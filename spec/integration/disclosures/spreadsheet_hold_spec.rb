@@ -232,8 +232,6 @@ RSpec.describe 'Holding back a suspect spreadsheet' do
       end
 
       it 'checks the file of a requester who opted out of AI reading like anyone’s' do
-        skip 'IncomingAttention::OptOut arrives in B10' unless defined?(IncomingAttention::OptOut)
-
         IncomingAttention::OptOut.set!(owner, true)
         request = presidio([])
         expect(hold([%w[Depot Vans]])).to eq('requester_only')

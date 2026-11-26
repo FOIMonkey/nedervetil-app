@@ -1,7 +1,7 @@
 require 'spec_helper'
 
 RSpec.describe Deadlines::Piles do
-  include_context 'with incoming attention off' if defined?(IncomingAttention::Config)
+  include_context 'with incoming attention off'
   include_context 'with document OCR off'
 
   it 'counts only the documents the requester can see' do

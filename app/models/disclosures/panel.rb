@@ -140,7 +140,6 @@ module Disclosures
     end
 
     def routine?(message)
-      defined?(IncomingAttention::Labels) &&
         IncomingAttention::Labels.routine?(message)
     end
 

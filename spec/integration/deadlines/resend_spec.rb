@@ -2,7 +2,8 @@ require 'spec_helper'
 require 'timeout'
 
 RSpec.describe 'Resending a failed message' do
-  include_context 'with incoming attention off' if defined?(IncomingAttention::Config)
+  include_context 'with incoming attention off'
+
   # Monday 7 September 2026; due 5 October (20 working days).
   let(:start) { Time.zone.parse('2026-09-07 10:00') }
   let(:user) { FactoryBot.create(:user) }
@@ -142,7 +143,6 @@ RSpec.describe 'Resending a failed message' do
   end
 
   it 'preserves an unread automatic classification even when core is no longer awaiting description' do
-      skip 'IncomingAttention arrives in B10' unless defined?(IncomingAttention::Config)
     request = request_sent
     message = failed_follow_up(request, at: start + 7.days)
     incoming = FactoryBot.create(:incoming_message, info_request: request)

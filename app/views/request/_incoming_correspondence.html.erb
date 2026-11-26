@@ -1,24 +1,26 @@
-<div class="incoming correspondence <%= incoming_message.prominence %> js-collapsible" id="<%= dom_id(incoming_message) %>">
-  <div class="correspondence__header">
-    <span class="correspondence__header__author js-collapsible-trigger">
-      <% if incoming_message.specific_from_name? %>
-        <%= incoming_message.safe_from_name %>,
-      <% end %>
-      <% if incoming_message.from_public_body? %>
-        <%= @info_request.public_body.name %>
-      <% end %>
-    </span>
+<% attention_visible = IncomingAttention::Labels.visible_to?(incoming_message, @user, current_ability) %>
+<% routine_update = !!(attention_visible && IncomingAttention::Effective.routine?(incoming_message)) %>
+<div class="incoming correspondence <%= incoming_message.prominence %> js-collapsible" data-routine-update="<%= routine_update %>" id="<%= dom_id(incoming_message) %>" data-controller="collapsible" data-collapsible-routine-value="<%= routine_update %>" data-action="collapsible:set@window->collapsible#set hashchange@window->collapsible#reveal">
+  <%# On the requester's page the feed's row already says who and when. %>
+  <% unless @request_history %>
+  <div class="correspondence__header" role="heading" aria-level="2" data-collapsible-target="header" data-action="click->collapsible#headerClick mouseover->collapsible#hover mouseout->collapsible#hover">
+    <span class="correspondence__header__author js-collapsible-trigger" data-collapsible-target="trigger" data-action="click->collapsible#toggle keydown->collapsible#key mouseover->collapsible#hover mouseout->collapsible#hover"><%= Deadlines::History.sender(@info_request, incoming_message) %></span>
+
+    <%= render partial: 'request/incoming_prediction', locals: { incoming_message: incoming_message } %>
 
     <%= link_to incoming_message_path(incoming_message, anchor_only: true), :class => 'correspondence__header__date' do %>
       <%= simple_date(incoming_message.sent_at) %>
     <% end %>
+    <%= render partial: 'request/attention_choice', locals: { incoming_message: incoming_message } %>
   </div>
+  <% end %>
 
   <% incoming_message.parsed_for_display? if incoming_message.last_parsed.nil? && can?(:read, incoming_message) %>
   <%= render partial: 'request/prominence', locals: { prominenceable: incoming_message } %>
 
   <%- if can?(:read, incoming_message) %>
-    <% if feature_enabled?(:refusal_identification) %>
+    <%= render partial: 'request/incoming_outcome', locals: { incoming_message: incoming_message } unless @request_history %>
+    <% if Current.memo(:refusal_identification) { feature_enabled?(:refusal_identification) } %>
       <%= render partial: 'request/incoming_refusals',
                  locals: { incoming_message: incoming_message } %>
     <% end %>
@@ -28,22 +30,14 @@
                  locals: { incoming_message: incoming_message } %>
     </div>
 
+    <% if @request_history && @receipt_message != incoming_message %>
+      <%= render partial: 'request/attention_choice', locals: { incoming_message: incoming_message } %>
+    <% end %>
+
     <p class="event_actions">
-      <% if !@user.nil? && @user.admin_page_links? %>
+      <% if is_admin? %>
         <%= link_to "Admin", edit_admin_incoming_message_path(incoming_message.id) %>
       <% end %>
     </p>
-
-    <% if local_assigns[:show_correspondence_footer] %>
-      <% link_to_this_url = incoming_message_url(incoming_message) %>
-
-      <% report_path =
-           new_request_report_path(@info_request.url_title,
-                                   incoming_message_id: incoming_message.id) %>
-
-      <%= render partial: 'request/correspondence_footer',
-                 locals: { link_to_this_url: link_to_this_url,
-                           report_path: report_path } %>
-    <% end %>
   <%- end %>
 </div>

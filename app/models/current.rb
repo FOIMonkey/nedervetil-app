@@ -2,6 +2,8 @@
 class Current < ActiveSupport::CurrentAttributes
   # Per-page cache; nil outside Current.memoising so nothing is retained.
   attribute :page_memo
+  # True while the app, not a person, sets a request's status.
+  attribute :automatic_classification
 
   # Stops further email reads on this page once one is refused.
   attribute :mail_read_refused

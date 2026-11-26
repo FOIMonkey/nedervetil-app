@@ -32,9 +32,7 @@ module Deadlines
         sent = outgoing[event.outgoing_message_id]
         event.association(:outgoing_message).target = sent if sent
       end
-      if defined?(IncomingAttention::Prediction)
-        IncomingAttention::Prediction.remember_for(by_id.keys)
-      end
+      IncomingAttention::Prediction.remember_for(by_id.keys)
       request.thread_shared = true
       messages
     end
@@ -119,8 +117,6 @@ module Deadlines
     end
 
     def auto_classified_message_ids(request)
-      return Set.new unless defined?(IncomingAttention::Prediction)
-
       request.deadlines_auto_classified_ids ||=
         IncomingAttention::Prediction.
           where(info_request_id: request.id,

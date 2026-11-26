@@ -1,29 +1,31 @@
-<% if (@is_you && @display_user.about_me) || @display_user.show_about_me? %>
-  <div class="user_about_me">
-    <%= image_tag "quote-marks.png", :class => "comment_quote" %>
-    <%= @display_user.get_about_me_for_html_display %>
-    <% if @is_you %>
-      (<%= link_to _("edit text about you"), edit_profile_about_me_path %>)
-    <% end %>
-  </div>
-<% end %>
-
 <% if @is_you && @display_user.active? %>
-  <p id="user_change_password_email" class="user_change_password_email">
-    <% if @display_user.profile_photo %>
-      <%= link_to _('Change profile photo'), set_profile_photo_path %> |
-    <% end %>
-    <%= link_to _('Change your password'), new_password_change_path %> |
-    <%= link_to _('Change your email'), signchangeemail_path %>
+  <ul class="account-settings" id="user_change_password_email">
+    <li>
+      <span class="account-settings__name"><%= _('Name') %></span>
+      <span class="account-settings__value"><%= @display_user.name %></span>
+      <%= link_to _('Change'), edit_users_name_path, class: 'account-settings__change', 'aria-label': _('Change your name') %>
+    </li>
+    <li>
+      <span class="account-settings__name"><%= _('Email') %></span>
+      <span class="account-settings__value"><%= @display_user.email %></span>
+      <%= link_to _('Change'), signchangeemail_path, class: 'account-settings__change', 'aria-label': _('Change your email') %>
+    </li>
+    <li>
+      <span class="account-settings__name"><%= _('Password') %></span>
+      <span class="account-settings__value"></span>
+      <%= link_to _('Change'), new_password_change_path, class: 'account-settings__change', 'aria-label': _('Change your password') %>
+    </li>
+    <li>
+      <span class="account-settings__name"><%= _('Automatic reading of replies') %></span>
+      <span class="account-settings__value"><%= IncomingAttention::OptOut.opted_out?(@display_user) ? _('Off') : _('On') %></span>
+      <%= link_to _('Change'), profile_ai_reading_path, class: 'account-settings__change', 'aria-label': _('Change automatic reading of replies') %>
+    </li>
     <% if AlaveteliConfiguration.enable_two_factor_auth %>
-    |
-      <% if @display_user.totp? %>
-        <%= link_to _('Two factor authentication settings'), one_time_password_path %>
-      <% elsif @display_user.hotp? %>
-        <%= link_to _('View your two factor authentication one time passcode'), one_time_password_path %>
-      <% else %>
-        <%= link_to _('Improve your account security'), one_time_password_path %>
-      <% end %>
+      <li>
+        <span class="account-settings__name"><%= _('Two-factor authentication') %></span>
+        <span class="account-settings__value"><%= @display_user.otp_enabled? ? _('On') : _('Off') %></span>
+        <%= link_to _('Change'), one_time_password_path, class: 'account-settings__change', 'aria-label': _('Change two-factor authentication') %>
+      </li>
     <% end %>
-  </p>
+  </ul>
 <% end %>

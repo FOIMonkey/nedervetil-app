@@ -1,7 +1,8 @@
 require 'spec_helper'
 
 RSpec.describe Deadlines::NextStep do
-  include_context 'with incoming attention off' if defined?(IncomingAttention::Config)
+  include_context 'with incoming attention off'
+
   let(:user) { FactoryBot.create(:user, trusted: true) }
   let(:start) { Time.zone.parse('2026-09-07 10:00') }
   let(:soon) { start + 10.days }

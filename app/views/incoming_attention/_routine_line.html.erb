@@ -1,0 +1,28 @@
+<% return_to = local_assigns.fetch(:return_to, 'dashboard') %>
+<% replies.group_by(&:label).each do |label, items| %>
+  <div class="routine-line">
+    <% if items.one? %><%= _(label) %><% else %><%= items.size %> <%= { 'Acknowledgement' => _('acknowledgements'), 'Routine update' => _('routine updates') }.fetch(label) { label.downcase.pluralize } %><% end %>
+  </div>
+  <ul class="routine-replies">
+    <% items.each do |reply| %>
+      <% name = reply.request.public_body.name %>
+      <li class="routine-reply" data-message-id="<%= reply.message.id %>" data-attention-label="<%= label %>">
+        <%= link_to name, show_request_path(reply.request.url_title, anchor: dom_id(reply.message)) %>
+        <time datetime="<%= reply.received_at.iso8601 %>"><%= I18n.l(reply.received_at, format: reply.received_at.year == Time.zone.today.year ? '%-d %b' : '%-d %b %Y') %></time>
+        <% if reply.request.is_actual_owning_user?(current_user) && can?(:update_request_state, reply.request) %>
+          <%= button_to _('Dismiss'), attention_dismissal_path(url_title: reply.request.url_title),
+            params: { incoming_message_ids: [reply.message.id], incoming_attention_return: return_to },
+            form_class: 'routine-reply-dismiss', class: 'routine-reply-dismiss__button', form: { data: { turbo: false } },
+            aria: { label: _('Dismiss {{label}} from {{public_body_name}}', label: _(label).downcase, public_body_name: name) } %>
+        <% end %>
+      </li>
+    <% end %>
+  </ul>
+<% end %>
+<% if replies.size > 1 && replies.all? { |reply| reply.request.is_actual_owning_user?(current_user) && can?(:update_request_state, reply.request) } %>
+  <% group_title = (replies.first.request.info_request_batch || replies.first.request).title %>
+  <%= button_to _('Dismiss all {{count}}', count: replies.size), attention_dismissal_path(url_title: replies.first.request.url_title),
+    params: { incoming_message_ids: replies.map { |reply| reply.message.id }, incoming_attention_return: return_to },
+    form_class: 'routine-replies-dismiss-all', class: 'routine-reply-dismiss__button', form: { data: { turbo: false } },
+    aria: { label: _('Dismiss all {{count}} routine updates for {{title}}', count: replies.size, title: group_title) } %>
+<% end %>

@@ -68,8 +68,7 @@ module Deadlines
     end
 
     def being_read?
-      last? && defined?(IncomingAttention::Effective) &&
-        IncomingAttention::Effective.notification_pending?(message)
+      last? && IncomingAttention::Effective.notification_pending?(message)
     end
 
     def first_line

@@ -30,7 +30,6 @@ module Deadlines
       # when attention_ids is preloaded, absence avoids a per-request query.
       status = request.calculate_status
       if status == 'waiting_classification' &&
-         defined?(IncomingAttention::Effective) &&
          IncomingAttention::Effective.active? &&
          !@attention_ids&.include?(request.id)
         status = if @attention_ids

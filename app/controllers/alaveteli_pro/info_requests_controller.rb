@@ -32,8 +32,7 @@ class AlaveteliPro::InfoRequestsController < AlaveteliPro::BaseController
     @per_page = 10
     @request_summaries = request_summaries.paginate page: @page,
                                                     per_page: @per_page
-    return unless defined?(IncomingAttention::Effective) &&
-                  IncomingAttention::Effective.active?
+    return unless IncomingAttention::Effective.active?
 
     filter = params.dig(:alaveteli_pro_request_filter, :filter).presence
     return unless filter && filter != 'draft'

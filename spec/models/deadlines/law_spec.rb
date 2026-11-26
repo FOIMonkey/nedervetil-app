@@ -2,7 +2,7 @@ require 'spec_helper'
 
 # Expected dates were worked out separately from the gov.uk bank holidays.
 RSpec.describe 'Deadlines and the law' do
-  include_context 'with incoming attention off' if defined?(IncomingAttention::Config)
+  include_context 'with incoming attention off'
   let(:user) { FactoryBot.create(:user, trusted: true) }
   let(:start) { Time.zone.parse('2026-09-07 10:00') }
 

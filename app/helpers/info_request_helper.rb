@@ -4,7 +4,11 @@ module InfoRequestHelper
   include LinkToHelper
 
   def status_text(info_request, opts = {})
-    if info_request.awaiting_description
+    if IncomingAttention::Effective.active?
+      # A request whose new replies need no attention keeps its status.
+      status = IncomingAttention::Effective.dashboard_status(info_request)
+      status = 'awaiting_description' if status == 'waiting_classification'
+    elsif info_request.awaiting_description
       status = "awaiting_description"
     else
       status = info_request.calculate_status

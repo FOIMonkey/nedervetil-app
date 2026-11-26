@@ -241,7 +241,6 @@ class FoiAttachment < ApplicationRecord
   private
 
   def invalidate_attention_prediction
-    return unless defined?(IncomingAttention::Prediction)
     return unless saved_change_to_prominence? || saved_change_to_erased_at?
 
     IncomingAttention::Prediction.invalidate_message(

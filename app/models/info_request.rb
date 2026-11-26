@@ -140,6 +140,7 @@ class InfoRequest < ApplicationRecord
           class_name: 'AlaveteliPro::Embargo',
           dependent: :destroy
   before_destroy :destroy_documents
+  after_update :invalidate_attention_predictions
   has_many :deadline_adjustments, class_name: 'Deadlines::Adjustment',
                                   inverse_of: :info_request,
                                   dependent: :delete_all
@@ -823,6 +824,24 @@ class InfoRequest < ApplicationRecord
   # described_state should always indicate the current state of the request, as described
   # by the request owner (or, in some other cases an admin or other user)
   def set_described_state(new_state, set_by = nil, message = "")
+    if IncomingAttention::Classification.automatic?
+      return change_described_state(new_state, set_by, message)
+    end
+
+    self.class.transaction do
+      IncomingAttention::Outcome.overridden!(self, new_state)
+      # Lock a fresh copy without discarding the caller's unsaved attributes.
+      self.class.lock.find(id)
+      change_described_state(new_state, set_by, message).tap do
+        # Human classification covers replies received so far, not later ones.
+        IncomingAttention::Prediction.
+          where(incoming_message_id: incoming_messages.select(:id)).
+          update_all(human_reviewed_at: Time.current)
+      end
+    end
+  end
+
+  private def change_described_state(new_state, set_by, message)
     old_described_state = described_state
     ActiveRecord::Base.transaction do
       self.awaiting_description = false
@@ -1712,5 +1731,16 @@ class InfoRequest < ApplicationRecord
     return if info_request_batch_id
 
     RequestLimits.record!(user, :request, info_request_id: id)
+  end
+
+  def invalidate_attention_predictions
+    return unless saved_change_to_user_id? || saved_change_to_prominence?
+
+    IncomingAttention::Prediction.where(info_request_id: id).
+      pluck(:incoming_message_id).each do |message_id|
+        IncomingAttention::Prediction.invalidate_message(
+          message_id, 'visibility_changed'
+        )
+      end
   end
 end

@@ -1,7 +1,8 @@
 require 'spec_helper'
 
 RSpec.describe 'A reply and its next steps', feature: :alaveteli_pro do
-  include_context 'with incoming attention off' if defined?(IncomingAttention::Config)
+  include_context 'with incoming attention off'
+
   let(:user) { FactoryBot.create(:pro_user, name: 'Rowan Requester') }
   let(:council) {
     FactoryBot.create(:public_body,
@@ -388,7 +389,6 @@ RSpec.describe 'A reply and its next steps', feature: :alaveteli_pro do
     end
 
     it 'counts from the decision, not from a routine reply after it' do
-      skip 'IncomingAttention arrives in B10' unless defined?(IncomingAttention::Config)
       request = refused(sent)
       routine_reply(request, at: Time.zone.parse('2026-10-20 10:00'))
 

@@ -98,10 +98,6 @@ module OutgoingMessage::DeliveryTransitions
   end
 
   def automatic(&block)
-    if defined?(IncomingAttention::Classification)
-      IncomingAttention::Classification.automatically(&block)
-    else
-      yield
-    end
+    IncomingAttention::Classification.automatically(&block)
   end
 end

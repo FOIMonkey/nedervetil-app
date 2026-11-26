@@ -1,7 +1,7 @@
 require 'spec_helper'
 
 RSpec.describe 'Reviewing a finished request', feature: :alaveteli_pro do
-  include_context 'with incoming attention off' if defined?(IncomingAttention::Config)
+  include_context 'with incoming attention off'
   include_context 'with production error pages'
 
   let(:owner) {

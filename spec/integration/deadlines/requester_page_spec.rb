@@ -1,7 +1,7 @@
 require 'spec_helper'
 
 RSpec.describe 'The requester’s own request page' do
-  include_context 'with incoming attention off' if defined?(IncomingAttention::Config)
+  include_context 'with incoming attention off'
   let(:user) { FactoryBot.create(:pro_user) }
   let(:start) { Time.zone.parse('2026-09-07 10:00') }
 

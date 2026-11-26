@@ -27,8 +27,7 @@ module Deadlines
     end
 
     def attention_messages(requests)
-      return unless defined?(IncomingAttention::Effective) &&
-                    IncomingAttention::Effective.active?
+      return unless IncomingAttention::Effective.active?
 
       IncomingAttention::Effective.dashboard_attention(
         IncomingMessage.where(info_request_id: requests.map(&:id))
@@ -38,17 +37,13 @@ module Deadlines
     def next_actions(requests, attention_ids, today: Time.zone.today)
       ids = requests.map(&:id)
       # Match Stage.auto_classified_message_ids: automatic outcomes count.
-      auto_ids = if defined?(IncomingAttention::Prediction)
-                   IncomingAttention::Prediction.
-                     where(info_request_id: ids,
-                           auto_classified: true,
-                           outcome_applied_state: nil).
-                     pluck(:info_request_id, :incoming_message_id).
-                     group_by(&:first).
-                     transform_values { |rows| rows.map(&:last).to_set }
-                 else
-                   {}
-                 end
+      auto_ids = IncomingAttention::Prediction.
+        where(info_request_id: ids,
+              auto_classified: true,
+              outcome_applied_state: nil).
+        pluck(:info_request_id, :incoming_message_id).
+        group_by(&:first).
+        transform_values { |rows| rows.map(&:last).to_set }
       requests.each do |request|
         request.deadlines_auto_classified_ids =
           auto_ids.fetch(request.id, Set.new)

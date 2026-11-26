@@ -1,4 +1,4 @@
-<% outcome_row = defined?(IncomingAttention::Config) && IncomingAttention::Outcome.active? && IncomingAttention::Labels.visible_to?(incoming_message, @user, current_ability) ? IncomingAttention::Prediction.for_message(incoming_message) : nil %>
+<% outcome_row = IncomingAttention::Outcome.active? && IncomingAttention::Labels.visible_to?(incoming_message, @user, current_ability) ? IncomingAttention::Prediction.for_message(incoming_message) : nil %>
 <% if outcome_row && outcome_row.outcome_status == 'complete' %>
   <% owner = @info_request.is_actual_owning_user?(@user) && can?(:update_request_state, @info_request) %>
   <% exemptions = IncomingAttention::Outcome.exemptions(outcome_row) %>

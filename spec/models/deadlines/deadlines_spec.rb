@@ -8,7 +8,7 @@ RSpec.describe 'Request deadlines' do
   let(:start) { Time.zone.parse('2026-09-07 10:00') }
 
   # These rules are checked against core's own statuses.
-  include_context 'with incoming attention off' if defined?(IncomingAttention::Config)
+  include_context 'with incoming attention off'
   let(:user) { FactoryBot.create(:user, trusted: true) }
 
   def request_sent(at: start, **attrs)
@@ -393,7 +393,6 @@ RSpec.describe 'Request deadlines' do
     end
 
     it 'does not restart the review window for a routine reply classified automatically' do
-      skip 'IncomingAttention arrives in B10' unless defined?(IncomingAttention::Config)
       request = request_sent
       reply(request, at: Time.zone.parse('2026-09-28 10:00'), state: 'rejected')
       auto_routine_reply(request, at: Time.zone.parse('2026-10-20 10:00'))
@@ -475,9 +474,9 @@ RSpec.describe 'Request deadlines' do
     end
 
     context 'with incoming attention on' do
-      include_context 'with incoming attention off', true if defined?(IncomingAttention::Config)
+      include_context 'with incoming attention off', true
+
       it 'will not mark complete while a reply is still being checked, though the request shows as awaiting' do
-      skip 'IncomingAttention arrives in B10' unless defined?(IncomingAttention::Config)
         request = request_sent
         travel_to(start + 3.days) do
           message = FactoryBot.create(:incoming_message, info_request: request)
@@ -534,7 +533,6 @@ RSpec.describe 'Request deadlines' do
     end
 
     it 'expects a reply once a failed follow-up has been resent, even if the status was never restored' do
-      skip 'IncomingAttention arrives in B10' unless defined?(IncomingAttention::Config)
       request = request_sent
       followup = travel_to(start + 3.days) do
         OutgoingMessage.create!(info_request: request.reload,

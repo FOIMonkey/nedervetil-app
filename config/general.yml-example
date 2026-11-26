@@ -734,6 +734,68 @@ GA_CODE: ''
 # ---
 OVERRIDE_ALL_PUBLIC_BODY_REQUEST_EMAILS: ''
 
+# Reading replies with an AI service at INCOMING_ATTENTION_ENDPOINT, which
+# flags the ones that need the requester. Off unless INCOMING_ATTENTION_ENABLED
+# is true. The service's token comes from the INCOMING_ATTENTION_AUTH_TOKEN
+# environment variable, never from this file, so only the process that calls
+# the service has it.
+#
+# Replies that arrived before reading was switched on are left alone, unless
+# they arrived at or after INCOMING_ATTENTION_BACKFILL_RECEIVED_AFTER: an ISO
+# 8601 time with its zone, in quotes.
+#
+# INCOMING_ATTENTION_ENABLED - Boolean (default: false)
+# INCOMING_ATTENTION_ENDPOINT - String (default: '')
+# INCOMING_ATTENTION_BACKFILL_RECEIVED_AFTER - String (default: '')
+#
+# Examples:
+#
+#   INCOMING_ATTENTION_ENABLED: true
+#   INCOMING_ATTENTION_ENDPOINT: https://reader.example.org
+#   INCOMING_ATTENTION_BACKFILL_RECEIVED_AFTER: '2026-10-01T00:00:00Z'
+#
+# ---
+INCOMING_ATTENTION_ENABLED: false
+INCOMING_ATTENTION_ENDPOINT: ''
+INCOMING_ATTENTION_BACKFILL_RECEIVED_AFTER: ''
+
+# Sending those requests through a service that takes the user data out
+# before passing them on to the worker. Blank (the default) sends them to
+# INCOMING_ATTENTION_ENDPOINT directly. Set, each request goes to this URL
+# with the same path (/v1/classify, /v1/outcome), body and worker token; the
+# service returns the worker's answer. It must be HTTPS, or HTTP on this
+# machine for the near end of a secure tunnel. Its own token, if it needs
+# one, comes from the INCOMING_ATTENTION_ANONYMISER_AUTH_TOKEN environment
+# variable and is sent as X-Anonymiser-Token. Requesters who opted out of AI
+# reading are never sent, either way.
+#
+# INCOMING_ATTENTION_ANONYMISER_ENDPOINT - String (default: '')
+#
+# Examples:
+#
+#   INCOMING_ATTENTION_ANONYMISER_ENDPOINT: http://127.0.0.1:5002
+#
+# ---
+INCOMING_ATTENTION_ANONYMISER_ENDPOINT: ''
+
+# What the AI service's reading of a reply does to the request's status:
+# off asks nothing; shadow stores the reading for admins and changes nothing;
+# apply sets the status and tells the requester, who can confirm or change it.
+# Needs INCOMING_ATTENTION_ENABLED.
+#
+# INCOMING_OUTCOME_STRICT_DOCUMENTS makes a reading "not sure" when any
+# document wasn't read in full. INCOMING_OUTCOME_OCR reads scanned PDF letters
+# with Tesseract on this server first.
+#
+# INCOMING_OUTCOME_MODE - String, off, shadow or apply (default: off)
+# INCOMING_OUTCOME_STRICT_DOCUMENTS - Boolean (default: false)
+# INCOMING_OUTCOME_OCR - Boolean (default: false)
+#
+# ---
+INCOMING_OUTCOME_MODE: 'off'
+INCOMING_OUTCOME_STRICT_DOCUMENTS: false
+INCOMING_OUTCOME_OCR: false
+
 # Search path for external commandline utilities (such as pdftk, unrtf).
 # When set to an empty array the the standard environment PATH will be used to
 # search for external commandline utilities.

@@ -69,7 +69,7 @@ module AlaveteliPro
     end
 
     def filter_results(results, user = nil)
-      if defined?(IncomingAttention::Effective) && IncomingAttention::Effective.active?
+      if IncomingAttention::Effective.active?
         attention = attention_results(results, user)
         return attention if attention
       end
@@ -156,7 +156,7 @@ module AlaveteliPro
 
     def filter_attributes
       attributes = default_filters + phase_filters
-      return attributes unless defined?(IncomingAttention::Effective) && IncomingAttention::Effective.active?
+      return attributes unless IncomingAttention::Effective.active?
 
       attributes + attention_filters
     end

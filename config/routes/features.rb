@@ -1,3 +1,13 @@
+get 'profile/ai_reading', to: 'incoming_attention/ai_reading#edit',
+                          as: :profile_ai_reading
+post 'profile/ai_reading', to: 'incoming_attention/ai_reading#update'
+
+# The requester's choices about replies' AI readings.
+scope 'request/:url_title', module: 'incoming_attention' do
+  post 'attention_choice', to: 'choices#create', as: :attention_choice
+  post 'attention_dismissal', to: 'choices#dismiss', as: :attention_dismissal
+end
+
 # Request deadlines.
 scope 'deadlines/:request_id',
       module: 'deadlines',

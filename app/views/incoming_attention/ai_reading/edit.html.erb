@@ -1,0 +1,17 @@
+<% @title = _('Reading replies with AI') %>
+<%= page_band back: back_to_account %>
+<div id="ai-reading" class="ai-reading">
+  <p><%= _('When a reply to one of your requests arrives, this site can send its text to an AI service (Cloudflare Workers AI). It sorts routine updates from replies that need you, and reads what a reply did with your request so it can set the request’s status. You can always confirm or change that status.') %></p>
+  <p><%= _('If you turn this off, new replies are not sent to the AI service. Every new reply is shown as needing your attention, and you tell us what it did with your request yourself. Replies that were read before stay as they are.') %></p>
+  <% unless IncomingAttention::Config.enabled? %>
+    <p><strong><%= _('Reading replies with AI is not switched on for this site at the moment.') %></strong></p>
+  <% end %>
+  <%= form_tag profile_ai_reading_path, method: :post, class: 'ai-reading__form' do %>
+    <fieldset>
+      <legend><%= _('Read my new replies with AI') %></legend>
+      <p><label><%= radio_button_tag :ai_reading, 'on', !@opted_out %> <%= _('On') %></label></p>
+      <p><label><%= radio_button_tag :ai_reading, 'off', @opted_out %> <%= _('Off') %></label></p>
+    </fieldset>
+    <%= submit_tag _('Save') %>
+  <% end %>
+</div>

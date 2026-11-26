@@ -11,28 +11,21 @@ module Deadlines
 
     STATUSES = (Stage::OUTCOMES + %w[waiting_clarification]).freeze
     # The hedged "likely decision" label is left out.
-    LABELS = if defined?(IncomingAttention::Labels)
-               [
-                 *IncomingAttention::Labels::ROUTINE.values,
-                 *IncomingAttention::Labels::ATTENTION.
-                   values_at('DELIVERY_PROBLEM', 'ACTION_REQUESTED', 'SUBSTANTIVE')
-               ].freeze
-             else
-               [].freeze
-             end
+    LABELS = [
+      *IncomingAttention::Labels::ROUTINE.values,
+      *IncomingAttention::Labels::ATTENTION.
+        values_at('DELIVERY_PROBLEM', 'ACTION_REQUESTED', 'SUBSTANTIVE')
+    ].freeze
 
     def self.reply_suffix(request, event)
       message = event.incoming_message or return
-      if defined?(IncomingAttention::Prediction)
-        prediction = IncomingAttention::Prediction.for_message(message)
-        outcome = IncomingAttention::Outcome.label(prediction)
-        return _(outcome) if outcome
-      end
+      prediction = IncomingAttention::Prediction.for_message(message)
+      outcome = IncomingAttention::Outcome.label(prediction)
+      return _(outcome) if outcome
 
       state = status(request, event)
       return InfoRequest::State.short_description(state) if state
-      return unless defined?(IncomingAttention::Effective) &&
-                    IncomingAttention::Effective.active? &&
+      return unless IncomingAttention::Effective.active? &&
                     !IncomingAttention::Effective.notification_pending?(
                       message,
                       prediction: prediction
@@ -178,14 +171,10 @@ module Deadlines
       return hidden_reply(event) unless @ability.can?(:read, message)
 
       suffix = self.class.reply_suffix(request, event)
-      routine = if defined?(IncomingAttention::Labels)
-                  suffix.in?(IncomingAttention::Labels::ROUTINE.values.
-                               map { |label| _(label) }) ||
-                    (suffix.nil? && IncomingAttention::Effective.active? &&
-                     IncomingAttention::Effective.routine?(message))
-                else
-                  false
-                end
+      routine = suffix.in?(IncomingAttention::Labels::ROUTINE.values.
+                             map { |label| _(label) }) ||
+                (suffix.nil? && IncomingAttention::Effective.active? &&
+                 IncomingAttention::Effective.routine?(message))
       answer = Reply.new(request, event, @ability)
       Entry.new(at: message.sent_at || event.created_at,
                 kind: routine ? :routine : :reply,

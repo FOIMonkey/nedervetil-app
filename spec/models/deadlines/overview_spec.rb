@@ -1,7 +1,7 @@
 require 'spec_helper'
 
 RSpec.describe Deadlines::Overview do
-  include_context 'with incoming attention off' if defined?(IncomingAttention::Config)
+  include_context 'with incoming attention off'
   let(:user) { FactoryBot.create(:pro_user, trusted: true) }
   let(:start) { Time.zone.parse('2026-09-07 10:00') }
   let(:today) { Date.new(2026, 10, 1) }
@@ -179,7 +179,8 @@ RSpec.describe Deadlines::Overview do
   end
 
   context 'with classification presentation enabled' do
-    include_context 'with incoming attention off', true if defined?(IncomingAttention::Config)
+    include_context 'with incoming attention off', true
+
     it 'preserves the next action for a reply still awaiting classification' do
       request = request_sent
       travel_to(start + 8.days) do

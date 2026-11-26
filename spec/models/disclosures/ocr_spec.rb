@@ -32,7 +32,7 @@ RSpec.describe 'Disclosures OCR' do
   it 'reads a scanned page on this server, also for a requester who switched off AI reading' do
     skip 'Tesseract, pdftoppm or prlimit not installed' unless ocr_tools?
     Disclosures.ocr = true
-    IncomingAttention::OptOut.set!(owner, true) if defined?(IncomingAttention::OptOut)
+    IncomingAttention::OptOut.set!(owner, true)
 
     document = scanned_document
     page = document.pages.first

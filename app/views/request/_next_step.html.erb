@@ -22,9 +22,7 @@
   <% after = capture do %>
     <% if step.completable? && !action.none? %><%= render partial: 'deadlines/complete_form', locals: { request: request, return_to: 'request', hint: _('Move it to Finished') } %><% end %>
     <%= change_status %>
-    <% if defined?(IncomingAttention::Effective) %>
-      <%= render partial: 'request/attention_choice', locals: { incoming_message: step.latest_reply.message } %>
-    <% end %>
+    <%= render partial: 'request/attention_choice', locals: { incoming_message: step.latest_reply.message } %>
   <% end %>
   <%= render partial: 'request/receipt', locals: { reply: step.latest_reply, review_by: step.review_by, after: after, review_coming_up: step.review_coming_up?, arrived: local_assigns[:arrived], change: step.change_status? } %>
 <% when :closed %>
@@ -162,7 +160,7 @@
   </section>
   <% if local_assigns[:fresh] && action.kind == :response %>
     <div class="next-step__after">
-      <div><h3><%= _('When they reply') %></h3><p><%= defined?(IncomingAttention::InstantEmails) && !IncomingAttention::InstantEmails.on?(@user) ? _('It’s in your daily summary.') : _('We email you as it arrives.') %></p></div>
+      <div><h3><%= _('When they reply') %></h3><p><%= IncomingAttention::InstantEmails.on?(@user) ? _('We email you as it arrives.') : _('It’s in your daily summary.') %></p></div>
       <div><h3><%= _('If they miss {{date}}', date: step.long_date(action.date)) %></h3><p><%= _('You can remind them in one click.') %></p></div>
     </div>
   <% end %>

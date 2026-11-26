@@ -3,7 +3,7 @@ require 'timeout'
 
 RSpec.describe RequestLimits do
   include_context 'with request limits on, on the real clock'
-  include_context 'with incoming attention off' if defined?(IncomingAttention::Config)
+  include_context 'with incoming attention off'
 
   let(:user) { FactoryBot.create(:user) }
 
@@ -218,7 +218,7 @@ end
 RSpec.describe 'Request limits under simultaneous submissions' do
   self.use_transactional_tests = false
   include_context 'with request limits on, on the real clock'
-  include_context 'with incoming attention off' if defined?(IncomingAttention::Config)
+  include_context 'with incoming attention off'
 
   # Follow-ups to two different requests: nothing else in their creation locks
   # a shared row, so only RequestLimits' lock on the account can order them.

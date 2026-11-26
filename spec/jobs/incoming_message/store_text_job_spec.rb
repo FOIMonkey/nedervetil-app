@@ -132,6 +132,146 @@ RSpec.describe IncomingMessage::StoreTextJob, type: :job do
     end
   end
 
+  describe "the reply's AI reading" do
+    let(:info_request) { FactoryBot.create(:info_request) }
+
+    let(:readings) { [] }
+
+    before do
+      allow(IncomingAttention::Config).to receive(:enabled?).and_return(true)
+      allow(IncomingAttention::Job).to receive(:perform_later) do |id|
+        readings << IncomingAttention::Prediction.find(id).incoming_message_id
+      end
+      allow_any_instance_of(described_class).
+        to receive(:send_exception_notifications?).and_return(true)
+      allow(ExceptionNotifier).to receive(:notify_exception)
+    end
+
+    it 'is not queued when the mail arrives, only this job' do
+      message = receive_reply
+
+      expect(readings).to be_empty
+      expect(IncomingAttention::Prediction.for_message(message).status).
+        to eq('pending')
+      expect(described_class).to have_been_enqueued.with(message)
+    end
+
+    it 'is queued once, when the text is stored' do
+      stored_when_queued = nil
+      allow(IncomingAttention::Job).to receive(:perform_later) do |id|
+        message = IncomingAttention::Prediction.find(id).incoming_message
+        readings << message.id
+        stored_when_queued = stored(message).last
+      end
+
+      message = nil
+      perform_enqueued_jobs(only: described_class) { message = receive_reply }
+
+      expect(readings).to eq([message.id])
+      expect(stored_when_queued).to include('No way!')
+      expect(described_class).not_to have_been_enqueued
+      expect(ExceptionNotifier).not_to have_received(:notify_exception)
+    end
+
+    it 'is queued when the job gives up on the text' do
+      tries = 0
+      allow_any_instance_of(IncomingMessage).
+        to receive(:build_main_body_text) do
+          expect(readings).to be_empty
+          tries += 1
+          raise AttachmentToText::ConversionFailed
+        end
+
+      message = nil
+      perform_enqueued_jobs(only: described_class) { message = receive_reply }
+
+      expect(tries).to eq(3)
+      expect(readings).to eq([message.id])
+    end
+
+    it 'is queued when the job gives up on mail that can’t be read' do
+      allow(MailHandler::Reading).to receive(:of) do
+        expect(readings).to be_empty
+        raise MailHandler::ReadRefused, 'the mail cell is down'
+      end
+      allow(Rails.logger).to receive(:warn)
+
+      message = nil
+      perform_enqueued_jobs(only: described_class) { message = receive_reply }
+
+      expect(readings).to eq([message.id])
+      expect(stored(message)).to eq([nil, nil])
+    end
+
+    it 'is queued when the job is dropped for an erased email' do
+      message = receive_reply
+      allow_any_instance_of(RawEmail).to receive(:erased?).and_return(true)
+
+      perform_enqueued_jobs(only: described_class)
+
+      expect(readings).to eq([message.id])
+      expect(stored(message)).to eq([nil, nil])
+    end
+
+    it 'is queued as the mail arrives when this job cannot be queued' do
+      allow(described_class).to receive(:perform_later).
+        and_raise(RedisClient::CannotConnectError)
+
+      message = receive_reply
+
+      expect(readings).to eq([message.id])
+    end
+
+    it 'is queued as the mail arrives when this job is refused' do
+      allow(described_class).to receive(:perform_later).and_return(false)
+
+      message = receive_reply
+
+      expect(readings).to eq([message.id])
+    end
+
+    it 'is not queued for mail in the holding pen' do
+      perform_enqueued_jobs(only: described_class) do
+        receive_reply(to: 'dummy@localhost')
+      end
+
+      expect(readings).to be_empty
+    end
+
+    it 'is not queued with AI reading off' do
+      allow(IncomingAttention::Config).to receive(:enabled?).and_return(false)
+
+      perform_enqueued_jobs(only: described_class) { receive_reply }
+
+      expect(readings).to be_empty
+    end
+
+    it 'is queued once when the suggestion of documents cannot be' do
+      allow(Disclosures::SuggestJob).to receive(:perform_later).
+        and_raise(RedisClient::CannotConnectError)
+
+      message = nil
+      perform_enqueued_jobs(only: described_class) { message = receive_reply }
+
+      expect(readings).to eq([message.id])
+      expect(described_class).not_to have_been_enqueued
+      expect(ExceptionNotifier).not_to have_received(:notify_exception)
+    end
+
+    it 'is queued by its recovery task for a reply nothing has parsed, ' \
+       'should this job be lost' do
+      message = receive_reply
+      row = IncomingAttention::Prediction.for_message(message)
+      row.update_columns(updated_at: 6.minutes.ago)
+
+      IncomingAttention::Recovery.run
+
+      expect(stored(message)).to eq([nil, nil])
+      expect(readings).to eq([message.id])
+      expect(row.reload.status).to eq('pending')
+    end
+  end
+
   describe 'the suggestion of documents from the reply' do
     let(:info_request) { FactoryBot.create(:info_request) }
 
@@ -195,6 +335,19 @@ RSpec.describe IncomingMessage::StoreTextJob, type: :job do
       end
 
       expect(Disclosures::SuggestJob).not_to have_been_enqueued
+    end
+
+    it 'is queued once when the AI reading cannot be' do
+      allow(IncomingAttention::Config).to receive(:enabled?).and_return(true)
+      allow_any_instance_of(IncomingAttention::Prediction).
+        to receive(:enqueue!).and_raise(ActiveRecord::ConnectionNotEstablished)
+
+      message = nil
+      perform_enqueued_jobs(only: described_class) { message = receive_reply }
+
+      expect(Disclosures::SuggestJob).
+        to have_been_enqueued.with(message.id).exactly(:once)
+      expect(described_class).not_to have_been_enqueued
     end
   end
 

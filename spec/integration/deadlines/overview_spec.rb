@@ -1,7 +1,7 @@
 require 'spec_helper'
 
 RSpec.describe Deadlines::Overview do
-  include_context 'with incoming attention off' if defined?(IncomingAttention::Config)
+  include_context 'with incoming attention off'
   let(:user) { FactoryBot.create(:pro_user, trusted: true) }
   let(:start) { Time.zone.parse('2026-09-07 10:00') }
   let(:today) { Date.new(2026, 10, 1) }
@@ -92,8 +92,8 @@ RSpec.describe Deadlines::Overview do
     end
 
     context 'with replies to read' do
-      include_context 'with lean attention predictions' if defined?(IncomingAttention::Config)
-      before { skip 'IncomingAttention arrives in B10' unless defined?(IncomingAttention::Config) }
+      include_context 'with lean attention predictions'
+
       # Coming up, late (one reminded for its date, one reminded recently for
       # an earlier date), a reply to read and finished: each kind of row Home
       # shows.

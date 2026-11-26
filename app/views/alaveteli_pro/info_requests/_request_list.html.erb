@@ -3,10 +3,9 @@
   <div class="requests">
     <div class="requests__folder-title">
       <h2><%= @request_filter.filter_capital_label %></h2>
-      <% attention_active = defined?(IncomingAttention::Effective) && IncomingAttention::Effective.active? %>
-      <% if attention_active && @request_filter.filter == 'needs_attention' %>
+      <% if IncomingAttention::Effective.active? && @request_filter.filter == 'needs_attention' %>
         <p class="requests__folder-hint"><%= _("Replies you should read. Each one stays here until you set its request's status.") %></p>
-      <% elsif attention_active && @request_filter.filter == 'routine_updates' %>
+      <% elsif IncomingAttention::Effective.active? && @request_filter.filter == 'routine_updates' %>
         <p class="requests__folder-hint"><%= _('Acknowledgements and other routine updates. Dismiss an update to remove it from this list.') %></p>
       <% end %>
     </div>
@@ -56,7 +55,7 @@
       </p>
     </div>
     <div class="requests__list">
-      <% if attention_active %>
+      <% if IncomingAttention::Effective.active? %>
         <% if @request_summaries.empty? && !@request_filter.search.present? && %w[needs_attention routine_updates].include?(@request_filter.filter) %>
           <p class="attention-empty"><%= @request_filter.filter == 'needs_attention' ? _('Nothing needs your attention.') : _('No routine updates.') %></p>
         <% end %>
@@ -64,7 +63,7 @@
       <% else %>
         <%= render @request_summaries.map(&:summarisable) %>
       <% end %>
-      <%= will_paginate WillPaginate::Collection.new(@page, @per_page, (attention_active ? @request_summaries.total_entries : @request_summaries.count)) %>
+      <%= will_paginate WillPaginate::Collection.new(@page, @per_page, (IncomingAttention::Effective.active? ? @request_summaries.total_entries : @request_summaries.count)) %>
     </div> <!-- .requests__list -->
 
   </div> <!-- .requests -->

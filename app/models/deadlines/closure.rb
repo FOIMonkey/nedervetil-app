@@ -56,8 +56,7 @@ module Deadlines
     # status would mark them reviewed unseen.
     def self.unread_replies?(request)
       return true if request.awaiting_description?
-      return false unless defined?(IncomingAttention::Effective) &&
-                          IncomingAttention::Effective.active?
+      return false unless IncomingAttention::Effective.active?
 
       IncomingAttention::Effective.unresolved(
         IncomingMessage.where(info_request_id: request.id)

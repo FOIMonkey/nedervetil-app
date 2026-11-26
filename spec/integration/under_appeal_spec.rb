@@ -1,7 +1,7 @@
 require 'spec_helper'
 
 RSpec.describe 'The "Under appeal" status', type: :request do
-  include_context 'with incoming attention off' if defined?(IncomingAttention::Config)
+  include_context 'with incoming attention off'
 
   let(:user) { FactoryBot.create(:user) }
   let(:info_request) { FactoryBot.create(:info_request, user: user) }

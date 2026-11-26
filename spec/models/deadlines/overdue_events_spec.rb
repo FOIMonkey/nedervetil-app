@@ -3,7 +3,8 @@ require 'spec_helper'
 # Core's query in InfoRequest.log_overdue_event_type raises once a request has
 # two overdue events after its date, and then logs nothing for anyone.
 RSpec.describe 'Overdue events after a restored due date' do
-  include_context 'with incoming attention off' if defined?(IncomingAttention::Config)
+  include_context 'with incoming attention off'
+
   # Monday 7 September 2026: the response is due on 5 October.
   let(:start) { Time.zone.parse('2026-09-07 10:00') }
   let(:user) { FactoryBot.create(:user, trusted: true) }

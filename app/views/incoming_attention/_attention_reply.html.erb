@@ -1,0 +1,11 @@
+<% received = reply.received_at %>
+<li class="attention-reply" data-request-id="<%= reply.request.id %>" data-message-id="<%= reply.message.id %>" data-attention-label="<%= reply.label %>">
+  <%= link_to show_request_path(reply.request.url_title, anchor: dom_id(reply.message)), class: 'attention-reply__link' do %>
+    <span class="attention-reply__from"><%= reply.request.public_body.name %></span><span class="visually-hidden">:</span>
+    <span class="attention-reply__label"><%= _(reply.label) %></span>
+  <% end %>
+  <time class="attention-reply__date" datetime="<%= received.iso8601 %>"><%= I18n.l(received, format: '%-d %b %Y, %H:%M') %></time>
+  <% if local_assigns.fetch(:show_request, true) %>
+    <span class="attention-reply__request"><%= reply.request.title %></span>
+  <% end %>
+</li>

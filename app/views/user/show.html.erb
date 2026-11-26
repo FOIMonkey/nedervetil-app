@@ -1,39 +1,25 @@
-<% if @show_requests %>
-  <% @title =  _("{{user_name}} - Freedom of Information requests",
-                 :user_name => h(@display_user.name)) %>
+<% if @is_you && @display_user.active? %>
+  <% @title = _('Account') %>
+  <% content_for :body_class, 'band-view account-view' %>
+  <header class="page-band account-band">
+    <h1 class="page-band__title"><%= _('Account') %></h1>
+    <p class="account-band__sub"><%= _('{{user_name}} · joined {{year}}', user_name: @display_user.name, year: @display_user.created_at.year) %></p>
+  </header>
+  <%= band_notice %>
+  <div class="account-page">
+    <%= render partial: 'user/show_user_info' %>
+  </div>
 <% else %>
   <% @title = _("{{user_name}} - user profile",
                 :user_name => h(@display_user.name)) %>
-<% end %>
 
-<% unless @is_you || @same_name_users.none? %>
-  <%= render partial: 'user/show/show_same_name_users' %>
-<% end %>
-
-<% if @show_profile && @is_you && @undescribed_requests.size > 0 %>
-  <%= render partial: 'user/show/show_undescribed_requests' %>
-<% end %>
-
-<% if @show_profile %>
   <%= render partial: 'user/show/show_profile' %>
-<% end %>
 
-<% if @show_batches %>
-  <%= render partial: 'user/show/show_batches' %>
-<% end %>
+  <% if @is_you %>
+    <h2 id="email_subscriptions" class="email_subscriptions">
+      <%= _('Email alerts') %>
+    </h2>
 
-<% if @show_requests %>
-  <%= render partial: 'user/show/show_requests' %>
-<% end %>
-
-<% if @show_profile && @is_you %>
-  <h2 id="email_subscriptions" class="email_subscriptions">
-    <%= _("Things you're following") %>
-  </h2>
-
-  <%= render :partial => 'change_receive_email' %>
-
-  <br>
-
-  <%= render partial: 'user/show/show_track_things' %>
+    <%= render :partial => 'change_receive_email' %>
+  <% end %>
 <% end %>

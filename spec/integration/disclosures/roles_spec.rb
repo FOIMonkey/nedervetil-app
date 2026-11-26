@@ -205,15 +205,13 @@ RSpec.describe 'Disclosures views by role' do
         to eq([['documents-panel__plain'], ['documents-panel__plain']])
       expect(found.ancestors('.documents-todo__fold')).to be_empty
 
-      if defined?(IncomingAttention::Labels)
-        allow(IncomingAttention::Labels).to receive(:routine?).and_call_original
-        allow(IncomingAttention::Labels).
-          to receive(:routine?).with(reply).and_return(true)
-        found = row
-        expect(found.ancestors('.documents-todo__fold').first.
-               at_css('summary').text).
-          to start_with('Set aside')
-      end
+      allow(IncomingAttention::Labels).to receive(:routine?).and_call_original
+      allow(IncomingAttention::Labels).
+        to receive(:routine?).with(reply).and_return(true)
+      found = row
+      expect(found.ancestors('.documents-todo__fold').first.
+             at_css('summary').text).
+        to start_with('Set aside')
     end
   end
 

@@ -4,7 +4,7 @@ RSpec.describe 'Request deadlines' do
   # Monday 7 September 2026; due 5 October (20 working days).
   let(:start) { Time.zone.parse('2026-09-07 10:00') }
 
-  include_context 'with incoming attention off' if defined?(IncomingAttention::Config)
+  include_context 'with incoming attention off'
   let(:user) { FactoryBot.create(:user, trusted: true) }
 
   def request_sent(at: start, **attrs)

@@ -1,0 +1,6 @@
+<% if @request_history %>
+  <% suffix = incoming_message.response_event && Deadlines::History.reply_suffix(@info_request, incoming_message.response_event) %>
+  <% if suffix %><span class="incoming-reply-type"><%= suffix %></span><% end %>
+<% elsif IncomingAttention::Labels.visible_to?(incoming_message, @user, current_ability) && !IncomingAttention::Effective.notification_pending?(incoming_message) %>
+  <span class="incoming-reply-type"><%= _(IncomingAttention::Labels.for_message(incoming_message)) %></span>
+<% end %>

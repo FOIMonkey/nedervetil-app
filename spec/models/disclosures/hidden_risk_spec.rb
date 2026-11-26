@@ -142,8 +142,6 @@ RSpec.describe Disclosures::HiddenRisk do
     end
 
     it 'checks the file of a requester who opted out of AI reading like anyone’s' do
-      skip 'IncomingAttention::OptOut arrives in B10' unless defined?(IncomingAttention::OptOut)
-
       request = presidio([])
       IncomingAttention::OptOut.set!(owner, true)
       expect(described_class.high?(['Depot totals'], document)).to be(false)

@@ -188,7 +188,6 @@ class IncomingMessage < ApplicationRecord
 
   # A reading not queued here is queued by IncomingAttention::Recovery.
   def queue_attention_prediction
-    return unless defined?(IncomingAttention::Prediction)
 
     IncomingAttention::Prediction.for_message(self)&.enqueue!
   rescue StandardError => e
@@ -198,13 +197,11 @@ class IncomingMessage < ApplicationRecord
   end
 
   def create_attention_prediction
-    return unless defined?(IncomingAttention::Prediction)
 
     IncomingAttention::Prediction.ensure_for(self)
   end
 
   def invalidate_attention_prediction
-    return unless defined?(IncomingAttention::Prediction)
     return unless saved_change_to_info_request_id? ||
                   saved_change_to_raw_email_id? || saved_change_to_prominence?
 

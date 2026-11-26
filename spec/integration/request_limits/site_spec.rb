@@ -2,7 +2,7 @@ require 'spec_helper'
 
 RSpec.describe 'Request limits on the site', feature: :alaveteli_pro do
   include_context 'with request limits on, on the real clock'
-  include_context 'with incoming attention off' if defined?(IncomingAttention::Config)
+  include_context 'with incoming attention off'
 
   before do
     allow(Rails.application.config).

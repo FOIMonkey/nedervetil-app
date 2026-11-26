@@ -1,0 +1,75 @@
+<% mode = { 'needs_attention' => :attention, 'routine_updates' => :routine }.fetch(filter.to_s, :overview) %>
+<% filter_path = ->(bucket) { alaveteli_pro_info_requests_path('alaveteli_pro_request_filter[filter]' => bucket) } %>
+<% summaries.each do |summary| %>
+  <% if %w[InfoRequest InfoRequestBatch].include?(summary.summarisable_type) %>
+    <% batch = summary.summarisable_type == 'InfoRequestBatch' %>
+    <% group_key = batch ? summary.summarisable_id : "request:#{summary.summarisable_id}" %>
+    <% card_id = batch ? "info-request-batch-#{summary.summarisable_id}" : "info-request-#{summary.summarisable_id}" %>
+    <% children = data[:requests][group_key] || [] %>
+    <% replies = children.flat_map { |request| (data[:messages][request.id] || []).map { |m|
+         IncomingAttention::Effective::InboxReply.new(m, request, data[:labels].fetch(m.id), data[:decisions].fetch(m.id).routine?) } } %>
+    <% replies = replies.sort_by { |reply| [reply.received_at, reply.message.id] }.reverse %>
+    <% attention = replies.reject(&:routine) %>
+    <% routine = replies.select(&:routine) %>
+    <article class="request attention-request-group" id="<%= card_id %>" data-summary-id="<%= summary.id %>">
+      <h3 class="request__title">
+        <% if children.any? { |request| request.prominence(decorate: true).is_requester_only? } %>
+          <span class="embargo-indicator embargo-indicator--small" title="<%= _('Private until you choose to publish') %>"><%= _('Private') %></span>
+        <% end %>
+        <% if batch %>
+          <%= link_to summary.title, info_request_batch_path(summary.summarisable_id) %>
+        <% elsif children.first %>
+          <%= link_to summary.title, show_request_path(children.first.url_title) %>
+        <% else %><%= summary.title %><% end %>
+      </h3>
+
+      <% if children.empty? %>
+        <p class="attention-group__meta"><%= _('No visible correspondence in this group.') %></p>
+      <% elsif mode == :attention %>
+        <ul class="attention-replies">
+          <%= render partial: 'incoming_attention/attention_reply', collection: attention, as: :reply, locals: { show_request: false } %>
+        </ul>
+        <% if routine.any? %>
+          <p class="attention-group__also"><%= link_to n_('Also {{count}} routine update', 'Also {{count}} routine updates', routine.size, count: routine.size), filter_path.('routine_updates') + "##{card_id}" %></p>
+        <% end %>
+      <% elsif mode == :routine %>
+        <div class="routine-updates">
+          <%= render partial: 'incoming_attention/routine_line', locals: { replies: routine, return_to: 'routine_updates' } %>
+        </div>
+        <% if attention.any? %>
+          <p class="attention-group__also"><%= link_to n_('{{count}} reply needs attention', '{{count}} replies need attention', attention.size, count: attention.size), filter_path.('needs_attention') + "##{card_id}" %></p>
+        <% end %>
+      <% else %>
+        <p class="attention-group__meta">
+          <% if batch %>
+            <% names = children.map { |request| request.public_body.name }.uniq %>
+            <span><%= _('To {{public_body_names}}', public_body_names: names.size > 4 ? _('{{public_body_names}} and {{count}} others', public_body_names: names.first(3).join(', '), count: names.size - 3) : names.to_sentence(last_word_connector: ' and ')) %></span>
+            <% if (sent_at = summary.summarisable.sent_at) %><span><%= _('Sent {{date}}', date: I18n.l(sent_at, format: '%-d %b %Y')) %></span><% end %>
+            <% next_child = children.map { |child| Deadlines::NextAction.for(child) }.reject(&:none?).select(&:date).min_by(&:date) %>
+            <% if next_child %><span class="attention-group__deadline"><%= render partial: 'deadlines/action_line', locals: { action: next_child } %> (<%= next_child.request.public_body.name %>)</span><% end %>
+          <% else %>
+            <% request = children.first %>
+            <% status = IncomingAttention::Effective.dashboard_status(request) %>
+            <span class="attention-group__status"><span class="icon-standalone icon_<%= status %>" aria-hidden="true"></span><%= InfoRequest::State.short_description(status) %></span>
+            <span><%= _('To {{authority}}', authority: request.public_body.name) %></span>
+            <% next_action = Deadlines::NextAction.for(request) %>
+            <% if !next_action.none? && next_action.group != :needs_attention %>
+              <span class="attention-group__deadline"><%= render partial: 'deadlines/action_line', locals: { action: next_action } %></span>
+            <% elsif status.start_with?('waiting_response') || status == 'waiting_classification' %>
+              <span><%= status == 'waiting_response' || status == 'waiting_classification' ? _('Due {{date}}', date: I18n.l(request.date_response_required_by, format: '%-d %b %Y')) : _('Was due {{date}}', date: I18n.l(request.date_response_required_by, format: '%-d %b %Y')) %></span>
+            <% end %>
+          <% end %>
+        </p>
+        <% if attention.any? || routine.any? %>
+          <p class="attention-group__replies">
+            <% if attention.any? %><%= link_to n_('{{count}} reply needs attention', '{{count}} replies need attention', attention.size, count: attention.size), filter_path.('needs_attention') + "##{card_id}", class: 'attention-group__replies--attention' %><% end %>
+            <% if attention.any? && routine.any? %> · <% end %>
+            <% if routine.any? %><%= link_to n_('{{count}} routine update', '{{count}} routine updates', routine.size, count: routine.size), filter_path.('routine_updates') + "##{card_id}" %><% end %>
+          </p>
+        <% end %>
+      <% end %>
+    </article>
+  <% else %>
+    <%= render summary.summarisable %>
+  <% end %>
+<% end %>

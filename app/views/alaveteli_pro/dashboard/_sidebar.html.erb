@@ -1,5 +1,5 @@
 <% phase_counts = @user.phase_counts %>
-<% if defined?(IncomingAttention::Effective) && IncomingAttention::Effective.active? %>
+<% if IncomingAttention::Effective.active? %>
 <% current = controller_name == 'info_requests' && action_name == 'index' ? (@request_filter&.filter.presence || 'not_drafts') : nil %>
 <% marks = { awaiting_response: 'waiting_response', overdue: 'waiting_response_overdue',
              very_overdue: 'waiting_response_very_overdue', response_received: 'waiting_classification',

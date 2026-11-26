@@ -209,7 +209,6 @@ class RawEmail < ApplicationRecord
   end
 
   def invalidate_attention_prediction
-    return unless defined?(IncomingAttention::Prediction)
 
     IncomingAttention::Prediction.invalidate_message(
       incoming_message&.id, 'raw_erased'
