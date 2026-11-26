@@ -30,7 +30,7 @@ module Classifiable
              when 'requires_admin'
                _('This request requires administrator attention')
              else
-               raise 'Unsupported state'
+               raise ActiveRecord::RecordNotFound
              end
 
     render 'classifications/message'
@@ -58,6 +58,19 @@ module Classifiable
       url_title: info_request.url_title,
       described_state: classification_params[:described_state]
     )
+  end
+
+  # Rejects stale classifications when newer events exist (skipping if
+  # only_when_given and param absent). Callers check `return if performed?`.
+  def turn_back_stale_answer(only_when_given: false)
+    return if only_when_given && !params.key?(:last_info_request_event_id)
+    return if params[:last_info_request_event_id].to_i ==
+              info_request.last_event_id_needing_description
+
+    flash[:error] = _('The request has been updated since you originally ' \
+                      'loaded this page. Please check for any new incoming ' \
+                      'messages below, and try again.')
+    redirect_to show_request_path(url_title: info_request.url_title)
   end
 
   def message_required_for_state?

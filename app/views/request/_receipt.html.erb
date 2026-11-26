@@ -1,0 +1,67 @@
+<% request = @info_request %>
+<% fmt = ->(date) { Deadlines::Overview.format_date(date) } %>
+<% owner = request.is_actual_owning_user?(@user) %>
+<% row = @requester_panel&.replies&.find { |candidate| candidate.message == reply.message } %>
+<% @receipt_message = reply.message %>
+<% share = owner && row && can?(:publish_from_reply, reply.message) && (reply_to_share?(row) || (row.pending && reply.files.any?)) %>
+<% publishes = can?(:publish_from_reply, reply.message) && !can?(:admin, request) %>
+<% asking = owner && reply.ask? && !local_assigns[:arrived] && can?(:update_request_state, request) %>
+<% said = reply.excerpt %>
+<%# Coming up says this once there's a row for it. %>
+<% review_line = review_by && !local_assigns[:review_coming_up] && _('You can ask for a review until {{date}}.', date: fmt.(review_by)) %>
+<% body_name = request.public_body.short_name.presence || request.public_body.name %>
+<%# Someone told nothing came needs the review, not the sharing. %>
+<% answer = !asking && reply.answer %>
+<% review_first = answer == 'none' && review_by && owner %>
+<% review_line = _('You can ask them to look again until {{date}}.', date: fmt.(review_by)) if review_first %>
+<% earlier = owner && @requester_panel&.replies&.reverse&.find { |candidate| candidate.message != reply.message && can?(:publish_from_reply, candidate.message) && reply_to_share?(candidate) } %>
+<% waiting = owner && row && !can?(:publish_from_reply, reply.message) ? row.main.reject(&:document) : [] %>
+<section class="receipt" aria-labelledby="receipt-title">
+  <h2 id="receipt-title" class="receipt__head">
+    <% if !reply.due %><%= _('{{public_body_name}} replied', public_body_name: body_name) %>
+    <% elsif reply.late? %><%= _('{{public_body_name}} replied late', public_body_name: body_name) %>
+    <% else %><%= _('{{public_body_name}} replied on time', public_body_name: body_name) %><% end %>
+    <span class="receipt__date">· <%= fmt.(reply.date) %></span>
+  </h2>
+  <%= render partial: 'request/incoming_outcome', locals: { incoming_message: reply.message } %>
+  <% if said %>
+    <div class="receipt__said">
+      <blockquote><p>“<%= said %>”</p></blockquote>
+      <% if owner %><p class="receipt__letter"><%= link_to _('Read their full letter'), "#reply-#{reply.message.id}" %></p><% end %>
+    </div>
+  <% end %>
+  <% if asking %>
+    <%= render partial: 'request/reply_ask', locals: { request: request } %>
+  <% elsif answer %>
+    <p class="receipt__answer" id="receipt-answer"><span class="receipt__got"><%= _(Deadlines::Reply::GOT.fetch(answer)) %>.</span><% if local_assigns[:change] %> <a class="receipt__change" href="#describe_state_form_1"><%= _('Change') %><span class="visually-hidden">: <%= _('what you got') %></span></a><% end %><% if review_line %><span class="receipt__answer-next"><%= review_line %></span><% end %></p>
+  <% elsif review_line %>
+    <p class="receipt__answer"><%= review_line %></p>
+  <% end %>
+  <div class="receipt__files" id="receipt-files">
+    <%= render partial: 'request/attachment_list', locals: { incoming_message: reply.message, attachments: reply.message.get_attachments_for_display, publishes: publishes } %>
+  </div>
+  <% if waiting.any? %>
+    <div class="documents-todo"><%= render partial: 'disclosures/request_todo_rows', locals: { rows: waiting } %></div>
+  <% end %>
+  <% if asking && review_line %><p class="receipt__by"><%= review_line %></p><% end %>
+  <% if earlier %><p class="receipt__earlier"><%= link_to _('Earlier files to share'), "#reply-#{earlier.message.id}" %></p><% end %>
+  <% if owner %>
+    <div class="receipt__bar">
+      <div class="receipt__acts<%= ' receipt__acts--review-first' if review_first %>">
+        <% if share %><%= link_to _('Share documents'), publish_reply_path(url_title: request.url_title, message_id: reply.message.id), class: "receipt__act#{' receipt__act--primary' unless asking || review_first}" %><% end %>
+        <%= link_to _('Reply'), new_request_incoming_followup_path(request.url_title, incoming_message_id: reply.message.id), class: 'receipt__act' %>
+        <% if review_by %><%= link_to _('Ask for review'), new_request_followup_path(request.url_title, internal_review: 1), class: "receipt__act#{' receipt__act--primary' if review_first}" %><% end %>
+      </div>
+      <details class="receipt__more">
+        <summary><%= _('More') %></summary>
+        <ul class="receipt__next">
+          <li><%= link_to _('Ask again'), new_alaveteli_pro_info_request_path(from: request.id, public_body: request.public_body.url_name) %><span><%= _('Start from this letter') %></span></li>
+          <li><%= link_to _('Ask someone else'), new_alaveteli_pro_info_request_path(from: request.id) %><span><%= _('The same letter, another authority') %></span></li>
+        </ul>
+        <% if local_assigns[:after].present? %><div class="receipt__rest"><%= local_assigns[:after] %></div><% end %>
+      </details>
+    </div>
+  <% else %>
+    <%= local_assigns[:after] %>
+  <% end %>
+</section>

@@ -11,8 +11,7 @@ module OutgoingMessage::DeliveryTransitions
   def record_failure_status
     request = info_request
     request.with_lock do
-      return if defined?(Deadlines::Closure) &&
-                Deadlines::Closure.unread_replies?(request)
+      return if Deadlines::Closure.unread_replies?(request)
 
       automatic { request.set_described_state('error_message') }
     end
@@ -48,8 +47,7 @@ module OutgoingMessage::DeliveryTransitions
     # Keep checks, status write and due-date update inside the row lock.
     request.with_lock do
       return unless request.described_state == 'error_message'
-      return if defined?(Deadlines::Closure) &&
-                Deadlines::Closure.unread_replies?(request)
+      return if Deadlines::Closure.unread_replies?(request)
 
       events = request.info_request_events.order(:id).to_a
       sent = last_send(events) or return

@@ -8,7 +8,7 @@
 
 <%= render_prominence(incoming_message.get_main_body_text_part, format: :text) -%>
 <% if can?(:read, incoming_message.get_main_body_text_part) %>
-<%= incoming_message.get_body_for_quoting %>
+<%= @pack_bodies&.fetch(incoming_message.id, nil) || incoming_message.get_body_for_quoting %>
 <% end %>
 <% incoming_message.get_attachments_for_display.each do |a| %>
 <%= _('Attachment:') %> <% if can?(:read, a) %><%= a.display_filename %> (<%= a.display_size %>)<% end %> <%= render_prominence(a, format: :text) -%>

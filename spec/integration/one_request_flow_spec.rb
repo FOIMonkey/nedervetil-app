@@ -25,9 +25,7 @@ RSpec.describe 'Signed-in request flow', type: :request do
     it 'opens the inbox' do
       get '/pro/dashboard'
       expect(response).to have_http_status(:ok)
-      if defined?(Deadlines::Piles)
-        expect(page_html.at_css('.dashboard-page')).to be_present
-      end
+      expect(page_html.at_css('.dashboard-page')).to be_present
     end
 
     it 'sends the classic request form to the inbox form' do
@@ -56,7 +54,7 @@ RSpec.describe 'Signed-in request flow', type: :request do
       info_request = FactoryBot.create(:info_request, user: user)
       get "/request/#{info_request.url_title}"
       expect(response).to have_http_status(:ok)
-      expect(home_crumb).to be_present if defined?(Deadlines::Piles)
+      expect(home_crumb).to be_present
     end
   end
 

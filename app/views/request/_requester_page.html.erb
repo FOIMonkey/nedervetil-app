@@ -1,0 +1,66 @@
+<% content_for :body_class, 'band-view requester-view' %>
+<% Deadlines::Stage.share_thread(@info_request) %>
+<% action = Deadlines::NextAction.for(@info_request) %>
+<% unread = Deadlines::Overview.attention_messages([@info_request]) || [] %>
+<% pile = Deadlines::Piles.pile(action, unread) %>
+<% panel = Disclosures::Panel.new(@info_request, current_ability) %>
+<% @requester_panel = panel %>
+<% @disclosure_attachment_documents = panel.attachment_documents %>
+<% history = Deadlines::History.new(@info_request, current_ability, documents: panel.documents) %>
+<% private_request = @info_request.prominence(decorate: true).is_requester_only? %>
+<% sent = Deadlines::Stage.response_basis(@info_request) %>
+<% @request_history = true %>
+<%# A reply has come, whatever the labels still say: nothing is being waited for. %>
+<% arrived = %i[response post review].include?(action.kind) && Deadlines::Reply.latest(@info_request, current_ability)&.being_read? %>
+
+<div class="page-band request-band">
+  <p class="request-band__crumb"><%= link_to _('Home'), alaveteli_pro_dashboard_path %> / <b><%= _(Deadlines::Piles::NAMES.fetch(pile)) %></b></p>
+  <% if flash[:request_sent] %>
+    <p class="request-band__stamp" role="status"><%= _('Sent to {{public_body_name}}', public_body_name: @info_request.public_body.name) %></p>
+  <% end %>
+  <h1 class="page-band__title request-band__title"><%= @info_request.title %></h1>
+  <p class="request-band__facts">
+    <span><%= _('To {{public_body_link}}', public_body_link: link_to(@info_request.public_body.name, public_body_path(@info_request.public_body))) %></span>
+    <% if sent %><span><%= _('Sent {{date}}', date: I18n.l(sent.created_at.to_date, format: '%-d %b %Y')) %></span><% end %>
+    <span><%= action.law %></span>
+    <% if private_request %><span class="page-band__label"><%= _('Private') %></span><% end %>
+  </p>
+  <% unless arrived %><%= render partial: 'request/deadline_track', locals: { action: action, sent: sent, fresh: flash[:request_sent].present? } %><% end %>
+</div>
+<%= band_notice %>
+
+<%= render partial: 'request/hidden_request_messages' %>
+
+<div class="requester-page" data-controller="feed-reveal" data-action="click->feed-reveal#click hashchange@window->feed-reveal#fromHash">
+  <%= render partial: 'request/next_step',
+             locals: { step: Deadlines::NextStep.new(action, unread: unread, ability: current_ability, arrived: arrived, status_choices: (@state_transitions if @is_owning_user)),
+                       action: action, unread: unread, fresh: flash[:request_sent].present?, arrived: arrived } %>
+
+  <%= render_notes(@info_request.all_notes) %>
+  <% dates = capture do %>
+    <% if can?(:adjust_deadlines, @info_request) %>
+      <details class="feed__dates">
+        <summary>
+          <span class="feed__what"><span class="feed__title"><%= _('Deadlines') %></span><span class="feed__meta"><%= _('See or change the dates') %></span></span>
+          <span class="feed__open"><span class="feed__closed"><%= _('Open') %></span><span class="feed__opened"><%= _('Close') %></span></span>
+        </summary>
+        <div class="feed__sheet">
+          <%= render partial: 'deadlines/case_panel', locals: { info_request: @info_request, on_page: true, complete: !%i[ask_review regulator].include?(action.kind) } %>
+        </div>
+      </details>
+    <% end %>
+  <% end %>
+  <%= render partial: 'deadlines/feed', locals: { history: history, action: action, unread: unread, dates: dates, arrived: arrived } %>
+
+  <div class="request-foot">
+    <% if private_request %>
+      <p><%= _('Private: only you and the site’s admins can see it.') %></p>
+    <% end %>
+    <p class="request-foot__links">
+      <%= link_to _('Download all'), download_entire_request_path(url_title: @info_request.url_title), data: { turbo: false } %>
+      <% if Disclosures::RequestDeletion.new(@info_request, current_user).offered? %>
+        <%= link_to _('Delete the emails, keep the documents'), request_deletion_path(url_title: @info_request.url_title) %>
+      <% end %>
+    </p>
+  </div>
+</div>

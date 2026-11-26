@@ -11,8 +11,12 @@
 #  content    :text
 #
 
+# A translated announcement shown site-wide, in the inbox or to users with a
+# specific role, with per-user dismissal tracking through AnnouncementDismissal.
 class Announcement < ApplicationRecord
   SITE_WIDE = 'everyone'.freeze
+  # Stored as 'pro' for compatibility with existing inbox announcements.
+  INBOX = 'pro'.freeze
 
   belongs_to :user,
              inverse_of: :announcements
@@ -27,29 +31,26 @@ class Announcement < ApplicationRecord
   default_scope -> { order(created_at: :desc) }
   scope :visible_to, -> (visible_to) { where(visibility: visible_to) }
 
-  scope :for_user_with_roles, -> (user, *roles) {
-    # has the user dismissed the announcement
+  scope :for_user, -> (user, *visibilities) {
     where(
       'announcements.id NOT IN (SELECT announcement_id FROM ' \
       'announcement_dismissals WHERE user_id = :user_id)',
       user_id: user
     ).
+      where('announcements.created_at >= ?', user.created_at).
+      visible_to(visibilities)
+  }
 
-    # does the announcement have the same visibility role as the user or set
-    # to be visible to everyone
-    where(
-      'announcements.visibility IN (' \
-        'SELECT roles.name FROM roles ' \
-        'INNER JOIN users_roles ON users_roles.role_id = roles.id ' \
-        'WHERE users_roles.user_id = :user_id' \
-      ')',
-      user_id: user
-    ).
-
-    # hide old announcements, created before user signed up
-    where('announcements.created_at >= ?', user.created_at).
-
-    visible_to(roles)
+  scope :for_user_with_roles, -> (user, *roles) {
+    for_user(user, *roles).
+      where(
+        'announcements.visibility IN (' \
+          'SELECT roles.name FROM roles ' \
+          'INNER JOIN users_roles ON users_roles.role_id = roles.id ' \
+          'WHERE users_roles.user_id = :user_id' \
+        ')',
+        user_id: user
+      )
   }
 
   scope :site_wide_for_user, -> (user = nil, dismissed_announcements = nil) {
@@ -58,12 +59,12 @@ class Announcement < ApplicationRecord
 
     if user
       last_dismissed = relation.joins(:dismissals).
-        where('announcement_dismissals.user_id = :user', user: user)
+        where(announcement_dismissals: { user_id: user })
     else
       last_dismissed = relation.where(id: dismissed_announcements)
     end
 
-    created_at = last_dismissed.limit(1).pluck(:created_at).first
+    created_at = last_dismissed.pick(:created_at)
 
     if created_at
       relation.
@@ -77,7 +78,7 @@ class Announcement < ApplicationRecord
             presence: true
   validates :visibility,
             presence: true,
-            inclusion: { in: [SITE_WIDE] + Role.allowed_roles }
+            inclusion: { in: [SITE_WIDE, INBOX] + Role.allowed_roles }
 
   after_initialize :set_defaults
 

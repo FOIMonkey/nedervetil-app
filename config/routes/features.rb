@@ -1,3 +1,16 @@
+# Request deadlines.
+scope 'deadlines/:request_id',
+      module: 'deadlines',
+      as: 'request_deadline',
+      constraints: { request_id: /\d+/,
+                     stage: /response|review_request|review/ } do
+  post 'remind', to: 'reminders#create', as: 'remind'
+  post 'complete', to: 'closures#create', as: 'complete'
+  post 'reopen', to: 'closures#destroy', as: 'reopen'
+  post ':stage', to: 'adjustments#create', as: ''
+  post ':stage/restore', to: 'adjustments#destroy', as: 'restore'
+end
+
 get 'request/:url_title/delete', to: 'disclosures/request_deletions#new',
                                  as: :request_deletion
 post 'request/:url_title/delete', to: 'disclosures/request_deletions#create'

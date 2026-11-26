@@ -1,0 +1,69 @@
+<% if sent && action.date && %i[response post review].include?(action.kind) && !(action.kind == :post && action.date < Time.zone.today) %>
+  <% fmt = ->(date) { Deadlines::Overview.format_date(date) } %>
+  <% long = ->(date) { I18n.l(date, format: '%-d %B') } %>
+  <% today = Time.zone.today %>
+  <% start = sent.created_at.to_date %>
+  <% finish = [action.date, today].max %>
+  <% span = [(finish - start).to_i, 1].max %>
+  <% at = ->(date) { (100.0 * (date - start).to_i / span).clamp(0, 100).round(1) } %>
+  <% due_label = { response: _('Response due'), post: _('Response due'), review: _('Review due'), ask_review: _('Review by') }.fetch(action.kind) %>
+  <% stops = [] %>
+  <% if %i[review ask_review].include?(action.kind) %>
+    <% response_due = @info_request.date_response_required_by %>
+    <% decision = Deadlines::Stage.decision_response(@info_request) %>
+    <% if response_due && response_due > start && response_due < action.date %>
+      <% stops << { label: _('Response due'), date: response_due, met: decision && decision.created_at.to_date <= response_due } %>
+    <% end %>
+    <% if action.kind == :review && (review = Deadlines::Stage.review_basis(@info_request)) %>
+      <% stops << { label: _('Review asked'), date: review.created_at.to_date } %>
+    <% end %>
+  <% end %>
+  <% stops = stops.reject { |stop| at.(stop[:date]) < 15 || at.(stop[:date]) > 85 } %>
+  <% stops = stops.reject.with_index { |stop, i| i.positive? && (at.(stop[:date]) - at.(stops[i - 1][:date])).abs < 15 } %>
+  <% due_at = at.(action.date) %>
+  <% spoken = [_('Request sent {{date}}', date: long.(start)), *stops.map { |stop| "#{stop[:label]} #{long.(stop[:date])}" },
+               "#{action.late? ? _('Due') : due_label} #{long.(action.date)}", _('Today is {{date}}', date: long.(today))] %>
+  <% if local_assigns[:fresh] && action.kind == :response && !action.late? %>
+    <% total = Deadlines::Calendar.working_days_between(start, action.date, action.regime) %>
+    <% used = Deadlines::Calendar.working_days_between(start, today, action.regime) %>
+    <div class="deadline-count">
+      <p class="deadline-count__head"><span class="deadline-count__big"><%= action.days_left %></span><span class="deadline-count__label"><%= n_('<b>working day</b>for their reply, due {{date}}', '<b>working days</b>for their reply, due {{date}}', action.days_left, date: long.(action.date)) %></span></p>
+      <div class="deadline-count__cells" role="img" aria-label="<%= used.zero? ? _('Sent today.') : _('{{used}} of {{total}} working days gone.', used: used, total: total) %> <%= _('Response due {{date}}.', date: long.(action.date)) %>" style="grid-template-columns: repeat(<%= total %>, minmax(0, 1fr))">
+        <% total.times do |day| %><i<% if day < [used, 1].max %> class="deadline-count__gone"<% end %>></i><% end %>
+      </div>
+      <p class="deadline-count__key"><span><b><%= _('Sent') %></b> <%= fmt.(start) %></span><span><b><%= _('Response due') %></b> <%= fmt.(action.date) %></span></p>
+    </div>
+  <% else %>
+  <div class="deadline-track">
+    <div class="deadline-track__head">
+      <p class="deadline-track__left">
+        <% if action.late? %>
+          <%= n_('{{count}} working day late', '{{count}} working days late', action.late_days, count: action.late_days) %>
+        <% elsif action.days_left.zero? %>
+          <%= _('Due today') %>
+        <% else %>
+          <%= n_('{{count}} working day left', '{{count}} working days left', action.days_left, count: action.days_left) %>
+          <span><%= { response: _('for their reply'), post: _('for their reply'), review: _('for the internal review'), ask_review: _('to ask for an internal review') }.fetch(action.kind) %></span>
+        <% end %>
+      </p>
+      <% if action.adjustable_stage %><a class="deadline-track__change" href="#deadlines"><%= _('Change the due date') %></a><% end %>
+    </div>
+    <div class="deadline-track__track" role="img" aria-label="<%= spoken.join('. ') %>.">
+      <% unless action.late? && due_at < 18 %><span class="deadline-track__stop deadline-track__stop--first"><b><%= _('Sent') %></b> <%= fmt.(start) %></span><% end %>
+      <% stops.each do |stop| %>
+        <span class="deadline-track__stop deadline-track__stop--mid<%= ' deadline-track__stop--met' if stop[:met] %>" style="left: <%= at.(stop[:date]) %>%"><%= stop[:label] %> <%= fmt.(stop[:date]) %></span>
+      <% end %>
+      <% if action.late? %>
+        <span class="deadline-track__stop<%= ' deadline-track__stop--end' if due_at > 80 %>" style="left: <%= due_at %>%"><b><%= _('Due') %></b> <%= fmt.(action.date) %></span>
+      <% else %>
+        <span class="deadline-track__stop deadline-track__stop--last"><b><%= due_label %></b> <%= fmt.(action.date) %></span>
+      <% end %>
+      <div class="deadline-track__bar">
+        <div class="deadline-track__fill" style="width: <%= action.late? ? due_at : at.(today) %>%"></div>
+        <% if action.late? %><div class="deadline-track__overrun" style="left: <%= due_at %>%"></div><% end %>
+      </div>
+      <span class="deadline-track__today<%= ' deadline-track__today--end' if at.(today) > 90 %><%= ' deadline-track__today--start' if at.(today) < 8 %>" style="left: <%= at.(today) %>%"><%= _('Today') %></span>
+    </div>
+  </div>
+  <% end %>
+<% end %>

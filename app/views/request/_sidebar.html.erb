@@ -1,4 +1,7 @@
 <div id="right_column" class="sidebar right_column" role="complementary">
+  <% if can?(:adjust_deadlines, info_request) %>
+    <%= render partial: 'deadlines/case_panel', locals: { info_request: info_request } %>
+  <% end %>
   <%= render partial: 'disclosures/request_documents', locals: { info_request: info_request } %>
   <div class="sidebar__section new-request-cta">
     <%= render partial: 'general/new_request' %>
@@ -25,8 +28,10 @@
   <%= render partial: 'request/batch',
              locals: { info_request: info_request } %>
 
-  <%= render partial: 'request/citations',
-             locals: { citations: citations, info_request: info_request } %>
+  <% if local_assigns[:citations] %>
+    <%= render partial: 'request/citations',
+               locals: { citations: citations, info_request: info_request } %>
+  <% end %>
 
   <%= render partial: 'blog_posts/blog_posts',
              locals: { taggable: info_request } %>

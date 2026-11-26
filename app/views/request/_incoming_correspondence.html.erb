@@ -34,7 +34,7 @@
       <% end %>
     </p>
 
-    <% if show_correspondence_footer %>
+    <% if local_assigns[:show_correspondence_footer] %>
       <% link_to_this_url = incoming_message_url(incoming_message) %>
 
       <% report_path =

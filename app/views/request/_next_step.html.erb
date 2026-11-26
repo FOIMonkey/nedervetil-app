@@ -1,0 +1,169 @@
+<%# A theme's page may render this with only the locals it has always taken. %>
+<% step = local_assigns[:step] || Deadlines::NextStep.new(action, unread: unread, ability: current_ability, arrived: local_assigns[:arrived], status_choices: (@state_transitions if @is_owning_user)) %>
+<% request = @info_request %>
+<% change_status = capture do %>
+  <% if step.change_status? %>
+    <details class="next-step__status" id="describe_state_form_1"<%= ' open' if @update_status %>>
+      <summary><span class="receipt__label"><%= _('Change status') %></span><span class="receipt__hint"><%= _('If what happened has changed') %></span></summary>
+      <%= render partial: 'request/describe_state', locals: { id_suffix: '1' } %>
+    </details>
+  <% end %>
+<% end %>
+<%# The way to write to them, in every state: the latest reply's section has its own Reply. %>
+<% write = capture do %>
+  <% if step.last_response %>
+    <%= link_to _('Write a reply'), new_request_incoming_followup_path(request.url_title, incoming_message_id: step.last_response.id, anchor: 'followup'), class: 'next-step__minor' %>
+  <% else %>
+    <%= link_to _('Send a followup'), new_request_followup_path(request.url_title, anchor: 'followup'), class: 'next-step__minor' %>
+  <% end %>
+<% end %>
+<% case step.panel %>
+<% when :receipt %>
+  <% after = capture do %>
+    <% if step.completable? && !action.none? %><%= render partial: 'deadlines/complete_form', locals: { request: request, return_to: 'request', hint: _('Move it to Finished') } %><% end %>
+    <%= change_status %>
+    <% if defined?(IncomingAttention::Effective) %>
+      <%= render partial: 'request/attention_choice', locals: { incoming_message: step.latest_reply.message } %>
+    <% end %>
+  <% end %>
+  <%= render partial: 'request/receipt', locals: { reply: step.latest_reply, review_by: step.review_by, after: after, review_coming_up: step.review_coming_up?, arrived: local_assigns[:arrived], change: step.change_status? } %>
+<% when :closed %>
+  <section class="next-step next-step--quiet next-step--done" aria-labelledby="next-step-title">
+    <p class="receipt__kicker"><%= _('Marked complete {{date}}', date: step.short_date(action.closure.created_at.to_date)) %></p>
+    <h2 id="next-step-title"><%= InfoRequest::State.short_description(action.closure.final_state) %></h2>
+    <div class="next-step__actions">
+      <% to_share = @requester_panel&.replies&.reverse&.find { |row| can?(:publish_from_reply, row.message) && reply_to_share?(row) } %>
+      <% if to_share %><%= link_to _('Share documents'), publish_reply_path(url_title: request.url_title, message_id: to_share.message.id), class: 'button' %><% end %>
+      <%# Comes back to this page, which refreshes in place and lands on the deadlines panel (doc/FORK.md). %>
+      <%= form_tag request_deadline_reopen_path(request_id: request.id), class: 'next-step__form', data: { turbo_action: 'replace', lands_on: 'deadlines' } do %>
+        <button type="submit" class="next-step__link"><%= _('Reopen') %></button>
+      <% end %>
+      <%= write %>
+    </div>
+  </section>
+<% when :done %>
+  <section class="next-step next-step--quiet next-step--done" aria-labelledby="next-step-title">
+    <h2 id="next-step-title"><%= InfoRequest::State.short_description(request.calculate_status) %></h2>
+    <div class="next-step__actions"><%= write %></div>
+    <%= change_status %>
+  </section>
+<% when :act %>
+  <section class="next-step next-step--act" aria-labelledby="next-step-title">
+    <% case action.kind %>
+    <% when :ask_review %>
+      <h2 id="next-step-title"><%= step.decision %></h2>
+      <% if action.regime == 'foi' %>
+        <p><%= _('Ask for an internal review by {{date}}. After that, they can refuse to review it.', date: step.long_date(action.date)) %></p>
+      <% else %>
+        <p><%= _('You can ask for a review until {{date}}.', date: step.long_date(action.date)) %></p>
+      <% end %>
+      <div class="next-step__actions">
+        <%= link_to action.scottish? ? _('Ask for a review') : _('Ask for an internal review'), new_request_followup_path(request.url_title, internal_review: '1', anchor: 'followup'), class: 'button' %>
+        <%= write %>
+        <% if step.completable? %><%= render partial: 'deadlines/complete_form', locals: { request: request, return_to: 'request' } %><% end %>
+      </div>
+      <%= change_status %>
+    <% when :regulator %>
+      <h2 id="next-step-title"><%= step.decision %></h2>
+      <% if action.scottish? %>
+        <p><%= _('You can apply to the Scottish Information Commissioner until {{date}}.', date: step.long_date(action.date)) %></p>
+      <% else %>
+        <p><%= _('The ICO asks for complaints within 6 weeks: by {{date}}.', date: step.long_date(action.date)) %></p>
+      <% end %>
+      <div class="next-step__actions">
+        <%= link_to action.scottish? ? _('Apply to the Commissioner') : _('Complain to the ICO'), help_unhappy_path(url_title: request.url_title), class: 'button' %>
+        <%= write %>
+        <% if step.completable? %><%= render partial: 'deadlines/complete_form', locals: { request: request, return_to: 'request' } %><% end %>
+      </div>
+      <%= change_status %>
+    <% when :clarify %>
+      <h2 id="next-step-title"><%= action.label %></h2>
+      <p><%= _('They asked on {{date}}.', date: step.long_date(action.date)) %><% if action.reply_by %> <%= _('Reply by {{date}}, or they may close it.', date: step.long_date(action.reply_by)) %><% end %></p>
+      <div class="next-step__actions">
+        <%= link_to _('Reply to the authority'), step.last_response ? new_request_incoming_followup_path(request.url_title, incoming_message_id: step.last_response.id, anchor: 'followup') : new_request_followup_path(request.url_title, anchor: 'followup'), class: 'button' %>
+      </div>
+      <%= change_status %>
+    <% when :read_reply %>
+      <h2 id="next-step-title"><%= action.label %></h2>
+      <p><%= _('Read it, then set the status.') %></p>
+      <div class="next-step__actions">
+        <% if step.reply_to_read %><%= link_to _('Read the reply'), "#reply-#{step.reply_to_read.id}", class: 'button' %><% end %>
+        <%= write %>
+      </div>
+      <%= change_status %>
+    <% when :delivery %>
+      <h2 id="next-step-title"><%= action.label %></h2>
+      <p><%= _('Your request couldn’t be delivered.') %></p>
+      <div class="next-step__actions">
+        <%= link_to _('Contact us'), help_contact_path, class: 'button' %>
+        <%= write %>
+      </div>
+      <%= change_status %>
+    <% else %>
+      <% review = new_request_followup_path(request.url_title, internal_review: '1', anchor: 'followup') %>
+      <% unhappy = help_unhappy_path(url_title: request.url_title) %>
+      <% remind = ->(primary) do
+           if action.reminder
+             tag.span(_('Reminded {{date}}', date: step.short_date(action.reminder.created_at.to_date)), class: 'next-step__minor')
+           elsif action.remindable? && request.is_actual_owning_user?(@user)
+             form_tag(request_deadline_remind_path(request_id: request.id), class: 'next-step__form') do
+               button_tag(_('Remind them'), type: 'submit', class: primary ? 'button' : 'next-step__link')
+             end
+           end
+         end %>
+      <h2 id="next-step-title"><%= action.label %></h2>
+      <% if action.kind == :review && action.scottish? %>
+        <p><%= _('It was due on {{due_date}}. You can apply to the Scottish Information Commissioner until {{apply_by}}.', due_date: step.long_date(action.date), apply_by: step.long_date(action.regulator_by)) %></p>
+        <div class="next-step__actions">
+          <%= link_to _('Apply to the Commissioner'), unhappy, class: 'button' %>
+          <%= remind.(false) %>
+          <%= write %>
+        </div>
+      <% elsif action.kind == :review %>
+        <p><%= _('It was due on {{due_date}}. You can complain to the ICO now.', due_date: step.long_date(action.date)) %></p>
+        <div class="next-step__actions">
+          <%= link_to _('Complain to the ICO'), unhappy, class: 'button' %>
+          <%= remind.(false) %>
+          <%= write %>
+        </div>
+      <% elsif action.scottish? %>
+        <p><%= _('It was due on {{due_date}}. In Scotland the next step is a review: ask by {{review_by}}.', due_date: step.long_date(action.date), review_by: step.long_date(action.review_by)) %></p>
+        <div class="next-step__actions">
+          <%= link_to _('Ask for a review'), review, class: 'button' %>
+          <%= remind.(false) %>
+          <%= write %>
+        </div>
+      <% else %>
+        <p><%= _('It was due on {{due_date}}.', due_date: step.long_date(action.date)) %><% if action.review_by %> <%= _('You can ask for an internal review until {{review_by}}.', review_by: step.long_date(action.review_by)) %><% end %></p>
+        <div class="next-step__actions">
+          <%= remind.(true) %>
+          <% if action.review_by %><%= link_to _('Ask for an internal review'), review, class: 'next-step__minor' %><% end %>
+          <%= link_to _('Complain to the ICO'), unhappy, class: 'next-step__minor' %>
+          <%= write %>
+        </div>
+      <% end %>
+      <%= change_status if @update_status %>
+    <% end %>
+  </section>
+<% when :waiting %>
+  <section class="next-step next-step--quiet" aria-labelledby="next-step-title">
+    <h2 id="next-step-title"><%= _('Waiting for {{public_body_name}}', public_body_name: request.public_body.name) %></h2>
+    <p><%= case action.kind
+      when :response then _('Reply due {{date}}.', date: step.short_date(action.date))
+      when :review then _('Internal review due {{date}}.', date: step.short_date(action.date))
+      when :post then _('Reply by post expected.')
+      when :follow_up then _('Follow-up sent {{date}}.', date: step.short_date(action.date))
+      end %></p>
+    <% if !step.completable? && step.reply_to_read %>
+      <p class="receipt__letter"><%= link_to _('Read the new reply'), "#reply-#{step.reply_to_read.id}" %></p>
+    <% end %>
+    <div class="next-step__actions"><%= write %></div>
+    <%= change_status if @update_status %>
+  </section>
+  <% if local_assigns[:fresh] && action.kind == :response %>
+    <div class="next-step__after">
+      <div><h3><%= _('When they reply') %></h3><p><%= defined?(IncomingAttention::InstantEmails) && !IncomingAttention::InstantEmails.on?(@user) ? _('It’s in your daily summary.') : _('We email you as it arrives.') %></p></div>
+      <div><h3><%= _('If they miss {{date}}', date: step.long_date(action.date)) %></h3><p><%= _('You can remind them in one click.') %></p></div>
+    </div>
+  <% end %>
+<% end %>

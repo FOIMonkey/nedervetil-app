@@ -1,16 +1,65 @@
+<% phase_counts = @user.phase_counts %>
+<% if defined?(IncomingAttention::Effective) && IncomingAttention::Effective.active? %>
+<% current = controller_name == 'info_requests' && action_name == 'index' ? (@request_filter&.filter.presence || 'not_drafts') : nil %>
+<% marks = { awaiting_response: 'waiting_response', overdue: 'waiting_response_overdue',
+             very_overdue: 'waiting_response_very_overdue', response_received: 'waiting_classification',
+             clarification_needed: 'waiting_clarification', complete: 'successful' } %>
+<% filter_path = ->(key) { alaveteli_pro_info_requests_path('alaveteli_pro_request_filter[filter]' => key) } %>
+<h2 class="dashboard-sidebar__heading"><%= _('New replies') %></h2>
+<ul class="vertical-navigation-menu dashboard-folders attention-sidebar">
+  <% [['needs_attention', _('Needs attention')], ['routine_updates', _('Routine updates')]].each do |bucket, label| %>
+  <% selected = current == bucket %>
+  <li class="vertical-navigation-menu__item dashboard-folder<%= ' attention-sidebar__item--active' if bucket == 'needs_attention' && phase_counts[bucket].positive? %><%= ' dashboard-folder--selected' if selected %>">
+    <%= link_to filter_path.(bucket), class: 'vertical-navigation-menu__link dashboard-folder__name', data: {attention_bucket: bucket, count: phase_counts[bucket]}, aria: {current: (selected ? 'page' : nil)} do %>
+      <%= label %> <span class="dashboard-folder__count"><%= phase_counts[bucket] %></span>
+    <% end %>
+  </li>
+  <% end %>
+</ul>
+<ul class="vertical-navigation-menu dashboard-folders">
+  <li class="vertical-navigation-menu__item dashboard-folder dashboard-folder--top-level<%= ' dashboard-folder--selected' if current == 'not_drafts' %>">
+    <%= link_to alaveteli_pro_info_requests_path, class: 'vertical-navigation-menu__link dashboard-folder__name', aria: {current: (current == 'not_drafts' ? 'page' : nil)} do %>
+      <%= _('All requests') %> <span class="dashboard-folder__count"><%= phase_counts['not_drafts'] %></span>
+    <% end %>
+  <% phases = InfoRequest::State.phases.select { |phase| phase_counts[phase[:scope]] > 0 } %>
+  <% if phases.any? %>
+  <ul class="vertical-navigation-menu dashboard-sub-folders">
+    <% phases.each do |phase| %>
+    <% selected = current == phase[:scope].to_s %>
+    <li class="vertical-navigation-menu__item dashboard-folder<%= ' dashboard-folder--selected' if selected %>">
+      <%= link_to filter_path.(phase[:scope]), class: 'vertical-navigation-menu__link dashboard-folder__name', aria: {current: (selected ? 'page' : nil)} do %>
+        <span class="icon-standalone<%= " icon_#{marks[phase[:scope]]}" if marks[phase[:scope]] %>" aria-hidden="true"></span><%= phase[:capital_label] %>
+        <span class="dashboard-folder__count"><%= phase_counts[phase[:scope]] %></span>
+      <% end %>
+    </li>
+    <% end %>
+  </ul>
+  <% end %>
+  </li>
+</ul>
+<% if phase_counts['draft'] > 0 %>
+<ul class="vertical-navigation-menu dashboard-folders">
+  <li class="vertical-navigation-menu__item dashboard-folder dashboard-folder--top-level<%= ' dashboard-folder--selected' if current == 'draft' %>">
+    <%= link_to filter_path.('draft'), class: 'vertical-navigation-menu__link dashboard-folder__name', aria: {current: (current == 'draft' ? 'page' : nil)} do %>
+      <span class="phase-icon phase-icon--draft"></span>
+      <%= _('Drafts') %> <span class="dashboard-folder__count"><%= phase_counts['draft'] %></span>
+    <% end %>
+  </li>
+</ul>
+<% end %>
+<% else %>
 <ul class="vertical-navigation-menu dashboard-folders ">
   <li class="vertical-navigation-menu__item dashboard-folder dashboard-folder--top-level dashboard-folder--selected">
     <a href="<%= alaveteli_pro_info_requests_path %>" class="vertical-navigation-menu__link dashboard-folder__name">
       <%= _('All requests') %>
       <span class="dashboard-folder__count">
-        <%= @user.phase_counts['not_drafts'] %>
+        <%= phase_counts['not_drafts'] %>
       </span>
     </a>
-  </li>
   <ul class="vertical-navigation-menu dashboard-sub-folders">
     <% InfoRequest::State.phases.each do |phase| %>
     <li class="vertical-navigation-menu__item dashboard-folder">
-      <% if @user.phase_counts[phase[:scope]] > 0 %>
+      <% if phase_counts[phase[:scope]] > 0 %>
         <a href="<%= alaveteli_pro_info_requests_path('alaveteli_pro_request_filter[filter]' => phase[:scope]) %>" class="vertical-navigation-menu__link dashboard-folder__name">
       <% else %>
         <span class="vertical-navigation-menu__link dashboard-folder__name dashboard-folder__name--disabled">
@@ -18,9 +67,9 @@
         <span class="phase-icon phase-icon--<%= phase[:param] %>"></span>
         <%= phase[:capital_label] %>
         <span class="dashboard-folder__count">
-          <%= @user.phase_counts[phase[:scope]] %>
+          <%= phase_counts[phase[:scope]] %>
         </span>
-      <% if @user.phase_counts[phase[:scope]] > 0 %>
+      <% if phase_counts[phase[:scope]] > 0 %>
         </a>
       <% else %>
         </span>
@@ -28,12 +77,13 @@
     </li>
     <% end %>
   </ul>
+  </li>
 </ul>
 
 <ul class="vertical-navigation-menu dashboard-folders">
 
   <li class="vertical-navigation-menu__item dashboard-folder dashboard-folder--top-level">
-    <% if @user.phase_counts['draft'] > 0 %>
+    <% if phase_counts['draft'] > 0 %>
       <a href="<%= alaveteli_pro_info_requests_path('alaveteli_pro_request_filter[filter]' => 'draft') %>" class="vertical-navigation-menu__link dashboard-folder__name">
     <% else %>
       <span class="vertical-navigation-menu__link dashboard-folder__name">
@@ -41,9 +91,9 @@
     <span class="phase-icon phase-icon--draft"></span>
     <%= _('Drafts') %>
     <span class="dashboard-folder__count">
-      <%= @user.phase_counts['draft'] %>
+      <%= phase_counts['draft'] %>
     </span>
-    <% if @user.phase_counts['draft'] > 0 %>
+    <% if phase_counts['draft'] > 0 %>
       </a>
     <% else %>
       </span>
@@ -51,3 +101,4 @@
   </li>
 
 </ul>
+<% end %>

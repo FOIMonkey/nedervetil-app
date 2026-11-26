@@ -1,0 +1,25 @@
+<%# It comes back to the request page, which refreshes in place and lands on the deadlines panel (doc/FORK.md). %>
+<% if local_assigns[:unread] %>
+<p class="deadlines-complete deadlines-complete__unread"><%= _('A reply hasn’t been read yet. Read it before marking the request complete.') %></p>
+<% else %>
+<details class="deadlines-complete">
+  <summary><span class="receipt__label"><%= _('Mark complete') %></span><% if local_assigns[:hint] %><span class="receipt__hint"><%= hint %></span><% end %></summary>
+  <%= form_tag request_deadline_complete_path(request_id: request.id), class: 'deadlines-complete__form', data: { turbo_action: 'replace', lands_on: 'deadlines' } do %>
+    <%# Stops a reply that arrived after the page loaded being classified unseen. %>
+    <%= hidden_field_tag :last_event_id, request.info_request_events.map(&:id).max, id: nil %>
+    <%= hidden_field_tag :return_to, return_to, id: nil %>
+    <fieldset>
+      <legend><%= _('Final status') %></legend>
+      <% Deadlines::Closure::FINAL_STATES.each do |state| %>
+        <label class="deadlines-complete__option">
+          <input type="radio" name="final_state" value="<%= state %>" required<%= ' checked' if request.described_state == state %>>
+          <span class="icon-standalone icon_<%= state %>" aria-hidden="true"></span>
+          <%= InfoRequest::State.short_description(state) %>
+        </label>
+      <% end %>
+    </fieldset>
+    <p class="deadlines-complete__help"><%= _('Sets the request’s status and moves it to Finished. Any new correspondence reopens it.') %></p>
+    <button type="submit" class="button"><%= _('Mark complete') %></button>
+  <% end %>
+</details>
+<% end %>

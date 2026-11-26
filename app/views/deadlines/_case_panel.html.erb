@@ -1,0 +1,96 @@
+<%# Each form here comes back to the request page, which refreshes in place and lands on this panel (doc/FORK.md). %>
+<% on_page = local_assigns[:on_page] %>
+<% action = Deadlines::NextAction.for(info_request) %>
+<% fmt = ->(date) { Deadlines::Overview.format_date(date) } %>
+<section class="<%= on_page ? 'request-section' : 'sidebar__section' %> deadlines-panel" id="deadlines" aria-labelledby="deadlines-panel-title">
+  <h2 id="deadlines-panel-title"><%= _('Deadlines') %></h2>
+  <% unless on_page %>
+  <p class="deadlines-panel__next">
+    <% if action.closed? %>
+      <%= _('Marked complete on {{date}}: {{status}}.', date: fmt.(action.closure.created_at.to_date), status: InfoRequest::State.short_description(action.closure.final_state)) %>
+    <% elsif action.none? %>
+      <%= _('Nothing outstanding.') %>
+    <% else %>
+      <%= render partial: 'deadlines/action_line', locals: { action: action } %>
+    <% end %>
+  </p>
+  <% end %>
+
+  <dl class="deadlines-panel__steps">
+    <% action.timeline.each do |label, date, note| %>
+      <div class="deadlines-panel__step">
+        <dt><%= label %></dt>
+        <dd><time datetime="<%= date.iso8601 %>"><%= fmt.(date) %></time><% if note %><span class="deadlines-panel__note"><%= note %></span><% end %></dd>
+      </div>
+    <% end %>
+    <div class="deadlines-panel__step">
+      <dt><%= _('Law') %></dt>
+      <dd><%= action.law %></dd>
+    </div>
+  </dl>
+
+  <% if (old = action.superseded_adjustment) %>
+    <p class="deadlines-panel__notice"><%= _('The date you set ({{date}}) no longer applies: the clock restarted.', date: fmt.(old.due_on)) %></p>
+  <% end %>
+
+  <% if (stage = action.adjustable_stage) %>
+    <% current = action.adjustment %>
+    <% if current %>
+      <p class="deadlines-panel__changed">
+        <%= _('Due date changed: {{reason}}.', reason: current.reason_label.sub(/\A[A-Z](?![A-Z])/, &:downcase)) %>
+        <% if current.note.present? %><span class="deadlines-panel__note"><%= current.note %></span><% end %>
+      </p>
+      <%= form_tag request_deadline_restore_path(request_id: info_request.id, stage: stage), class: 'deadlines-panel__restore', data: { turbo_action: 'replace', lands_on: 'deadlines' } do %>
+        <button type="submit" class="button"><%= _('Restore {{date}}', date: fmt.(current.original_due_on)) %></button>
+      <% end %>
+    <% end %>
+    <details class="deadlines-panel__change"<%= ' open' if flash[:error].present? %>>
+      <summary><%= _('Change the due date') %></summary>
+      <%= form_tag request_deadline_path(request_id: info_request.id, stage: stage), class: 'deadlines-panel__form', data: { turbo_action: 'replace', lands_on: 'deadlines' } do %>
+        <p>
+          <label for="deadline_due_on"><%= _('New due date') %></label>
+          <input type="date" id="deadline_due_on" name="due_on" required value="<%= action.date&.iso8601 %>">
+        </p>
+        <p>
+          <label for="deadline_reason"><%= _('Reason') %></label>
+          <% reasons = Deadlines::REASONS.slice(*Deadlines.stage_reasons(stage, action.regime)) %>
+          <%= select_tag :reason, options_for_select(reasons.transform_values { |label| _(label).to_str }.invert, current&.reason), id: 'deadline_reason' %>
+        </p>
+        <p>
+          <label for="deadline_note"><%= _('Note') %> <span class="deadlines-panel__optional"><%= _('(optional, visible to you and site admins)') %></span></label>
+          <textarea id="deadline_note" name="note" rows="2" maxlength="1000"></textarea>
+        </p>
+        <p class="deadlines-panel__help">
+          <% if stage == 'response' %>
+            <% case action.regime %>
+            <% when 'foi' %>
+              <%= _("Use the date the authority gave. A public interest extension should normally be no more than 20 further working days, and they still had to tell you by the original date which exemption they're considering.") %>
+            <% when 'eir', 'eisr' %>
+              <%= _('Use the date the authority gave. For complex and voluminous requests the limit is 40 working days from when they got it, and they had to tell you within 20.') %>
+            <% else %>
+              <%= _('The law in Scotland allows no extension. Record a date only if you agreed one with them.') %>
+            <% end %>
+            <%= _('After a fee notice, use the date the response will be due once you have paid.') %>
+          <% elsif stage == 'review' %>
+            <%= _('Use the date the authority gave for completing the review.') %><% unless action.regime == 'foi' %> <%= _('The law gives them {{days}} working days.', days: Deadlines.review_days.fetch(action.regime)) %><% end %>
+          <% else %>
+            <%= _('This counts from the decision ({{date}}). Use the date in the authority’s letter if it gave one.', date: fmt.(Deadlines::Stage.decision_response(info_request).created_at.to_date)) %>
+          <% end %>
+        </p>
+        <button type="submit" class="button"><%= _('Save due date') %></button>
+      <% end %>
+    </details>
+  <% end %>
+
+  <% if on_page %>
+    <% if local_assigns[:complete] && !action.closed? && !Deadlines::Closure.unread_replies?(info_request) %>
+      <%= render partial: 'deadlines/complete_form', locals: { request: info_request, return_to: 'request' } %>
+    <% end %>
+  <% elsif action.closed? %>
+    <%= form_tag request_deadline_reopen_path(request_id: info_request.id), class: 'deadlines-panel__restore', data: { turbo_action: 'replace', lands_on: 'deadlines' } do %>
+      <button type="submit" class="button"><%= _('Reopen') %></button>
+    <% end %>
+  <% else %>
+    <%= render partial: 'deadlines/complete_form', locals: { request: info_request, return_to: 'request', unread: Deadlines::Closure.unread_replies?(info_request) } %>
+  <% end %>
+</section>

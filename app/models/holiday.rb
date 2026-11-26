@@ -9,24 +9,21 @@
 #  updated_at  :datetime
 #
 
-# models/holiday.rb:
-#
-# Store details on, and perform calculations with, public holidays on which
-# the clock for answering FOI requests does not run:
+# Copyright (c) 2009 UK Citizens Online Democracy. All rights reserved.
+# Email: hello@mysociety.org; WWW: http://www.mysociety.org/
+
+# Public holiday dates that pause FOI working-day clocks (used by
+# Deadlines::Calendar and standalone due-date calculations).
 #
 #   ... "working day" means any day other than a Saturday, a Sunday, Christmas
 #   Day, Good Friday or a day which is a bank holiday under the [1971 c. 80.]
 #   Banking and Financial Dealings Act 1971 in any part of the United Kingdom.
 #    -- Freedom of Information Act 2000 section 10
-#
-# Copyright (c) 2009 UK Citizens Online Democracy. All rights reserved.
-# Email: hello@mysociety.org; WWW: http://www.mysociety.org/
-
 class Holiday < ApplicationRecord
   validates_presence_of :day
 
   def self.holidays
-    @@holidays ||= distinct.pluck(:day)
+    @holidays ||= distinct.pluck(:day)
   end
 
   def self.weekend_or_holiday?(date)

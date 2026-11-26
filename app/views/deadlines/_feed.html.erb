@@ -1,0 +1,104 @@
+<%# The request's history, newest first: one row per event. Each letter is rendered once, in its row. The latest reply's question and files are at the top of the page (request/_receipt). %>
+<% fmt = ->(date) { Deadlines::Overview.format_date(date) } %>
+<% unread_ids = unread.map(&:id) %>
+<% latest = Deadlines::Reply.latest(@info_request, current_ability) unless action.closed? %>
+<% upcoming = history.upcoming(action, latest) unless local_assigns[:arrived] %>
+<% letter_types = %w[sent resent followup_sent followup_resent response] %>
+<%# Only what has a date. Deadlines goes under the history when nothing does. %>
+<% coming_up = upcoming || action.late? %>
+<% if coming_up %>
+  <section class="request-section request-feed request-feed--next" aria-labelledby="coming-up-title">
+    <h2 id="coming-up-title" class="feed__heading"><%= _('Coming up') %></h2>
+    <% if upcoming %>
+      <p class="feed__row">
+        <time class="feed__date" datetime="<%= upcoming.date.iso8601 %>"><%= fmt.(upcoming.date) %></time>
+        <span class="feed__what"><span class="feed__title">
+          <% if upcoming.kind == :ask_review && @info_request.is_actual_owning_user?(@user) %><%= link_to upcoming.title, new_request_followup_path(@info_request.url_title, internal_review: 1) %><% else %><%= upcoming.title %><% end %>
+        </span></span>
+      </p>
+    <% elsif action.late? %>
+      <p class="feed__row"><span class="feed__date"><%= _('Today') %></span><span class="feed__what"><span class="feed__title"><%= _('Past the due date') %></span></span></p>
+    <% end %>
+    <%= dates %>
+  </section>
+<% end %>
+<section class="request-section request-feed" aria-labelledby="feed-title">
+  <h2 id="feed-title" class="feed__heading"><%= _('What’s happened') %></h2>
+  <% history.entries.reverse.each_with_index do |entry, index| %>
+    <% event = entry.event %>
+    <% message = event&.incoming_message if entry.kind.in?(%i[reply routine]) %>
+    <% files = message ? message.get_attachments_for_display.size : 0 %>
+    <% new_reply = message && @receipt_message != message && unread_ids.include?(message.id) %>
+    <%# A row that opens is named by its title alone; the date and the lines under it describe it. %>
+    <% key = "feed-entry-#{index}" %>
+    <% described_by = [] %>
+    <% head = capture do %>
+      <time class="feed__date" id="<%= key %>-date" datetime="<%= entry.date.iso8601 %>"><%= fmt.(entry.date) %></time><% described_by << "#{key}-date" %>
+      <span class="feed__what">
+        <span class="feed__title"><%= entry.title %><% if new_reply %> <span class="feed__new"><%= _('New') %></span><% end %></span>
+        <% about = message && @receipt_message == message %>
+        <% row = @requester_panel.replies.find { |candidate| candidate.message == message } if message %>
+        <% unshared = row && !about && can?(:publish_from_reply, message) && reply_to_share?(row) %>
+        <% if entry.line %><span class="feed__line" id="<%= key %>-line"><%= entry.line %></span><% described_by << "#{key}-line" %><% end %>
+        <% meta = [(_('Shown above') if about), (entry.timing if about), entry.meta, (n_('{{count}} file', '{{count}} files', files, count: files) if files.positive?), (_('Ready to share') if unshared)].compact %>
+        <% if meta.any? %><span class="feed__meta" id="<%= key %>-meta"><%= meta.join(' · ') %></span><% described_by << "#{key}-meta" %><% end %>
+      </span>
+    <% end %>
+    <% if entry.kind == :hidden %>
+      <%# Nothing to open: the row says it's hidden and why, and nothing else of the letter. %>
+      <% letter = event.incoming_message || event.outgoing_message %>
+      <div class="feed__row" id="<%= dom_id(letter) %>">
+        <%= head %>
+        <div class="feed__hidden"><%= render partial: 'request/prominence', locals: { prominenceable: letter } %></div>
+      </div>
+    <% elsif event && letter_types.include?(event.event_type) %>
+      <% at_top = message && @receipt_message == message %>
+      <% ask = latest&.event == event && latest.ask? && @info_request.is_actual_owning_user?(@user) && can?(:update_request_state, @info_request) && !at_top %>
+      <details class="feed__letter" <%= 'open' if ask || (message && !@receipt_message && unread_ids.include?(message.id)) %> <% if message %>id="reply-<%= message.id %>"<% end %>>
+        <summary aria-label="<%= new_reply ? _('{{title}}, new', title: entry.title) : entry.title %>" aria-describedby="<%= described_by.join(' ') %>">
+          <%= head %>
+          <span class="feed__open"><span class="feed__closed"><%= _('Read') %></span><span class="feed__opened"><%= _('Close') %></span></span>
+        </summary>
+        <div class="feed__body feed__sheet">
+          <% if ask %><%= render partial: 'request/reply_ask', locals: { request: @info_request } %><% end %>
+          <% row = @requester_panel.replies.find { |candidate| candidate.message == message } if message %>
+          <% if message && !at_top %>
+            <%= render partial: 'request/incoming_outcome', locals: { incoming_message: message } %>
+            <% if row && can?(:publish_from_reply, message) && (reply_to_share?(row) || (row.pending && row.rows.empty?)) %>
+              <p class="feed__share"><%= link_to _('Share documents'), publish_reply_path(url_title: @info_request.url_title, message_id: message.id), class: 'receipt__act' %></p>
+            <% end %>
+          <% end %>
+          <% if row && !can?(:publish_from_reply, message) %>
+            <%# The latest reply's are with its files, at the top of the page (request/_receipt). %>
+            <% waiting = at_top ? [] : row.main.reject(&:document) %>
+            <% if waiting.any? || row.folded.any? %>
+              <div class="documents-todo">
+                <% if waiting.any? %><%= render partial: 'disclosures/request_todo_rows', locals: { rows: waiting } %><% end %>
+                <% row.folded.each do |label, rows| %>
+                  <details class="documents-todo__fold">
+                    <summary><%= label %> (<%= rows.size %>)</summary>
+                    <%= render partial: 'disclosures/request_todo_rows', locals: { rows: rows } %>
+                  </details>
+                <% end %>
+              </div>
+            <% end %>
+          <% end %>
+          <%= render partial: 'request/correspondence', locals: { info_request_event: event } %>
+          <% if at_top && files.positive? %><p class="feed__files"><%= link_to n_('{{count}} file, listed above', '{{count}} files, listed above', files, count: files), '#receipt-files' %></p><% end %>
+        </div>
+      </details>
+    <% else %>
+      <div class="feed__row">
+        <%= head %>
+        <% if entry.documents %>
+          <ul class="feed__documents">
+            <% entry.documents.each do |document| %>
+              <li><%= link_to document.filename.presence || document.title, document_row_path(document) %></li>
+            <% end %>
+          </ul>
+        <% end %>
+      </div>
+    <% end %>
+  <% end %>
+  <% unless coming_up %><%= dates %><% end %>
+</section>

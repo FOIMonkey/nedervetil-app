@@ -271,22 +271,26 @@ module InfoRequestHelper
        user: user_link_for_request(info_request))
   end
 
+  # A file, not a page: data-turbo="false", or Turbo Drive fetches it twice
+  # when its path has no extension (doc/FORK.md).
   def attachment_link(_incoming_message, attachment)
+    link_to image_tag(attachment_image(attachment), class: "attachment__image",
+                                                    alt: "Attachment"),
+            attachment_path(attachment), data: { turbo: false }
+  end
+
+  def attachment_image(attachment)
     img_filename = "icon_#{attachment.content_type.sub('/', '_')}_large.png"
     full_filename = File.expand_path(Rails.root.join('app',
                                                      'assets',
                                                      'images',
                                                      'content_type',
                                                      img_filename))
-    image = if File.exist?(full_filename)
+    if File.exist?(full_filename)
       "content_type/#{ img_filename }"
     else
       "content_type/icon_unknown.png"
     end
-
-    link_to image_tag(image, class: "attachment__image",
-                             alt: "Attachment"),
-            attachment_path(attachment)
   end
 
   def attachment_path(attachment, options = {})

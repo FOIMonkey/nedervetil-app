@@ -1,5 +1,5 @@
 <% days = @info_request.late_calculator.reply_late_after_days %>
-<% due = defined?(Deadlines::Calendar) ? Deadlines::Calendar.working_days_after(Time.zone.today, days, Deadlines.regime(@info_request)) : (Time.zone.today + days.days) %>
+<% due = Deadlines::Calendar.working_days_after(Time.zone.today, days, Deadlines.regime(@info_request)) %>
 <ul class="flow-facts">
   <li><span class="flow-facts__value"><%= _('Reply due <b>{{date}}</b>', date: I18n.l(due, format: '%-d %B')) %></span><span class="flow-facts__note"><%= _('{{number_of_days}} {{working_or_calendar_days}} days', number_of_days: days, working_or_calendar_days: AlaveteliConfiguration.working_or_calendar_days) %></span></li>
   <li><span class="flow-facts__value"><%= _('Private') %></span><span class="flow-facts__note"><%= _('Only you and the site’s admins can see it. {{public_body_name}} sees your name.', public_body_name: body.name) %></span></li>

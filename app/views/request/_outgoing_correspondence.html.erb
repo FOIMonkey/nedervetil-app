@@ -1,11 +1,11 @@
-<div class="outgoing correspondence js-collapsible" id="<%= dom_id(outgoing_message) %>">
+<div class="outgoing correspondence js-collapsible" id="<%= dom_id(outgoing_message) %>" data-controller="collapsible delivery-log" data-action="collapsible:set@window->collapsible#set hashchange@window->collapsible#reveal">
   <%= render partial: 'request/prominence', locals: { prominenceable: outgoing_message } %>
 
   <%- if can?(:read, outgoing_message) %>
     <% delivery_status = outgoing_message.delivery_status %>
 
-    <div class="correspondence__header <% if delivery_status %>correspondence__header--with-delivery-status<% end %>">
-      <span class="correspondence__header__author js-collapsible-trigger">
+    <div class="correspondence__header <% if delivery_status %>correspondence__header--with-delivery-status<% end %>" role="heading" aria-level="2" data-collapsible-target="header" data-action="click->collapsible#headerClick mouseover->collapsible#hover mouseout->collapsible#hover">
+      <span class="correspondence__header__author js-collapsible-trigger" data-collapsible-target="trigger" data-action="click->collapsible#toggle keydown->collapsible#key mouseover->collapsible#hover mouseout->collapsible#hover">
         <%= outgoing_message.safe_from_name || _('Anonymous user') %>
       </span>
 
@@ -15,43 +15,31 @@
 
       <% if delivery_status %>
         <div class="correspondence__header__delivery-status">
-          <%= link_to outgoing_message_delivery_status_path(outgoing_message), class: "toggle-delivery-log toggle-delivery-log--#{outgoing_message.delivery_status.to_s} js-toggle-delivery-log", data: { delivery_status: outgoing_message.delivery_status.to_s } do -%>
+          <%= link_to outgoing_message_delivery_status_path(outgoing_message), class: "toggle-delivery-log toggle-delivery-log--#{outgoing_message.delivery_status.to_s} js-toggle-delivery-log", data: { delivery_status: outgoing_message.delivery_status.to_s, delivery_log_target: 'toggle', action: 'delivery-log#toggle' } do -%>
             <%= outgoing_message.delivery_status.to_s!.humanize -%>
           <% end -%>
         </div>
       <% end %>
     </div>
 
-    <div class="js-delivery-log-ajax-error" hidden aria-hidden="true" style="display: none; visibility: hidden;">
+    <div class="js-delivery-log-ajax-error" hidden aria-hidden="true" style="display: none; visibility: hidden;" data-delivery-log-target="error">
       <p><%= _('We couldn’t load the mail server logs for this message.') %></p>
       <p><%= link_to _('Try opening the logs in a new window.'), outgoing_message_delivery_status_path(outgoing_message), :target => '_blank' %></p>
     </div>
 
-    <div class="correspondence_text">
+    <div class="correspondence_text" data-delivery-log-target="text">
       <div><%= outgoing_message.get_body_for_html_display %></div>
     </div>
 
     <p class="event_actions">
-      <% if outgoing_message.status == 'ready' && !@info_request.is_external? %>
+      <% if outgoing_message.status == 'ready' %>
         <%= _('<strong>Warning:</strong> This message has <strong>not yet ' \
                  'been sent</strong> for an unknown reason.') %>
       <% end %>
 
-      <% if !@user.nil? && @user.admin_page_links? %>
+      <% if is_admin? %>
         <%= link_to "Admin", edit_admin_outgoing_message_path(outgoing_message.id) %>
       <% end %>
     </p>
-
-    <% if show_correspondence_footer %>
-      <% link_to_this_url = outgoing_message_url(outgoing_message) %>
-
-      <% report_path =
-           new_request_report_path(@info_request.url_title,
-                                   outgoing_message_id: outgoing_message.id) %>
-
-      <%= render partial: 'request/correspondence_footer',
-                 locals: { link_to_this_url: link_to_this_url,
-                           report_path: report_path } %>
-    <% end %>
   <%- end %>
 </div>

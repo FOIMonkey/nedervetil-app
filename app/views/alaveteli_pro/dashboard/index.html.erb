@@ -1,46 +1,69 @@
 <%= render :partial => 'ga_events' %>
+<% content_for :body_class, 'band-view' %>
+<% @title = _('Home') %>
+<% has_requests = !(@user.info_requests.empty? && @user.draft_info_requests.empty?) %>
+<% piles = Deadlines::Piles.for(@user) %>
+<% fmt = ->(date) { Deadlines::Overview.format_date(date) } %>
+<% limit = 5 %>
+<% needs = piles[:needs] + piles[:overdue] %>
+<% replies = piles[:needs].flat_map(&:unread) %>
+<% first_reply = replies.map { |message| (message[:sent_at] || message.created_at).to_date }.min %>
+<% first_late = piles[:overdue].filter_map { |row| row.action.date }.min %>
+<% next_due = piles[:waiting].filter_map { |row| row.action.date }.min %>
+<% sections = [['needs', _('Needs you'), needs], ['waiting', _('Coming up'), piles[:waiting]], ['finished', _('Finished'), piles[:finished]]] %>
 
-<div class="inner-canvas">
+<header class="page-band dashboard-band">
+  <h1 class="page-band__title"><%= _('Home') %></h1>
+  <% if has_requests %>
+    <ul class="home-spots" aria-label="<%= _('At a glance') %>">
+      <li<% if replies.any? %> class="home-spots__urgent"<% end %>><a href="#home-needs"><span class="home-spots__figure"><%= replies.size %></span> <span class="home-spots__label"><%= n_('New reply', 'New replies', replies.size) %></span><% if first_reply %> <span class="home-spots__extra"><%= _('From {{date}}', date: fmt.(first_reply)) %></span><% end %></a></li>
+      <li<% if piles[:overdue].any? %> class="home-spots__urgent"<% end %>><a href="#home-needs"><span class="home-spots__figure"><%= piles[:overdue].size %></span> <span class="home-spots__label"><%= _('Late') %></span><% if first_late %> <span class="home-spots__extra"><%= _('Due {{date}}', date: fmt.(first_late)) %></span><% end %></a></li>
+      <li><a href="#home-waiting"><span class="home-spots__figure"><%= piles[:waiting].size %></span> <span class="home-spots__label"><%= _('Coming up') %></span><% if next_due %> <span class="home-spots__extra"><%= _('Next {{date}}', date: fmt.(next_due)) %></span><% end %></a></li>
+    </ul>
+  <% end %>
+</header>
+<%= band_notice %>
 
-  <div class="inner-canvas-header">
-    <div class="row">
-      <h1><%= _("Your dashboard") %></h1>
+<div class="dashboard-page">
+  <% if @announcements.present? %>
+    <%= render partial: 'announcements' %>
+  <% end %>
+
+  <% if !has_requests %>
+    <section class="request-section home-empty" aria-labelledby="home-empty-title">
+      <h2 id="home-empty-title"><%= _('No requests yet') %></h2>
+      <p><%= _('Ask a question and replies land here.') %></p>
+      <p><%= link_to _('Make request'), make_request_path, class: 'button' %></p>
+    </section>
+  <% else %>
+    <% sections.each do |key, name, rows| %>
+      <% next if rows.empty? %>
+      <section class="request-section pile-section" id="home-<%= key %>" aria-labelledby="home-<%= key %>-title" data-pile="<%= key %>">
+        <h2 id="home-<%= key %>-title"><%= name %> <span class="request-section__count"><%= rows.size %></span></h2>
+        <ul class="pile">
+          <%= render partial: 'deadlines/pile_row', collection: rows.first(limit), as: :row, locals: { fmt: fmt } %>
+        </ul>
+        <% if rows.size > limit %>
+          <details class="pile__more">
+            <summary><%= _('View {{count}} more', count: rows.size - limit) %></summary>
+            <ul class="pile">
+              <%= render partial: 'deadlines/pile_row', collection: rows.drop(limit), as: :row, locals: { fmt: fmt } %>
+            </ul>
+          </details>
+        <% end %>
+      </section>
+    <% end %>
+
+    <div class="dashboard-filters">
+      <%= link_to _('View all requests'), alaveteli_pro_info_requests_path, class: 'dashboard-chip' %>
+      <% if (drafts = @user.draft_info_requests.count).positive? %>
+        <%= link_to n_('View {{count}} draft', 'View {{count}} drafts', drafts, count: drafts), alaveteli_pro_info_requests_path('alaveteli_pro_request_filter[filter]' => 'draft'), class: 'dashboard-chip' %>
+      <% end %>
+      <%= form_tag alaveteli_pro_info_requests_path, method: :get, class: 'dashboard-search', role: 'search' do %>
+        <label class="visually-hidden" for="home-search">Search requests</label>
+        <input type="search" id="home-search" name="alaveteli_pro_request_filter[search]" placeholder="<%= _('Potholes') %>">
+        <button type="submit" class="button"><%= _('Search') %></button>
+      <% end %>
     </div>
-  </div>
-
-  <div class="inner-canvas-body">
-    <div class="row">
-      <div class="dashboard-left-column">
-
-        <%= render partial: 'alaveteli_pro/dashboard/sidebar' %>
-
-      </div> <!-- .dashboard-left-column -->
-
-      <div class="dashboard-right-column">
-        <% if @announcements.present? %>
-          <%= render partial: 'announcements' %>
-        <% end %>
-
-        <% if @to_do_list.active_items.empty? && @user.info_requests.empty? && @user.draft_info_requests.empty? && @user.info_request_batches.empty? && @user.draft_info_request_batches.empty? %>
-          <%= render partial: 'no_to_dos' %>
-        <% elsif @to_do_list.active_items.empty? %>
-          <%= render partial: 'done_to_dos' %>
-        <% else %>
-          <%= render partial: 'to_do_list' %>
-        <% end %>
-
-
-        <div class="dashboard-activity">
-          <h2 class="dashboard-activity__title"><%= _("Activity") %></h2>
-          <%= render partial: 'activity_list_item', :collection => @activity_list.current_items %>
-          <%= will_paginate WillPaginate::Collection.new(@page, @per_page, @activity_list.events.count) %>
-
-        </div> <!-- .dashboard-activity -->
-
-      </div>  <!-- .dashboard-right-column -->
-
-
-   </div>
-  </div>  <!-- .dashboard-body -->
-
-</div>  <!-- .dashboard -->
+  <% end %>
+</div>

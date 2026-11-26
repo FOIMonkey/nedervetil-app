@@ -136,11 +136,7 @@ module Disclosures
     end
 
     def thread_messages
-      if defined?(Deadlines::Stage)
-        Deadlines::Stage.share_thread(info_request)
-      else
-        info_request.incoming_messages.includes(:foi_attachments).to_a
-      end
+      Deadlines::Stage.share_thread(info_request)
     end
 
     def routine?(message)

@@ -39,6 +39,7 @@ require 'digest/sha1'
 require 'fileutils'
 
 class InfoRequest < ApplicationRecord
+  REPORTED_STATES = %w[attention_requested requires_admin].freeze
   OLD_AGE_IN_DAYS = 21.days
 
   include Rails.application.routes.url_helpers
@@ -139,7 +140,17 @@ class InfoRequest < ApplicationRecord
           class_name: 'AlaveteliPro::Embargo',
           dependent: :destroy
   before_destroy :destroy_documents
+  has_many :deadline_adjustments, class_name: 'Deadlines::Adjustment',
+                                  inverse_of: :info_request,
+                                  dependent: :delete_all
+  has_many :deadline_closures, class_name: 'Deadlines::Closure',
+                               inverse_of: :info_request,
+                               dependent: :delete_all
   after_create :request_limits_record
+
+  # Preloaded by Deadlines::Stage to avoid per-row queries on list views.
+  attr_accessor :thread_shared
+  attr_accessor :deadlines_auto_classified_ids, :deadlines_batch
 
   has_many :foi_attachments, through: :incoming_messages
 
@@ -481,16 +492,15 @@ class InfoRequest < ApplicationRecord
       where(["awaiting_description = ?
               AND described_state = ?
               AND #{date_field} < ?
-              AND (SELECT id
+              AND NOT EXISTS (SELECT 1
               FROM info_request_events
               WHERE info_request_id = info_requests.id
               AND event_type = ?
-              AND created_at > info_requests.#{date_field})
-              IS NULL",
-              false,
-              'waiting_response',
-              Time.zone.today,
-              event_type])
+              AND created_at > info_requests.#{date_field})",
+             false,
+             'waiting_response',
+             Time.zone.today,
+             event_type])
 
     query.find_each(batch_size: 100) do |info_request|
       # Date to DateTime representing beginning of day
@@ -1008,6 +1018,14 @@ class InfoRequest < ApplicationRecord
     @late_calculator ||= DefaultLateCalculator.new
   end
 
+  def update_due_dates(sent_event)
+    self.last_event_forming_initial_request_id = sent_event.id
+    self.date_initial_request_last_sent_at = sent_event.created_at.to_date
+    self.date_response_required_by = calculate_date_response_required_by
+    self.date_very_overdue_after = calculate_date_very_overdue_after
+    save!
+  end
+
   # TODO: once date_response_required_by is populated for all
   # requests, this can be removed
   def date_response_required_by
@@ -1018,9 +1036,11 @@ class InfoRequest < ApplicationRecord
   end
 
   def calculate_date_response_required_by
-    Holiday.due_date_from(date_initial_request_last_sent_at,
-                          late_calculator.reply_late_after_days,
-                          AlaveteliConfiguration.working_or_calendar_days)
+    Deadlines::Calendar.due_date_for(
+      self,
+      from: date_initial_request_last_sent_at,
+      days: late_calculator.reply_late_after_days
+    )
   end
 
   # TODO: once date_very_overdue_after is populated for all
@@ -1033,9 +1053,11 @@ class InfoRequest < ApplicationRecord
   end
 
   def calculate_date_very_overdue_after
-    Holiday.due_date_from(date_initial_request_last_sent_at,
-                          late_calculator.reply_very_late_after_days,
-                          AlaveteliConfiguration.working_or_calendar_days)
+    Deadlines::Calendar.due_date_for(
+      self,
+      from: date_initial_request_last_sent_at,
+      days: late_calculator.reply_very_late_after_days
+    )
   end
 
   def last_embargo_set_event
@@ -1650,13 +1672,12 @@ class InfoRequest < ApplicationRecord
     self.law_used = public_body.legislation.key if public_body
   end
 
+  # All non-holding-pen user requests use notifications (set once on create).
   def set_use_notifications
-    if use_notifications.nil?
-      self.use_notifications = user &&
-                               user.features.enabled?(:notifications) && \
-                               info_request_batch_id.present?
-    end
-    true
+    return unless use_notifications.nil?
+
+    self.use_notifications =
+      holding_pen_request?(read_only: true) ? false : user.present?
   end
 
   def must_be_valid_state

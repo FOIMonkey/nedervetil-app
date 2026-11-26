@@ -1,0 +1,13 @@
+<%# The answer comes back to this page, which refreshes in place and lands on
+    the answer (doc/FORK.md). %>
+<%= form_tag alaveteli_pro_classifications_path(url_title: request.url_title), class: 'receipt__ask', data: { turbo_action: 'replace', lands_on: 'receipt-answer' } do %>
+  <%= hidden_field_tag :last_info_request_event_id, request.last_event_id_needing_description, id: nil %>
+  <fieldset>
+    <legend><%= _('Did you get what you asked for?') %></legend>
+    <div class="receipt__chips">
+      <% Deadlines::Reply::LABELS.each do |key, label| %>
+        <button type="submit" name="classification[described_state]" value="<%= Deadlines::Reply::ANSWERS.fetch(key) %>" class="receipt__chip"><%= _(label) %></button>
+      <% end %>
+    </div>
+  </fieldset>
+<% end %>

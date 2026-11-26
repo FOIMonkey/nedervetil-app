@@ -1,0 +1,37 @@
+<% outcome_row = defined?(IncomingAttention::Config) && IncomingAttention::Outcome.active? && IncomingAttention::Labels.visible_to?(incoming_message, @user, current_ability) ? IncomingAttention::Prediction.for_message(incoming_message) : nil %>
+<% if outcome_row && outcome_row.outcome_status == 'complete' %>
+  <% owner = @info_request.is_actual_owning_user?(@user) && can?(:update_request_state, @info_request) %>
+  <% exemptions = IncomingAttention::Outcome.exemptions(outcome_row) %>
+  <% applied = outcome_row.outcome_applied_state %>
+  <% if IncomingAttention::Outcome.applying? && applied && outcome_row.human_reviewed_at.nil? && @info_request.described_state == applied %>
+    <div class="correspondence__suggestion request-outcome" data-request-outcome="<%= applied %>">
+      <% partial = IncomingAttention::Outcome.partial_reasons(outcome_row) %>
+      <p>
+        <%= _('We read this reply as <strong>{{outcome}}</strong>', outcome: _(IncomingAttention::Outcome.label(outcome_row))) %><% if partial.any? %>: <%= partial.join('; ') %><% end %>, <%= _('and have updated the request.') %>
+        <% if exemptions.any? && partial.none? { |reason| reason.start_with?('withheld') } %><%= _('It mentions {{exemptions}}.', exemptions: exemptions.to_sentence) %><% end %>
+        <% if IncomingAttention::Outcome.weak_all?(outcome_row) %><%= _('If part of what you asked for was withheld or missing, change it to Some information.') %><% end %>
+      </p>
+      <% if owner %>
+        <%= form_tag classifications_path(@info_request.url_title), class: 'request-outcome__confirm' do %>
+          <%= hidden_field_tag 'classification[described_state]', applied %>
+          <%= hidden_field_tag :last_info_request_event_id, @info_request.last_event_id_needing_description %>
+          <%= button_tag _('That’s right'), class: 'button-tertiary' %>
+          <%= link_to _('Change the status'), request_path(@info_request, update_status: 1, anchor: 'describe_state_form_1'), rel: 'nofollow' %>
+        <% end %>
+      <% end %>
+    </div>
+  <% elsif IncomingAttention::Outcome.applying? && outcome_row.outcome_call == 'unsure' && outcome_row.human_reviewed_at.nil? && @info_request.awaiting_description? %>
+    <div class="correspondence__suggestion request-outcome" data-request-outcome="unsure">
+      <p>
+        <%= _('We couldn’t tell from this reply whether you got the information you asked for.') %>
+        <% if exemptions.any? %><%= _('It mentions {{exemptions}}.', exemptions: exemptions.to_sentence) %><% end %>
+        <% if owner %><%= link_to _('Please tell us what you received'), '#describe_state_form_1' %>.<% end %>
+      </p>
+    </div>
+  <% elsif IncomingAttention::Outcome.mode == 'shadow' && current_ability.can?(:admin, @info_request) %>
+    <div class="correspondence__suggestion request-outcome" data-request-outcome="shadow">
+      <p><%= _('Automatic reading (not applied): <strong>{{outcome_call}}</strong>', outcome_call: outcome_row.outcome_call) %><% if exemptions.any? %>; <%= exemptions.to_sentence %><% end %>.
+        <span class="request-outcome__reasons"><%= Array(outcome_row.outcome_signals&.fetch('reasons', nil)).join(', ') %></span></p>
+    </div>
+  <% end %>
+<% end %>

@@ -207,6 +207,7 @@ class InfoRequestEvent < ApplicationRecord
       true
     end
   end
+  alias visible? visible
 
   def params=(new_params)
     super(params_for_jsonb(new_params))

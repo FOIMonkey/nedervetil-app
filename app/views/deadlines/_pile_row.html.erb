@@ -1,0 +1,74 @@
+<% action = row.action %>
+<% request = row.request %>
+<% latest_reply = -> { Deadlines::Stage.events(request).reverse.find { |event| event.event_type == 'response' } } %>
+<% drafts = row.drafts.positive? ? " #{n_('{{count}} draft document.', '{{count}} draft documents.', row.drafts, count: row.drafts)}" : '' %>
+<% quiet = false %>
+<% reason = case row.pile
+   when :needs
+     if row.unread.any?
+       files = row.unread_files
+       [row.unread.one? ? _('Replied') : n_('{{count}} reply', '{{count}} replies', row.unread.size, count: row.unread.size), (n_('{{count}} file', '{{count}} files', files, count: files) if files.positive?)].compact.join(' · ')
+     elsif %i[ask_review regulator clarify].include?(action.kind) && (event = latest_reply.call)
+       "#{Deadlines::History.reply_title(request, event)}.#{drafts}"
+     else
+       action.label
+     end
+   when :overdue
+     ["#{action.kind == :review ? _('{{review}} late', review: action.review_word.upcase_first) : _('Late')} · #{_('due {{date}}', date: fmt.(action.date))}",
+      (_('reminded {{date}}', date: fmt.(action.reminder.created_at.to_date)) if action.reminder)].compact.join(' · ')
+   when :waiting
+     quiet = true
+     if action.adjustment
+       _('Due date changed: {{reason}}, from {{date}}', reason: action.adjustment.reason_label.sub(/\A[A-Z](?![A-Z])/, &:downcase), date: fmt.(action.adjustment.original_due_on))
+     elsif (event = latest_reply.call) && action.basis_date && event.created_at.to_date >= action.basis_date
+       "#{Deadlines::History.reply_title(request, event)}, #{fmt.(event.created_at.to_date)}"
+     end
+   when :finished
+     status = action.closed? ? action.closure.final_state : request.calculate_status
+     published = row.published.positive? ? " #{n_('{{count}} document published.', '{{count}} documents published.', row.published, count: row.published)}" : ''
+     "#{InfoRequest::State.short_description(status)}.#{published}#{drafts}"
+   end %>
+<% progress = %i[response review].include?(action.kind) && !row.unread.any? ? action.progress : nil %>
+<li class="pile__row" data-request-id="<%= request.id %>">
+  <div>
+    <%= link_to request.title, show_request_path(request.url_title), class: 'pile__title' %>
+    <span class="pile__authority"><%= request.public_body.name %></span>
+    <% if reason.present? %><span class="pile__reason<%= ' pile__reason--quiet' if quiet %>"><%= reason %></span><% end %>
+    <% if row.pile == :overdue && action.remindable? && request.is_actual_owning_user?(@user) %>
+      <%= form_tag request_deadline_remind_path(request_id: request.id), class: 'pile__remind' do %>
+        <%= hidden_field_tag :return_to, 'home', id: nil %>
+        <button type="submit" class="button"><%= _('Remind them') %><span class="visually-hidden"> <%= _('about {{request_title}}', request_title: request.title) %></span></button>
+      <% end %>
+    <% end %>
+  </div>
+  <div class="pile__when">
+    <% if progress %>
+      <span class="pile__meter" aria-hidden="true"><i class="pile__used" style="width: <%= progress[0] %>%"></i><% if progress[1].positive? %><i class="pile__over" style="width: <%= progress[1] %>%"></i><% end %></span>
+    <% end %>
+    <% if row.unread.any? %>
+      <%= _('Received {{date}}', date: fmt.((row.unread.first[:sent_at] || row.unread.first.created_at).to_date)) %>
+    <% elsif action.late? && action.late_days.positive? %>
+      <b><%= n_('{{count}} working day late', '{{count}} working days late', action.late_days, count: action.late_days) %></b>
+    <% elsif action.late? %>
+      <b><%= _('Due {{date}}', date: fmt.(action.date)) %></b>
+    <% elsif action.kind == :ask_review %>
+      <b><%= _('Review by {{date}}', date: fmt.(action.date)) %></b><br><%= n_('{{count}} working day left', '{{count}} working days left', action.days_left, count: action.days_left) %>
+    <% elsif action.kind == :regulator %>
+      <b><%= action.scottish? ? _('Apply by {{date}}', date: fmt.(action.date)) : _('Complain by {{date}}', date: fmt.(action.date)) %></b>
+    <% elsif action.kind == :response %>
+      <%= _('Response due {{date}}', date: fmt.(action.date)) %>
+    <% elsif action.kind == :review %>
+      <%= _('Internal review due {{date}}', date: fmt.(action.date)) %>
+    <% elsif action.kind == :clarify %>
+      <%= _('Asked {{date}}', date: fmt.(action.date)) %>
+    <% elsif action.kind == :read_reply && action.date %>
+      <%= _('Received {{date}}', date: fmt.(action.date)) %>
+    <% elsif action.kind == :post %>
+      <%= _('Reply by post expected') %>
+    <% elsif action.kind == :follow_up %>
+      <%= _('Follow-up sent {{date}}', date: fmt.(action.date)) %>
+    <% elsif action.closed? %>
+      <%= _('Marked complete {{date}}', date: fmt.(action.closure.created_at.to_date)) %>
+    <% end %>
+  </div>
+</li>

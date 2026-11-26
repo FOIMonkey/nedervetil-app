@@ -1,0 +1,4 @@
+<% fmt = ->(date) { Deadlines::Overview.format_date(date) } %>
+<span class="deadline-line<%= ' deadline-line--late' if action.late? %>" data-deadline-kind="<%= action.kind %>">
+  <span class="deadline-line__label"><%= action.label %></span><% if (phrase = action.date_phrase(fmt)) %> <time class="deadline-line__date" datetime="<%= action.date.iso8601 %>"><%= phrase %></time><% end %><% if (detail = action.detail) %><span class="deadline-line__detail"> · <%= detail %></span><% end %>
+</span>

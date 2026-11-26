@@ -180,11 +180,9 @@ RSpec.describe 'Disclosures formats' do
     sign_in(owner)
     document_request :get, "/request/#{info_request.url_title}"
     page = Nokogiri::HTML(response.body)
-    if page.at_css('.requester-page')
-      expect(
-        page.css('a').find { |link| link.text == 'Share documents' }['href']
-      ).to eq("/request/#{info_request.url_title}/publish/#{message.id}")
-    end
+    expect(
+      page.css('a').find { |link| link.text == 'Share documents' }['href']
+    ).to eq("/request/#{info_request.url_title}/publish/#{message.id}")
     sign_in(owner)
     document_request :get,
                      "/request/#{info_request.url_title}/publish/#{message.id}"

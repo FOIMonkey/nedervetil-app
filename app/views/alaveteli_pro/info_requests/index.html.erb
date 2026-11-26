@@ -1,26 +1,96 @@
+<% core_filter = params.dig(:alaveteli_pro_request_filter, :filter).presence %>
+<% if core_filter && core_filter != 'draft' %>
 <div class="inner-canvas">
-
   <div class="inner-canvas-header">
     <div class="row">
       <h1><%= _('Requests') %></h1>
     </div>
   </div>
-
   <div class="inner-canvas-body">
     <div class="row">
       <div class="dashboard-left-column">
-
         <%= render partial: 'alaveteli_pro/dashboard/sidebar' %>
-
-      </div> <!-- .dashboard-left-column -->
-
-        <% if @user.info_requests.empty? && @user.draft_info_requests.empty? && @user.info_request_batches.empty? && @user.draft_info_request_batches.empty? %>
-          <%= render partial: 'no_requests' %>
-        <% else %>
-          <%= render partial: 'request_list' %>
-        <% end %>
       </div>
+      <% if @user.info_requests.empty? && @user.draft_info_requests.empty? && @user.info_request_batches.empty? && @user.draft_info_request_batches.empty? %>
+        <%= render partial: 'no_requests' %>
+      <% else %>
+        <%= render partial: 'request_list' %>
+      <% end %>
+    </div>
+  </div>
+</div>
+<% else %>
+<% content_for :body_class, 'band-view' %>
+<% piles = Deadlines::Piles.for(@user) %>
+<% filter = params[:alaveteli_pro_request_filter].respond_to?(:to_unsafe_h) ? params[:alaveteli_pro_request_filter] : {} %>
+<% query = filter[:search].to_s.strip %>
+<% drafts = filter[:filter].to_s == 'draft' %>
+<% pile = Deadlines::Piles::NAMES.keys.find { |name| name.to_s == params[:pile].to_s } %>
+<% draft_requests = @user.draft_info_requests.includes(public_body: :translations).order(updated_at: :desc) %>
+<% total = piles.values.sum(&:size) %>
+<% fmt = ->(date) { Deadlines::Overview.format_date(date) } %>
+<% matches = ->(row) { query.empty? || [row.request.title, row.request.public_body&.name].compact.any? { |text| text.downcase.include?(query.downcase) } } %>
 
-  </div>  <!-- .dashboard-body -->
+<header class="page-band requests-band">
+  <h1 class="page-band__title"><%= _('Requests') %></h1>
+  <nav class="requests-piles" aria-label="<%= _('Requests') %>">
+    <%= link_to alaveteli_pro_info_requests_path, 'aria-current': (pile.nil? && !drafts ? 'page' : nil) do %><%= _('All') %> <b><%= total %></b><% end %>
+    <% piles.each do |name, rows| %>
+      <%= link_to alaveteli_pro_info_requests_path(pile: name), 'aria-current': (pile == name ? 'page' : nil) do %><%= _(Deadlines::Piles::NAMES.fetch(name)) %> <b><%= rows.size %></b><% end %>
+    <% end %>
+    <% if draft_requests.any? %>
+      <%= link_to alaveteli_pro_info_requests_path('alaveteli_pro_request_filter[filter]' => 'draft'), 'aria-current': (drafts ? 'page' : nil) do %><%= _('Drafts') %> <b><%= draft_requests.size %></b><% end %>
+    <% end %>
+  </nav>
+</header>
+<%= band_notice %>
 
-</div>  <!-- .dashboard -->
+<div class="dashboard-page requests-page">
+  <% unless drafts %>
+    <%= form_tag alaveteli_pro_info_requests_path, method: :get, class: 'dashboard-search requests-search', role: 'search' do %>
+      <% if pile %><%= hidden_field_tag :pile, pile, id: nil %><% end %>
+      <input type="search" name="alaveteli_pro_request_filter[search]" value="<%= query %>" placeholder="<%= _('Search your requests') %>" aria-label="<%= _('Search your requests') %>">
+      <button type="submit" class="button"><%= _('Search') %></button>
+    <% end %>
+  <% end %>
+
+  <% if drafts && draft_requests.empty? %>
+    <p class="requests-page__none"><%= _('No drafts.') %> <%= link_to _('See all requests'), alaveteli_pro_info_requests_path %></p>
+  <% elsif drafts %>
+    <ul class="pile">
+      <% draft_requests.each do |draft| %>
+        <li class="pile__row">
+          <div>
+            <%= link_to draft.title.presence || _('No title'), new_alaveteli_pro_info_request_path(draft_id: draft.id), class: 'pile__title' %>
+            <% if draft.public_body %><span class="pile__authority"><%= draft.public_body.name %></span><% end %>
+          </div>
+          <div class="pile__when">
+            <%= _('Saved {{date}}', date: fmt.(draft.updated_at.to_date)) %>
+            <details class="pile__delete">
+              <summary><%= _('Delete') %><span class="visually-hidden"> <%= draft.title.presence || _('No title') %></span></summary>
+              <%= button_to _('Delete this draft'), alaveteli_pro_draft_info_request_path(draft), method: :delete, class: 'button' %>
+            </details>
+          </div>
+        </li>
+      <% end %>
+    </ul>
+  <% else %>
+    <% shown = 0 %>
+    <% piles.each do |name, rows| %>
+      <% next if pile && pile != name %>
+      <% rows = rows.select(&matches) %>
+      <% next if rows.empty? %>
+      <% shown += rows.size %>
+      <section class="request-section pile-section" id="pile-<%= name %>" aria-labelledby="pile-<%= name %>-title" data-pile="<%= name %>">
+        <h2 id="pile-<%= name %>-title"><%= _(Deadlines::Piles::NAMES.fetch(name)) %></h2>
+        <ul class="pile">
+          <%= render partial: 'deadlines/pile_row', collection: rows, as: :row, locals: { fmt: fmt } %>
+        </ul>
+      </section>
+    <% end %>
+    <% if shown.zero? %>
+      <p class="requests-page__none"><%= query.present? ? _('No requests match “{{query}}”.', query: query) : _('No requests here.') %> <%= link_to _('See all requests'), alaveteli_pro_info_requests_path if query.present? || pile %></p>
+    <% end %>
+  <% end %>
+</div>
+<% end %>

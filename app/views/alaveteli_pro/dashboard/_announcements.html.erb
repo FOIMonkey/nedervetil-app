@@ -1,24 +1,24 @@
-<div class="dashboard__announcements carousel" aria-live="polite">
+<div class="dashboard__announcements carousel" aria-live="polite" data-controller="carousel" data-action="announcement-dismiss:dismissed->carousel#dismissed">
   <ul class="dashboard__announcements__list carousel-content">
     <% @announcements.each_with_index do |announcement, idx| %>
-      <li class="dashboard__announcements__list-item carousel-item" aria-hidden="<% if idx.zero? %>false<% else %>true<% end %>">
-        <div class="dashboard__announcement">
+      <li class="dashboard__announcements__list-item carousel-item" aria-hidden="<% if idx.zero? %>false<% else %>true<% end %>" data-carousel-target="item">
+        <div class="dashboard__announcement" data-controller="announcement-dismiss">
           <% if announcement.title.present? %><h2 class="dashboard__announcement__title"><%= announcement.title %></h2><% end %>
           <div class="dashboard__announcement__content">
-            <p><%= sanitize announcement.content %></p>
+            <p><%= sanitize_without_style_blocks(announcement.content) %></p>
           </div>
-          <%= link_to _('Dismiss'), announcement_path(announcement), method: :delete, remote: true, class: 'dashboard__announcement_dismiss carousel-item-dismiss' %>
+          <%= button_to _('Dismiss'), announcement_path(announcement), method: :delete, class: 'dashboard__announcement_dismiss carousel-item-dismiss', form_class: 'dashboard__announcement_dismiss-form', form: { data: { action: 'announcement-dismiss#dismiss' } } %>
         </div>
       </li>
     <% end %>
   </ul>
   <fieldset aria-label="carousel buttons" class="dashboard__announcements__controls carousel-buttons" aria-controls="carousel">
-    <button value="prev" aria-label="previous" id="prev" class="carousel-button">&laquo;</button>
+    <button type="button" value="prev" aria-label="previous" id="prev" class="carousel-button" data-action="carousel#previous">&laquo;</button>
     <span class="dashboard__announcements__controls__status">
       <%= _('<span class="current-page">{{current_page}}</span> of ' \
             '<span class="total-pages">{{total_pages}}</span>',
             current_page: 1, total_pages: @announcements.count) %>
     </span>
-    <button value="next" id="next" aria-label="next" class="carousel-button">&raquo;</button>
+    <button type="button" value="next" id="next" aria-label="next" class="carousel-button" data-action="carousel#next">&raquo;</button>
   </fieldset>
 </div>
