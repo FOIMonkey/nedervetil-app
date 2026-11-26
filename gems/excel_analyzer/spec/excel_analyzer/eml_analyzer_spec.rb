@@ -35,7 +35,14 @@ RSpec.describe ExcelAnalyzer::EmlAnalyzer do
 
     subject(:metadata) { ExcelAnalyzer::EmlAnalyzer.new(blob).metadata }
 
-    before { allow(Mail).to receive(:read).with("blob/path").and_return(mail) }
+    # The mail is read in this process: the app's sandbox, which could send
+    # the read elsewhere, is not part of this gem.
+    before do
+      allow(File).to receive(:binread).and_call_original
+      allow(File).to receive(:binread).with("blob/path").
+        and_return(mail.to_s)
+      stub_const("AlaveteliSandbox", double(required?: false))
+    end
 
     it { is_expected.to eq({}) }
 
@@ -78,6 +85,39 @@ RSpec.describe ExcelAnalyzer::EmlAnalyzer do
       it "calls on_spreadsheet_received callback once only" do
         expect(ExcelAnalyzer.on_spreadsheet_received).
           to receive(:call).with(blob).once
+        metadata
+      end
+    end
+
+    context "when mail contains a generic OLE Office attachment" do
+      let(:mail) do
+        Mail.new do
+          attachments["locked.docx"] = {
+            mime_type: "application/x-ole-storage",
+            content: "\xD0\xCF\x11\xE0\xA1\xB1\x1A\xE1".b
+          }
+        end
+      end
+
+      it "calls on_spreadsheet_received callback" do
+        expect(ExcelAnalyzer.on_spreadsheet_received).
+          to receive(:call).with(blob)
+        metadata
+      end
+    end
+
+    context "when mail contains a generic OLE non-Office attachment" do
+      let(:mail) do
+        Mail.new do
+          attachments["note.msg"] = {
+            mime_type: "application/x-ole-storage",
+            content: "\xD0\xCF\x11\xE0\xA1\xB1\x1A\xE1".b
+          }
+        end
+      end
+
+      it "does not call on_spreadsheet_received callback" do
+        expect(ExcelAnalyzer.on_spreadsheet_received).not_to receive(:call)
         metadata
       end
     end

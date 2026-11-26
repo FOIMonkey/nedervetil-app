@@ -12,19 +12,32 @@ module ExcelAnalyzer
     include ExcelAnalyzer::Probe
 
     CONTENT_TYPE =
-      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet".freeze
+
+    # A macro-enabled workbook or a template is the same zip of sheets.
+    CONTENT_TYPES = [
+      CONTENT_TYPE,
+      "application/vnd.ms-excel.sheet.macroenabled.12",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.template",
+      "application/vnd.ms-excel.template.macroenabled.12"
+    ].freeze
+
+    OLE2_CONTENT_TYPE = 'application/x-ole-storage'.freeze
+    OLE2_EXTENSIONS = %w[.xlsx .xlsm .xltx .xltm].freeze
 
     def self.accept?(blob)
-      blob.content_type == CONTENT_TYPE
+      type = blob.content_type.to_s.downcase
+      return true if CONTENT_TYPES.include?(type)
+      return false unless blob.respond_to?(:filename)
+
+      ExcelAnalyzer.ole2_type?(type, blob.filename, OLE2_EXTENSIONS)
     end
 
     def metadata
       data = excel_metadata
 
       if suspected_problem?(data)
-        # rubocop:disable Style/RescueModifier
-        ExcelAnalyzer.on_hidden_metadata.call(blob, data) rescue nil
-        # rubocop:enable Style/RescueModifier
+        ExcelAnalyzer.on_hidden_metadata.call(blob, data)
       end
 
       { excel: data }
@@ -33,21 +46,11 @@ module ExcelAnalyzer
     private
 
     def excel_metadata
-      download_blob_to_tempfile(&method(:probe))
+      download_blob_to_tempfile { |io| probe(io) }
     rescue StandardError => ex
+      raise if ExcelAnalyzer.retryable_error?(ex)
+
       { error: ex.message }
-    end
-
-    def suspected_problem?(data)
-      return true if data[:error]
-
-      total_count = data.sum { |k, v| v }
-      return false if total_count == 0
-      return false if data[:named_ranges] == total_count
-      return false if data[:external_links] == total_count
-      return false if data[:hidden_rows] == total_count && total_count <= 50
-
-      true
     end
   end
 end

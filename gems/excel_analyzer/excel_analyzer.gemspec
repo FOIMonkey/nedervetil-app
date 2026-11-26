@@ -24,7 +24,7 @@ Gem::Specification.new do |spec|
   spec.require_paths = ["lib"]
 
   spec.add_dependency "activestorage"
-  spec.add_dependency "rubyXL"
+  spec.add_dependency "nokogiri"
   spec.add_dependency "rubyzip"
   spec.add_dependency "mail"
   spec.add_dependency "marcel"

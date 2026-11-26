@@ -19,4 +19,3 @@ RSpec.describe ExcelAnalyzer::Probe do
     expect(probe(xlsx)).to be_a(Hash)
   end
 end
-

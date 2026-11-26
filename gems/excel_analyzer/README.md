@@ -1,8 +1,16 @@
 # ExcelAnalyzer
 
-This gem packages an analyzer to inspects `XLSX` files (uploaded and analyzed as
-`ActiveStorage::Blob` objects) for hidden data, adding the results to the blob
-metadata.
+This gem packages Active Storage analyzers that inspect uploaded spreadsheets,
+ZIP archives and Office files for hidden data (hidden sheets, rows, columns,
+comments, pivot caches, external links, named ranges, macros and embedded
+workbooks), recording counts in blob metadata.
+
+In this fork it reads workbooks with `OfficePackage::ExcelMetadata` (via the
+Office converter sandbox when enabled) rather than `rubyXL`, and covers
+`.xlsx`, `.xlsm`, `.xltx`, `.xltm`, `.xls`, `.xlsb`, ZIP archives
+(`ExcelAnalyzer::ZipAnalyzer`) and embedded spreadsheets inside Word and
+PowerPoint packages (`ExcelAnalyzer::OfficeEmbeddedAnalyzer`). See
+`doc/FORK.md`.
 
 ## Development
 
