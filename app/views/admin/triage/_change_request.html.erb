@@ -1,0 +1,59 @@
+<div class="admin-triage__head">
+  <span class="label label-warning"><%= change_request.public_body ? 'Update authority' : 'New authority' %></span>
+  <span class="muted"><%= admin_date(change_request.created_at) %></span>
+</div>
+
+<h2 class="admin-triage__title">
+  <% if change_request.public_body %>
+    <%= link_to change_request.public_body.name, admin_body_path(change_request.public_body), data: { turbo_frame: '_top' } %>
+  <% else %>
+    <%= change_request.authority_name %>
+  <% end %>
+</h2>
+
+<dl class="admin-facts">
+  <% if change_request.public_body %>
+    <div><dt>Current address</dt><dd><code><%= change_request.public_body.request_email.presence || 'None' %></code></dd></div>
+  <% end %>
+  <div><dt>Suggested address</dt><dd><strong><code><%= change_request.public_body_email.presence || 'None' %></code></strong></dd></div>
+  <div>
+    <dt>Source</dt>
+    <dd>
+      <% if change_request.source_link %>
+        <%= link_to change_request.source_url, change_request.source_link, rel: 'nofollow noopener', target: '_blank' %>
+      <% else %>
+        <%= change_request.source_url.presence || 'None' %>
+      <% end %>
+    </dd>
+  </div>
+  <div><dt>Requested by</dt><dd><%= change_request.requester_name %> (<%= change_request.requester_email %>)</dd></div>
+  <% if change_request.notes.present? %>
+    <div><dt>Notes</dt><dd><%= change_request.notes %></dd></div>
+  <% end %>
+</dl>
+
+<div class="admin-triage__links">
+  <% if change_request.public_body %>
+    <%= link_to 'Make update',
+                edit_admin_body_path(change_request.public_body, change_request_id: change_request.id),
+                class: 'btn btn-primary',
+                data: { turbo_frame: '_top' } %>
+  <% else %>
+    <%= link_to 'Add authority',
+                new_admin_body_path(change_request_id: change_request.id),
+                class: 'btn btn-primary',
+                data: { turbo_frame: '_top' } %>
+  <% end %>
+
+  <%= link_to 'Close and respond',
+              edit_admin_change_request_path(change_request),
+              class: 'btn',
+              data: { turbo_frame: '_top' } %>
+
+  <%= form_tag admin_change_request_path(change_request),
+               method: :put,
+               class: 'admin-inline-form',
+               data: { turbo_frame: '_top' } do %>
+    <%= submit_tag 'Close', class: 'btn' %>
+  <% end %>
+</div>

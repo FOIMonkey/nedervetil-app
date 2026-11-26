@@ -554,10 +554,10 @@ Rails.application.routes.draw do
   end
   ####
 
-  #### AdminPublicBody controller
+  #### Admin::PublicBodies controller
   scope '/admin', :as => 'admin' do
     resources :bodies,
-    :controller => 'admin_public_body' do
+    :controller => 'admin/public_bodies' do
       get 'import_csv', :on => :collection
       post 'import_csv', :on => :collection
       resources :censor_rules,
@@ -578,49 +578,56 @@ Rails.application.routes.draw do
   end
   ####
 
-  #### AdminHoliday controller
+  #### Admin::Holidays controller
   scope '/admin', :as => 'admin' do
     resources :holidays,
-      :controller => 'admin_holidays'
+      :controller => 'admin/holidays',
+      :except => [:show]
   end
   ####
 
-  #### AdminHolidayImports controller
+  #### Admin::HolidayImports controller
   scope '/admin', :as => 'admin' do
     resources :holiday_imports,
-      :controller => 'admin_holiday_imports',
-      :only => [:new, :create]
+      :controller => 'admin/holiday_imports',
+      :only => [:new, :create] do
+        post :preview, :on => :collection
+      end
   end
   ####
 
-  #### AdminPublicBodyChangeRequest controller
+  #### Admin::PublicBodyChangeRequests controller
   scope '/admin', :as => 'admin' do
     resources :change_requests,
-      :controller => 'admin_public_body_change_requests',
+      :controller => 'admin/public_body_change_requests',
       :only => [:index, :destroy, :edit, :update]
   end
   ####
 
-  #### AdminGeneral controller
-  match '/admin' => 'admin_general#index',
+  #### Admin::General controller
+  match '/admin' => 'admin/general#index',
         :as => :admin_general_index,
         :via => :get
-  match '/admin/timeline' => 'admin_general#timeline',
+  get '/admin/jump' => 'admin/jump#show',
+      :as => :admin_jump
+  get '/admin/triage/:kind/:id' => 'admin/triage#show',
+      :as => :admin_triage
+  match '/admin/timeline' => 'admin/general#timeline',
         :as => :admin_timeline,
         :via => :get
-  match '/admin/stats' => 'admin_general#stats',
+  match '/admin/stats' => 'admin/general#stats',
         :as => :admin_stats,
         :via => :get
   ####
 
-  #### AdminRequest controller
+  #### Admin::Requests controller
   scope '/admin', :as => 'admin' do
     resources :requests,
-      :controller => 'admin_request',
-    :except => [:new, :create] do
+      :controller => 'admin/requests',
+      :except => [:new, :create] do
       post 'move', :on => :member
-      post 'generate_upload_url', :on => :member
-      post 'hide', :on => :member
+      patch 'prominence', :on => :member
+      post 'revert_report', :on => :member
       resources :censor_rules,
         :controller => 'admin/censor_rules',
         :only => [:new, :create] do
@@ -635,18 +642,10 @@ Rails.application.routes.draw do
   end
   ####
 
-  #### AdminComment controller
-  scope '/admin', :as => 'admin' do
-    resources :comments,
-      :controller => 'admin_comment',
-      :only => [:index, :edit, :update, :destroy]
-  end
-  ####
-
-  #### AdminRawEmail controller
+  #### Admin::RawEmails controller
   scope '/admin', :as => 'admin' do
     resources :raw_emails,
-      :controller => 'admin_raw_email',
+      :controller => 'admin/raw_emails',
       :only => [:show]
   end
   ####
@@ -661,20 +660,21 @@ Rails.application.routes.draw do
   end
   ####
 
-  #### AdminInfoRequestEvent controller
+  #### Admin::InfoRequestEvents controller
   scope '/admin', :as => 'admin' do
     resources :info_request_events,
-      :controller => 'admin_info_request_event',
+      :controller => 'admin/info_request_events',
       :only => [:edit, :index, :update]
   end
 
-  #### AdminIncomingMessage controller
+  #### Admin::IncomingMessages controller
   scope '/admin', :as => 'admin' do
     resources :incoming_messages,
-      :controller => 'admin_incoming_message',
+      :controller => 'admin/incoming_messages',
       :only => [:edit, :update, :destroy]
     resource :incoming_messages,
-      :controller => 'admin_incoming_message' do
+      :controller => 'admin/incoming_messages',
+      :only => [] do
         post 'bulk_destroy'
       end
   end
@@ -685,34 +685,34 @@ Rails.application.routes.draw do
     resources :incoming_messages, only: [] do
       scope module: :incoming_messages do
         resource :redelivery, only: [:create]
+        resource :reading, only: [:create]
       end
     end
   end
   ####
 
-
-  #### AdminOutgoingMessage controller
+  #### Admin::OutgoingMessages controller
   scope '/admin', :as => 'admin' do
     resources :outgoing_messages,
-      :controller => 'admin_outgoing_message',
-    :only => [:index, :edit, :update, :destroy] do
+      :controller => 'admin/outgoing_messages',
+      :only => [:index, :edit, :update, :destroy] do
       post 'resend', :on => :member
     end
   end
   ####
 
-  #### AdminMailServerLog controller
+  #### Admin::MailServerLogs controller
   scope '/admin', :as => 'admin' do
     resources :mail_server_logs,
-      :controller => 'admin_mail_server_log',
-    :only => [:index, :edit, :update]
+      :controller => 'admin/mail_server_logs',
+      :only => [:index, :edit, :update]
   end
   ####
 
   #### AdminFoiAttachment controller
   namespace :admin do
     resources :foi_attachments, path: :attachments,
-                                only: [:edit, :update] do
+                                only: [:edit] do
       get :download_unmasked, on: :member
       resource :prominence, controller: 'foi_attachments/prominence',
                             only: [:update]
@@ -724,22 +724,20 @@ Rails.application.routes.draw do
   end
   ####
 
-  #### AdminUser controller
+  #### Admin::Users controller
   scope '/admin', :as => 'admin' do
     resources :users,
-      :controller => 'admin_user',
-    :except => [:new, :create, :destroy] do
-      get 'active', :on => :collection
-      get 'banned', :on => :collection
-      get 'closed', :on => :collection
-      get 'show_bounce_message', :on => :member
-      post 'clear_bounce', :on => :member
-      post 'clear_profile_photo', :on => :member
-      post 'modify_comment_visibility', :on => :collection
-      resources :slugs, controller: 'admin_user_slug', only: :destroy
-      resources :censor_rules,
-        :controller => 'admin/censor_rules',
-        :only => [:new, :create]
+      :controller => 'admin/users',
+      :except => [:new, :create, :destroy] do
+        get 'active', :on => :collection
+        get 'banned', :on => :collection
+        get 'closed', :on => :collection
+        get 'show_bounce_message', :on => :member
+        post 'clear_bounce', :on => :member
+        resources :slugs, controller: 'admin/users/slugs', only: :destroy
+        resources :censor_rules,
+          :controller => 'admin/censor_rules',
+          :only => [:new, :create]
       end
   end
   ####
@@ -758,14 +756,6 @@ Rails.application.routes.draw do
   end
   ####
 
-  #### AdminUsersSessions controller
-  scope '/admin', :as => 'admin' do
-    resource :users_sessions,
-      :controller => 'admin_users_sessions',
-      :only => [:create, :destroy]
-  end
-  ####
-
   #### Admin::Users::SignIns controller
   namespace :admin do
     scope module: 'users' do
@@ -774,30 +764,23 @@ Rails.application.routes.draw do
   end
   ####
 
-  #### AdminTrack controller
-  scope '/admin', :as => 'admin' do
-    resources :tracks,
-      :controller => 'admin_track',
-      :only => [:index, :destroy]
-  end
-  ####
-
   #### Admin::CensorRules controller
   namespace :admin do
-    resources :censor_rules
+    resources :censor_rules, except: [:show]
   end
 
-  #### AdminSpamAddresses controller
+  #### Admin::SpamAddresses controller
   scope '/admin', :as => 'admin' do
     resources :spam_addresses,
-      :controller => 'admin_spam_addresses',
+      :controller => 'admin/spam_addresses',
       :only => [:index, :create, :destroy]
   end
   ####
 
-  #### AdminAnnouncement controller
+  #### Admin::Announcements controller
   scope '/admin', :as => 'admin' do
-    resources :announcements, :controller => 'admin_announcements'
+    resources :announcements, :controller => 'admin/announcements',
+                              :except => [:show]
   end
   ####
 

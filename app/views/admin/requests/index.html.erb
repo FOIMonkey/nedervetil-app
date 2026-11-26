@@ -1,0 +1,40 @@
+<% @title = 'Listing FOI requests' %>
+<% first_request = @info_requests.find { |r| !r.holding_pen_request?(read_only: true) } || @info_requests.first %>
+
+<div class="admin-list-head">
+  <h1><%= @title %></h1>
+  <div class="admin-summary__tools">
+    <%= link_to 'View tags', admin_tags_path(model_type: InfoRequest), class: 'btn btn-small' %>
+  </div>
+</div>
+
+<%= form_tag({}, method: 'get', class: 'admin-search-bar') do %>
+  <label for="query" class="visually-hidden">Search requests</label>
+  <%= search_field_tag 'query', params[:query], id: 'query', placeholder: 'Title, URL slug or requester' %>
+  <%= hidden_field_tag 'sort_order', @sort_order %>
+  <%= submit_tag 'Search', class: 'btn btn-primary', name: nil %>
+  <% if params[:query].present? %>
+    <%= link_to 'Show all', admin_requests_path, class: 'btn' %>
+  <% end %>
+<% end %>
+
+<% if first_request %>
+  <div class="admin-split">
+    <div class="admin-split__list" data-controller="triage-list" data-action="keydown@document->triage-list#keydown">
+      <%= render partial: 'some_requests', locals: { info_requests: @info_requests, preview_frame: 'request_preview', selected_id: first_request.id } %>
+    </div>
+    <aside class="admin-split__detail" aria-label="Request preview">
+      <turbo-frame id="request_preview">
+        <div class="admin-triage-pane">
+          <%= render partial: 'admin/triage/request_preview', locals: { info_request: first_request } %>
+        </div>
+      </turbo-frame>
+    </aside>
+  </div>
+<% else %>
+  <%= render partial: 'some_requests', locals: { info_requests: @info_requests } %>
+<% end %>
+
+<% if params[:query].present? || explain_search? %>
+  <%= render 'concerns/admin/searchable/search_stats' %>
+<% end %>

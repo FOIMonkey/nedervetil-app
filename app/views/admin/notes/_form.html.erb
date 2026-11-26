@@ -11,11 +11,12 @@
   <% end %>
 </div>
 
+<div data-controller="note-style">
 <div class="control-group">
   <%= f.label :style, class: 'control-label' %>
 
   <div class="controls">
-    <%= f.select :style, Note.style_labels %>
+    <%= f.select :style, Note.style_labels, {}, data: { note_style_target: 'style', action: 'note-style#update' } %>
     <span class="help-block">Notes are sorted by the order defined here.</span>
   </div>
 </div>
@@ -23,3 +24,4 @@
 <% f.translated_fields do |t| %>
   <%= render partial: 'locale_fields', locals: { t: t } %>
 <% end %>
+</div>

@@ -1,0 +1,85 @@
+<div class="admin-action-card" id="request-move">
+  <div class="admin-action-card__head">
+    <span class="admin-action-card__title">Move request</span>
+  </div>
+
+  <div class="admin-action-card__disclosures">
+    <details class="admin-inline-disclosure" id="move-authority-disclosure">
+      <summary class="btn btn-small">Move to another authority</summary>
+      <%= form_tag move_admin_request_path(info_request),
+                   class: 'admin-inline-disclosure__body admin-picker',
+                   data: { controller: 'record-picker',
+                           record_picker_url_value: admin_jump_path,
+                           record_picker_scope_value: 'bodies',
+                           record_picker_exclude_id_value: info_request.public_body_id } do %>
+        <label for="public_body_url_name">Authority name, email or URL slug</label>
+        <%= text_field_tag 'public_body_url_name', '',
+                           id: 'public_body_url_name',
+                           autocomplete: 'off',
+                           placeholder: 'camden_council or Camden',
+                           data: { record_picker_target: 'input',
+                                   action: 'input->record-picker#queue focus->record-picker#search' } %>
+        <turbo-frame id="move_body_picker_results"
+                     class="admin-picker__frame"
+                     data-record-picker-target="frame"></turbo-frame>
+
+        <div class="admin-move-preview" hidden data-record-picker-target="preview">
+          <p class="admin-move-preview__head"><strong>Confirm authority change</strong></p>
+          <p class="admin-move-preview__diff">
+            <span><%= info_request.public_body.name %></span>
+            <span aria-hidden="true">→</span>
+            <span>
+              <strong data-record-picker-target="previewName"></strong>
+              <span class="muted" data-record-picker-target="previewDetail"></span>
+            </span>
+          </p>
+        </div>
+
+        <div class="admin-picker__actions">
+          <%= submit_tag 'Move request to authority',
+                         class: 'btn btn-small btn-primary',
+                         data: { record_picker_target: 'submit' } %>
+        </div>
+      <% end %>
+    </details>
+
+    <details class="admin-inline-disclosure" id="move-user-disclosure">
+      <summary class="btn btn-small">Move to another user</summary>
+      <%= form_tag move_admin_request_path(info_request),
+                   class: 'admin-inline-disclosure__body admin-picker',
+                   data: { controller: 'record-picker',
+                           record_picker_url_value: admin_jump_path,
+                           record_picker_scope_value: 'users',
+                           record_picker_exclude_id_value: info_request.user_id } do %>
+        <label for="user_url_name">User name, email or URL slug</label>
+        <%= text_field_tag 'user_url_name', '',
+                           id: 'user_url_name',
+                           autocomplete: 'off',
+                           placeholder: 'rowan_patel or rowan@example.org',
+                           data: { record_picker_target: 'input',
+                                   action: 'input->record-picker#queue focus->record-picker#search' } %>
+        <turbo-frame id="move_user_picker_results"
+                     class="admin-picker__frame"
+                     data-record-picker-target="frame"></turbo-frame>
+
+        <div class="admin-move-preview" hidden data-record-picker-target="preview">
+          <p class="admin-move-preview__head"><strong>Confirm requester change</strong></p>
+          <p class="admin-move-preview__diff">
+            <span><%= info_request.user.name %></span>
+            <span aria-hidden="true">→</span>
+            <span>
+              <strong data-record-picker-target="previewName"></strong>
+              <span class="muted" data-record-picker-target="previewDetail"></span>
+            </span>
+          </p>
+        </div>
+
+        <div class="admin-picker__actions">
+          <%= submit_tag 'Move request to user',
+                         class: 'btn btn-small btn-primary',
+                         data: { record_picker_target: 'submit' } %>
+        </div>
+      <% end %>
+    </details>
+  </div>
+</div>

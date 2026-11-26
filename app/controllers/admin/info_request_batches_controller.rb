@@ -1,3 +1,5 @@
+# Displays an InfoRequestBatch and its paginated child requests in the admin
+# interface.
 class Admin::InfoRequestBatchesController < AdminController
   before_action :set_info_request_batch, :check_info_request_batch
 

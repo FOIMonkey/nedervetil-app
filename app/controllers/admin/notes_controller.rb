@@ -1,24 +1,28 @@
+# Manages translated editorial Note records attached to a notable record or tag
+# in the admin interface.
 class Admin::NotesController < AdminController
   include Admin::TagHelper
   include TranslatableParams
 
   def index
-    @notes = Note.paginate(page: params[:page], per_page: 50)
+    @notes = Note.order(id: :desc).paginate(page: params[:page], per_page: 50)
   end
 
   def new
     @note = scope.build
+    applies_to_something!(@note)
     @note.build_all_translations
   end
 
   def create
     @note = scope.build(note_params)
+    applies_to_something!(@note)
     if @note.save
       notice = 'Note successfully created.'
       redirect_to admin_note_parent_path(@note), notice: notice
     else
       @note.build_all_translations
-      render :new
+      render :new, status: :unprocessable_content
     end
   end
 
@@ -34,7 +38,7 @@ class Admin::NotesController < AdminController
       redirect_to admin_note_parent_path(@note), notice: notice
     else
       @note.build_all_translations
-      render :edit
+      render :edit, status: :unprocessable_content
     end
   end
 
@@ -46,6 +50,13 @@ class Admin::NotesController < AdminController
   end
 
   private
+
+  # Require either a notable record or a tag; orphan note forms have no target.
+  def applies_to_something!(note)
+    return if note.notable || note.notable_tag.present?
+
+    raise ActiveRecord::RecordNotFound
+  end
 
   def scope
     Note.where(params.slice(:notable_tag, :notable_id, :notable_type).permit!)

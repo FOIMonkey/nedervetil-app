@@ -1,0 +1,28 @@
+<% @title = "Listing Public body change requests" %>
+
+<div class="admin-list-head">
+  <h1><%= @title %></h1>
+</div>
+
+<%= form_tag({}, method: 'get', class: 'admin-search-bar') do %>
+  <label for="query" class="visually-hidden">Search change requests</label>
+  <%= search_field_tag 'query', params[:query], id: 'query', placeholder: 'Authority name, email, requester or notes' %>
+  <%= hidden_field_tag 'sort_order', @sort_order %>
+  <%= submit_tag 'Search', class: 'btn btn-primary', name: nil %>
+  <% if params[:query].present? %>
+    <%= link_to 'Show all', admin_change_requests_path, class: 'btn' %>
+  <% end %>
+<% end %>
+
+<div class="admin-record-list" id="change_requests">
+  <% if @change_requests.any? %>
+    <%= render partial: "change_request", collection: @change_requests %>
+    <%= will_paginate(@change_requests) %>
+  <% else %>
+    <p class="muted">None yet.</p>
+  <% end %>
+</div>
+
+<% if params[:query].present? || explain_search? %>
+  <%= render "concerns/admin/searchable/search_stats" %>
+<% end %>

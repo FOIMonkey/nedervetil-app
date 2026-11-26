@@ -1,0 +1,52 @@
+<% compact = local_assigns.fetch(:compact, false) %>
+<% return_to = local_assigns[:return_to] %>
+<% hidden_now = info_request.prominence == 'hidden' %>
+
+<div id="request-prominence" class="admin-action-card<%= ' admin-action-card--compact' if compact %>">
+  <% if hidden_now %>
+    <div class="admin-action-card__bar">
+      <div class="admin-action-card__status">
+        <span class="admin-action-card__title">Visibility</span>
+        <span class="label label-important">Hidden from requester</span>
+      </div>
+      <%= form_tag prominence_admin_request_path(info_request),
+                   method: :patch,
+                   class: 'admin-inline-form',
+                   data: { turbo_frame: '_top' } do %>
+        <%= hidden_field_tag :prominence, 'requester_only' %>
+        <% if return_to.present? %><%= hidden_field_tag :return_to, return_to %><% end %>
+        <%= submit_tag 'Unhide for requester', class: 'btn btn-small btn-primary' %>
+      <% end %>
+    </div>
+    <% if info_request.prominence_reason.present? %>
+      <p class="muted admin-action-card__note"><%= info_request.prominence_reason %></p>
+    <% end %>
+  <% else %>
+    <details class="admin-inline-disclosure admin-inline-disclosure--bar">
+      <summary class="admin-action-card__bar">
+        <span class="admin-action-card__status">
+          <span class="admin-action-card__title">Visibility</span>
+          <span class="label">Requester and admins</span>
+        </span>
+        <span class="btn btn-small btn-warning">Hide from requester</span>
+      </summary>
+      <%= form_tag prominence_admin_request_path(info_request),
+                   method: :patch,
+                   class: 'admin-inline-disclosure__body',
+                   data: { turbo_frame: '_top' } do %>
+        <%= hidden_field_tag :prominence, 'hidden' %>
+        <% if return_to.present? %><%= hidden_field_tag :return_to, return_to %><% end %>
+        <label for="prominence_reason_<%= info_request.id %>">Reason</label>
+        <%= text_area_tag :prominence_reason,
+                          info_request.prominence_reason,
+                          id: "prominence_reason_#{info_request.id}",
+                          rows: 3,
+                          placeholder: ProminenceHelper::Base.default_prominence_reason %>
+        <p class="help-block">
+          Leave blank for the default notice.
+        </p>
+        <%= submit_tag 'Confirm hide', class: 'btn btn-small btn-danger' %>
+      <% end %>
+    </details>
+  <% end %>
+</div>

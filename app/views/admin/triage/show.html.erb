@@ -1,0 +1,43 @@
+<% if @standalone %>
+  <p class="admin-summary__back">
+    <% if @kind == 'request_preview' %>
+      <%= link_to 'Back to requests', admin_requests_path %>
+    <% else %>
+      <%= link_to 'Back to Things to do', admin_general_index_path %>
+    <% end %>
+  </p>
+<% end %>
+
+<turbo-frame id="<%= @frame_id %>">
+  <div class="admin-triage-pane">
+    <% case @kind %>
+    <% when 'holding_pen' %>
+      <%= render partial: 'admin/triage/holding_pen',
+                 locals: { incoming_message: @incoming_message,
+                           raw_email: @raw_email,
+                           holding_pen: @holding_pen,
+                           public_bodies: @public_bodies,
+                           guessed_info_requests: @guessed_info_requests,
+                           rejected_reason: @rejected_reason } %>
+    <% when 'request' %>
+      <%= render partial: 'admin/triage/request',
+                 locals: { info_request: @info_request } %>
+    <% when 'request_preview' %>
+      <%= render partial: 'admin/triage/request_preview',
+                 locals: { info_request: @info_request,
+                           outgoing_count: @outgoing_count } %>
+    <% when 'change_request' %>
+      <%= render partial: 'admin/triage/change_request',
+                 locals: { change_request: @change_request } %>
+    <% when 'document' %>
+      <%= render partial: 'admin/triage/document',
+                 locals: { document: @document } %>
+    <% when 'attachment' %>
+      <%= render partial: 'admin/triage/attachment',
+                 locals: { revision: @revision } %>
+    <% when 'blank_contact' %>
+      <%= render partial: 'admin/triage/blank_contact',
+                 locals: { public_body: @public_body } %>
+    <% end %>
+  </div>
+</turbo-frame>

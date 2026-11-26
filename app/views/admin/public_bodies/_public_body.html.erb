@@ -1,0 +1,21 @@
+<details class="admin-row-details">
+  <summary class="admin-row-details__summary">
+    <span class="item-title">
+      <%= both_links(public_body) %>
+      <% if public_body.request_email.blank? && !public_body.defunct? %>
+        <span class="label label-warning">No FOI email</span>
+      <% end %>
+    </span>
+    <span class="item-metadata">
+      <%= render_tags public_body.tags %>
+    </span>
+  </summary>
+  <div id="body_<%= public_body.id %>" class="item-detail">
+    <% public_body.for_admin_column do |name, value| %>
+      <div>
+        <span><b><%= name.humanize %></b></span>
+        <span><%= admin_value(value) %></span>
+      </div>
+    <% end %>
+  </div>
+</details>

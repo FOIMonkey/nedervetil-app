@@ -1,0 +1,233 @@
+<% @title = "User – #{ @admin_user.name }" %>
+<% content_for :admin_user_header, true %>
+<% prominence_counts = @prominence_counts || @admin_user.info_requests.reorder(nil).group(:prominence).count %>
+<% request_count = @request_count || prominence_counts.values.sum %>
+<% hidden_count = @hidden_request_count || prominence_counts['hidden'].to_i %>
+<% document_count = @document_count || Disclosures::Document.where(owner_id: @admin_user.id).count %>
+<% batch_count = @info_request_batches.size %>
+<% sign_ins_count = @sign_ins_count || @admin_user.sign_ins.count %>
+<% sign_ins = @sign_ins || @admin_user.sign_ins.limit(50).to_a %>
+<% email_histories = @email_histories || @admin_user.email_histories.order(changed_at: :desc).limit(50).to_a %>
+<% permission_changes = @permission_changes || @admin_user.permission_changes.order(created_at: :desc).limit(50).to_a %>
+<% censor_rules = @admin_user.censor_rules %>
+
+<div class="admin-summary">
+  <p class="admin-summary__back"><%= link_to 'Users', admin_users_path %></p>
+  <h1><%= @title %></h1>
+  <p class="admin-lede">
+    <code><%= @admin_user.url_name %></code>
+    · <%= link_to @admin_user.email, "mailto:#{h @admin_user.email}" %>
+    · #<%= @admin_user.id %>
+    <% if @admin_user.created_at %>· joined <%= I18n.l(@admin_user.created_at.to_date, format: '%-d %B %Y') %><% end %>
+  </p>
+
+  <div class="admin-summary__tools">
+    <%= link_to 'Edit', edit_admin_user_path(@admin_user), class: 'btn btn-small btn-primary' %>
+    <%= link_to 'Public page', user_path(@admin_user), class: 'btn btn-small' %>
+
+    <% disabled = @admin_user.suspended? %>
+    <details class="admin-action-menu" id="user-ban-menu">
+      <summary class="btn btn-small btn-danger<%= ' disabled' if disabled %>">
+        <%= disabled ? 'Suspended' : 'Suspend user' %>
+      </summary>
+      <div class="admin-action-menu__panel">
+        <% if disabled %>
+          <p class="muted">This account is suspended. Edit the user to clear the ban text.</p>
+        <% else %>
+          <ul>
+            <% [
+              { button: 'Ban for spamming',
+                reason: _('Banned for spamming') },
+              { button: 'Ban for evading',
+                reason: _('Banned for evading another ban') },
+              { button: 'Ban for misuse',
+                reason: _('Banned for misuse in breach of house rules') }
+            ].each do |data| %>
+              <li>
+                <%= form_tag admin_user_suspension_path(@admin_user, suspension_reason: data[:reason]), class: 'admin-inline-form' do %>
+                  <%= submit_tag data[:button], class: 'admin-action-menu__item' %>
+                <% end %>
+              </li>
+            <% end %>
+          </ul>
+        <% end %>
+      </div>
+    </details>
+  </div>
+
+  <dl class="admin-facts">
+    <div>
+      <dt>Status</dt>
+      <dd>
+        <% if @admin_user.closed? %>
+          <span class="label label-important">Closed</span>
+        <% elsif @admin_user.suspended? %>
+          <span class="label label-important">Suspended</span>
+          <span class="muted"><%= @admin_user.ban_text %></span>
+        <% else %>
+          <span class="label">Active</span>
+        <% end %>
+        <% if @admin_user.trusted? %><span class="label label-solid">Trusted</span><% end %>
+        <% if @admin_user.email_confirmed? %><span class="muted">Email confirmed</span><% else %><span class="label label-warning">Unconfirmed</span><% end %>
+      </dd>
+    </div>
+    <div>
+      <dt>Email</dt>
+      <dd>
+        <%= link_to @admin_user.email, "mailto:#{h @admin_user.email}" %>
+        <% if @admin_user.email_bounced_at %>
+          <span class="label label-warning">Bounced <%= admin_date(@admin_user.email_bounced_at) %></span>
+          <% unless @admin_user.email_bounce_message.to_s.empty? %>
+            <%= link_to 'See bounce message', show_bounce_message_admin_user_path(@admin_user) %>
+          <% end %>
+          <%= form_tag clear_bounce_admin_user_path(@admin_user), class: 'admin-inline-form' do %>
+            <%= submit_tag 'Clear bounce', class: 'btn btn-mini' %>
+          <% end %>
+        <% end %>
+      </dd>
+    </div>
+    <div>
+      <dt>Roles</dt>
+      <dd>
+        <% if @admin_user.roles.any? %>
+          <% @admin_user.roles.each do |role| %>
+            <span class="label"><%= role.name %></span>
+          <% end %>
+        <% else %>
+          <span class="muted">None</span>
+        <% end %>
+      </dd>
+    </div>
+    <% enabled_features = @admin_user.features.select(&:enabled?) %>
+    <% if enabled_features.any? %>
+      <div>
+        <dt>Features</dt>
+        <dd><%= enabled_features.map(&:key).join(', ') %></dd>
+      </div>
+    <% end %>
+    <div>
+      <dt>URL name</dt>
+      <dd>
+        <ul class="unstyled admin-slug-list">
+          <% @admin_user.slugs.each_with_index do |slug, index| %>
+            <%= tag.li class: { muted: index.positive? } do %>
+              <code><%= slug.slug %></code>
+              <% if index.positive? %>
+                <%= button_to 'Delete',
+                              admin_user_slug_path(user_id: @admin_user, id: slug.id),
+                              method: :delete,
+                              form_class: 'admin-inline-form',
+                              class: 'btn btn-mini btn-danger' %>
+              <% end %>
+            <% end %>
+          <% end %>
+        </ul>
+      </dd>
+    </div>
+    <% if @admin_user.tags.any? %>
+      <div>
+        <dt>Tags</dt>
+        <dd><%= render_tags @admin_user.tags %></dd>
+      </div>
+    <% end %>
+  </dl>
+
+  <p class="admin-counts">
+    <a href="#user-requests"><b><%= request_count %></b><span><%= 'request'.pluralize(request_count) %><% if hidden_count.positive? %> (<%= hidden_count %> hidden)<% end %></span></a>
+    <a href="#user-audit"><b><%= document_count %></b><span><%= 'document'.pluralize(document_count) %> owned</span></a>
+    <a href="#user-batches"><b><%= batch_count %></b><span>batch <%= 'request'.pluralize(batch_count) %></span></a>
+  </p>
+
+  <section class="admin-block" id="user-requests" aria-labelledby="user-requests-heading">
+    <h2 id="user-requests-heading">
+      Requests <span class="admin-block__count"><%= request_count %></span>
+      <% if request_count.positive? %>
+        <span class="admin-block__more muted">
+          Requester &amp; admins: <%= prominence_counts['requester_only'].to_i %><% if hidden_count.positive? %> · Hidden: <%= hidden_count %><% end %>
+        </span>
+      <% end %>
+    </h2>
+    <%= render partial: 'admin/requests/some_requests',
+               locals: { info_requests: @info_requests } %>
+  </section>
+
+  <% if batch_count.positive? %>
+    <section class="admin-block" id="user-batches" aria-labelledby="user-batches-heading">
+      <h2 id="user-batches-heading">Batch requests <span class="admin-block__count"><%= batch_count %></span></h2>
+      <%= render partial: 'admin/info_request_batches/list',
+                 locals: { info_request_batches: @info_request_batches } %>
+    </section>
+  <% end %>
+
+  <section class="admin-block" id="user-audit" aria-labelledby="user-audit-heading">
+    <h2 id="user-audit-heading">Audit and history</h2>
+
+    <details class="admin-drawer" id="user-sign-ins">
+      <summary>Sign-ins <span class="admin-block__count">(<%= sign_ins_count %>)</span></summary>
+      <div class="admin-drawer__body">
+        <%= render partial: 'admin/users/sign_in_table',
+                   locals: { sign_ins: sign_ins, total_count: sign_ins_count } %>
+      </div>
+    </details>
+
+    <details class="admin-drawer" id="user-email-history">
+      <summary>Email history <span class="admin-block__count">(<%= email_histories.size %>)</span></summary>
+      <div class="admin-drawer__body">
+        <%= render partial: 'admin/users/email_history_table',
+                   locals: { email_histories: email_histories } %>
+      </div>
+    </details>
+
+    <details class="admin-drawer" id="user-permission-history">
+      <summary>Permission history <span class="admin-block__count">(<%= permission_changes.size %>)</span></summary>
+      <div class="admin-drawer__body">
+        <%= render partial: 'admin/users/permission_history_table',
+                   locals: { permission_changes: permission_changes } %>
+      </div>
+    </details>
+
+    <details class="admin-drawer" id="user-censor-rules">
+      <summary>Censor rules <span class="admin-block__count">(<%= censor_rules.size %>)</span></summary>
+      <div class="admin-drawer__body">
+        <%= render partial: 'admin/censor_rules/list',
+                   locals: { censor_rules: censor_rules,
+                             user: @admin_user } %>
+      </div>
+    </details>
+
+    <% if can? :login_as, @admin_user %>
+      <details class="admin-drawer" id="user-post-redirects">
+        <summary>Post redirects <span class="admin-block__count">(<%= @admin_user.post_redirects.size %>)</span></summary>
+        <div class="admin-drawer__body">
+          <%= render partial: 'admin/users/post_redirects',
+                     locals: { post_redirects: @admin_user.post_redirects } %>
+        </div>
+      </details>
+    <% end %>
+
+    <details class="admin-all">
+      <summary>All fields</summary>
+      <table class="table table-striped table-condensed">
+        <tbody>
+          <tr><td><b>Id</b></td><td><%= @admin_user.id %></td></tr>
+          <% @admin_user.for_admin_column do |name, value| %>
+            <tr>
+              <td><b><%= name.humanize %></b></td>
+              <td>
+                <% if name == 'email' %>
+                  <%= link_to @admin_user.email, "mailto:#{h @admin_user.email}" %>
+                <% elsif name == 'email_bounce_message' %>
+                  <% unless @admin_user.email_bounce_message.to_s.empty? %>
+                    <%= link_to 'See bounce message', show_bounce_message_admin_user_path(@admin_user) %>
+                  <% end %>
+                <% else %>
+                  <%= h admin_value(value) %>
+                <% end %>
+              </td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </details>
+  </section>
+</div>

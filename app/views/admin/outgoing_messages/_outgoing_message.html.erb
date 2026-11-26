@@ -1,0 +1,13 @@
+<article class="admin-message-row">
+  <div class="accordion-heading admin-message-row__head">
+    <span class="item-title"><%= both_links(outgoing_message) %></span>
+    <span class="admin-status-pill"><%= outgoing_message.status.humanize %></span>
+    <span class="admin-message-row__meta muted">
+      <%= outgoing_message.message_type.humanize %>
+      <% if outgoing_message.last_sent_at %>
+        · <%= admin_date(outgoing_message.last_sent_at, ago_only: true) %>
+      <% end %>
+    </span>
+  </div>
+  <p class="admin-message-row__excerpt muted"><%= truncate(outgoing_message.body.to_s.squish, length: 220) %></p>
+</article>

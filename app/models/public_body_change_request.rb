@@ -16,6 +16,8 @@
 #  updated_at        :datetime         not null
 #
 
+# A visitor or user submission asking admins to add a new PublicBody or update
+# an existing authority's email address, with mailer helpers and admin search.
 class PublicBodyChangeRequest < ApplicationRecord
   include Searchable
 
@@ -29,33 +31,43 @@ class PublicBodyChangeRequest < ApplicationRecord
 
   validates_presence_of :public_body_name,
                         message: N_("Please enter the name of the authority"),
-                        unless: proc { |change_request| change_request.public_body }
+                        unless:
+                          proc { |change_request| change_request.public_body }
   validates_presence_of :user_name,
                         message: N_("Please enter your name"),
                         unless: proc { |change_request| change_request.user }
   validates_presence_of :user_email,
                         message: N_("Please enter your email address"),
                         unless: proc { |change_request| change_request.user }
-  validate :user_email_format, unless: proc { |change_request| change_request.user_email.blank? }
-  validate :body_email_format, unless: proc { |change_request| change_request.public_body_email.blank? }
+  validate :user_email_format,
+           unless: proc { |change_request| change_request.user_email.blank? }
+  validate :body_email_format,
+           unless:
+             proc { |change_request| change_request.public_body_email.blank? }
+  # Checked only on change so legacy invalid values don't block closing.
+  validates :source_url,
+            http_url: { message: N_('Please enter a web address, such as ' \
+                                    'https://www.example.org, or leave it ' \
+                                    'blank') },
+            if: :will_save_change_to_source_url?
 
   scope :new_body_requests, -> {
     where(public_body_id: nil).order(:created_at)
   }
   scope :body_update_requests, -> {
-    where("public_body_id IS NOT NULL").order(:created_at)
+    where.not(public_body_id: nil).order(:created_at)
   }
 
   singleton_class.undef_method :open # Undefine Kernel.open to avoid warning
   scope :open, -> { where(is_open: true) }
 
   searchable admin_index: {
-    "notes": "A",
-    "public_body_email": "A",
-    "public_body_name": "A",
-    "source_url": "A",
-    "user_email": "A",
-    "user_name": "A"
+    notes: "A",
+    public_body_email: "A",
+    public_body_name: "A",
+    source_url: "A",
+    user_email: "A",
+    user_name: "A"
   }, root: :public_body
 
   def self.from_params(params, user)
@@ -78,19 +90,24 @@ class PublicBodyChangeRequest < ApplicationRecord
     self
   end
 
+  # Returns a safe http/https link, or nil for legacy invalid values.
+  def source_link
+    HttpUrl.with_default_scheme(source_url)
+  end
+
   def add_body_request?
     public_body ? false : true
   end
 
-  def get_user_name
+  def requester_name
     user ? user.name : user_name
   end
 
-  def get_user_email
+  def requester_email
     user ? user.email : user_email
   end
 
-  def get_public_body_name
+  def authority_name
     public_body ? public_body.name : public_body_name
   end
 
@@ -117,19 +134,19 @@ class PublicBodyChangeRequest < ApplicationRecord
       _("Your request to update the address for {{public_body_name}} has " \
         "been sent. Thank you for getting in touch! We'll get back to you " \
         "soon.",
-        public_body_name: get_public_body_name)
+        public_body_name: authority_name)
     end
   end
 
   def send_response(subject, response)
-    ContactMailer.from_admin_message(get_user_name,
-                                     get_user_email,
+    ContactMailer.from_admin_message(requester_name,
+                                     requester_email,
                                      subject,
-                                     response.strip.html_safe).deliver_now
+                                     response.strip).deliver_now
   end
 
   def comment_for_public_body
-    comments = ["Requested by: #{get_user_name} (#{get_user_email})"]
+    comments = ["Requested by: #{requester_name} (#{requester_email})"]
     comments << "Source URL: #{source_url}" unless source_url.blank?
     comments << "Notes: #{notes}" unless notes.blank?
     comments.join("\n")
@@ -137,11 +154,11 @@ class PublicBodyChangeRequest < ApplicationRecord
 
   def request_subject
     if add_body_request?
-      _("Add authority - {{public_body_name}}",
-        public_body_name: public_body_name.html_safe).to_str
+      PlainTextTranslation._("Add authority - {{public_body_name}}",
+                             public_body_name: public_body_name)
     else
-      _("Update email address - {{public_body_name}}",
-        public_body_name: public_body.name.html_safe).to_str
+      PlainTextTranslation._("Update email address - {{public_body_name}}",
+                             public_body_name: public_body.name)
     end
   end
 
@@ -157,14 +174,15 @@ class PublicBodyChangeRequest < ApplicationRecord
   private
 
   def body_email_format
-    unless MySociety::Validate.is_valid_email(public_body_email)
-      errors.add(:public_body_email, _("The authority email doesn't look like a valid address"))
-    end
+    return if MySociety::Validate.is_valid_email(public_body_email)
+
+    errors.add(:public_body_email,
+               _("The authority email doesn't look like a valid address"))
   end
 
   def user_email_format
-    unless MySociety::Validate.is_valid_email(user_email)
-      errors.add(:user_email, _("Your email doesn't look like a valid address"))
-    end
+    return if MySociety::Validate.is_valid_email(user_email)
+
+    errors.add(:user_email, _("Your email doesn't look like a valid address"))
   end
 end

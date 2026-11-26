@@ -1,0 +1,38 @@
+<% outgoing_count = local_assigns.fetch(:outgoing_count) { info_request.outgoing_messages.count } %>
+<div class="admin-triage__head">
+  <span class="label"><%= InfoRequest::State.short_description(info_request.calculate_status) %></span>
+  <span class="muted">#<%= info_request.id %> · updated <%= admin_date(info_request.updated_at, ago_only: true) %></span>
+</div>
+
+<h2 class="admin-triage__title">
+  <%= link_to info_request.title, admin_request_path(info_request), data: { turbo_frame: '_top' } %>
+</h2>
+
+<p class="muted">
+  <%= link_to info_request.user.name, admin_user_path(info_request.user), data: { turbo_frame: '_top' } %>
+  to <%= link_to info_request.public_body.name, admin_body_path(info_request.public_body), data: { turbo_frame: '_top' } %>
+</p>
+
+<dl class="admin-facts">
+  <div>
+    <dt>Correspondence</dt>
+    <dd><%= pluralize(outgoing_count, 'sent message') %>, <%= pluralize(info_request.incoming_messages_count, 'reply', plural: 'replies') %></dd>
+  </div>
+  <div>
+    <dt>Replies go to</dt>
+    <dd><code><%= info_request.incoming_email %></code></dd>
+  </div>
+</dl>
+
+<% unless info_request.holding_pen_request?(read_only: true) %>
+  <%= render partial: 'admin/requests/prominence_control',
+             locals: { info_request: info_request,
+                       return_to: admin_requests_path,
+                       compact: true } %>
+<% end %>
+
+<div class="admin-triage__links">
+  <%= link_to 'Open request', admin_request_path(info_request), class: 'btn btn-primary', data: { turbo_frame: '_top' } %>
+  <%= link_to 'Edit fields', edit_admin_request_path(info_request), class: 'btn', data: { turbo_frame: '_top' } %>
+  <%= link_to 'Request page', show_request_path(info_request.url_title), class: 'btn', data: { turbo_frame: '_top' } %>
+</div>

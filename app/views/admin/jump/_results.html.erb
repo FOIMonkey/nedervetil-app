@@ -1,0 +1,66 @@
+<turbo-frame id="<%= @frame_id %>" target="_top">
+  <% any_results = [@requests, @users, @bodies, @documents, @tools].any? { |list| list.present? } %>
+  <% if !any_results %>
+    <p class="admin-jump__empty muted">Nothing matched "<%= @query %>".</p>
+  <% else %>
+    <% if @requests.present? %>
+      <div class="admin-jump__group">
+        <div class="admin-jump__heading">Requests</div>
+        <% @requests.each do |req| %>
+          <%= link_to admin_request_path(req), class: 'admin-jump__item' do %>
+            <strong>#<%= req.id %> <%= req.title %></strong>
+            <span class="muted"><%= req.public_body.name %> · <%= InfoRequest::State.short_description(req.calculate_status) %></span>
+          <% end %>
+        <% end %>
+      </div>
+    <% end %>
+
+    <% if @users.present? %>
+      <div class="admin-jump__group">
+        <div class="admin-jump__heading">Users</div>
+        <% @users.each do |user| %>
+          <%= link_to admin_user_path(user), class: 'admin-jump__item' do %>
+            <strong><%= user.name %></strong>
+            <span class="muted"><%= user.email %> · <code><%= user.url_name %></code></span>
+          <% end %>
+        <% end %>
+      </div>
+    <% end %>
+
+    <% if @bodies.present? %>
+      <div class="admin-jump__group">
+        <div class="admin-jump__heading">Authorities</div>
+        <% @bodies.each do |body| %>
+          <%= link_to admin_body_path(body), class: 'admin-jump__item' do %>
+            <strong><%= body.name %></strong>
+            <span class="muted"><code><%= body.url_name %></code><% if body.request_email.present? %> · <%= body.request_email %><% end %></span>
+          <% end %>
+        <% end %>
+      </div>
+    <% end %>
+
+    <% if @documents.present? %>
+      <div class="admin-jump__group">
+        <div class="admin-jump__heading">Documents</div>
+        <% @documents.each do |doc| %>
+          <%= link_to disclosure_manage_document_path(doc), class: 'admin-jump__item' do %>
+            <strong><%= doc.title %></strong>
+            <span class="muted"><%= document_state(doc) %><% if doc.authority %> · <%= doc.authority.name %><% end %></span>
+          <% end %>
+        <% end %>
+      </div>
+    <% end %>
+
+    <% if @tools.present? %>
+      <div class="admin-jump__group">
+        <div class="admin-jump__heading">Admin tools</div>
+        <% @tools.each do |tool| %>
+          <%= link_to tool[:path], class: 'admin-jump__item' do %>
+            <strong><%= tool[:label] %></strong>
+            <span class="muted"><%= tool[:group] %></span>
+          <% end %>
+        <% end %>
+      </div>
+    <% end %>
+  <% end %>
+</turbo-frame>

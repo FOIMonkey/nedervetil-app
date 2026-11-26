@@ -1,0 +1,108 @@
+<div class="admin-triage__head">
+  <span class="label label-warning">Holding pen</span>
+  <span class="muted"><%= admin_date(incoming_message.sent_at, ago_only: true) %></span>
+</div>
+
+<% parsed_mail = raw_email&.kept? ? raw_email.mail : nil %>
+<h2 class="admin-triage__title">
+  <% subject = incoming_message.subject.presence || parsed_mail&.subject.presence %>
+  <%= subject || "Raw email ##{raw_email&.id}" %>
+</h2>
+
+<p class="muted">
+  From <strong><%= incoming_message.from_name.presence || parsed_mail&.from&.join(', ') || 'Unknown sender' %></strong>
+</p>
+
+<% if holding_pen %>
+  <div class="alert alert-warning">
+    Held: <strong><%= rejected_reason.to_s.tr('_', ' ').capitalize %></strong>
+  </div>
+
+  <% if public_bodies.present? %>
+    <p class="admin-triage__sub">
+      <strong>Likely authority:</strong>
+      <%= safe_join(public_bodies.map { |b| link_to(b.name, admin_body_path(b), data: { turbo_frame: '_top' }) }, ', ') %>
+    </p>
+  <% end %>
+
+  <% if guessed_info_requests.present? %>
+    <div class="admin-triage__guesses">
+      <h3>Suggested match</h3>
+      <ul class="admin-guess-list">
+        <% guessed_info_requests.each do |guess| %>
+          <li class="admin-guess-list__item">
+            <div class="admin-guess-list__info">
+              <%= link_to "##{guess.info_request.id} #{guess.info_request.title}",
+                          admin_request_path(guess.info_request),
+                          class: 'admin-guess-list__title',
+                          data: { turbo_frame: '_top' } %>
+              <span class="muted admin-guess-list__meta">
+                <%= guess.match_method == :subject ? 'Matched by subject' : 'Matched by address' %>
+                · <%= guess.info_request.public_body.name %>
+              </span>
+            </div>
+            <%= form_tag admin_incoming_message_redelivery_path(incoming_message),
+                         data: { turbo_frame: '_top' },
+                         class: 'admin-inline-form' do %>
+              <%= hidden_field_tag 'url_title', guess.info_request.id %>
+              <%= submit_tag "Place in ##{guess.info_request.id}", class: 'btn btn-small btn-primary' %>
+            <% end %>
+          </li>
+        <% end %>
+      </ul>
+    </div>
+  <% end %>
+<% end %>
+
+<% excerpt_text = incoming_message.get_body_for_quoting.to_s.strip %>
+<% if excerpt_text.present? %>
+  <blockquote class="admin-triage__excerpt"><%= truncate(excerpt_text, length: 420) %></blockquote>
+<% end %>
+
+<div class="admin-triage__actions">
+  <% if guessed_info_requests.present? %>
+    <details class="admin-inline-disclosure">
+      <summary class="admin-rows__open">Redeliver to a different request</summary>
+      <%= form_tag admin_incoming_message_redelivery_path(incoming_message),
+                   class: 'admin-inline-disclosure__body',
+                   data: { turbo_frame: '_top' } do %>
+        <label for="triage_url_title_<%= incoming_message.id %>">Request ID or URL slug</label>
+        <div class="admin-inline-group">
+          <%= text_field_tag 'url_title', '',
+                             id: "triage_url_title_#{incoming_message.id}",
+                             required: true,
+                             placeholder: '48219' %>
+          <%= submit_tag 'Redeliver', class: 'btn btn-small btn-primary' %>
+        </div>
+      <% end %>
+    </details>
+  <% else %>
+    <%= form_tag admin_incoming_message_redelivery_path(incoming_message),
+                 class: 'admin-triage__form',
+                 data: { turbo_frame: '_top' } do %>
+      <label for="triage_url_title_<%= incoming_message.id %>">Redeliver to request (ID or URL slug)</label>
+      <div class="admin-inline-group">
+        <%= text_field_tag 'url_title', '',
+                           id: "triage_url_title_#{incoming_message.id}",
+                           required: true,
+                           placeholder: '48219' %>
+        <%= submit_tag 'Redeliver', class: 'btn btn-small btn-primary' %>
+      </div>
+    <% end %>
+  <% end %>
+
+  <div class="admin-triage__links">
+    <% if raw_email %>
+      <%= link_to 'Inspect raw email', admin_raw_email_path(raw_email), class: 'btn btn-small', data: { turbo_frame: '_top' } %>
+    <% end %>
+    <%= form_tag admin_incoming_message_path(incoming_message),
+                 method: :delete,
+                 class: 'admin-inline-form',
+                 data: { turbo_frame: '_top' } do %>
+      <%= hidden_field_tag 'incoming_message_id', incoming_message.id %>
+      <%= submit_tag 'Delete message',
+                     class: 'btn btn-small btn-danger',
+                     data: { confirm: 'This is permanent. Are you sure?' } %>
+    <% end %>
+  </div>
+</div>

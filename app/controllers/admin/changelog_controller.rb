@@ -4,6 +4,8 @@ class Admin::ChangelogController < AdminController
   def index
     markdown = Redcarpet::Markdown.new(Redcarpet::Render::HTML.new)
     text = File.read(Rails.root + 'doc/CHANGES.md')
+    # rubocop:disable Rails/OutputSafety -- the repository's own doc/CHANGES.md, rendered for admins
     @changelog = markdown.render(text).html_safe
+    # rubocop:enable Rails/OutputSafety
   end
 end

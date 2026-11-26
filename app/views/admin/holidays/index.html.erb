@@ -1,0 +1,51 @@
+<% @title = 'Public Holidays' %>
+
+<div data-controller="holidays">
+  <div class="admin-list-head">
+    <h1><%= @title %></h1>
+    <div class="admin-summary__tools">
+      <%= link_to 'New holiday',
+                  new_admin_holiday_path,
+                  class: 'btn btn-small btn-primary',
+                  id: 'new-holiday-button',
+                  data: { action: 'holidays#new' } %>
+      <%= link_to new_admin_holiday_import_path, class: 'btn btn-small' do %>
+        Create holidays from suggestions or iCal feed
+      <% end %>
+    </div>
+  </div>
+
+  <p class="muted">
+    Alaveteli calculates the due dates of requests taking account of the
+    public holidays shown here. If you have set the
+    <code>WORKING_OR_CALENDAR_DAYS</code>
+    (<a href="http://alaveteli.org/docs/customising/config/#working_or_calendar_days" target="_blank" rel="noopener">docs</a>)
+    setting to <code>working</code>, due dates exclude weekends and public holidays;
+    if set to <code>calendar</code>, due dates falling on a holiday or weekend roll to
+    the next weekday.
+  </p>
+
+  <div id="existing-holidays" data-holidays-target="existing">
+    <% if @years.empty? %>
+      <p class="muted">No public holidays configured yet.</p>
+    <% else %>
+      <% @years.each do |year| %>
+        <h2><%= year %></h2>
+
+        <table class="table table-striped table-condensed">
+          <tbody>
+            <% @holidays_by_year[year].sort_by(&:day).each do |holiday| %>
+              <% tag_opts = { class: 'holiday',
+                              id: dom_id(holiday),
+                              data: { holidays_target: 'row' } } %>
+
+              <%= content_tag :tr, holiday, tag_opts do %>
+                <%= render partial: 'holiday', locals: { holiday: holiday } %>
+              <% end %>
+            <% end %>
+          </tbody>
+        </table>
+      <% end %>
+    <% end %>
+  </div>
+</div>

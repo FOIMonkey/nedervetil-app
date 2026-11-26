@@ -2,6 +2,8 @@ require 'spec_helper'
 
 RSpec.describe Admin::CensorRulesHelper do
   include AdminHelper # Dependencies for `both_links`
+  # Views get feature_enabled? from the alaveteli_features railtie.
+  include AlaveteliFeatures::Helpers
   include Admin::CensorRulesHelper
 
   describe '#censor_rule_applies_to' do

@@ -1,0 +1,30 @@
+<% if announcements.size > 0 %>
+  <table class="table table-condensed table-hover announcement-list">
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Announcement</th>
+        <th>Visibility</th>
+        <th>Created at</th>
+        <th>Last updated by</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% announcements.each do |announcement| %>
+        <tr class="<%= cycle('odd', 'even') %>">
+          <td class="id"><%= h announcement.id %></td>
+          <td class="announcement"><%= h announcement.title.present? ? announcement.title : truncate(announcement.content) %></td>
+          <td class="visibility"><%= h announcement.visibility %></td>
+          <td class="created_at"><%= admin_date(announcement.created_at, ago_only: true) %></td>
+          <td class="last_updated_by"><%= h announcement.user.name %></td>
+          <td>
+            <%= link_to 'Edit', edit_admin_announcement_path(announcement), class: 'btn btn-mini' %>
+          </td>
+        </tr>
+      <% end %>
+    </tbody>
+  </table>
+<% else %>
+  <p class="muted">None yet.</p>
+<% end %>

@@ -36,7 +36,7 @@ RSpec.describe Admin::SearchHelper do
 
     before do
       controller.request.path_parameters =
-        { controller: 'admin_user', action: 'index' }
+        { controller: 'admin/users', action: 'index' }
       controller.request.query_parameters[:query] = 'bob'
     end
 

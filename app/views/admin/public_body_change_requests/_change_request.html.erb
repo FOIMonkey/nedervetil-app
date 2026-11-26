@@ -1,0 +1,70 @@
+<% authority_name = change_request.public_body&.name.presence || change_request.public_body_name.presence || '(Unnamed authority)' %>
+<% requester_label = if change_request.user
+                       change_request.user.name
+                     elsif change_request.user_name.present?
+                       change_request.user_email.present? ? "#{change_request.user_name} (#{change_request.user_email})" : change_request.user_name
+                     elsif change_request.user_email.present?
+                       change_request.user_email
+                     else
+                       'Anonymous'
+                     end %>
+<article class="admin-cr-card">
+  <div class="admin-cr-card__main">
+    <div class="admin-cr-card__head">
+      <strong class="admin-cr-card__title">
+        <%= link_to authority_name, edit_admin_change_request_path(change_request.id, full_edit: true) %>
+      </strong>
+      <span class="admin-status-pill<%= ' admin-status-pill--warn' if change_request.is_open? %>">
+        <%= change_request.public_body_id.present? ? 'Update' : 'New authority' %>
+      </span>
+      <% unless change_request.is_open? %>
+        <span class="admin-status-pill">Closed</span>
+      <% end %>
+    </div>
+
+    <div class="admin-cr-card__meta muted">
+      <span>Requested by <%= requester_label %></span>
+      <span aria-hidden="true">·</span>
+      <span><%= admin_date(change_request.created_at, ago_only: true) %></span>
+    </div>
+
+    <dl class="admin-cr-card__facts">
+      <% if change_request.public_body_email.present? %>
+        <div>
+          <dt>Proposed email</dt>
+          <dd><code><%= change_request.public_body_email %></code></dd>
+        </div>
+      <% end %>
+      <% if change_request.source_url.present? %>
+        <div>
+          <dt>Source</dt>
+          <dd>
+            <% if change_request.source_link %>
+              <%= link_to change_request.source_url, change_request.source_link, rel: 'nofollow noopener', target: '_blank' %>
+            <% else %>
+              <%= change_request.source_url %>
+            <% end %>
+          </dd>
+        </div>
+      <% end %>
+      <% if change_request.notes.present? %>
+        <div>
+          <dt>Notes</dt>
+          <dd><%= change_request.notes %></dd>
+        </div>
+      <% end %>
+    </dl>
+  </div>
+
+  <div class="admin-cr-card__actions">
+    <% if change_request.is_open? %>
+      <% if change_request.public_body %>
+        <%= link_to 'Edit authority', edit_admin_body_path(change_request.public_body, change_request_id: change_request.id), class: 'btn btn-small btn-primary' %>
+      <% else %>
+        <%= link_to 'Create authority', new_admin_body_path(change_request_id: change_request.id), class: 'btn btn-small btn-primary' %>
+      <% end %>
+      <%= link_to 'Close / respond', edit_admin_change_request_path(change_request.id), class: 'btn btn-small' %>
+    <% end %>
+    <%= link_to 'Edit', edit_admin_change_request_path(change_request.id, full_edit: true), class: 'btn btn-small' %>
+  </div>
+</article>

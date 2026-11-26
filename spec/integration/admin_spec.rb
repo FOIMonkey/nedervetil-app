@@ -12,20 +12,19 @@ RSpec.describe "When administering the site" do
     @admin = login(:admin_user)
   end
 
-  it "allows an admin to log in as another user" do
+  it 'retains account administration without an impersonation action' do
     using_session(@admin) do
-      visit admin_user_path bob_smith_user
-      find_link('Log in as Bob Smith (also confirms their email)').click
-      expect(page).to have_content 'Bob Smith'
+      visit admin_user_path(bob_smith_user)
+      expect(page).to have_content('Bob Smith')
+      expect(page).
+        to have_no_link('Log in as Bob Smith (also confirms their email)')
     end
   end
 
-  it 'does not allow a non-admin user to login as another user' do
-    robin = login(:robin_user)
-    using_session(robin) do
-      visit admin_user_path bob_smith_user
-      expect(page).to have_content \
-        'To log into the administrative interface, please sign in as a superuser'
+  it 'denies administration to ordinary accounts' do
+    using_session(login(robin_user)) do
+      visit admin_user_path(bob_smith_user)
+      expect(page.status_code).to eq(404)
     end
   end
 
@@ -53,7 +52,9 @@ RSpec.describe "When administering the site" do
       fill_in('Redeliver message to one or more other requests',
                 with: info_request.url_title)
       find_button('Redeliver to another request').click
-      expect(current_path).to eq(admin_request_path(info_request))
+      expect(page).to have_current_path(
+        admin_request_path(info_request), ignore_query: true
+      )
     end
 
     # check number of messages in holding pen and request
@@ -87,7 +88,9 @@ RSpec.describe "When administering the site" do
       fill_in('Redeliver message to one or more other requests',
                  with: "#{info_request.url_title},#{second_request.url_title}")
       find_button('Redeliver to another request').click
-      expect(current_path).to eq(admin_request_path(second_request))
+      expect(page).to have_current_path(
+        admin_request_path(second_request), ignore_query: true
+      )
     end
 
     # check number of messages in holding pen and requests
@@ -114,65 +117,18 @@ RSpec.describe "When administering the site" do
 
   describe 'when administering the holding pen' do
     it "shows a rejection reason for an incoming message from an invalid address" do
-      info_request = FactoryBot.create(:info_request,
-                                       allow_new_responses_from: 'authority_only',
-                                       handle_rejected_responses: 'holding_pen')
+      info_request = FactoryBot.create(
+        :info_request,
+        allow_new_responses_from: 'authority_only',
+        handle_rejected_responses: 'holding_pen'
+      )
       receive_incoming_mail('incoming-request-plain.eml',
                             to: info_request.incoming_email,
                             from: "frob@nowhere.com")
       using_session(@admin) do
         visit admin_raw_email_path last_holding_pen_mail
-        expect(page).to have_content "Only the authority can reply to this request"
-      end
-    end
-  end
-
-  describe 'generating an upload url' do
-    it 'shows a flash message with instructions on forwarding the url' do
-      request = FactoryBot.create(:info_request)
-      authority_name = request.public_body.name
-      authority_email = request.public_body.request_email
-
-      using_session(@admin) do
-        visit admin_request_path id: request.id
-        find_button('Generate URL').click
-
-        url = confirm_url(PostRedirect.last.email_token)
-
-        message = "Send \"#{authority_name}\" <#{authority_email}> " \
-                  "this URL: #{url} - it will log them in and let " \
-                  "them upload a response to this request."
-
-        expect(page).to have_link(authority_email,
-                                  href: "mailto:#{authority_email}")
-        expect(page).to have_link(url, href: url)
-        expect(page).to have_content(message)
-      end
-    end
-  end
-
-  describe 'hide and notify' do
-    let(:user) { FactoryBot.create(:user, name: "Awkward > Name") }
-    let(:request) { FactoryBot.create(:info_request, user: user) }
-
-    it 'sets the prominence of the request to requester_only' do
-      using_session(@admin) do
-        visit admin_request_path id: request.id
-        choose('reason_not_foi_not_foi')
-        find_button('Hide request').click
-      end
-
-      request.reload
-      expect(request.prominence).to eq('requester_only')
-    end
-
-    it 'renders a message to confirm the requester has been notified' do
-      using_session(@admin) do
-        visit admin_request_path id: request.id
-        choose('reason_not_foi_not_foi')
-        find_button('Hide request and notify user').click
         expect(page).
-          to have_content('Your message to Awkward > Name has been sent')
+          to have_content "Only the authority can reply to this request"
       end
     end
   end

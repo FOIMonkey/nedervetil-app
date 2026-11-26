@@ -801,6 +801,10 @@ class InfoRequest < ApplicationRecord
     self.class.requires_admin_states.include?(described_state)
   end
 
+  def reported?
+    REPORTED_STATES.include?(described_state)
+  end
+
   # Report this request for administrator attention
   def report!(reason, message, user)
     ActiveRecord::Base.transaction do

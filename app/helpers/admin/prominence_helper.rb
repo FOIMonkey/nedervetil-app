@@ -1,7 +1,6 @@
 # Helpers for handling prominence in the admin interface
 module Admin::ProminenceHelper
   HIGHLIGHT = {
-    backpage: 'text-warning',
     requester_only: 'text-warning',
     hidden: 'text-error'
   }.with_indifferent_access.freeze

@@ -1,0 +1,109 @@
+<% request = @info_request %>
+<% next_action = Deadlines::NextAction.for(request) %>
+<% documents = Disclosures::Document.where(info_request_id: request.id).includes(:foi_attachment).order(:created_at, :id) %>
+
+<div class="admin-summary">
+  <p class="admin-summary__back"><%= link_to 'Requests', admin_requests_path %></p>
+  <h1><%= request.title %></h1>
+  <p class="admin-lede">
+    <%= link_to request.user.name, admin_user_path(request.user) %>
+    to <%= link_to request.public_body.name, admin_body_path(request.public_body) %>
+    · sent <%= I18n.l(request.created_at.to_date, format: '%-d %B %Y') %> · #<%= request.id %>
+  </p>
+  <p class="admin-summary__tools">
+    <%= link_to 'Request page', show_request_path(request.url_title), class: 'btn btn-small' %>
+    <%= link_to 'Edit fields', edit_admin_request_path(request), class: 'btn btn-small' %>
+    <%= link_to 'Censor rule', new_admin_request_censor_rule_path(request), class: 'btn btn-small' %>
+  </p>
+
+  <% if request.reject_incoming_at_mta? %>
+    <div class="alert alert-warning" role="alert">
+      Mail for this request is automatically being rejected at the mail server due to spam.
+    </div>
+  <% end %>
+
+  <% if request.reported? %>
+    <% report = request.last_report_event %>
+    <% blocker = request.report_reversion_blocker %>
+    <div class="alert alert-warning admin-report-banner" id="revert_report">
+      <p><strong>Marked for attention</strong></p>
+      <% if blocker %>
+        <p class="help-block"><%= blocker.message %></p>
+      <% else %>
+        <% previous = request.classification_before_report %>
+        <%= form_tag revert_report_admin_request_path(request), class: 'admin-inline-form' do %>
+          <%= hidden_field_tag :report_event_id, report.id %>
+          <%= submit_tag 'Revert report', class: 'btn btn-small btn-primary' %>
+        <% end %>
+        <p class="help-block">Revert the request to its status before it was reported (<%= previous %>)</p>
+        <% replies = request.replies_classified_by_report %>
+        <% if replies.any? %>
+          <p class="help-block">Replies received after that status and before the report: <%= replies.size %>. The report counted as their classification, so the requester isn't asked to classify them again. Only the latest takes the status <strong><%= previous %></strong>.</p>
+        <% end %>
+      <% end %>
+      <% if report %>
+        <% details = report.params || {} %>
+        <% reporter = details[:editor] || details[:user] %>
+        <p class="help-block">
+          Report details: reported <%= report.created_at.to_fs(:long) %><% if reporter.is_a?(User) %> by <%= both_links(reporter) %><% elsif reporter.is_a?(String) %> by administrator <%= reporter %><% end %>.
+          <% if details[:reason].present? %>
+            Reason: <%= details[:reason] %>
+          <% end %>
+        </p>
+        <% if details[:message].present? %>
+          <blockquote class="admin-report-message"><%= simple_format(h(details[:message].to_s)) %></blockquote>
+        <% end %>
+      <% end %>
+    </div>
+  <% end %>
+
+  <dl class="admin-facts">
+    <div><dt>Status</dt><dd><strong><%= InfoRequest::State.short_description(request.calculate_status) %></strong></dd></div>
+    <div><dt>Who sees it</dt><dd><%= request.prominence == 'hidden' ? 'Hidden from the requester.' : 'Only the requester and admins. This is the default.' %></dd></div>
+    <% if next_action&.label %>
+      <div><dt>Next</dt><dd><%= next_action.label %> <strong><%= next_action.date_phrase(->(date) { date.strftime('%-d %B') }) %></strong></dd></div>
+    <% end %>
+    <div><dt>Law</dt><dd><%= request.legislation %></dd></div>
+    <div><dt>Replies go to</dt><dd><code><%= request.incoming_email %></code></dd></div>
+    <% if request.info_request_batch %>
+      <div><dt>Batch</dt><dd><%= both_links(request.info_request_batch) %></dd></div>
+    <% end %>
+    <% if documents.empty? %>
+      <div><dt>Documents</dt><dd class="muted">None</dd></div>
+    <% end %>
+    <% if request.tags.any? %>
+      <div><dt>Tags</dt><dd><%= render_tags request.tags %></dd></div>
+    <% end %>
+  </dl>
+
+  <div class="admin-action-grid">
+    <%= render partial: 'admin/requests/prominence_control', locals: { info_request: request } %>
+    <%= render partial: 'admin/requests/move_pickers', locals: { info_request: request } %>
+  </div>
+
+  <% if documents.any? %>
+    <section class="admin-block" aria-labelledby="request-documents">
+      <h2 id="request-documents">Documents <span class="admin-block__count"><%= documents.size %></span></h2>
+      <table class="table admin-documents">
+        <thead><tr><th>State</th><th>Document</th><th><span class="visually-hidden">Action</span></th></tr></thead>
+        <tbody>
+          <% documents.each do |document| %>
+            <% line = Disclosures::Attribution.new(document).text.presence %>
+            <tr>
+              <td><span class="label<%= ' label-warning' if document.stage_in?(:held, :in_review, :not_ready, :ready) %>"><%= document_state(document) %></span></td>
+              <td>
+                <%= link_to document.title, disclosure_manage_document_path(document) %>
+                <span class="admin-documents__note">
+                  <%= safe_join([line,
+                                 ("public since #{document_date(document.first_published_at)}" if document.stage_in?(:listed)),
+                                 ("withdrawn #{document_date(document.withdrawn_at)}#{" by #{document.withdrawn_by.name}" if document.withdrawn_by}" if document.stage_in?(:erased, :erasing, :withdrawn, :taken_down))].compact, ' · ') %>
+                </span>
+              </td>
+              <td><%= link_to 'Manage', disclosure_manage_document_path(document), class: 'btn btn-mini' %></td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </section>
+  <% end %>
+</div>

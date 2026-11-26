@@ -1,3 +1,6 @@
+# Configures which attributes a model exposes in admin detail tables, allowing
+# exclusions and computed inclusions while placing prominence_reason directly
+# after prominence.
 module AdminColumn
   extend ActiveSupport::Concern
 

@@ -1,0 +1,43 @@
+<% @title = 'Spam Addresses' %>
+
+<div class="admin-list-head">
+  <h1><%= @title %></h1>
+</div>
+
+<p class="muted">
+  Incoming mail that gets redirected to the holding pen will be
+  rejected if it is sent <code>To:</code> an address on this list.
+</p>
+
+<%= form_for(@spam_address, url: admin_spam_addresses_path, html: { class: 'admin-search-bar' }) do |f| %>
+  <%= foi_error_messages_for :spam_address %>
+  <label for="spam_address_email" class="visually-hidden">Spam email address</label>
+  <%= f.text_field :email, placeholder: 'Enter email address to reject' %>
+  <%= f.submit 'Add Spam Address', class: 'btn btn-primary' %>
+<% end %>
+
+<% if @spam_addresses.any? %>
+  <table class="table table-hover">
+    <thead>
+      <tr>
+        <th>Email</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      <% @spam_addresses.each do |spam| %>
+        <tr>
+          <td><code><%= spam.email %></code></td>
+          <td class="text-right">
+            <%= link_to 'Remove', admin_spam_address_path(spam),
+                        method: :delete,
+                        data: { confirm: 'This is permanent! Are you sure?' },
+                        class: 'btn btn-mini btn-danger' %>
+          </td>
+        </tr>
+      <% end %>
+    </tbody>
+  </table>
+<% else %>
+  <p class="muted">No spam addresses listed.</p>
+<% end %>

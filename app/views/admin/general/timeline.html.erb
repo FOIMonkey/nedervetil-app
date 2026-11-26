@@ -1,0 +1,64 @@
+<% @title = "Timeline" %>
+
+<div class="admin-list-head">
+  <h1><%= @events_title %></h1>
+</div>
+
+<div class="admin-timeline-toolbar">
+  <div class="btn-group">
+    <% time_filters.each do |time_label, date| %>
+      <%= link_to time_label,
+                  admin_timeline_path(start_date: date&.utc&.iso8601, event_type: params[:event_type]),
+                  class: "btn #{'active' if current_time_filter == time_label}" %>
+    <% end %>
+  </div>
+  <div class="btn-group">
+    <% event_types.each do |event_type, event_label| %>
+      <%= link_to event_label,
+                  admin_timeline_path(start_date: params[:start_date], event_type: event_type),
+                  class: "btn #{'active' if current_event_type == event_label}" %>
+    <% end %>
+  </div>
+</div>
+
+<% if @events.empty? %>
+  <p class="muted">No events in this period.</p>
+<% else %>
+  <% @events.group_by { |_event, event_at| event_at.to_date }.each do |date, day_events| %>
+    <h3 class="timeline_date">
+      <%= simple_date(day_events.first.last) %>
+      <span class="timeline_day"><%= date.strftime('%A') %></span>
+    </h3>
+
+    <ul class="admin-timeline-list">
+      <% day_events.each do |event, event_at| %>
+        <li class="admin-timeline-list__item">
+          <%= time_tag event_at, simple_time(event_at), title: event_at, class: 'admin-timeline-list__time muted' %>
+          <span class="admin-timeline-list__body">
+            <% if event.is_a?(InfoRequestEvent) %>
+              <%= both_links(event.info_request) %>
+              <% if lookup_context.template_exists?(event.event_type, ['admin/general'], true) %>
+                <%= render partial: event.event_type, locals: { event: event } %>
+              <% else %>
+                had '<%= event.event_type %>' done to it, parameters hidden.
+              <% end %>
+            <% else %>
+              <%= both_links(event.public_body) %>
+              <% if event.previous %>
+                was updated by administrator <strong><%= event.last_edit_editor %></strong>.
+                Changed fields:
+                <strong>
+                  <%= event.compare(event.previous).map { |change| change[:name] }.to_sentence %>
+                </strong>
+              <% else %>
+                was created by administrator <strong><%= event.last_edit_editor %></strong>.
+              <% end %>
+            <% end %>
+          </span>
+        </li>
+      <% end %>
+    </ul>
+  <% end %>
+<% end %>
+
+<%= will_paginate(@events) %>

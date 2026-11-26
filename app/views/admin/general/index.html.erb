@@ -1,0 +1,248 @@
+<%= render partial: 'announcement', collection: @announcements %>
+<% queue = @review_queue %>
+<% filter = @queue_filter || 'all' %>
+<% documents_count = @documents_count.to_i %>
+<% holding_pen_count = @holding_pen_count.to_i %>
+<% reported_count = @reported_count.to_i %>
+<% authority_count = @authority_queue_count.to_i %>
+<% map_count = @map_count.to_i %>
+<% drafts = queue ? queue.drafts.group_by(&:waiting) : {} %>
+<% for_requester = drafts[:requester] || [] %>
+<% total = documents_count + holding_pen_count + reported_count + authority_count %>
+<% show_split = @initial_triage.present? %>
+<% initial_kind = @initial_triage && @initial_triage[:kind] %>
+<% initial_id = @initial_triage && @initial_triage[:record]&.id %>
+<% expand_all = filter != 'all' %>
+
+<div class="admin-home">
+  <div class="admin-home__head">
+    <div class="admin-home__title-row">
+      <h1>Things to do</h1>
+      <p class="admin-lede">
+        <% if total.zero? && for_requester.empty? %>Nothing is waiting.<% else %><%= total %> waiting.<% end %>
+        <% if for_requester.any? %><%= pluralize(for_requester.size, 'draft') %> waiting for a requester.<% end %>
+      </p>
+    </div>
+
+    <nav class="admin-filter-pills" aria-label="Filter queue">
+      <%= link_to 'All', admin_general_index_path, class: 'admin-pill', 'aria-current': (filter == 'all' ? 'page' : nil) %>
+      <%= link_to 'Documents', admin_general_index_path(queue: 'documents'), class: 'admin-pill', 'aria-current': (filter == 'documents' ? 'page' : nil) %>
+      <%= link_to 'Holding pen', admin_general_index_path(queue: 'holding_pen'), class: 'admin-pill', 'aria-current': (filter == 'holding_pen' ? 'page' : nil) %>
+      <%= link_to 'Reported & errors', admin_general_index_path(queue: 'reported'), class: 'admin-pill', 'aria-current': (filter == 'reported' ? 'page' : nil) %>
+      <%= link_to 'Authorities', admin_general_index_path(queue: 'authorities'), class: 'admin-pill', 'aria-current': (filter == 'authorities' ? 'page' : nil) %>
+    </nav>
+  </div>
+
+  <div class="<%= show_split ? 'admin-split' : 'admin-home__single' %>">
+    <div class="<%= 'admin-split__list' if show_split %>" data-controller="triage-list" data-action="keydown@document->triage-list#keydown">
+      <% if %w[all documents].include?(filter) && queue %>
+        <section class="admin-block" aria-labelledby="todo-documents">
+          <h2 id="todo-documents">Documents <%= link_to 'Review queue', disclosure_document_reviews_path, class: 'admin-block__more' %></h2>
+          <% if queue.drafts.empty? && queue.source_changed.empty? && queue.erasing.empty? %>
+            <p class="admin-clear">No drafts waiting.</p>
+          <% end %>
+          <%= render partial: 'admin/general/document_todos',
+                     locals: { queue: queue, drafts: drafts,
+                               triage_frame: show_split,
+                               selected_triage: @initial_triage,
+                               open_default: expand_all || initial_kind == 'document' } %>
+        </section>
+
+        <% unless Disclosures.requester_editing? %>
+          <% if queue.attachment_drafts.any? %>
+            <section class="admin-block" aria-labelledby="todo-attachments">
+              <h2 id="todo-attachments">Attachments</h2>
+              <details class="admin-todo admin-todo--mine"<% if expand_all || initial_kind == 'attachment' %> open<% end %>>
+                <summary><span class="admin-todo__count"><%= queue.attachment_drafts.size %></span> Drafts only an admin can confirm</summary>
+                <ul class="admin-rows">
+                  <% queue.attachment_drafts.each do |revision| %>
+                    <% active = initial_kind == 'attachment' && initial_id == revision.id %>
+                    <li class="admin-triage-row"<% if active %> data-selected="true"<% end %> data-action="click->triage-list#selectRow">
+                      <%= link_to revision.foi_attachment.display_filename,
+                                  admin_triage_path('attachment', revision.id),
+                                  class: 'admin-rows__title admin-triage-link',
+                                  'aria-current': (active ? 'true' : nil),
+                                  data: { turbo: true,
+                                          turbo_frame: 'triage_detail',
+                                          triage_list_target: 'item',
+                                          action: 'click->triage-list#select' } %>
+                      <span class="admin-rows__act"><%= link_to 'Check', manage_attachment_revision_path(revision.foi_attachment, revision), class: 'admin-rows__open' %></span>
+                      <span class="admin-rows__meta"><span><%= revision.kind_label %></span><span>by <%= revision.user.name %></span><span><%= distance_of_time_in_words_to_now(revision.created_at) %></span></span>
+                    </li>
+                  <% end %>
+                </ul>
+              </details>
+            </section>
+          <% end %>
+        <% end %>
+      <% end %>
+
+      <% if %w[all holding_pen reported].include?(filter) %>
+        <section class="admin-block" aria-labelledby="todo-requests">
+          <h2 id="todo-requests">Requests</h2>
+          <% if @public_request_tasks %>
+            <div id="public-request-things-to-do">
+              <% if %w[all holding_pen].include?(filter) %>
+                <%= render partial: 'to_do_list',
+                           locals: { id: 'holding-pen',
+                                     items: @holding_pen_messages,
+                                     count: holding_pen_count,
+                                     label: 'Holding pen',
+                                     open: expand_all || initial_kind == 'holding_pen',
+                                     selected_triage: @initial_triage } %>
+              <% end %>
+
+              <% if %w[all reported].include?(filter) %>
+                <%= render partial: 'to_do_list',
+                           locals: { id: 'error-messages',
+                                     items: @error_message_requests,
+                                     count: @error_message_count,
+                                     label: (@error_message_count == 1 ? 'Delivery error' : 'Delivery errors'),
+                                     open: expand_all || (initial_kind == 'request' && @error_message_requests.any? { |r| r.id == initial_id }),
+                                     latest_events: @latest_events,
+                                     selected_triage: @initial_triage } %>
+
+                <%= render partial: 'to_do_list',
+                           locals: { id: 'attention-messages',
+                                     items: @attention_requests,
+                                     count: @attention_count,
+                                     label: (@attention_count == 1 ? 'Reported request' : 'Reported requests'),
+                                     open: expand_all || (initial_kind == 'request' && @attention_requests.any? { |r| r.id == initial_id }),
+                                     latest_events: @latest_events,
+                                     selected_triage: @initial_triage } %>
+
+                <%= render partial: 'to_do_list',
+                           locals: { id: 'requires-admin',
+                                     items: @requires_admin_requests,
+                                     count: @requires_admin_count,
+                                     label: 'Marked for admin',
+                                     open: expand_all || (initial_kind == 'request' && @requires_admin_requests.any? { |r| r.id == initial_id }),
+                                     latest_events: @latest_events,
+                                     selected_triage: @initial_triage } %>
+              <% end %>
+            </div>
+          <% else %>
+            <p class="admin-clear">Nothing to place, fix or answer.</p>
+          <% end %>
+        </section>
+      <% end %>
+
+      <% if %w[all authorities].include?(filter) %>
+        <section class="admin-block" aria-labelledby="todo-authorities">
+          <h2 id="todo-authorities">Authorities</h2>
+          <% if @authority_tasks %>
+            <div id="authority-things-to-do">
+              <% if @new_body_requests.any? %>
+                <details id="new-authorities" class="admin-todo admin-todo--mine"<% if expand_all || (initial_kind == 'change_request' && @new_body_requests.any? { |r| r.id == initial_id }) %> open<% end %>>
+                  <summary><span class="admin-todo__count"><%= @new_body_count %></span> <%= @new_body_count == 1 ? 'New authority' : 'New authorities' %></summary>
+                  <ul class="admin-rows">
+                    <% @new_body_requests.each do |change_request| %>
+                      <% active = initial_kind == 'change_request' && initial_id == change_request.id %>
+                      <li class="admin-triage-row"<% if active %> data-selected="true"<% end %> data-action="click->triage-list#selectRow">
+                        <%= link_to change_request.authority_name,
+                                    admin_triage_path('change_request', change_request.id),
+                                    class: 'admin-rows__title admin-triage-link',
+                                    'aria-current': (active ? 'true' : nil),
+                                    data: { turbo: true,
+                                            turbo_frame: 'triage_detail',
+                                            triage_list_target: 'item',
+                                            action: 'click->triage-list#select' } %>
+                        <span class="admin-rows__act">
+                          <%= link_to 'Close', edit_admin_change_request_path(change_request), class: 'admin-rows__open' %>
+                        </span>
+                        <span class="admin-rows__meta">
+                          <span><%= change_request.public_body_email.presence || 'No email suggested' %></span>
+                          <span><%= admin_date(change_request.created_at, ago_only: true) %></span>
+                        </span>
+                      </li>
+                    <% end %>
+                  </ul>
+                </details>
+              <% end %>
+
+              <% if @body_update_requests.any? %>
+                <details id="update-authorities" class="admin-todo admin-todo--mine"<% if expand_all || (initial_kind == 'change_request' && @body_update_requests.any? { |r| r.id == initial_id }) %> open<% end %>>
+                  <summary><span class="admin-todo__count"><%= @body_update_count %></span> <%= @body_update_count == 1 ? 'Authority update' : 'Authority updates' %></summary>
+                  <ul class="admin-rows">
+                    <% @body_update_requests.each do |change_request| %>
+                      <% active = initial_kind == 'change_request' && initial_id == change_request.id %>
+                      <li class="admin-triage-row"<% if active %> data-selected="true"<% end %> data-action="click->triage-list#selectRow">
+                        <%= link_to(change_request.public_body&.name || change_request.authority_name,
+                                    admin_triage_path('change_request', change_request.id),
+                                    class: 'admin-rows__title admin-triage-link',
+                                    'aria-current': (active ? 'true' : nil),
+                                    data: { turbo: true,
+                                            turbo_frame: 'triage_detail',
+                                            triage_list_target: 'item',
+                                            action: 'click->triage-list#select' }) %>
+                        <span class="admin-rows__act">
+                          <%= link_to 'Close', edit_admin_change_request_path(change_request), class: 'admin-rows__open' %>
+                        </span>
+                        <span class="admin-rows__meta">
+                          <span><%= change_request.public_body_email %></span>
+                          <span><%= admin_date(change_request.created_at, ago_only: true) %></span>
+                        </span>
+                      </li>
+                    <% end %>
+                  </ul>
+                </details>
+              <% end %>
+
+              <%= render partial: 'to_do_list',
+                         locals: { id: 'blank-contacts',
+                                   items: @blank_contacts,
+                                   count: @blank_contact_count,
+                                   label: 'Missing FOI email',
+                                   open: expand_all || initial_kind == 'blank_contact',
+                                   mine: false,
+                                   selected_triage: @initial_triage } %>
+            </div>
+          <% end %>
+          <% if map_count.positive? %>
+            <p class="admin-flag"><%= link_to pluralize(map_count, 'area code needs', plural: 'area codes need'), admin_authority_groups_path %> fixing for the map.</p>
+          <% end %>
+          <% unless @authority_tasks || map_count.positive? %>
+            <p class="admin-clear">No authority tasks waiting.</p>
+          <% end %>
+        </section>
+      <% end %>
+    </div>
+
+    <% if show_split %>
+      <aside class="admin-split__detail" aria-label="Selected item">
+        <turbo-frame id="triage_detail">
+          <div class="admin-triage-pane">
+            <% case @initial_triage[:kind] %>
+            <% when 'holding_pen' %>
+              <% msg = @initial_triage[:record] %>
+              <% ctx = Admin::HoldingPenContext.new(msg.raw_email) %>
+              <% hp = ctx.in_holding_pen? %>
+              <%= render partial: 'admin/triage/holding_pen',
+                         locals: { incoming_message: msg,
+                                   raw_email: msg.raw_email,
+                                   holding_pen: hp,
+                                   public_bodies: (hp ? ctx.public_bodies : []),
+                                   guessed_info_requests: (hp ? ctx.guessed_info_requests : []),
+                                   rejected_reason: (hp ? ctx.rejected_reason : nil) } %>
+            <% when 'request' %>
+              <%= render partial: 'admin/triage/request',
+                         locals: { info_request: @initial_triage[:record] } %>
+            <% when 'change_request' %>
+              <%= render partial: 'admin/triage/change_request',
+                         locals: { change_request: @initial_triage[:record] } %>
+            <% when 'document' %>
+              <%= render partial: 'admin/triage/document',
+                         locals: { document: @initial_triage[:record] } %>
+            <% when 'attachment' %>
+              <%= render partial: 'admin/triage/attachment',
+                         locals: { revision: @initial_triage[:record] } %>
+            <% when 'blank_contact' %>
+              <%= render partial: 'admin/triage/blank_contact',
+                         locals: { public_body: @initial_triage[:record] } %>
+            <% end %>
+          </div>
+        </turbo-frame>
+      </aside>
+    <% end %>
+  </div>
+</div>

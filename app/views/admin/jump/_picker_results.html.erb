@@ -1,0 +1,60 @@
+<turbo-frame id="<%= @frame_id %>">
+  <% if @scope == 'bodies' %>
+    <% if @bodies.present? %>
+      <div class="admin-picker__list" role="listbox" aria-label="Matching authorities">
+        <% @bodies.each do |body| %>
+          <button type="button"
+                  class="admin-picker__option"
+                  role="option"
+                  data-action="click->record-picker#pick"
+                  data-record-value="<%= body.url_name %>"
+                  data-record-name="<%= body.name %>"
+                  data-record-detail="<%= body.request_email.presence || body.url_name %>">
+            <strong><%= body.name %></strong>
+            <span class="muted"><code><%= body.url_name %></code><% if body.request_email.present? %> · <%= body.request_email %><% end %></span>
+          </button>
+        <% end %>
+      </div>
+    <% else %>
+      <p class="admin-picker__empty muted">No matching authority.</p>
+    <% end %>
+  <% elsif @scope == 'users' %>
+    <% if @users.present? %>
+      <div class="admin-picker__list" role="listbox" aria-label="Matching users">
+        <% @users.each do |user| %>
+          <button type="button"
+                  class="admin-picker__option"
+                  role="option"
+                  data-action="click->record-picker#pick"
+                  data-record-value="<%= user.url_name %>"
+                  data-record-name="<%= user.name %>"
+                  data-record-detail="<%= user.email %>">
+            <strong><%= user.name %></strong>
+            <span class="muted"><code><%= user.url_name %></code> · <%= user.email %></span>
+          </button>
+        <% end %>
+      </div>
+    <% else %>
+      <p class="admin-picker__empty muted">No matching user.</p>
+    <% end %>
+  <% elsif @scope == 'requests' %>
+    <% if @requests.present? %>
+      <div class="admin-picker__list" role="listbox" aria-label="Matching requests">
+        <% @requests.each do |req| %>
+          <button type="button"
+                  class="admin-picker__option"
+                  role="option"
+                  data-action="click->record-picker#pick"
+                  data-record-value="<%= req.id %>"
+                  data-record-name="#<%= req.id %> <%= req.title %>"
+                  data-record-detail="<%= req.public_body.name %>">
+            <strong>#<%= req.id %> <%= req.title %></strong>
+            <span class="muted"><%= req.public_body.name %> · <%= req.user.name %></span>
+          </button>
+        <% end %>
+      </div>
+    <% else %>
+      <p class="admin-picker__empty muted">No matching request.</p>
+    <% end %>
+  <% end %>
+</turbo-frame>

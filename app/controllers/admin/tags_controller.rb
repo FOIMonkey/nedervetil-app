@@ -1,3 +1,5 @@
+# Lists and filters tags in use across Taggable models, shows tagged records
+# and tag notes, and serves JSON tag suggestions in the admin interface.
 class Admin::TagsController < AdminController
   include Admin::TagHelper
 
@@ -56,7 +58,7 @@ class Admin::TagsController < AdminController
       split_tag_into_name_value(@query)
 
     if @query.include?(':')
-      scope = scope.where('has_tag_string_tags.name = ?', name) if name.present?
+      scope = scope.where(has_tag_string_tags: { name: name }) if name.present?
       if value.present?
         scope = scope.where('has_tag_string_tags.value LIKE ?', "#{value}%")
       end

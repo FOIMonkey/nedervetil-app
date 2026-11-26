@@ -1,0 +1,7 @@
+<% if AlaveteliConfiguration.override_all_public_body_request_emails.present? %>
+  <p class="help-block authority-email-redirect">
+    The authority address is saved as entered.
+    Requests to the authority’s main mailbox are currently redirected to
+    <strong><%= AlaveteliConfiguration.override_all_public_body_request_emails %></strong>.
+  </p>
+<% end %>

@@ -6,7 +6,7 @@ class Admin::OutgoingMessages::SnippetsController < AdminController
 
   def index
     @title = 'Listing Snippets'
-    @snippets = OutgoingMessage::Snippet.
+    @snippets = OutgoingMessage::Snippet.preload(:translations, :tags).
       paginate(page: params[:page], per_page: 25)
   end
 
@@ -24,7 +24,7 @@ class Admin::OutgoingMessages::SnippetsController < AdminController
     else
       @title = 'New snippet'
       @snippet.build_all_translations
-      render :new
+      render :new, status: :unprocessable_content
     end
   end
 
@@ -39,7 +39,7 @@ class Admin::OutgoingMessages::SnippetsController < AdminController
     else
       @title = 'Edit snippet'
       @snippet.build_all_translations
-      render action: :edit
+      render action: :edit, status: :unprocessable_content
     end
   end
 

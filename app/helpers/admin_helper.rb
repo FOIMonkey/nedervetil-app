@@ -1,7 +1,8 @@
+# Aggregates admin view helper modules and provides icon tags, sort-order
+# labels, event diff summaries and response-restriction badges for admin views.
 module AdminHelper
-  include Admin::BootstrapHelper
+  include Admin::NavHelper
   include Admin::CensorRulesHelper
-  include Admin::CitationsHelper
   include Admin::ClassificationsHelper
   include Admin::LinkHelper
   include Admin::ProminenceHelper
@@ -19,16 +20,8 @@ module AdminHelper
     icon("chevron-right")
   end
 
-  def chevron_down
-    icon("chevron-down")
-  end
-
   def arrow_right
     icon("arrow-right")
-  end
-
-  def comment_visibility(comment)
-    comment.visible? ? 'Visible' : 'Hidden'
   end
 
   def sort_order_humanized(sort_order)
@@ -43,19 +36,17 @@ module AdminHelper
 
   def significant_event_params(event)
     params = { 'edit' => [:title, :described_state, :awaiting_description],
-               'edit_comment' => [:body],
                'edit_outgoing' => [:body] }
     params.fetch(event.event_type, [])
   end
 
   def event_params_description(event)
     text = ''
-    if can?(:admin, AlaveteliPro::Embargo) || !event.info_request.embargo
-      diff = event.params_diff
-      significant_event_params(event).each do |key|
-        if diff[:new].key? key
-          text += "Changed #{key} from '#{diff[:old][key]}' to '#{diff[:new][key]}'. "
-         end
+    diff = event.params_diff
+    significant_event_params(event).each do |key|
+      if diff[:new].key? key
+        text +=
+          "Changed #{key} from '#{diff[:old][key]}' to '#{diff[:new][key]}'. "
       end
     end
     text

@@ -36,8 +36,8 @@
     <td>Rails::VERSION::STRING</td>
     <td><%= Rails::VERSION::STRING %></td>
   </tr>
-</table>
 
+</table>
 <h2>Configuration</h2>
 
 <div class="help-block">
@@ -65,39 +65,6 @@
 
 <table class="table table-condensed table-debug">
   <% @alaveteli_configuration.each do |k,v| %>
-    <tr>
-      <td><%= k %></td>
-      <td><%= v %></td>
-    </tr>
-  <% end %>
-</table>
-
-<h2>Environment variables</h2>
-
-<table class="table table-condensed table-debug">
-  <% @request_env.each do |k,v| %>
-    <tr>
-      <td><%= k %></td>
-      <td><%= v %></td>
-    </tr>
-  <% end %>
-</table>
-
-<h2>Parameters</h2>
-
-<table class="table table-condensed table-debug">
-  <% params.each do |k,v| %>
-    <tr>
-      <td><%= k %></td>
-      <td><%= v %></td>
-    </tr>
-  <% end %>
-</table>
-
-<h2>Session</h2>
-
-<table class="table table-condensed table-debug">
-  <% session.to_hash.each do |k,v| %>
     <tr>
       <td><%= k %></td>
       <td><%= v %></td>

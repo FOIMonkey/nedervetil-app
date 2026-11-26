@@ -8,6 +8,7 @@ RSpec.describe 'Updating censor rules' do
   end
 
   let(:user) { FactoryBot.create(:user) }
+  let!(:requester) { login(user) }
   let(:authority) { FactoryBot.create(:public_body) }
   let(:request) do
     FactoryBot.create(:info_request,
@@ -43,9 +44,10 @@ RSpec.describe 'Updating censor rules' do
 
   describe "Authority censor rules" do
     it 'clears the cache for existing requests when a new rule is added' do
-      visit show_request_path(request.url_title)
-
-      expect(page).to have_content "I have a rubbish answer for you"
+      using_session(requester) do
+        visit show_request_path(request.url_title)
+        expect(page).to have_content "I have a rubbish answer for you"
+      end
 
       using_session(admin) do
         visit new_admin_body_censor_rule_path(authority)
@@ -57,9 +59,11 @@ RSpec.describe 'Updating censor rules' do
 
       perform_enqueued_jobs
 
-      visit show_request_path(request.url_title)
-      expect(page).not_to have_content "I have a rubbish answer for you"
-      expect(page).to have_content "I have [REDACTED] for you"
+      using_session(requester) do
+        visit show_request_path(request.url_title)
+        expect(page).to have_content "I have [REDACTED] for you"
+        expect(page).to have_no_content "I have a rubbish answer for you"
+      end
     end
 
     it 'clears the cache for existing requests when a rule is updated' do
@@ -68,9 +72,10 @@ RSpec.describe 'Updating censor rules' do
                                text: "rubbish",
                                replacement: "[REDACTED]")
 
-      visit show_request_path(request.url_title)
-
-      expect(page).to have_content "I have a [REDACTED] answer for you"
+      using_session(requester) do
+        visit show_request_path(request.url_title)
+        expect(page).to have_content "I have a [REDACTED] answer for you"
+      end
 
       using_session(admin) do
         visit edit_admin_censor_rule_path(rule.id)
@@ -82,9 +87,11 @@ RSpec.describe 'Updating censor rules' do
 
       perform_enqueued_jobs
 
-      visit show_request_path(request.url_title)
-      expect(page).not_to have_content "I have a [REDACTED] answer for you"
-      expect(page).to have_content "I have a rubbish [REDACTED] for you"
+      using_session(requester) do
+        visit show_request_path(request.url_title)
+        expect(page).to have_content "I have a rubbish [REDACTED] for you"
+        expect(page).to have_no_content "I have a [REDACTED] answer for you"
+      end
     end
 
     it 'clears the cache for existing requests when a rule is deleted' do
@@ -93,9 +100,10 @@ RSpec.describe 'Updating censor rules' do
                                text: "rubbish",
                                replacement: "[REDACTED]")
 
-      visit show_request_path(request.url_title)
-
-      expect(page).to have_content "I have a [REDACTED] answer for you"
+      using_session(requester) do
+        visit show_request_path(request.url_title)
+        expect(page).to have_content "I have a [REDACTED] answer for you"
+      end
 
       using_session(admin) do
         visit edit_admin_censor_rule_path(rule.id)
@@ -104,17 +112,20 @@ RSpec.describe 'Updating censor rules' do
 
       perform_enqueued_jobs
 
-      visit show_request_path(request.url_title)
-      expect(page).not_to have_content "I have a [REDACTED] answer for you"
-      expect(page).to have_content "I have a rubbish answer for you"
+      using_session(requester) do
+        visit show_request_path(request.url_title)
+        expect(page).to have_content "I have a rubbish answer for you"
+        expect(page).to have_no_content "I have a [REDACTED] answer for you"
+      end
     end
   end
 
   describe "User censor rules" do
     it 'clears the cache for existing requests when a new rule is added' do
-      visit show_request_path(request.url_title)
-
-      expect(page).to have_content "I have a rubbish answer for you"
+      using_session(requester) do
+        visit show_request_path(request.url_title)
+        expect(page).to have_content "I have a rubbish answer for you"
+      end
 
       using_session(admin) do
         visit new_admin_user_censor_rule_path(user)
@@ -126,9 +137,11 @@ RSpec.describe 'Updating censor rules' do
 
       perform_enqueued_jobs
 
-      visit show_request_path(request.url_title)
-      expect(page).not_to have_content "I have a rubbish answer for you"
-      expect(page).to have_content "I have [REDACTED] for you"
+      using_session(requester) do
+        visit show_request_path(request.url_title)
+        expect(page).to have_content "I have [REDACTED] for you"
+        expect(page).to have_no_content "I have a rubbish answer for you"
+      end
     end
 
     it 'clears the cache for existing requests when a rule is updated' do
@@ -137,9 +150,10 @@ RSpec.describe 'Updating censor rules' do
                                text: "rubbish",
                                replacement: "[REDACTED]")
 
-      visit show_request_path(request.url_title)
-
-      expect(page).to have_content "I have a [REDACTED] answer for you"
+      using_session(requester) do
+        visit show_request_path(request.url_title)
+        expect(page).to have_content "I have a [REDACTED] answer for you"
+      end
 
       using_session(admin) do
         visit edit_admin_censor_rule_path(rule.id)
@@ -151,9 +165,11 @@ RSpec.describe 'Updating censor rules' do
 
       perform_enqueued_jobs
 
-      visit show_request_path(request.url_title)
-      expect(page).not_to have_content "I have a [REDACTED] answer for you"
-      expect(page).to have_content "I have a rubbish [REDACTED] for you"
+      using_session(requester) do
+        visit show_request_path(request.url_title)
+        expect(page).to have_content "I have a rubbish [REDACTED] for you"
+        expect(page).to have_no_content "I have a [REDACTED] answer for you"
+      end
     end
 
     it 'clears the cache for existing requests when a rule is deleted' do
@@ -162,9 +178,10 @@ RSpec.describe 'Updating censor rules' do
                                text: "rubbish",
                                replacement: "[REDACTED]")
 
-      visit show_request_path(request.url_title)
-
-      expect(page).to have_content "I have a [REDACTED] answer for you"
+      using_session(requester) do
+        visit show_request_path(request.url_title)
+        expect(page).to have_content "I have a [REDACTED] answer for you"
+      end
 
       using_session(admin) do
         visit edit_admin_censor_rule_path(rule.id)
@@ -173,18 +190,21 @@ RSpec.describe 'Updating censor rules' do
 
       perform_enqueued_jobs
 
-      visit show_request_path(request.url_title)
-      expect(page).not_to have_content "I have a [REDACTED] answer for you"
-      expect(page).to have_content "I have a rubbish answer for you"
+      using_session(requester) do
+        visit show_request_path(request.url_title)
+        expect(page).to have_content "I have a rubbish answer for you"
+        expect(page).to have_no_content "I have a [REDACTED] answer for you"
+      end
     end
   end
 
   describe "Request censor rules" do
     it 'clears the cache for existing requests when a new rule is added' do
       request_id = request.id
-      visit show_request_path(request.url_title)
-
-      expect(page).to have_content "I have a rubbish answer for you"
+      using_session(requester) do
+        visit show_request_path(request.url_title)
+        expect(page).to have_content "I have a rubbish answer for you"
+      end
 
       using_session(admin) do
         visit new_admin_request_censor_rule_path(request_id)
@@ -196,21 +216,23 @@ RSpec.describe 'Updating censor rules' do
 
       perform_enqueued_jobs
 
-      visit show_request_path(request.url_title)
-      expect(page).not_to have_content "I have a rubbish answer for you"
-      expect(page).to have_content "I have [REDACTED] for you"
+      using_session(requester) do
+        visit show_request_path(request.url_title)
+        expect(page).to have_content "I have [REDACTED] for you"
+        expect(page).to have_no_content "I have a rubbish answer for you"
+      end
     end
 
     it 'clears the cache for existing requests when a rule is updated' do
-      request_id = request.id
       rule = FactoryBot.create(:info_request_censor_rule,
                                censorable: request,
                                text: "rubbish",
                                replacement: "[REDACTED]")
 
-      visit show_request_path(request.url_title)
-
-      expect(page).to have_content "I have a [REDACTED] answer for you"
+      using_session(requester) do
+        visit show_request_path(request.url_title)
+        expect(page).to have_content "I have a [REDACTED] answer for you"
+      end
 
       using_session(admin) do
         visit edit_admin_censor_rule_path(rule.id)
@@ -222,21 +244,23 @@ RSpec.describe 'Updating censor rules' do
 
       perform_enqueued_jobs
 
-      visit show_request_path(request.url_title)
-      expect(page).not_to have_content "I have a [REDACTED] answer for you"
-      expect(page).to have_content "I have a rubbish [REDACTED] for you"
+      using_session(requester) do
+        visit show_request_path(request.url_title)
+        expect(page).to have_content "I have a rubbish [REDACTED] for you"
+        expect(page).to have_no_content "I have a [REDACTED] answer for you"
+      end
     end
 
     it 'clears the cache for existing requests when a rule is deleted' do
-      request_id = request.id
       rule = FactoryBot.create(:info_request_censor_rule,
                                censorable: request,
                                text: "rubbish",
                                replacement: "[REDACTED]")
 
-      visit show_request_path(request.url_title)
-
-      expect(page).to have_content "I have a [REDACTED] answer for you"
+      using_session(requester) do
+        visit show_request_path(request.url_title)
+        expect(page).to have_content "I have a [REDACTED] answer for you"
+      end
 
       using_session(admin) do
         visit edit_admin_censor_rule_path(rule.id)
@@ -245,17 +269,20 @@ RSpec.describe 'Updating censor rules' do
 
       perform_enqueued_jobs
 
-      visit show_request_path(request.url_title)
-      expect(page).not_to have_content "I have a [REDACTED] answer for you"
-      expect(page).to have_content "I have a rubbish answer for you"
+      using_session(requester) do
+        visit show_request_path(request.url_title)
+        expect(page).to have_content "I have a rubbish answer for you"
+        expect(page).to have_no_content "I have a [REDACTED] answer for you"
+      end
     end
   end
 
   describe "Global censor rules" do
     it 'clears the cache for existing requests when a new rule is added' do
-      visit show_request_path(request.url_title)
-
-      expect(page).to have_content "I have a rubbish answer for you"
+      using_session(requester) do
+        visit show_request_path(request.url_title)
+        expect(page).to have_content "I have a rubbish answer for you"
+      end
 
       using_session(admin) do
         visit new_admin_censor_rule_path
@@ -267,9 +294,11 @@ RSpec.describe 'Updating censor rules' do
 
       perform_enqueued_jobs
 
-      visit show_request_path(request.url_title)
-      expect(page).not_to have_content "I have a rubbish answer for you"
-      expect(page).to have_content "I have [REDACTED] for you"
+      using_session(requester) do
+        visit show_request_path(request.url_title)
+        expect(page).to have_content "I have [REDACTED] for you"
+        expect(page).to have_no_content "I have a rubbish answer for you"
+      end
     end
 
     it 'clears the cache for existing requests when a rule is updated' do
@@ -277,9 +306,10 @@ RSpec.describe 'Updating censor rules' do
                                text: "rubbish",
                                replacement: "[REDACTED]")
 
-      visit show_request_path(request.url_title)
-
-      expect(page).to have_content "I have a [REDACTED] answer for you"
+      using_session(requester) do
+        visit show_request_path(request.url_title)
+        expect(page).to have_content "I have a [REDACTED] answer for you"
+      end
 
       using_session(admin) do
         visit edit_admin_censor_rule_path(rule.id)
@@ -291,9 +321,11 @@ RSpec.describe 'Updating censor rules' do
 
       perform_enqueued_jobs
 
-      visit show_request_path(request.url_title)
-      expect(page).not_to have_content "I have a [REDACTED] answer for you"
-      expect(page).to have_content "I have a rubbish [REDACTED] for you"
+      using_session(requester) do
+        visit show_request_path(request.url_title)
+        expect(page).to have_content "I have a rubbish [REDACTED] for you"
+        expect(page).to have_no_content "I have a [REDACTED] answer for you"
+      end
     end
 
     it 'clears the cache for existing requests when a rule is deleted' do
@@ -301,9 +333,10 @@ RSpec.describe 'Updating censor rules' do
                                text: "rubbish",
                                replacement: "[REDACTED]")
 
-      visit show_request_path(request.url_title)
-
-      expect(page).to have_content "I have a [REDACTED] answer for you"
+      using_session(requester) do
+        visit show_request_path(request.url_title)
+        expect(page).to have_content "I have a [REDACTED] answer for you"
+      end
 
       using_session(admin) do
         visit edit_admin_censor_rule_path(rule.id)
@@ -312,9 +345,11 @@ RSpec.describe 'Updating censor rules' do
 
       perform_enqueued_jobs
 
-      visit show_request_path(request.url_title)
-      expect(page).not_to have_content "I have a [REDACTED] answer for you"
-      expect(page).to have_content "I have a rubbish answer for you"
+      using_session(requester) do
+        visit show_request_path(request.url_title)
+        expect(page).to have_content "I have a rubbish answer for you"
+        expect(page).to have_no_content "I have a [REDACTED] answer for you"
+      end
     end
   end
 end

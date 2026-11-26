@@ -1,0 +1,2 @@
+<% updater = event.params[:user]&.name || (event.params[:editor] && "administrator #{event.params[:editor]}") || event.params[:script] %>
+had its status updated by <%= updater %> from '<%= h event.params[:old_described_state] %>' to '<%= h event.params[:described_state] %>'.

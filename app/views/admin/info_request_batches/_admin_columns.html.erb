@@ -12,9 +12,13 @@
 
         <td>
           <% if name == 'body' %>
-            <% truncated_value = truncate(h(value&.squish), length: 100, omission: '') { link_to '…', '#', title: 'Show more', class: 'toggle-hidden' } %>
-            <%= simple_format(truncated_value) %>
-            <div style="display:none;"><%= simple_format(value&.truncate(1000)) %></div>
+            <%= simple_format(truncate(h(value&.squish), length: 100, omission: '')) %>
+            <% if h(value&.squish).length > 100 %>
+              <details class="admin-more">
+                <summary title="Show more">…</summary>
+                <%= simple_format(h(value&.truncate(1000))) %>
+              </details>
+            <% end %>
           <% else %>
             <%= admin_value(value) %>
           <% end %>

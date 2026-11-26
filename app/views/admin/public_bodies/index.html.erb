@@ -1,0 +1,41 @@
+<% if @query.nil? %>
+  <% @title = 'Listing public authorities' %>
+<% else %>
+  <% @title = "Listing public authorities matching '#{@query}'" %>
+<% end %>
+
+<div class="admin-list-head">
+  <h1><%= @title %></h1>
+  <div class="admin-summary__tools">
+    <%= link_to 'New public authority', new_admin_body_path, class: 'btn btn-small btn-primary' %>
+    <%= link_to 'Import from CSV file', import_csv_admin_bodies_path, class: 'btn btn-small' %>
+    <%= link_to 'View tags', admin_tags_path(model_type: PublicBody), class: 'btn btn-small' %>
+  </div>
+</div>
+
+<%= form_tag nil, method: :get, class: 'admin-search-bar' do %>
+  <label for="query" class="visually-hidden">Search authorities</label>
+  <%= search_field_tag 'query', params[:query], id: 'query', placeholder: 'Authority name, email or notes' %>
+  <%= submit_tag 'Search', class: 'btn btn-primary', name: nil %>
+  <% if @query %>
+    <%= link_to 'Show all', admin_bodies_path, class: 'btn' %>
+  <% end %>
+<% end %>
+
+<% if @public_bodies.size > 0 %>
+  <% if @query.nil? %>
+    <h2>All authorities</h2>
+  <% else %>
+    <% if legacy_search? %>
+      <h2>Substring search matches (<%= @public_bodies.total_entries %> total)</h2>
+    <% else %>
+      <h2>Search engine matches (<%= @public_bodies.total_entries %> total)</h2>
+    <% end %>
+  <% end %>
+  <%= render partial: 'one_list', locals: { bodies: @public_bodies } %>
+<% end %>
+
+<%= will_paginate(@public_bodies) %>
+<% if params[:query].present? || explain_search? %>
+  <%= render 'concerns/admin/searchable/search_stats' %>
+<% end %>

@@ -1,0 +1,85 @@
+<div class="page-header admin-list-head">
+  <h1><%= @title %></h1>
+  <div class="admin-summary__tools">
+    <%= link_to 'All change requests', admin_change_requests_path, class: 'btn btn-small' %>
+  </div>
+</div>
+
+<% if @full_edit %>
+  <%= form_tag admin_change_request_path(@change_request), method: 'put', class: 'form form-horizontal admin-edit-form' do %>
+
+    <% if @change_request.user_id.present? %>
+      <div class="control-group">
+        <span class="control-label">Requested by</span>
+        <div class="controls admin-controls-static"><%= both_links(@change_request.user) %></div>
+      </div>
+    <% else %>
+      <div class="control-group">
+        <label class="control-label" for="change_request_user_name">Requested by</label>
+        <div class="controls"><%= text_field(:change_request, :user_name, class: 'span6') %></div>
+      </div>
+      <div class="control-group">
+        <label class="control-label" for="change_request_user_email">User email</label>
+        <div class="controls"><%= email_field(:change_request, :user_email, class: 'span6') %></div>
+      </div>
+    <% end %>
+
+    <div class="control-group">
+      <label class="control-label" for="change_request_public_body_name">Authority</label>
+      <div class="controls"><%= text_field(:change_request, :public_body_name, class: 'span6') %></div>
+    </div>
+
+    <div class="control-group">
+      <label class="control-label" for="change_request_public_body_email">Authority email</label>
+      <div class="controls"><%= text_field(:change_request, :public_body_email, class: 'span6') %></div>
+    </div>
+
+    <div class="control-group">
+      <label class="control-label" for="change_request_source_url">Source URL</label>
+      <div class="controls"><%= url_field :change_request, :source_url, class: 'span6' %></div>
+    </div>
+
+    <div class="control-group">
+      <label class="control-label" for="change_request_notes">Notes</label>
+      <div class="controls"><%= text_area :change_request, :notes, rows: 6, class: 'span6' %></div>
+    </div>
+
+    <div class="control-group">
+      <label class="control-label" for="change_request_is_open">Change request is open</label>
+      <div class="controls">
+        <%= select('change_request', 'is_open', [['Yes', true], ['No', false]]) %>
+      </div>
+    </div>
+
+    <div class="form-actions">
+      <%= submit_tag 'Save', accesskey: 's', class: 'btn btn-success' %>
+      <%= link_to 'Cancel', admin_change_requests_path, class: 'btn' %>
+    </div>
+  <% end %>
+
+  <section class="admin-danger-zone">
+    <h2>Danger zone</h2>
+    <%= form_tag admin_change_request_path(@change_request), method: 'delete' do %>
+      <%= submit_tag 'Destroy change request',
+                     accesskey: 'd',
+                     class: 'btn btn-danger',
+                     data: { confirm: 'This is permanent! Are you sure?' } %>
+    <% end %>
+  </section>
+
+<% else %>
+  <%= form_tag admin_change_request_path(@change_request), method: 'put', class: 'form form-horizontal' do %>
+    <%= render partial: "admin/public_body_change_requests/response" %>
+
+    <div class="form-actions">
+      <%= submit_tag "Close and respond", accesskey: "r", class: "btn btn-primary" %>
+      <%= link_to "Close",
+                  admin_change_request_path(@change_request),
+                  method: :put,
+                  accesskey: "c",
+                  class: "btn" %>
+    </div>
+  <% end %>
+
+  <%= render partial: "admin/general/change_request_summary" %>
+<% end %>

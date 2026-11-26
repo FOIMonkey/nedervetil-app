@@ -1,0 +1,34 @@
+<div class="admin-triage__head">
+  <span class="label label-warning"><%= document_state(document) %></span>
+  <span class="muted"><%= document.kind_label %> · <%= distance_of_time_in_words_to_now(document.created_at) %> ago</span>
+</div>
+
+<h2 class="admin-triage__title">
+  <%= link_to document.title, disclosure_manage_document_path(document), data: { turbo_frame: '_top' } %>
+</h2>
+
+<dl class="admin-facts">
+  <% if document.authority %>
+    <div><dt>Authority</dt><dd><%= link_to document.authority.name, admin_body_path(document.authority), data: { turbo_frame: '_top' } %></dd></div>
+  <% end %>
+  <% if document.info_request %>
+    <div><dt>Request</dt><dd><%= link_to "##{document.info_request.id} #{document.info_request.title}", admin_request_path(document.info_request), data: { turbo_frame: '_top' } %></dd></div>
+  <% end %>
+  <% reason = Disclosures::ReviewSubmission.reason(document) %>
+  <% if reason.present? %>
+    <div><dt>Waiting because</dt><dd><%= reason %></dd></div>
+  <% end %>
+  <% if Disclosures::ReviewSubmission.unwanted(document) %>
+    <div><dt>Consent</dt><dd><strong>The requester no longer wants it published</strong></dd></div>
+  <% end %>
+  <% if document.stage_in?(:erased, :erasing, :withdrawn, :taken_down) %>
+    <div><dt>Withdrawn</dt><dd><%= document_date(document.withdrawn_at) %><% if document.request_deleted? %> · Its request was deleted<% end %></dd></div>
+  <% end %>
+</dl>
+
+<div class="admin-triage__links">
+  <%= link_to 'Open check desk', disclosure_manage_document_path(document), class: 'btn btn-primary', data: { turbo_frame: '_top' } %>
+  <% if document.info_request %>
+    <%= link_to 'Open request', admin_request_path(document.info_request), class: 'btn', data: { turbo_frame: '_top' } %>
+  <% end %>
+</div>

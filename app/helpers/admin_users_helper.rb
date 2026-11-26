@@ -1,12 +1,11 @@
+# Renders status and role badge spans for a User row in the admin users list.
 module AdminUsersHelper
   def user_labels(user)
-    html = ''
-    html += banned_label if user.banned?
-    html += closed_label if user.closed?
-    user.roles.each do |role|
-      html += role_label(role)
-    end
-    html.html_safe
+    labels = []
+    labels << banned_label if user.banned?
+    labels << closed_label if user.closed?
+    labels.concat(user.roles.map { |role| role_label(role) })
+    safe_join(labels)
   end
 
   private

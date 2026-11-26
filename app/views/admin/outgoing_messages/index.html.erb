@@ -1,0 +1,28 @@
+<% @title = 'Listing outgoing messages' %>
+
+<div class="admin-list-head">
+  <h1><%= @title %></h1>
+</div>
+
+<%= form_tag nil, method: :get, class: 'admin-search-bar' do %>
+  <label for="query" class="visually-hidden">Search outgoing messages</label>
+  <%= search_field_tag 'query', params[:query], id: 'query', placeholder: 'Sender name, subject or message body' %>
+  <%= submit_tag 'Search', class: 'btn btn-primary', name: nil %>
+  <% if params[:query].present? %>
+    <%= link_to 'Show all', admin_outgoing_messages_path, class: 'btn' %>
+  <% end %>
+<% end %>
+
+<div class="admin-record-list" id="outgoing_messages">
+  <% if @outgoing_messages.any? %>
+    <%= render partial: 'outgoing_message', collection: @outgoing_messages %>
+  <% else %>
+    <p class="muted">None yet.</p>
+  <% end %>
+</div>
+
+<%= will_paginate(@outgoing_messages) %>
+
+<% if params[:query].present? || explain_search? %>
+  <%= render 'concerns/admin/searchable/search_stats' %>
+<% end %>

@@ -1,0 +1,38 @@
+<% @title = 'Statistics' %>
+
+<h1>Statistics</h1>
+
+<div class="hero-unit admin-stats-summary">
+  <div class="admin-stats-summary__cell">
+    <h2>
+      <strong><%= number_with_delimiter(@public_body_count) %></strong>
+      <span>public authorities</span>
+    </h2>
+  </div>
+
+  <div class="admin-stats-summary__cell">
+    <h2>
+      <strong><%= number_with_delimiter(@info_request_count) %></strong>
+      <span>requests,
+      <%= number_with_delimiter(@outgoing_message_count) %> outgoing messages,
+      <%= number_with_delimiter(@incoming_message_count) %> incoming messages</span>
+    </h2>
+  </div>
+
+  <div class="admin-stats-summary__cell">
+    <h2>
+      <strong><%= number_with_delimiter(@user_count) %></strong>
+      <span>users</span>
+    </h2>
+  </div>
+</div>
+
+<h2>State of requests</h2>
+<div class="admin-stats-states">
+  <% for state, count in @request_by_state %>
+    <div class="stats-row">
+      <span class="span4"><%= state %></span>
+      <span class="label label-info"><%= number_with_delimiter(count) %></span>
+    </div>
+  <% end %>
+</div>

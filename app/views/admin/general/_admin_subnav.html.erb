@@ -1,0 +1,11 @@
+<% section = admin_subnav_section %>
+<% if section %>
+  <nav class="admin-subnav" aria-label="<%= section[:domain] %> section">
+    <div class="admin-subnav__inner">
+      <span class="admin-subnav__domain"><%= section[:domain] %></span>
+      <% section[:items].each do |label, path| %>
+        <%= link_to label, path, 'aria-current': admin_subnav_current(path) %>
+      <% end %>
+    </div>
+  </nav>
+<% end %>

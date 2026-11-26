@@ -1,0 +1,32 @@
+<div id="permission-history">
+  <% if permission_changes.any? %>
+    <table class="table table-condensed table-striped">
+      <thead>
+        <tr>
+          <th>Permission</th>
+          <th>Change</th>
+          <th>By</th>
+          <th>Changed at</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% permission_changes.each do |change| %>
+          <tr class="<%= cycle('odd', 'even') %>">
+            <td><%= change.what == 'admin' ? 'Admin' : 'Trusted' %></td>
+            <td><%= change.granted? ? 'given' : 'taken away' %></td>
+            <td>
+              <% if change.changed_by %>
+                <%= link_to change.changed_by.name, admin_user_path(change.changed_by) %>
+              <% else %>
+                unknown
+              <% end %>
+            </td>
+            <td><%= change.created_at.strftime("%Y-%m-%d %H:%M:%S") %></td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  <% else %>
+    <p>None yet.</p>
+  <% end %>
+</div>

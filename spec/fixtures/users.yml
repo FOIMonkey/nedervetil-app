@@ -5,7 +5,7 @@
 #  id                                :integer          not null, primary key
 #  email                             :string           not null
 #  name                              :string           not null
-#  hashed_password                   :string           not null
+#  hashed_password                   :string           default(""), not null
 #  salt                              :string
 #  created_at                        :datetime         not null
 #  updated_at                        :datetime         not null
@@ -13,20 +13,16 @@
 #  url_name                          :text             not null
 #  last_daily_track_email            :datetime
 #  ban_text                          :text             default(""), not null
-#  about_me                          :text             default(""), not null
 #  locale                            :string
 #  email_bounced_at                  :datetime
 #  email_bounce_message              :text             default(""), not null
-#  no_limit                          :boolean          default(FALSE), not null
+#  trusted                           :boolean          default(FALSE), not null
 #  receive_email_alerts              :boolean          default(TRUE), not null
-#  can_make_batch_requests           :boolean          default(FALSE), not null
 #  otp_enabled                       :boolean          default(FALSE), not null
 #  otp_secret_key                    :string
 #  otp_counter                       :integer
 #  confirmed_not_spam                :boolean          default(FALSE), not null
-#  comments_count                    :integer          default(0), not null
 #  info_requests_count               :integer          default(0), not null
-#  track_things_count                :integer          default(0), not null
 #  request_classifications_count     :integer          default(0), not null
 #  public_body_change_requests_count :integer          default(0), not null
 #  info_request_batches_count        :integer          default(0), not null
@@ -34,14 +30,25 @@
 #  daily_summary_minute              :integer
 #  closed_at                         :datetime
 #  login_token                       :string
-#  receive_user_messages             :boolean          default(TRUE), not null
-#  user_messages_count               :integer          default(0), not null
 #  status_update_count               :integer          default(0), not null
 #  last_sign_in_at                   :datetime
 #  otp_last_used_at                  :integer
 #  otp_enabled_at                    :datetime
 #  otp_backup_codes_generated_at     :datetime
 #  otp_backup_codes                  :text
+#  encrypted_password                :string           default(""), not null
+#  reset_password_token              :string
+#  reset_password_sent_at            :datetime
+#  confirmation_token                :string
+#  confirmation_sent_at              :datetime
+#  confirmed_at                      :datetime
+#  unconfirmed_email                 :string
+#  otp_secret                        :text
+#  consumed_timestep                 :bigint
+#  otp_required_for_login            :boolean          default(FALSE), not null
+#  devise_otp_backup_codes           :string           default([]), not null, is an Array
+#  authentication_version            :string           default(""), not null
+#  credential_reset_required         :boolean          default(FALSE), not null
 #
 
 # If sample data has been loaded you can log in as any of these users with their
@@ -53,13 +60,15 @@ bob_smith_user:
   url_name: bob_smith
   email: bob@localhost
   salt: "-6116981980.392287733335677"
-  hashed_password: 6b7cd45a5f35fd83febc0452a799530398bfb6e8 # jonespassword
+  hashed_password: ''
+  encrypted_password: <%= Devise::Encryptor.digest(User, 'jonespassword') %>
+  authentication_version: <%= SecureRandom.uuid %>
   updated_at: 2007-10-31 10:39:15.491593
   created_at: 2007-10-31 10:39:15.491593
   email_confirmed: true
+  confirmed_at: 2007-11-01 10:39:15.491593
   ban_text: ''
   locale: 'en'
-  about_me: 'I like making requests about fancy dogs and naughty chickens and stuff.'
   receive_email_alerts: true
   info_requests_count: 5
   last_daily_track_email: <%= Time.zone.now %>
@@ -69,16 +78,16 @@ silly_name_user:
   url_name: silly_emnameem
   email: silly@localhost
   salt: "-6116981980.392287733335677"
-  hashed_password: 6b7cd45a5f35fd83febc0452a799530398bfb6e8 # jonespassword
+  hashed_password: ''
+  encrypted_password: <%= Devise::Encryptor.digest(User, 'jonespassword') %>
+  authentication_version: <%= SecureRandom.uuid %>
   updated_at: 2007-11-01 10:39:15.491593
   created_at: 2007-11-01 10:39:15.491593
   email_confirmed: true
+  confirmed_at: 2007-11-01 10:39:15.491593
   ban_text: ''
   locale: 'en'
-  about_me: ''
   receive_email_alerts: true
-  comments_count: 1
-  track_things_count: 2
   last_daily_track_email: <%= Time.zone.now %>
 admin_user:
   id: "3"
@@ -86,13 +95,15 @@ admin_user:
   url_name: joe_admin
   email: joe@localhost
   salt: "-6116981980.392287733335677"
-  hashed_password: 6b7cd45a5f35fd83febc0452a799530398bfb6e8 # jonespassword
+  hashed_password: ''
+  encrypted_password: <%= Devise::Encryptor.digest(User, 'jonespassword') %>
+  authentication_version: <%= SecureRandom.uuid %>
   updated_at: 2007-11-01 10:39:15.491593
   created_at: 2007-11-01 10:39:15.491593
   email_confirmed: true
+  confirmed_at: 2007-11-01 10:39:15.491593
   ban_text: ''
   locale: ''
-  about_me: ''
   receive_email_alerts: true
   last_daily_track_email: <%= Time.zone.now %>
 unconfirmed_user:
@@ -101,12 +112,13 @@ unconfirmed_user:
   url_name: unconfirmed
   email: unconfirmed@localhost
   salt: "-6116981980.392287733335677"
-  hashed_password: 6b7cd45a5f35fd83febc0452a799530398bfb6e8 # jonespassword
+  hashed_password: ''
+  encrypted_password: <%= Devise::Encryptor.digest(User, 'jonespassword') %>
+  authentication_version: <%= SecureRandom.uuid %>
   updated_at: 2007-11-01 10:39:15.491593
   created_at: 2007-11-01 10:39:15.491593
   email_confirmed: false
   ban_text: ''
-  about_me: ''
   receive_email_alerts: true
   last_daily_track_email: <%= Time.zone.now %>
 robin_user:
@@ -115,12 +127,14 @@ robin_user:
   url_name: robin_houston
   email: robin@localhost
   salt: "-6116981980.392287733335677"
-  hashed_password: 6b7cd45a5f35fd83febc0452a799530398bfb6e8 # jonespassword
+  hashed_password: ''
+  encrypted_password: <%= Devise::Encryptor.digest(User, 'jonespassword') %>
+  authentication_version: <%= SecureRandom.uuid %>
   updated_at: 2012-01-01 10:39:15.491593
   created_at: 2012-01-01 10:39:15.491593
   email_confirmed: true
+  confirmed_at: 2007-11-01 10:39:15.491593
   ban_text: ''
-  about_me: 'I am the best'
   receive_email_alerts: true
   info_requests_count: 2
   last_daily_track_email: <%= Time.zone.now %>
@@ -130,12 +144,14 @@ another_user:
   url_name: another_user
   email: another@localhost
   salt: "-6116981980.392287733335677"
-  hashed_password: 6b7cd45a5f35fd83febc0452a799530398bfb6e8 # jonespassword
+  hashed_password: ''
+  encrypted_password: <%= Devise::Encryptor.digest(User, 'jonespassword') %>
+  authentication_version: <%= SecureRandom.uuid %>
   updated_at: 2012-01-01 10:39:15.491593
   created_at: 2012-01-01 10:39:15.491593
   email_confirmed: true
+  confirmed_at: 2007-11-01 10:39:15.491593
   ban_text: ''
-  about_me: 'Just another user'
   receive_email_alerts: true
   info_requests_count: 1
   last_daily_track_email: <%= Time.zone.now %>
@@ -145,13 +161,15 @@ paul_pro_user:
   url_name: paul_pro
   email: paul@localhost
   salt: "-6116981980.392287733335677"
-  hashed_password: 6b7cd45a5f35fd83febc0452a799530398bfb6e8 # jonespassword
+  hashed_password: ''
+  encrypted_password: <%= Devise::Encryptor.digest(User, 'jonespassword') %>
+  authentication_version: <%= SecureRandom.uuid %>
   updated_at: 2007-10-31 10:39:15.491593
   created_at: 2007-10-31 10:39:15.491593
   email_confirmed: true
+  confirmed_at: 2007-11-01 10:39:15.491593
   ban_text: ''
   locale: 'en'
-  about_me: 'Totes profesh'
   receive_email_alerts: true
   last_daily_track_email: <%= Time.zone.now %>
 annie_all_roles_user:
@@ -160,19 +178,21 @@ annie_all_roles_user:
   url_name: annie_admin
   email: annie@localhost
   salt: "-6116981980.392287733335677"
-  hashed_password: 6b7cd45a5f35fd83febc0452a799530398bfb6e8 # jonespassword
+  hashed_password: ''
+  encrypted_password: <%= Devise::Encryptor.digest(User, 'jonespassword') %>
+  authentication_version: <%= SecureRandom.uuid %>
   updated_at: 2007-10-31 10:39:15.491593
   created_at: 2007-10-31 10:39:15.491593
   email_confirmed: true
+  confirmed_at: 2007-11-01 10:39:15.491593
   ban_text: ''
   locale: 'en'
-  about_me: 'All the roles'
   receive_email_alerts: true
   last_daily_track_email: <%= Time.zone.now %>
   otp_enabled: true
-  otp_secret_key: W5LLD4AHA7JAINQIQV7NGSEBU3CQGO3D # See https://github.com/mysociety/alaveteli/pull/9343 for setup help
+  otp_secret_key: <%= User.type_for_attribute("otp_secret_key").serialize("W5LLD4AHA7JAINQIQV7NGSEBU3CQGO3D").to_json %> # See https://github.com/mysociety/alaveteli/pull/9343 for setup help
   otp_enabled_at: 2007-10-31 10:39:15.491593
-  otp_backup_codes: '["133107","591088","687254","426010","773637","735999","489138","769201","198169","600907","821923","805386"]'
+  otp_backup_codes: <%= User.type_for_attribute("otp_backup_codes").serialize(%w[133107 591088 687254 426010 773637 735999 489138 769201 198169 600907 821923 805386]).to_json %>
   otp_backup_codes_generated_at: 2007-10-31 10:39:15.491593
 peter_pro_admin_user:
   id: 9
@@ -180,13 +200,15 @@ peter_pro_admin_user:
   url_name: peter_pro_admin
   email: peter@localhost
   salt: "-6116981980.392287733335677"
-  hashed_password: 6b7cd45a5f35fd83febc0452a799530398bfb6e8 # jonespassword
+  hashed_password: ''
+  encrypted_password: <%= Devise::Encryptor.digest(User, 'jonespassword') %>
+  authentication_version: <%= SecureRandom.uuid %>
   updated_at: 2007-10-31 10:39:15.491593
   created_at: 2007-10-31 10:39:15.491593
   email_confirmed: true
+  confirmed_at: 2007-11-01 10:39:15.491593
   ban_text: ''
   locale: 'en'
-  about_me: ''
   receive_email_alerts: true
   last_daily_track_email: <%= Time.zone.now %>
 ollie_foi_officer_user:
@@ -195,11 +217,13 @@ ollie_foi_officer_user:
   url_name: ollie_officer
   email: ollie@localhost
   salt: "-6116981980.392287733335677"
-  hashed_password: 6b7cd45a5f35fd83febc0452a799530398bfb6e8 # jonespassword
+  hashed_password: ''
+  encrypted_password: <%= Devise::Encryptor.digest(User, 'jonespassword') %>
+  authentication_version: <%= SecureRandom.uuid %>
   updated_at: 2007-10-31 10:39:15.491593
   created_at: 2007-10-31 10:39:15.491593
   email_confirmed: true
+  confirmed_at: 2007-11-01 10:39:15.491593
   ban_text: ''
   locale: 'en'
-  about_me: 'An FOI Officer at all authorities'
   receive_email_alerts: false

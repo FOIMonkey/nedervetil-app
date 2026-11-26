@@ -1,0 +1,83 @@
+<div class="admin">
+<header id="admin-bar" class="admin-bar">
+  <div class="admin-bar__inner">
+    <%= link_to admin_general_index_path, class: 'admin-bar__brand' do %>
+      <%= render 'admin/general/brand_mark' %><%= site_name %> <span class="admin-bar__tag">Admin</span>
+    <% end %>
+
+    <nav class="admin-bar__nav" aria-label="Admin">
+      <div class="admin-bar__group admin-bar__group--queues" role="group" aria-label="Queues">
+        <%= link_to 'Today', admin_general_index_path, 'aria-current': admin_domain_current(:today) %>
+        <%= link_to 'Documents', disclosure_document_reviews_path, 'aria-current': admin_domain_current(:documents) %>
+      </div>
+
+      <div class="admin-bar__group admin-bar__group--records" role="group" aria-label="Records">
+        <%= link_to 'Requests', admin_requests_path, 'aria-current': admin_domain_current(:requests) %>
+        <%= link_to 'Authorities', admin_bodies_path, 'aria-current': admin_domain_current(:authorities) %>
+        <%= link_to 'Users', admin_users_path, 'aria-current': admin_domain_current(:users) %>
+        <%= link_to 'Topics', admin_topic_pages_path, 'aria-current': admin_domain_current(:topics) %>
+      </div>
+
+      <% if admin_page? %>
+        <%= link_to admin_jump_path, class: 'admin-bar__jump', data: { action: 'click->admin-jump#open' } do %>
+          Jump <kbd aria-hidden="true">/</kbd>
+        <% end %>
+      <% end %>
+
+      <details class="admin-bar__more" data-controller="admin-bar-menu" data-action="keydown@document->admin-bar-menu#escape click@document->admin-bar-menu#outside">
+        <summary class="admin-bar__toggle" data-admin-bar-menu-target="toggle"<% if admin_domain_current(:system) %> data-active="true"<% end %>>Tools</summary>
+        <div id="admin-more" class="admin-bar__menu">
+          <ul aria-label="Summary">
+            <li><%= link_to 'Jump search', admin_jump_path %></li>
+            <li><%= link_to 'Timeline', admin_timeline_path %></li>
+            <li><%= link_to 'Stats', admin_stats_path %></li>
+            <li><%= link_to 'Debug', admin_debug_index_path %></li>
+          </ul>
+          <ul aria-label="Requests">
+            <% if feature_enabled?(:admin_outgoing_messages) %><li><%= link_to 'Outgoing messages', admin_outgoing_messages_path %></li><% end %>
+            <% if feature_enabled?(:admin_mail_server_logs) %><li><%= link_to 'Mail server logs', admin_mail_server_logs_path %></li><% end %>
+            <li><%= link_to 'Request events', admin_info_request_events_path %></li>
+            <li><%= link_to 'Request categories', admin_categories_path(model_type: 'InfoRequest') %></li>
+            <li><%= link_to 'Request tags', admin_tags_path(model_type: 'InfoRequest') %></li>
+            <% if feature_enabled?(:refusal_snippets) %><li><%= link_to 'Snippets', admin_snippets_path %></li><% end %>
+          </ul>
+          <ul aria-label="Authorities">
+            <li><%= link_to 'Authority pages', admin_authority_pages_path %></li>
+            <li><%= link_to 'Groups', admin_authority_groups_path %></li>
+            <li><%= link_to 'External releases', admin_external_releases_path %></li>
+            <li><%= link_to 'Authority categories', admin_categories_path(model_type: 'PublicBody') %></li>
+            <li><%= link_to 'Authority tags', admin_tags_path(model_type: 'PublicBody') %></li>
+            <% if feature_enabled?(:admin_public_body_change_requests) %><li><%= link_to 'Change requests', admin_change_requests_path %></li><% end %>
+          </ul>
+          <ul aria-label="Users">
+            <li><%= link_to 'Sign-ins', admin_sign_ins_path %></li>
+            <li><%= link_to 'User tags', admin_tags_path(model_type: 'User') %></li>
+            <li><%= link_to 'Two factor', admin_two_factor_path %></li>
+          </ul>
+          <ul aria-label="Topics &amp; documents">
+            <li><%= link_to 'Document review', disclosure_document_reviews_path %></li>
+            <li><%= link_to 'Published documents', disclosure_documents_path %></li>
+            <li><%= link_to 'Topics', admin_topic_pages_path %></li>
+            <li><%= link_to 'Datasets', admin_topic_datasets_path %></li>
+            <li><%= link_to 'Topic guides', admin_topic_guides_path %></li>
+            <li><%= link_to 'Topic history', admin_topic_changes_path %></li>
+          </ul>
+          <ul aria-label="System">
+            <li><%= link_to 'Announcements', admin_announcements_path %></li>
+            <li><%= link_to 'Censor rules', admin_censor_rules_path %></li>
+            <li><%= link_to 'Holidays', admin_holidays_path %></li>
+            <li><%= link_to 'Notes', admin_notes_path %></li>
+            <li><%= link_to 'Spam addresses', admin_spam_addresses_path %></li>
+          </ul>
+        </div>
+      </details>
+    </nav>
+
+    <div class="admin-bar__end">
+      <% if current_user %><span class="admin-bar__who"><%= current_user.name %></span><% end %>
+      <%= link_to 'Public site', frontpage_path %>
+      <%= link_to 'Sign out', signout_path, method: :delete, data: { turbo: false } %>
+    </div>
+  </div>
+</header>
+</div>

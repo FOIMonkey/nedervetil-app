@@ -27,7 +27,7 @@ class Admin::CategoriesController < AdminController
       redirect_to admin_categories_path(model_type: current_klass)
     else
       @category.build_all_translations
-      render action: 'new'
+      render action: 'new', status: :unprocessable_content
     end
   end
 
@@ -41,7 +41,7 @@ class Admin::CategoriesController < AdminController
       redirect_to admin_categories_path(model_type: current_klass)
     else
       @category.build_all_translations
-      render action: 'edit'
+      render action: 'edit', status: :unprocessable_content
     end
   end
 
@@ -56,7 +56,7 @@ class Admin::CategoriesController < AdminController
     if transaction[:success]
       head :ok
     else
-      render plain: transaction[:error], status: :unprocessable_entity
+      render_plain_text(transaction[:error], status: :unprocessable_content)
     end
   end
 

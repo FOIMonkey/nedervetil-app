@@ -1,0 +1,19 @@
+<% preview_frame = local_assigns[:preview_frame] %>
+<% selected_id = local_assigns[:selected_id] %>
+<% if info_requests.any? %>
+  <%= render partial: 'concerns/admin/sortable/sort_options' %>
+<% end %>
+
+<div class="admin-record-list" id="requests">
+  <% if info_requests.any? %>
+    <% info_requests.each do |info_request| %>
+      <%= render partial: 'admin/requests/info_request',
+                 locals: { info_request: info_request,
+                           preview_frame: preview_frame,
+                           selected: selected_id.present? && info_request.id == selected_id } %>
+    <% end %>
+    <%= will_paginate(info_requests) %>
+  <% else %>
+    <p class="muted">None yet.</p>
+  <% end %>
+</div>

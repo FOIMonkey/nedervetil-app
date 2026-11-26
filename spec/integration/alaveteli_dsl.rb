@@ -7,44 +7,6 @@ module AlaveteliDsl
     browse_request(url_title)
   end
 
-  def create_request(public_body)
-    visit select_authority_path
-    within(:css, '#search_form') do
-      fill_in 'query', with: public_body.name
-      find_button('Search').click
-    end
-    within(:css, '.body_listing') do
-      find_link('Make a request').click
-    end
-    fill_in 'Summary', with: "Why is your quango called Geraldine?"
-    fill_in 'Your request', with: "This is a silly letter. It is too short to be interesting."
-
-    find_button('Next Step: Preview your public request').click
-    find_button('Send and publish request').click
-    expect(page).to have_content('To send and publish your FOI request, create an account or sign in')
-  end
-
-  def create_request_and_user(public_body)
-    user = FactoryBot.build(:user)
-    # Make a request in the normal way
-    using_session(without_login) do
-      create_request(public_body)
-      # Now log in as an unconfirmed user.
-      visit signin_path token: get_last_post_redirect.token
-      within '#signup_form' do
-        fill_in "Your name:", with: user.name
-        fill_in "Your e-mail:", with: user.email
-        fill_in "Password:", with: 'jonespassword'
-        fill_in "Confirm password:", with: 'jonespassword'
-        click_button "Sign up"
-      end
-      expect(page).to have_content('Now check your email!')
-    end
-
-    # This will trigger a confirmation mail. Return the PostRedirect
-    get_last_post_redirect
-  end
-
   # Visit and fill out the pro-specific new request form
   # Note: you'll need to be logged in as a pro user to access this page.
   def create_pro_request(public_body)
@@ -64,7 +26,9 @@ module AlaveteliDsl
   end
 
   def add_body_to_pro_batch(public_body)
-    within ".batch-builder__search-results li[data-body-id=\"#{public_body.id}\"]" do
+    within(
+      ".batch-builder__search-results li[data-body-id=\"#{public_body.id}\"]"
+    ) do
       click_button "Add"
     end
   end
@@ -107,6 +71,11 @@ end
 
 def login(user, **params)
   u = user.is_a?(User) ? user : users(user)
+  if u.is_admin? && !u.totp?
+    u.update!(otp_secret: User.generate_otp_secret,
+              otp_required_for_login: true)
+  end
+  code = nil
   if u.totp?
     # Arrange a fresh fixture proof; replay is tested by dedicated flows.
     u.update_columns(consumed_timestep: nil)
@@ -149,15 +118,14 @@ def holding_pen_messages
 end
 
 def last_holding_pen_mail
-  InfoRequest.holding_pen_request.get_last_public_response.raw_email
+  InfoRequest.holding_pen_request.last_public_response.raw_email
 end
 
 def confirmation_url_from_email
   deliveries = ActionMailer::Base.deliveries
   expect(deliveries.size).to eq(1)
   mail = deliveries.first
-  mail.body.to_s =~ /(http:\/\/.*\/c\/.*)/
-  $1
+  mail.body.to_s[/(http:\/\/.*\/c\/.*)/, 1]
 end
 
 def cache_directories_exist?(request)

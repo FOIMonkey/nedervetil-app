@@ -1,0 +1,59 @@
+<% preview_frame = local_assigns[:preview_frame] %>
+<% selected = local_assigns.fetch(:selected, false) %>
+<% status_label = InfoRequest::State.short_description(info_request.calculate_status) %>
+<% date_str = if defined?(sort_order) && sort_order =~ /created_at/
+                admin_date(info_request.created_at, ago_only: true)
+              else
+                admin_date(info_request.updated_at, ago_only: true)
+              end %>
+<% if preview_frame.present? %>
+  <article class="admin-request-row"<% if selected %> data-selected="true"<% end %> data-action="click->triage-list#selectRow">
+    <div class="admin-request-row__main">
+      <div class="admin-request-row__head">
+        <span class="item-title">
+          <%= link_to info_request.title,
+                      admin_triage_path('request_preview', info_request.id),
+                      class: 'admin-request-row__title',
+                      'aria-current': (selected ? 'true' : nil),
+                      data: { turbo: true,
+                              turbo_frame: preview_frame,
+                              triage_list_target: 'item',
+                              action: 'click->triage-list#select' } %>
+        </span>
+        <span class="admin-status-pill<%= ' admin-status-pill--warn' if info_request.reported? || info_request.described_state == 'error_message' %><%= ' admin-status-pill--hidden' if info_request.prominence == 'hidden' %>">
+          <%= info_request.prominence == 'hidden' ? 'Hidden' : status_label %>
+        </span>
+      </div>
+      <div class="admin-request-row__meta muted">
+        <span><%= info_request.user.name %></span>
+        <span aria-hidden="true">→</span>
+        <span><%= info_request.public_body.name %></span>
+        <span aria-hidden="true">·</span>
+        <span><%= date_str %></span>
+      </div>
+    </div>
+    <div class="admin-request-row__act">
+      <%= link_to 'Open', admin_request_path(info_request), class: 'admin-rows__open' %>
+    </div>
+    <div id="request_<%= info_request.id %>" class="item-detail" hidden></div>
+  </article>
+<% else %>
+  <article class="admin-request-row admin-request-row--plain">
+    <div class="admin-request-row__main">
+      <div class="admin-request-row__head">
+        <span class="item-title">
+          <%= link_to info_request.title, admin_request_path(info_request), class: 'admin-request-row__title' %>
+        </span>
+        <span class="admin-status-pill<%= ' admin-status-pill--warn' if info_request.reported? || info_request.described_state == 'error_message' %><%= ' admin-status-pill--hidden' if info_request.prominence == 'hidden' %>">
+          <%= info_request.prominence == 'hidden' ? 'Hidden' : status_label %>
+        </span>
+      </div>
+      <div class="admin-request-row__meta muted">
+        <span><%= info_request.public_body.name %></span>
+        <span aria-hidden="true">·</span>
+        <span><%= date_str %></span>
+      </div>
+    </div>
+    <div id="request_<%= info_request.id %>" class="item-detail" hidden></div>
+  </article>
+<% end %>

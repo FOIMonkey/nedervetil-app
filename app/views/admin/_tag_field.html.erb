@@ -1,7 +1,3 @@
-<% content_for :javascript_head do %>
-  <%= javascript_importmap_tags("admin", importmap: Rails.application.admin_importmap) %>
-<% end %>
-
 <% suggestions_id = "#{object_name}_tag_string_suggestions" %>
 
 <div data-controller="tagging"

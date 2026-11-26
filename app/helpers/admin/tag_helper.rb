@@ -1,10 +1,7 @@
 # Helpers for rendering HasTagStringTags
 module Admin::TagHelper
   def render_tags(tags)
-    tags.
-      map { |record_tag| render_tag(record_tag) }.
-      join.
-      html_safe
+    safe_join(tags.map { |record_tag| render_tag(record_tag) })
   end
 
   def render_tag(record_tag)

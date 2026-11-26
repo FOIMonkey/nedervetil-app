@@ -1,11 +1,11 @@
-<div class="note--body control-group">
+<div class="note--body control-group" data-note-style-target="body">
   <%= t.label :body, class: 'control-label' %>
   <div class="controls">
     <%= t.text_area :body, class: 'input-block-level', rows: 10 %>
   </div>
 </div>
 
-<div class="note--rich_body control-group">
+<div class="note--rich_body control-group" data-note-style-target="richBody">
   <%= t.label :rich_body, 'Body', class: 'control-label' %>
   <div class="controls">
     <%= t.rich_text_area :rich_body %>

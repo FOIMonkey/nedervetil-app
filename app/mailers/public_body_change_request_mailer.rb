@@ -19,12 +19,14 @@ class PublicBodyChangeRequestMailer < ApplicationMailer
     # From is an address we control so that strict DMARC senders don't get
     # refused
     from_address = MailHandler.address_from_name_and_email(
-      @change_request.get_user_name,
-      blackhole_email)
+      @change_request.requester_name,
+      blackhole_email
+    )
 
     reply_to_address = MailHandler.address_from_name_and_email(
-      @change_request.get_user_name,
-      @change_request.get_user_email)
+      @change_request.requester_name,
+      @change_request.requester_email
+    )
 
     set_reply_to_headers('Reply-To' => reply_to_address)
 

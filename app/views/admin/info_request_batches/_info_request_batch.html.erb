@@ -1,35 +1,22 @@
-<div class="accordion-group">
-  <div class="accordion-heading accordion-toggle row">
-    <span class="item-title span6">
-      <a href="#batch_<%= info_request_batch.id %>" data-toggle="collapse" data-parent="requests">
-        <%= chevron_right %>
-      </a>
-
+<details class="admin-row-details">
+  <summary class="admin-row-details__summary">
+    <span class="item-title">
       <%= both_links(info_request_batch) %>
-
-      <% if info_request_batch.embargoed? %>
-        <%= content_tag(:span, 'embargoed', class: 'label') %>
-      <% end %>
     </span>
-
-    <span class="item-metadata span6">
+    <span class="item-metadata">
       <%= both_links(info_request_batch.user) %>
       <%= arrow_right %>
       <%= "to #{info_request_batch.public_bodies.size} authorities" %>,
       <%= admin_date(info_request_batch.updated_at, ago_only: true) %>
     </span>
-  </div>
+  </summary>
 
-  <div id="batch_<%= info_request_batch.id %>" class="item-detail accordion-body collapse row">
+  <div id="batch_<%= info_request_batch.id %>" class="item-detail">
     <% info_request_batch.for_admin_column do |name, value| %>
       <div>
-        <span class="span6">
-          <%= name.humanize %>
-        </span>
-        <span class="span6">
-          <%= admin_value(value) %>
-        </span>
+        <span><%= name.humanize %></span>
+        <span><%= admin_value(value) %></span>
       </div>
     <% end %>
   </div>
-</div>
+</details>

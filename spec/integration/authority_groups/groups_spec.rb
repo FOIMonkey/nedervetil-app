@@ -398,7 +398,6 @@ RSpec.describe 'Authority groups' do
     end
 
     it 'link from the admin navigation' do
-      skip 'Admin workspace arrives in B15'
       sign_in(admin)
       get '/admin/authority_groups'
       expect(page.css('#admin-bar a').map(&:text)).

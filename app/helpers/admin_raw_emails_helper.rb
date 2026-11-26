@@ -6,6 +6,6 @@ module AdminRawEmailsHelper
   # Returns a String
   def address_list(addresses)
     addresses = Array(addresses).compact
-    addresses.map { |addr| content_tag :code, addr }.join(', ').html_safe
+    safe_join(addresses.map { |addr| content_tag :code, addr }, ', ')
   end
 end

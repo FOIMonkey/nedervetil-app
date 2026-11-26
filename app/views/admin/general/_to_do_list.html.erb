@@ -1,0 +1,81 @@
+<% count ||= items.size %>
+<% open_default = local_assigns.fetch(:open, id != 'blank-contacts') %>
+<% mine = local_assigns.fetch(:mine, id != 'blank-contacts') %>
+<% selected_triage = local_assigns[:selected_triage] %>
+<% latest_events = local_assigns[:latest_events] %>
+<% if count > 0 %>
+  <details id="<%= id %>" class="admin-todo<%= ' admin-todo--mine' if mine %>"<% if open_default %> open<% end %>>
+    <summary>
+      <span class="admin-todo__count"><%= count %></span>
+      <%= label %>
+    </summary>
+    <ul class="admin-rows">
+      <% items.each do |item| %>
+        <% if item.is_a?(IncomingMessage) %>
+          <% body_text = item.get_body_for_quoting.to_s %>
+          <% title = item.subject.presence || (body_text.gsub(/[[:space:]]/, '').empty? ? '(no body)' : excerpt(body_text, '', radius: 55)) %>
+          <% active = selected_triage && selected_triage[:kind] == 'holding_pen' && selected_triage[:record]&.id == item.id %>
+          <li class="admin-triage-row"<% if active %> data-selected="true"<% end %> data-action="click->triage-list#selectRow">
+            <%= link_to title, admin_triage_path('holding_pen', item.id),
+                        class: 'admin-rows__title admin-triage-link',
+                        'aria-current': (active ? 'true' : nil),
+                        data: { turbo: true,
+                                turbo_frame: 'triage_detail',
+                                triage_list_target: 'item',
+                                action: 'click->triage-list#select' } %>
+            <span class="admin-rows__act">
+              <%= link_to 'Raw', admin_raw_email_path(item.raw_email_id), class: 'admin-rows__open' %>
+            </span>
+            <span class="admin-rows__meta">
+              <% if item.from_name.present? %><span><%= item.from_name %></span><% end %>
+              <span><%= simple_date(item.sent_at) %></span>
+            </span>
+          </li>
+        <% elsif item.is_a?(InfoRequest) %>
+          <% active = selected_triage && selected_triage[:kind] == 'request' && selected_triage[:record]&.id == item.id %>
+          <% event = latest_events ? latest_events[item.id] : item.last_event %>
+          <li class="admin-triage-row"<% if active %> data-selected="true"<% end %> data-action="click->triage-list#selectRow">
+            <%= link_to item.title, admin_triage_path('request', item.id),
+                        class: 'admin-rows__title admin-triage-link',
+                        'aria-current': (active ? 'true' : nil),
+                        data: { turbo: true,
+                                turbo_frame: 'triage_detail',
+                                triage_list_target: 'item',
+                                action: 'click->triage-list#select' } %>
+            <span class="admin-rows__act">
+              <%= link_to 'Open', admin_request_path(item), class: 'admin-rows__open' %>
+            </span>
+            <span class="admin-rows__meta">
+              <span>#<%= item.id %></span>
+              <span><%= simple_date(item.is_old_unclassified? ? item.last_public_response_at : (event&.created_at || item.updated_at)) %></span>
+              <% if InfoRequest.requires_admin_states.include?(item.described_state) %>
+                <% msg = event&.params&.[](:message) %>
+                <% if event&.params&.[](:reason) %>
+                  <span>Reason: <%= event.params[:reason] %></span>
+                <% end %>
+                <span><%= msg.blank? ? 'None given' : truncate(msg.to_s, length: 85) %></span>
+              <% end %>
+            </span>
+          </li>
+        <% elsif item.is_a?(PublicBody) %>
+          <% active = selected_triage && selected_triage[:kind] == 'blank_contact' && selected_triage[:record]&.id == item.id %>
+          <li class="admin-triage-row"<% if active %> data-selected="true"<% end %> data-action="click->triage-list#selectRow">
+            <%= link_to item.name, admin_triage_path('blank_contact', item.id),
+                        class: 'admin-rows__title admin-triage-link',
+                        'aria-current': (active ? 'true' : nil),
+                        data: { turbo: true,
+                                turbo_frame: 'triage_detail',
+                                triage_list_target: 'item',
+                                action: 'click->triage-list#select' } %>
+            <span class="admin-rows__act">
+              <%= link_to 'Open', admin_body_path(item), class: 'admin-rows__open' %>
+            </span>
+            <span class="admin-rows__meta">
+              <span>Updated <%= simple_date(item.updated_at) %></span>
+            </span>
+          </li>
+        <% end %>
+      <% end %>
+    </ul>
+  </details>
+<% end %>

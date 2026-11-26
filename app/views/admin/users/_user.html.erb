@@ -1,0 +1,45 @@
+<details class="admin-row-details">
+  <summary class="admin-row-details__summary">
+    <span class="item-title">
+      <%= both_links(user) %>
+      <span class="muted"><%= user.email %></span>
+      <span class="user-labels"><%= user_labels(user) %></span>
+      <span class="user-tags"><%= render_tags user.tags %></span>
+    </span>
+    <span class="item-metadata">
+      <% if defined?(sort_order) && sort_order =~ /created_at/ %>
+        joined <%= admin_date(user.created_at, ago_only: true) %>
+      <% else %>
+        updated <%= admin_date(user.updated_at, ago_only: true) %>
+      <% end %>
+    </span>
+  </summary>
+
+  <div id="user_<%= user.id %>" class="item-detail-body">
+    <table class="table table-striped table-condensed">
+      <tbody>
+        <% if user.banned? %>
+          <tr>
+            <td><b>Ban text</b></td>
+            <td><%= h user.ban_text %></td>
+          </tr>
+        <% end %>
+
+        <% user.for_admin_column(:created_at, :updated_at, :email_confirmed) do |name, value| %>
+          <tr>
+            <td><b><%= name.humanize %></b></td>
+            <td><%= admin_value(value) %></td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+    <div class="text-right">
+      <%= form_tag admin_user_suspension_path(user, suspension_reason: 'Banned for spamming'), class: 'admin-inline-form' do %>
+        <% disabled = user.suspended? %>
+        <% submit_class = %w[btn btn-small btn-danger] %>
+        <% submit_class << 'disabled' if disabled %>
+        <%= submit_tag 'Ban for spamming', class: submit_class, disabled: disabled %>
+      <% end %>
+    </div>
+  </div>
+</details>

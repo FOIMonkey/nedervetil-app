@@ -3,7 +3,7 @@
 <div class="row">
   <div class="span12">
     <h1><%= @title %></h1>
-    <p>Enrolment state across the user base. HOTP is the legacy single-shared-code scheme; TOTP is authenticator-app based.</p>
+    <p>Authenticator enrolment across accounts. Admins must enrol before they can sign in.</p>
   </div>
 </div>
 
@@ -18,7 +18,7 @@
         </tr>
       </thead>
       <tbody>
-        <% [[:none, 'No 2FA'], [:hotp, 'HOTP (legacy)'], [:totp, 'TOTP']].each do |key, label| %>
+        <% [[:none, 'Not enrolled'], [:totp, 'Authenticator enabled']].each do |key, label| %>
           <tr>
             <td><%= label %></td>
             <td class="text-right"><%= number_with_delimiter(@all_counts[key]) %></td>
@@ -37,11 +37,11 @@
   </div>
 </div>
 
-<% if @hotp_users.any? %>
+<% if @unenrolled_admins.any? %>
   <div class="row">
     <div class="span12">
-      <h2>HOTP users</h2>
-      <p>Users still on the legacy HOTP scheme, ordered by most recent sign-in.</p>
+      <h2>Admins awaiting enrolment</h2>
+      <p>These accounts cannot enter the admin interface until enrolment is complete.</p>
 
       <table class="table table-striped table-condensed">
         <thead>
@@ -51,7 +51,7 @@
           </tr>
         </thead>
         <tbody>
-          <% @hotp_users.each do |user| %>
+          <% @unenrolled_admins.each do |user| %>
             <tr>
               <td><%= link_to user.name, admin_user_path(user) %></td>
               <td>

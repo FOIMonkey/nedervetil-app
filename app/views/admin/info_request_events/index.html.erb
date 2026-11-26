@@ -1,0 +1,32 @@
+<% @title = "Listing FOI request events" %>
+
+<div class="admin-list-head">
+  <h1><%= @title %></h1>
+</div>
+
+<%= form_tag({}, method: 'get', class: 'admin-search-bar') do %>
+  <label for="query" class="visually-hidden">Search event metadata</label>
+  <%= search_field_tag 'query', params[:query], id: 'query', placeholder: 'Search in event metadata (email, reason, message, ID)' %>
+  <%= submit_tag 'Search', class: 'btn btn-primary', name: nil %>
+  <% if params[:query].present? %>
+    <%= link_to 'Show all', admin_info_request_events_path, class: 'btn' %>
+  <% end %>
+<% end %>
+
+<%= render partial: "concerns/admin/sortable/sort_options" %>
+
+<div class="admin-record-list" id="info_request_events">
+  <% if @info_request_events.any? %>
+    <p class="muted admin-record-list__count">Found <%= pluralize(@info_request_events.total_entries, 'event') %></p>
+
+    <%= render partial: "admin/info_request_events/info_request_event",
+               collection: @info_request_events %>
+    <%= will_paginate(@info_request_events) %>
+  <% else %>
+    <p class="muted">Nothing found.</p>
+  <% end %>
+</div>
+
+<% if params[:query].present? || explain_search? %>
+  <%= render "concerns/admin/searchable/search_stats" %>
+<% end %>

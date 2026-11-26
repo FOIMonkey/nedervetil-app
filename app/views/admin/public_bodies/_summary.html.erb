@@ -1,0 +1,135 @@
+<%# A theme's page may render this with only @public_body. %>
+<% summary = @summary || AuthorityGroups::AdminSummary.new(@public_body) %>
+<% body = summary.body %>
+
+<div class="admin-summary">
+  <p class="admin-summary__back"><%= link_to 'Authorities', admin_bodies_path %></p>
+  <h1><%= body.name %></h1>
+  <p class="admin-lede"><%= body.short_name.presence %><% if body.short_name.present? && body.url_name %> · <% end %><% if body.url_name %><code><%= body.url_name %></code><% end %> · #<%= body.id %></p>
+  <p class="admin-summary__tools">
+    <%= link_to 'Edit', edit_admin_body_path(body), class: 'btn btn-small btn-primary' %>
+    <% if body.url_name %><%= link_to 'Public page', public_body_path(body), class: 'btn btn-small' %><% end %>
+    <% if body.url_name %><%= link_to 'Add a release', new_admin_external_release_path(body: body.url_name), class: 'btn btn-small' %><% end %>
+  </p>
+
+  <dl class="admin-facts">
+    <div>
+      <dt>FOI address</dt>
+      <dd>
+        <% if summary.foi_address.present? %><%= link_to summary.foi_address, "mailto:#{summary.foi_address}" %><% else %>None<% end %>
+        <% if body.is_requestable? %>
+          <span class="admin-ok">Requests can be sent</span>
+        <% else %>
+          <strong>Requests can’t be sent: <%= body.not_requestable_reason %></strong><% if body.is_followupable? %>; follow-ups can<% end %>
+        <% end %>
+        <%= render 'request_email_redirect' %>
+      </dd>
+    </div>
+    <div>
+      <dt>Groups</dt>
+      <dd class="admin-chips">
+        <% if summary.groups.empty? %>None<% end %>
+        <% summary.groups.each do |key, categories| %>
+          <span class="admin-chips__heading"><%= AuthorityGroups::Group.label(key).singularize %></span>
+          <% categories.each do |category| %><%= link_to category.title, authority_group_path(tag: category.category_tag), class: 'admin-chip' %><% end %>
+        <% end %>
+      </dd>
+    </div>
+    <div>
+      <dt>Map</dt>
+      <dd>
+        <% if summary.area_codes.empty? %>No area code<% end %>
+        <% summary.area_codes.each do |code| %>
+          <span class="admin-map-code">
+            <code><%= code %></code>
+            <% if AuthorityGroups::Map.current?(code) %><span class="admin-ok">On the map</span>
+            <% elsif code.match?(AuthorityGroups::Map::DISTRICT_CODE) %><strong>Not on the map: <%= AuthorityGroups::Map.describe(code).delete_prefix("#{code} ") %></strong>
+            <% else %><span class="muted">Listed, not drawn: it has no district area of its own</span><% end %>
+          </span>
+        <% end %>
+      </dd>
+    </div>
+    <% if summary.other_tags.any? %>
+      <div><dt>Other tags</dt><dd class="admin-chips"><%= render_tags summary.other_tags %></dd></div>
+    <% end %>
+    <div>
+      <dt>Home page</dt>
+      <dd><% if body.calculated_home_page %><%= link_to body.calculated_home_page, body.calculated_home_page %><% if body.home_page.blank? %> <span class="muted">worked out from the address</span><% end %><% else %>Unknown<% end %></dd>
+    </div>
+  </dl>
+
+  <% if summary.holdings.any? %>
+    <section class="admin-block" id="body-holds" aria-labelledby="body-holds-title">
+      <h2 id="body-holds-title">What they hold</h2>
+      <p>From its type tags. Untick anything another body runs here, then add a note to say who.</p>
+      <%= form_tag admin_body_holds_path(body), class: 'admin-holds' do %>
+        <% summary.holdings.each do |holder, topic| %>
+          <label class="checkbox"><%= check_box_tag 'held[]', holder.key, summary.ticked?(holder), id: "held-#{holder.key}" %> <%= holder.what %> <span class="muted"><%= topic.title %></span></label>
+        <% end %>
+        <%= submit_tag 'Save', class: 'btn btn-small btn-primary', name: nil %>
+        <%= link_to 'Add note', new_admin_note_path(notable_type: 'PublicBody', notable_id: body.id), class: 'btn btn-small' %>
+      <% end %>
+    </section>
+  <% end %>
+
+  <% if summary.named_holders.any? %>
+    <section class="admin-block" id="body-who" aria-labelledby="body-who-title">
+      <h2 id="body-who-title">Who does what</h2>
+      <p>Its line on group pages. Leave it blank to use the words from the topic files, shown greyed out.</p>
+      <%= form_tag admin_body_who_line_path(body) do %>
+        <%= text_field_tag :line, summary.who_line, maxlength: AuthorityGroups::WhoLine::MAX,
+                                  placeholder: summary.default_who_line, class: 'span8', 'aria-labelledby': 'body-who-title' %>
+        <%= submit_tag 'Save', class: 'btn btn-small btn-primary', name: nil %>
+      <% end %>
+    </section>
+  <% end %>
+
+  <p class="admin-counts">
+    <a href="#body-requests"><b><%= summary.request_count %></b><span><%= 'request'.pluralize(summary.request_count) %></span></a>
+    <a href="#body-documents"><b><%= summary.document_count %></b><span><%= 'document'.pluralize(summary.document_count) %> published</span></a>
+    <a href="#body-releases"><b><%= summary.release_count %></b><span>external <%= 'release'.pluralize(summary.release_count) %></span></a>
+  </p>
+
+  <section class="admin-block" id="body-documents" aria-labelledby="body-documents-title">
+    <h2 id="body-documents-title">Published documents <span class="admin-block__count"><%= summary.document_count %></span><% if body.url_name && summary.more_documents? %><%= link_to "All #{summary.document_count}", disclosure_documents_path(body: body.url_name), class: 'admin-block__more' %><% end %></h2>
+    <% if summary.document_count.zero? %>
+      <p class="admin-clear">None yet.</p>
+    <% else %>
+      <ul class="admin-rows admin-rows--flush">
+        <% summary.recent_documents.each do |document| %>
+          <% line = Disclosures::Attribution.new(document).text.presence %>
+          <li>
+            <%= link_to document.public_view.title, disclosure_manage_document_path(document), class: 'admin-rows__title' %>
+            <span class="admin-rows__meta"><span><%= document.kind_label %></span><% if line %><span><%= line %></span><% end %><span>public since <%= document_date(document.first_published_at) %></span></span>
+          </li>
+        <% end %>
+      </ul>
+    <% end %>
+  </section>
+
+  <section class="admin-block" id="body-releases" aria-labelledby="body-releases-title">
+    <h2 id="body-releases-title">External releases <span class="admin-block__count"><%= summary.release_count %></span><% if body.url_name && summary.release_count.positive? %><%= link_to "All #{summary.release_count}", admin_external_releases_path(body: body.url_name), class: 'admin-block__more' %><% end %></h2>
+    <% if summary.release_count.zero? %>
+      <p class="admin-clear">None yet.</p>
+    <% else %>
+      <table class="table admin-releases">
+        <tbody>
+          <% summary.recent_releases.each do |release| %>
+            <tr class="<%= 'muted' if release.hidden? %>">
+              <td class="muted"><%= release.released_on.strftime('%-d %b %Y') %></td>
+              <td>
+                <%= link_to release.title, release.url, rel: 'nofollow noopener' %>
+                <% if release.hidden? %><span class="label">Hidden</span><% end %>
+                <% if release.pinned? %><span class="label">Pinned</span><% end %>
+              </td>
+              <td class="admin-releases__act">
+                <%= button_to(release.hidden? ? 'Show' : 'Hide', release.hidden? ? unhide_admin_external_release_path(release) : hide_admin_external_release_path(release), class: 'btn btn-mini', form: { class: 'admin-inline-form' }) %>
+                <%= button_to(release.pinned? ? 'Unpin' : 'Pin', release.pinned? ? unpin_admin_external_release_path(release) : pin_admin_external_release_path(release), class: 'btn btn-mini', form: { class: 'admin-inline-form' }) %>
+              </td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    <% end %>
+  </section>
+</div>

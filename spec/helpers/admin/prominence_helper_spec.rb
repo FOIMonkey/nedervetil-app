@@ -1,7 +1,7 @@
 require 'spec_helper'
 
 RSpec.describe Admin::ProminenceHelper, type: :helper do
-  %i[normal backpage requester_only hidden].each do |prominence|
+  %i[normal requester_only hidden].each do |prominence|
     let(prominence) { double(prominence: prominence.to_s) }
   end
 
@@ -17,12 +17,6 @@ RSpec.describe Admin::ProminenceHelper, type: :helper do
       let(:prominence) { normal }
       it { is_expected.to include(%q(title="normal")) }
       it { is_expected.to include('icon-prominence--normal') }
-    end
-
-    context 'backpage' do
-      let(:prominence) { backpage }
-      it { is_expected.to include(%q(title="backpage")) }
-      it { is_expected.to include('icon-prominence--backpage') }
     end
 
     context 'requester_only' do
@@ -42,18 +36,13 @@ RSpec.describe Admin::ProminenceHelper, type: :helper do
     subject { helper.highlight_prominence(prominence) }
 
     context 'when given a string' do
-      let(:prominence) { 'backpage' }
-      it { is_expected.to eq(helper.highlight_prominence(backpage)) }
+      let(:prominence) { 'requester_only' }
+      it { is_expected.to eq(helper.highlight_prominence(requester_only)) }
     end
 
     context 'normal' do
       let(:prominence) { normal }
       it { is_expected.to eq('normal') }
-    end
-
-    context 'backpage' do
-      let(:prominence) { backpage }
-      it { is_expected.to eq(%q(<span class="text-warning">backpage</span>)) }
     end
 
     context 'requester_only' do

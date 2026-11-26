@@ -704,7 +704,6 @@ RSpec.describe 'Authority pages fed by data' do
     end
 
     it 'save a named authority’s Who does what line, refuse one too long, and clear it with a blank one' do
-      skip 'Admin public body summary arrives in B15'
       police = FactoryBot.create(:public_body, name: 'Caledon Police',
                                                tag_string: 'police scotland')
       sign_in(admin)
@@ -728,7 +727,6 @@ RSpec.describe 'Authority pages fed by data' do
     end
 
     it 'save the What they hold checklist as holds_not tags, leaving other tags alone' do
-      skip 'Admin public body summary arrives in B15'
       sign_in(admin)
       get admin_body_path(ashdown)
       boxes = page.css('#body-holds input[type=checkbox]').

@@ -1,0 +1,16 @@
+<div class="admin-triage__head">
+  <span class="label label-warning">Attachment draft</span>
+  <span class="muted"><%= distance_of_time_in_words_to_now(revision.created_at) %> ago</span>
+</div>
+
+<h2 class="admin-triage__title"><%= revision.foi_attachment.display_filename %></h2>
+
+<dl class="admin-facts">
+  <div><dt>Kind</dt><dd><%= revision.kind_label %></dd></div>
+  <div><dt>Submitted by</dt><dd><%= link_to revision.user.name, admin_user_path(revision.user), data: { turbo_frame: '_top' } %></dd></div>
+  <div><dt>Why admin review</dt><dd>Does more than redact</dd></div>
+</dl>
+
+<div class="admin-triage__links">
+  <%= link_to 'Check revision', manage_attachment_revision_path(revision.foi_attachment, revision), class: 'btn btn-primary', data: { turbo_frame: '_top' } %>
+</div>

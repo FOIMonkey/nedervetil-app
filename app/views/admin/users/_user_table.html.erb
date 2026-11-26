@@ -1,0 +1,5 @@
+<div class="admin-record-list" id="users">
+  <%= render partial: 'admin/users/user', collection: users %>
+</div>
+
+<%= will_paginate(users) %>

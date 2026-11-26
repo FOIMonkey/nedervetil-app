@@ -1,0 +1,50 @@
+<% @title = "Edit #{@public_body.name}" %>
+
+<div class="admin-list-head">
+  <h1>Edit public body</h1>
+  <div class="admin-summary__tools">
+    <%= link_to 'Show', admin_body_path(@public_body), class: 'btn btn-small' %>
+    <%= link_to 'List all', admin_bodies_path, class: 'btn btn-small' %>
+  </div>
+</div>
+
+<ul class="breadcrumb">
+  <li class="active">Public Body: <%= both_links(@public_body) %></li>
+</ul>
+
+<div class="admin-edit-split">
+  <div id="public_body_form" class="admin-edit-split__main">
+    <%= translated_form_for @public_body, url: admin_body_path(@public_body), method: 'put', html: { class: 'form form-horizontal' } do |f| %>
+      <%= render partial: 'form', locals: { f: f } %>
+      <div class="form-actions">
+        <%= f.submit 'Save', accesskey: 's', class: 'btn btn-success' %>
+        <%= link_to 'Cancel', admin_body_path(@public_body), class: 'btn' %>
+      </div>
+    <% end %>
+
+    <section class="admin-danger-zone">
+      <h2>Danger zone</h2>
+      <%= form_tag admin_body_path(@public_body), class: 'form form-inline', method: 'delete' do %>
+        <% button_opts = { class: 'btn btn-danger', data: { confirm: 'Are you sure you want to destroy this public body?' } } %>
+        <% if @hide_destroy_button
+             button_opts[:disabled] = true
+             button_opts[:title] = "This authority has #{@public_body.info_requests.count} requests"
+           end %>
+        <%= submit_tag "Destroy #{@public_body.name}", button_opts %>
+        <span class="help-inline muted">Permanent and irreversible.</span>
+      <% end %>
+    </section>
+
+    <h2>History</h2>
+    <%= render partial: 'edit_history', locals: { versions: @public_body.versions.order(version: :desc) } %>
+  </div>
+
+  <aside class="admin-edit-split__aside">
+    <% if @change_request %>
+      <h3>Change Request</h3>
+      <%= render partial: 'admin/general/change_request_summary' %>
+    <% end %>
+
+    <%= render partial: 'tag_help' %>
+  </aside>
+</div>

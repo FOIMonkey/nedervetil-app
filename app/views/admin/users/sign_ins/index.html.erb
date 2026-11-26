@@ -1,17 +1,11 @@
-<%= render 'admin_user/scopes' %>
-
-<div class="row">
-  <%= form_tag admin_sign_ins_path, method: :get, class: 'form form-search span12' do %>
-    <div class="input-append">
-      <%= text_field_tag 'query', params[:query], size: 30, class: 'input-large search-query' %>
-      <%= submit_tag 'Search', class: 'btn' %>
-    </div>
-
-    <span class="help-inline">
-      (substring search: names, emails, country, IP and user agent)
-    </span>
+<%= form_tag admin_sign_ins_path, method: :get, class: 'admin-search-bar' do %>
+  <label for="query" class="visually-hidden">Search sign-ins</label>
+  <%= search_field_tag 'query', params[:query], id: 'query', placeholder: 'Name, email, IP or user agent' %>
+  <%= submit_tag 'Search', class: 'btn btn-primary', name: nil %>
+  <% if params[:query].present? %>
+    <%= link_to 'Show all', admin_sign_ins_path, class: 'btn' %>
   <% end %>
-</div>
+<% end %>
 
 <%= render partial: 'admin/users/sign_in_table',
            locals: { sign_ins: @sign_ins } %>

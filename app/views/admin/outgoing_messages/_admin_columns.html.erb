@@ -1,0 +1,47 @@
+<table class="table table-striped table-condensed">
+  <tbody>
+    <% outgoing_message.for_admin_column do |name, value| %>
+      <tr>
+        <td class="span3">
+          <b><%= name.humanize %></b>
+        </td>
+
+        <td>
+          <% if name == 'body' %>
+            <% squished = value.to_s.squish %>
+            <% if squished.length > 100 %>
+              <details class="admin-more">
+                <summary title="Show more"><%= truncate(squished, length: 100, separator: ' ') %></summary>
+                <%= simple_format(h(value&.truncate(1000))) %>
+              </details>
+            <% else %>
+              <%= squished %>
+            <% end %>
+          <% elsif name == 'prominence' %>
+            <%= h highlight_prominence(value) %>
+          <% else %>
+            <%= admin_value(value) %>
+          <% end %>
+        </td>
+      </tr>
+    <% end %>
+
+    <tr>
+      <td class="span3">
+        <b>Raw body</b>
+      </td>
+
+      <td>
+        <% raw_squished = outgoing_message.raw_body.to_s.squish %>
+        <% if raw_squished.length > 100 %>
+          <details class="admin-more">
+            <summary title="Show more"><%= truncate(raw_squished, length: 100, separator: ' ') %></summary>
+            <%= simple_format(h(outgoing_message.raw_body&.truncate(1000))) %>
+          </details>
+        <% else %>
+          <%= raw_squished %>
+        <% end %>
+      </td>
+    </tr>
+  </tbody>
+</table>

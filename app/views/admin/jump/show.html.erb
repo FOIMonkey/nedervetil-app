@@ -1,0 +1,34 @@
+<% @title = 'Jump and admin tools' %>
+
+<div class="admin-summary">
+  <h1>Jump to record or tool</h1>
+
+  <%= form_tag admin_jump_path, method: :get, class: 'admin-search-bar' do %>
+    <label for="jump-q" class="visually-hidden">Query</label>
+    <%= search_field_tag :q, @query, id: 'jump-q', placeholder: '#123, @user, authority or tool', autofocus: true %>
+    <%= submit_tag 'Go', class: 'btn btn-primary', name: nil %>
+    <% if @query.present? %>
+      <%= link_to 'Clear', admin_jump_path, class: 'btn' %>
+    <% end %>
+  <% end %>
+
+  <% if @query.present? %>
+    <%= render partial: 'admin/jump/results' %>
+  <% end %>
+
+  <section class="admin-block" id="tools" aria-labelledby="all-admin-tools">
+    <h2 id="all-admin-tools">All admin tools</h2>
+    <div class="admin-tool-grid">
+      <% admin_tool_groups.each do |group, links| %>
+        <div>
+          <h3><%= group %></h3>
+          <ul class="unstyled">
+            <% links.each do |label, path| %>
+              <li><%= link_to label, path %></li>
+            <% end %>
+          </ul>
+        </div>
+      <% end %>
+    </div>
+  </section>
+</div>

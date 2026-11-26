@@ -1,0 +1,19 @@
+<div class="admin-triage__head">
+  <span class="label">Missing FOI email</span>
+  <span class="muted">#<%= public_body.id %></span>
+</div>
+
+<h2 class="admin-triage__title">
+  <%= link_to public_body.name, admin_body_path(public_body), data: { turbo_frame: '_top' } %>
+</h2>
+
+<dl class="admin-facts">
+  <div><dt>URL name</dt><dd><code><%= public_body.url_name %></code></dd></div>
+  <div><dt>Home page</dt><dd><%= public_body.calculated_home_page.presence || 'Unknown' %></dd></div>
+  <div><dt>Updated</dt><dd><%= admin_date(public_body.updated_at) %></dd></div>
+</dl>
+
+<div class="admin-triage__links">
+  <%= link_to 'Add FOI address', edit_admin_body_path(public_body), class: 'btn btn-primary', data: { turbo_frame: '_top' } %>
+  <%= link_to 'Open authority', admin_body_path(public_body), class: 'btn', data: { turbo_frame: '_top' } %>
+</div>

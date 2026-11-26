@@ -16,9 +16,9 @@ class Admin::Users::ErasuresController < AdminController
   end
 
   def ensure_erasable
-    return if @erased_user.closed?
+    return if @erased_user.erasable?
 
-    flash[:error] = 'User accounts must be closed before erasing.'
+    flash[:error] = 'Only a closed account that is not banned can be erased.'
     redirect_to admin_user_path(@erased_user)
   end
 

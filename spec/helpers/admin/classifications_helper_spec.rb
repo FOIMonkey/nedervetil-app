@@ -11,6 +11,6 @@ RSpec.describe Admin::ClassificationsHelper do
     end
 
     it { is_expected.to include('classification_icon--successful') }
-    it { is_expected.to include('title="Successful"') }
+    it { is_expected.to include('title="All information provided"') }
   end
 end

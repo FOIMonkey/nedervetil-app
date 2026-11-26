@@ -1,11 +1,11 @@
 <% case tagging %>
 <% when PublicBody %>
-  <%= render partial: 'admin_public_body/public_body', locals: {
+  <%= render partial: 'admin/public_bodies/public_body', locals: {
     public_body: tagging
   } %>
 
 <% when InfoRequest %>
-  <%= render partial: 'admin_request/info_request', locals: {
+  <%= render partial: 'admin/requests/info_request', locals: {
     info_request: tagging
   } %>
 
@@ -19,13 +19,8 @@
     note: tagging
   } %>
 
-<% when Blog::Post %>
-  <%= render partial: 'admin/blog_posts/blog_post', locals: {
-    blog_post: tagging
-  } %>
-
 <% when User %>
-  <%= render partial: 'admin_user/user', locals: {
+  <%= render partial: 'admin/users/user', locals: {
     user: tagging
   } %>
 

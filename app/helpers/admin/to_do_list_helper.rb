@@ -2,28 +2,23 @@
 module Admin::ToDoListHelper
   PRIORITY_IMPORTANT = %w[
     attention-messages
-    embargoed-attention-messages
-    attention-comments
-    embargoed-attention-comments
     requires-admin
-  ]
+  ].freeze
 
   PRIORITY_WARNING = %w[
-    embargoed-requires-admin
     error-messages
-    embargoed-error-messages
     holding-pen
-  ]
+  ].freeze
 
   PRIORITY_INFO = %w[
     new-authorities
     update-authorities
-  ]
+  ].freeze
 
   PRIORITY_NONE = %w[
     blank-contacts
     unclassified
-  ]
+  ].freeze
 
   def todo_list_label_style(id)
     case id
@@ -33,9 +28,8 @@ module Admin::ToDoListHelper
       'label-info'
     when *PRIORITY_WARNING
       'label-warning'
-    when *PRIORITY_IMPORTANT
-      'label-important'
     else
+      # PRIORITY_IMPORTANT and any unknown id default to important
       'label-important'
     end
   end

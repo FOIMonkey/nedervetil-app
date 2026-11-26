@@ -1,0 +1,26 @@
+<div id="info_request_event_<%= info_request_event.id %>" class="admin-event-row">
+  <div class="admin-event-row__head">
+    <span class="item-title">
+      <%= link_to(
+        "Event ##{info_request_event.id}",
+        edit_admin_info_request_event_path(info_request_event),
+        title: "Edit event #{info_request_event.id}",
+        class: 'admin-event-row__id'
+      ) %>
+      <strong><%= h info_request_event.event_type.humanize %></strong>
+      <% if info_request_event.calculated_state.present? %>
+        <span class="admin-status-pill"><%= InfoRequest::State.short_description(info_request_event.calculated_state) %></span>
+      <% end %>
+    </span>
+    <span class="admin-event-row__time muted" title="<%= info_request_event.created_at %>">
+      <%= admin_date(info_request_event.created_at, ago_only: true) %>
+    </span>
+  </div>
+
+  <% diff = info_request_event.params_diff %>
+  <% if diff[:new].any? || diff[:other].any? %>
+    <div id="event_<%= info_request_event.id %>" class="admin-event-row__params event-params">
+      <%= render partial: "admin/requests/params", locals: { params: diff } %>
+    </div>
+  <% end %>
+</div>

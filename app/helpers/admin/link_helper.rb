@@ -13,8 +13,8 @@ module Admin::LinkHelper
 
     link_to(icon, request_path(info_request), title: title) + ' ' +
       classification_icon(info_request) + ' ' +
-        link_to(info_request.title, admin_request_path(info_request),
-                title: admin_title)
+      link_to(info_request.title, admin_request_path(info_request),
+              title: admin_title)
   end
 
   def outgoing_message_both_links(outgoing_message)
@@ -42,7 +42,6 @@ module Admin::LinkHelper
   def foi_attachment_both_links(foi_attachment)
     title = 'View attachment on public website'
     icon = prominence_icon(foi_attachment)
-    info_request = foi_attachment.incoming_message.info_request
 
     link_to(icon, foi_attachment_path(foi_attachment), title: title) + ' ' +
       link_to(foi_attachment.filename,
@@ -77,53 +76,10 @@ module Admin::LinkHelper
       link_to(user.name, admin_user_path(user), title: admin_title)
   end
 
-  def comment_both_links(comment)
-    title = 'View comment on public website'
-    icon = prominence_icon(comment)
-
-    link_to(icon, comment_path(comment), title: title) + ' ' +
-      link_to(truncate(comment.body, length: 60), edit_admin_comment_path(comment),
-              title: admin_title)
-  end
-
-  def blog_post_both_links(blog_post)
-    title = 'View blog post'
-    icon = eye
-
-    link_to(icon, blog_post.url, title: title) + ' ' +
-      link_to(blog_post.title, edit_admin_blog_post_path(blog_post),
-              title: admin_title)
-  end
-
-  def track_thing_both_links(track_thing)
-    title = 'View track'
-    icon = eye
-    icon_link = search_general_path(track_thing.track_query)
-
-    link_to(icon, icon_link, title: title) + ' ' + "#{track_thing.id}:"
-  end
-
   def category_both_links(category)
     # No public links, yet?
     link_to(category.title, edit_admin_category_path(category),
             title: admin_title)
-  end
-
-  def citation_both_links(citation)
-    title = 'View citation'
-    icon = eye
-
-    link_to(icon, citation.source_url, title: title) + ' ' +
-      link_to(citation.source_url, edit_admin_citation_path(citation),
-              title: admin_title)
-  end
-
-  def project_both_links(project)
-    title = 'View project'
-    icon = eye
-
-    link_to(icon, project_path(project), title: title) + ' ' +
-      link_to(project.title, admin_project_path(project))
   end
 
   def admin_title

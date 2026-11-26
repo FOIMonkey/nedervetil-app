@@ -1,0 +1,37 @@
+<% @title = 'New public authority' %>
+
+<div class="admin-list-head">
+  <h1><%= @title %></h1>
+  <div class="admin-summary__tools">
+    <%= link_to 'List all', admin_bodies_path, class: 'btn btn-small' %>
+  </div>
+</div>
+
+<div class="admin-edit-split">
+  <div id="public_body_form" class="admin-edit-split__main">
+    <%= translated_form_for @public_body, as: :public_body, url: admin_bodies_path, html: { class: 'form form-horizontal' } do |f| %>
+      <%= render partial: 'form', locals: { f: f } %>
+
+      <div class="form-actions">
+        <%= f.submit 'Create', class: 'btn btn-success' %>
+        <%= link_to 'Cancel', admin_bodies_path, class: 'btn' %>
+      </div>
+    <% end %>
+  </div>
+
+  <aside class="admin-edit-split__aside">
+    <% if @change_request %>
+      <h3>Change Request</h3>
+      <%= render partial: 'admin/general/change_request_summary' %>
+    <% end %>
+
+    <% if @public_body.ordered_translations.many? %>
+      <div class="alert alert-info">
+        <i class="icon-info-sign"></i>
+        Make sure you add the request email for <em>all</em> locales.
+      </div>
+    <% end %>
+
+    <%= render partial: 'tag_help' %>
+  </aside>
+</div>

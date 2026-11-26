@@ -1,0 +1,30 @@
+<% @title = "Listing mail server logs" %>
+
+<div class="admin-list-head">
+  <h1><%= @title %></h1>
+</div>
+
+<%= form_tag nil, method: :get, class: 'admin-search-bar' do %>
+  <label for="query" class="visually-hidden">Search mail server logs</label>
+  <%= search_field_tag 'query', params[:query], id: 'query', placeholder: 'Recipient address, SMTP ID or log text' %>
+  <%= submit_tag 'Search', class: 'btn btn-primary', name: nil %>
+  <% if params[:query].present? %>
+    <%= link_to 'Show all', admin_mail_server_logs_path, class: 'btn' %>
+  <% end %>
+<% end %>
+
+<%= render partial: "concerns/admin/sortable/sort_options" %>
+
+<div class="admin-record-list" id="mail_server_logs">
+  <% if @mail_server_logs.any? %>
+    <%= render partial: "mail_server_log", collection: @mail_server_logs %>
+  <% else %>
+    <p class="muted">Nothing found.</p>
+  <% end %>
+</div>
+
+<%= will_paginate(@mail_server_logs) %>
+
+<% if params[:query].present? || explain_search? %>
+  <%= render "concerns/admin/searchable/search_stats" %>
+<% end %>

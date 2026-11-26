@@ -68,4 +68,14 @@ RSpec.describe Admin::TagHelper, type: :helper do
       end
     end
   end
+
+  describe '#render_tags' do
+    it 'renders each tag, escaped, as one safe string' do
+      html = helper.render_tags(%w[foo <b>])
+      expect(html).to be_html_safe
+      expect(html).to include('>foo</a></span><span class="label')
+      expect(html).to include('&lt;b&gt;')
+      expect(html).not_to include('<b>')
+    end
+  end
 end

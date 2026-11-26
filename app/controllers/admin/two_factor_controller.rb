@@ -3,8 +3,8 @@ class Admin::TwoFactorController < AdminController
   def show
     @all_counts = counts_for(User)
     @admin_counts = counts_for(User.with_role(:admin))
-    @hotp_users = User.with_hotp.
-      order(User.arel_table[:last_sign_in_at].desc.nulls_last)
+    @unenrolled_admins = User.with_role(:admin).without_two_factor.
+      order(User.arel_table[:last_sign_in_at].desc.nulls_last, :id)
   end
 
   private
@@ -13,7 +13,6 @@ class Admin::TwoFactorController < AdminController
     {
       total: scope.count,
       none: scope.without_two_factor.count,
-      hotp: scope.with_hotp.count,
       totp: scope.with_totp.count
     }
   end

@@ -1,0 +1,22 @@
+<dialog id="admin-jump-dialog" class="admin-jump-dialog" aria-label="Jump to record or admin tool" data-admin-jump-target="dialog" data-action="click->admin-jump#backdropClick">
+  <%= form_tag admin_jump_path, method: :get, class: 'admin-jump-dialog__head', data: { turbo_frame: 'admin_jump_results' } do %>
+    <label for="admin-jump-input" class="visually-hidden">Jump to record or admin tool</label>
+    <%= search_field_tag :q, nil,
+                         id: 'admin-jump-input',
+                         placeholder: '#123, @user, authority or tool',
+                         autocomplete: 'off',
+                         data: { admin_jump_target: 'input',
+                                 action: 'input->admin-jump#queue keydown->admin-jump#navigate' } %>
+    <%= hidden_field_tag :frame, 'admin_jump_results' %>
+    <button type="button" class="btn btn-small" data-action="click->admin-jump#close">Close</button>
+  <% end %>
+  <turbo-frame id="admin_jump_results" target="_top" class="admin-jump-dialog__body" data-admin-jump-target="frame" data-action="turbo:frame-load->admin-jump#frameLoaded">
+    <p class="admin-jump__hint muted">Type at least 2 characters, or a request number like <code>#15</code>.</p>
+  </turbo-frame>
+  <div class="admin-jump-dialog__foot">
+    <span><code>#123</code> request</span>
+    <span><code>@user</code> user</span>
+    <span><code>Esc</code> close</span>
+    <%= link_to 'All tools', admin_jump_path, class: 'admin-jump-dialog__all' %>
+  </div>
+</dialog>

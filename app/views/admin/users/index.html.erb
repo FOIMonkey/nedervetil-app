@@ -1,0 +1,27 @@
+<%= form_tag nil, method: :get, class: 'admin-search-bar admin-search-bar--stacked' do %>
+  <div class="admin-search-bar__row">
+    <label for="query" class="visually-hidden">Search users</label>
+    <%= search_field_tag 'query', params[:query], id: 'query', placeholder: 'Name, email or tag' %>
+    <%= hidden_field_tag 'sort_order', @sort_order %>
+    <%= submit_tag 'Search', class: 'btn btn-primary', name: nil %>
+    <% if params[:query].present? || @roles.any? %>
+      <%= link_to 'Show all', admin_users_path, class: 'btn' %>
+    <% end %>
+  </div>
+
+  <div class="role-filter">
+    <span class="muted">Filter by role:</span>
+    <% Role.site_wide.where(name: Role.grantable_roles).order(:name).each do |role| %>
+      <label class="checkbox inline">
+        <%= check_box_tag 'roles[]', role.name, @roles.include?(role.name) %>
+        <%= role.name.humanize %>
+      </label>
+    <% end %>
+  </div>
+<% end %>
+
+<%= render partial: 'concerns/admin/sortable/sort_options' %>
+<%= render partial: 'user_table', locals: { users: @admin_users } %>
+<% if params[:query].present? || explain_search? %>
+  <%= render 'concerns/admin/searchable/search_stats' %>
+<% end %>

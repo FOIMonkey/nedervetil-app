@@ -37,7 +37,8 @@ class Admin::RawEmails::ErasuresController < AdminController
   end
 
   def unmasked_attachments
-    msg = 'Ensure all attachments are masked before attempting to erase.'
+    msg = 'Some attachments are not masked yet. Mask them before erasing ' \
+          'the raw email.'
     redirect_to admin_raw_email_path(@raw_email), error: msg
   end
 end
