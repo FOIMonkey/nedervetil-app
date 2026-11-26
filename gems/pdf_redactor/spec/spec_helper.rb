@@ -1,0 +1,5 @@
+require 'pdf_redactor'
+require 'open3'
+require 'shellwords'
+require 'tempfile'
+require_relative '../../../spec/support/attachment_fixtures'

@@ -1,0 +1,40 @@
+inherit_from: ../../.rubocop.yml
+
+Metrics/ClassLength:
+  Exclude:
+    - 'lib/pdf_redactor/final_scan.rb'
+    - 'lib/pdf_redactor/qdf_doc.rb'
+    - 'lib/pdf_redactor/redactor.rb'
+
+Metrics/CyclomaticComplexity:
+  Exclude:
+    - 'lib/pdf_redactor/afm.rb'
+    - 'lib/pdf_redactor/c_map.rb'
+    - 'lib/pdf_redactor/final_scan.rb'
+    - 'lib/pdf_redactor/font.rb'
+    - 'lib/pdf_redactor/glyph_names.rb'
+    - 'lib/pdf_redactor/lexer.rb'
+    - 'lib/pdf_redactor/picture_cover.rb'
+    - 'lib/pdf_redactor/qdf_doc.rb'
+    - 'lib/pdf_redactor/redactor.rb'
+    - 'lib/pdf_redactor/rule_codec.rb'
+    - 'lib/pdf_redactor/serialize.rb'
+    - 'lib/pdf_redactor/true_type_program.rb'
+
+Metrics/MethodLength:
+  Exclude:
+    - 'lib/pdf_redactor/c_map.rb'
+    - 'lib/pdf_redactor/final_scan.rb'
+    - 'lib/pdf_redactor/font.rb'
+    - 'lib/pdf_redactor/lexer.rb'
+    - 'lib/pdf_redactor/picture_cover.rb'
+    - 'lib/pdf_redactor/qdf_doc.rb'
+    - 'lib/pdf_redactor/redactor.rb'
+    - 'lib/pdf_redactor/true_type_program.rb'
+
+Metrics/ParameterLists:
+  Exclude:
+    - 'lib/pdf_redactor.rb'
+    - 'lib/pdf_redactor/picture_cover.rb'
+    - 'lib/pdf_redactor/redactor.rb'
+    - 'spec/pdf_redactor_spec.rb'
