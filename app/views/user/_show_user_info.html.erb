@@ -16,6 +16,11 @@
       <%= link_to _('Change'), new_password_change_path, class: 'account-settings__change', 'aria-label': _('Change your password') %>
     </li>
     <li>
+      <span class="account-settings__name"><%= _('Emails about replies') %></span>
+      <span class="account-settings__value"><%= IncomingAttention::InstantEmails.on?(@display_user) ? _('Each reply') : _('One summary a day') %></span>
+      <%= link_to _('Change'), profile_emails_path, class: 'account-settings__change', 'aria-label': _('Change emails about replies') %>
+    </li>
+    <li>
       <span class="account-settings__name"><%= _('Automatic reading of replies') %></span>
       <span class="account-settings__value"><%= IncomingAttention::OptOut.opted_out?(@display_user) ? _('Off') : _('On') %></span>
       <%= link_to _('Change'), profile_ai_reading_path, class: 'account-settings__change', 'aria-label': _('Change automatic reading of replies') %>

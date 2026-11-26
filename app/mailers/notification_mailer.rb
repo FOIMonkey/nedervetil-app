@@ -1,55 +1,102 @@
-# models/notification_mailer.rb:
-# Emails relating to notifications from the site
-#
 # Copyright (c) 2017 UK Citizens Online Democracy. All rights reserved.
 # Email: hello@mysociety.org; WWW: http://www.mysociety.org/
 
+# Sends instant and daily-digest Notification emails, integrating with
+# IncomingAttention and routing holding-pen replies immediately to admins.
 class NotificationMailer < ApplicationMailer
   def self.send_daily_notifications
-    done_something = false
-    query = "notifications.frequency = ? AND " \
-            "notifications.send_after <= ? AND " \
-            "notifications.seen_at IS NULL AND " \
-            "notifications.expired = ?"
-    users = User.
-      includes(:notifications).
-        references(:notifications).
-          where(query,
-                Notification.frequencies[Notification::DAILY],
-                Time.zone.now,
-                false)
-    users.find_each do |user|
-      notifications = user.
-        notifications.
-          daily.
-            unseen.
-              where(expired: false).
-                order(created_at: :desc)
-      notifications = Notification.reject_and_mark_expired(notifications)
-      NotificationMailer.daily_summary(user, notifications).deliver_now
-      Notification.
-        where(id: notifications.map(&:id)).
-        update_all(seen_at: Time.zone.now)
-      done_something = true
+    frequency = Notification.frequencies[Notification::DAILY]
+    held = send_holding_pen_notifications(frequency)
+    if IncomingAttention::Config.enabled?
+      return IncomingAttention::Digest.send_notifications(frequency) || held
     end
-    done_something
+
+    done_something = false
+    notifications = Notification.daily.unseen.where(expired: false).
+      outside_holding_pen
+    due = notifications.where('send_after <= ?', Time.zone.now)
+    due.distinct.pluck(:user_id).each do |user_id|
+      rows = Notification.reject_and_mark_expired(
+        notifications.where(user_id: user_id).order(created_at: :desc).to_a
+      )
+      next if rows.empty?
+
+      NotificationMailer.daily_summary(User.find(user_id), rows).deliver_now
+      Notification.where(id: rows.map(&:id)).update_all(seen_at: Time.zone.now)
+      done_something = true
+    rescue StandardError => e
+      # The rows stay unseen, and the other accounts still get their mail.
+      Rails.logger.warn(
+        "notification_delivery_failed user_id=#{user_id} #{e.class}"
+      )
+    end
+    held || done_something
   end
 
   def self.send_instant_notifications
-    done_something = false
-    notifications = Notification.
-      instantly.
-        unseen.
-          where(expired: false).
-            order(:created_at)
-    notifications = Notification.reject_and_mark_expired(notifications)
-    notifications.each do |notification|
-      NotificationMailer.instant_notification(notification).deliver_now
-      notification.seen_at = Time.zone.now
-      notification.save!
-      done_something = true
+    frequency = Notification.frequencies[Notification::INSTANTLY]
+    held = send_holding_pen_notifications(frequency)
+    if IncomingAttention::Config.enabled?
+      return IncomingAttention::Digest.send_notifications(frequency) || held
     end
-    done_something
+
+    done_something = false
+    notifications = Notification.instantly.unseen.where(expired: false).
+      outside_holding_pen.order(:created_at)
+    rows = Notification.reject_and_mark_expired(notifications.to_a)
+    rows.each do |notification|
+      NotificationMailer.instant_notification(notification).deliver_now
+      notification.update!(seen_at: Time.zone.now)
+      done_something = true
+    rescue StandardError => e
+      Rails.logger.warn(
+        "notification_delivery_failed notification_id=#{notification.id} " \
+        "#{e.class}"
+      )
+    end
+    held || done_something
+  end
+
+  # Delivers holding-pen replies immediately via RequestMailer.new_response;
+  # restricted to the hidden holding pen owned by the internal admin user.
+  private_class_method def self.send_holding_pen_notifications(frequency)
+    sent = false
+    notifications = Notification.
+      where(frequency: frequency, seen_at: nil, expired: false).
+      joins(info_request_event: :info_request).
+      where(info_requests: { url_title: 'holding_pen' })
+    notifications.order(:id).each do |notification|
+      IncomingAttention::Digest.with_account_lock(notification.user_id) do
+        notification.reload
+        next if notification.seen_at || notification.expired?
+
+        event = notification.info_request_event
+        request = event.info_request
+        message = event.incoming_message
+        next unless holding_pen_response?(notification, event, request, message)
+
+        delivery = RequestMailer.new_response(request, message)
+        next unless delivery.message.perform_deliveries &&
+                    delivery.message.to.present?
+
+        delivery.deliver_now
+        notification.update_columns(seen_at: Time.current)
+        sent = true
+      end
+    rescue StandardError => e
+      Rails.logger.warn('incoming_attention_holding_pen_alert_failed ' \
+                        "notification_id=#{notification.id} #{e.class}")
+    end
+    sent
+  end
+
+  private_class_method def self.holding_pen_response?(notification, event,
+                                                      request, message)
+    request.prominence == 'hidden' &&
+      request.user_id == User.internal_admin_user.id &&
+      notification.user_id == request.user_id &&
+      event.event_type == 'response' &&
+      message && message.info_request_id == request.id
   end
 
   def self.send_notifications
@@ -58,46 +105,48 @@ class NotificationMailer < ApplicationMailer
     sent_instant_notifications || sent_daily_notifications
   end
 
-  def self.send_notifications_loop
-    # Run send_notifications in an endless loop, sleeping when there is
-    # nothing to do
-    loop do
-      sleep_seconds = 1
-      until send_notifications
-        sleep sleep_seconds
-        sleep_seconds *= 2
-        sleep_seconds = 300 if sleep_seconds > 300
-      end
-    end
-  end
+  # A presentation comes only from Digest.send_account, with the rows it
+  # groups, and that method checks them again after this renders.
+  def daily_summary(user, notifications, presentation = nil,
+                    frequency: Notification.frequencies[Notification::DAILY])
+    fresh, pass = IncomingAttention::Digest.authorize(user, notifications)
+    if IncomingAttention::Config.enabled?
+      unless presentation
+        notifications = fresh.reject do |row|
+          IncomingAttention::Digest.notification_pending?(row, pass)
+        end
+        return if notifications.empty?
 
-  def daily_summary(user, notifications)
+        presentation = IncomingAttention::Digest.presentation(
+          user, notifications, pass
+        )
+      end
+    else
+      notifications = fresh
+      presentation = nil
+    end
+
     @user = user
-    @grouped_notifications = notifications.group_by do |n|
-      info_request = n.info_request_event.info_request
-      if info_request.info_request_batch_id.present?
-        info_request.info_request_batch
-      else
-        info_request
-      end
-    end
-
-    mail_user(
-      user,
-      subject: -> {
-        _("Your daily request summary from {{pro_site_name}}",
-          pro_site_name: pro_site_name)
-      }
-    )
+    @summary = IncomingAttention::Summary.new(user, notifications, presentation)
+    @summary_instant =
+      frequency == Notification.frequencies[Notification::INSTANTLY]
+    summary = @summary
+    mail_user(user, subject: -> { summary.subject })
   end
 
   def instant_notification(notification)
+    notification = summarise(notification)
+    return unless notification
+
     event_type = notification.info_request_event.event_type
-    method = "#{event_type}_notification".to_sym
+    method = :"#{event_type}_notification"
     send(method, notification)
   end
 
   def response_notification(notification)
+    notification = summarise(notification) unless @summary
+    return unless notification
+
     @info_request = notification.info_request_event.info_request
     @incoming_message = notification.info_request_event.incoming_message
 
@@ -105,43 +154,9 @@ class NotificationMailer < ApplicationMailer
       @info_request.user,
       subject: -> {
         _("New response to your FOI request - {{request_title}}",
-          request_title: @info_request.title.html_safe)
+          request_title: @info_request.title)
       },
       template_name: 'response_notification'
-    )
-  end
-
-  def embargo_expiring_notification(notification)
-    @info_request = notification.info_request_event.info_request
-
-    mail_user(
-      @info_request.user,
-      subject: -> {
-        _(
-          "Your FOI request - {{request_title}} will be made public on " \
-          "{{site_name}} this week",
-          request_title: @info_request.title.html_safe,
-          site_name: site_name.html_safe
-        )
-      },
-      template_name: 'embargo_expiring_notification'
-    )
-  end
-
-  def expire_embargo_notification(notification)
-    @info_request = notification.info_request_event.info_request
-
-    mail_user(
-      @info_request.user,
-      subject: -> {
-        _(
-          "Your FOI request - {{request_title}} has been made public on " \
-          "{{site_name}}",
-          request_title: @info_request.title.html_safe,
-          site_name: site_name.html_safe
-        )
-      },
-      template_name: 'expire_embargo_notification'
     )
   end
 
@@ -154,7 +169,7 @@ class NotificationMailer < ApplicationMailer
       subject: -> {
         _(
           "Delayed response to your FOI request - {{request_title}}",
-          request_title: @info_request.title.html_safe
+          request_title: @info_request.title
         )
       },
       template_name: 'overdue_notification'
@@ -171,10 +186,33 @@ class NotificationMailer < ApplicationMailer
         _(
           "You're long overdue a response to your FOI request " \
           "- {{request_title}}",
-          request_title: @info_request.title.html_safe
+          request_title: @info_request.title
         )
       },
       template_name: 'very_overdue_notification'
     )
+  end
+
+  def mail_user(user, subject:, **options)
+    return super unless @summary
+
+    summary = @summary
+    super(user, subject: -> { summary.subject }, **options)
+  end
+
+  private
+
+  # The notification as it is now, or nil while its reply is still being
+  # read. Raises SnapshotChanged if its user may no longer read it.
+  def summarise(notification)
+    notification = IncomingAttention::Digest.
+      authorized!(notification.user, [notification]).first
+    if IncomingAttention::Config.enabled? &&
+       IncomingAttention::Digest.notification_pending?(notification)
+      return
+    end
+
+    @summary = IncomingAttention::Summary.new(notification.user, [notification])
+    notification
   end
 end

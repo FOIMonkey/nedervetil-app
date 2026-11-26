@@ -666,12 +666,13 @@ class User < ApplicationRecord
       min: daily_summary_minute }
   end
 
-  # With what frequency does the user want to be notified?
+  # Daily summary unless opted into instant email; lookup failures must raise
+  # rather than falling back to another frequency.
   def notification_frequency
-    if features.enabled?(:notifications)
-      Notification::DAILY
-    else
+    if IncomingAttention::InstantEmails.on?(self)
       Notification::INSTANTLY
+    else
+      Notification::DAILY
     end
   end
 

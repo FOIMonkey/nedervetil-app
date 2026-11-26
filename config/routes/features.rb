@@ -1,6 +1,8 @@
 get 'profile/ai_reading', to: 'incoming_attention/ai_reading#edit',
                           as: :profile_ai_reading
 post 'profile/ai_reading', to: 'incoming_attention/ai_reading#update'
+get 'profile/emails', to: 'incoming_attention/emails#edit', as: :profile_emails
+post 'profile/emails', to: 'incoming_attention/emails#update'
 
 # The requester's choices about replies' AI readings.
 scope 'request/:url_title', module: 'incoming_attention' do

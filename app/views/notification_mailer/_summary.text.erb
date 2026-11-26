@@ -1,0 +1,16 @@
+<% link = ->(row) { row.batch ? info_request_batch_url(row.batch) : row.message ? new_response_url(row.request, row.message) : show_request_url(row.request.url_title) } %>
+<%= summary.preview %>
+<% { _('Needs you') => summary.needs, _('Also') => summary.also }.each do |heading, rows| -%>
+<% next if rows.empty? -%>
+
+<%= heading %>
+<% rows.each do |row| -%>
+
+<%= row.title %>
+<%= row.line %>
+<%= link.(row) %>
+<% end -%>
+<% end -%>
+
+<%= instant ? _('An email as replies arrive.') : _('One email a day, only when something changed.') %>
+<%= _('Change emails:') %> <%= profile_emails_url %>

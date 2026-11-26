@@ -1,0 +1,12 @@
+<% @title = _('Emails') %>
+<%= page_band back: back_to_account %>
+<div id="emails-setting" class="ai-reading">
+  <%= form_tag profile_emails_path, method: :post, class: 'ai-reading__form' do %>
+    <fieldset>
+      <legend><%= _('Emails about replies') %></legend>
+      <p><label><%= radio_button_tag :emails, 'daily', !@instant %> <%= _('One summary a day') %> <span class="ai-reading__note"><%= _('Only on days something changed') %></span></label></p>
+      <p><label><%= radio_button_tag :emails, 'each', @instant %> <%= _('An email for each reply') %> <span class="ai-reading__note"><%= _('As it arrives, instead of the summary') %></span></label></p>
+    </fieldset>
+    <%= submit_tag _('Save') %>
+  <% end %>
+</div>

@@ -13,6 +13,8 @@
 #  expired               :boolean          default(FALSE)
 #
 
+# Queues instant or daily-digest emails for a User about an InfoRequestEvent,
+# expiring notifications once the request state moves on.
 class Notification < ApplicationRecord
   belongs_to :info_request_event,
              inverse_of: :notifications
@@ -21,22 +23,27 @@ class Notification < ApplicationRecord
 
   INSTANTLY = :instantly
   DAILY = :daily
-  enum :frequency, [ INSTANTLY, DAILY ]
+  enum :frequency, { INSTANTLY => 0, DAILY => 1 }
 
   validates_presence_of :frequency, :send_after
 
   before_validation :calculate_send_after
 
   scope :unseen, -> { where(seen_at: nil) }
+  # Replies to the holding pen are mailed to an admin at once, never summarised.
+  scope :outside_holding_pen, -> {
+    joins(info_request_event: :info_request).
+      where.not(info_requests: { url_title: 'holding_pen' })
+  }
 
   # Set the send_at timestamp based on the chosen frequency
   def calculate_send_after
-    unless persisted? || send_after.present?
-      if daily?
-        self.send_after = user.next_daily_summary_time
-      else
-        self.send_after = Time.zone.now
-      end
+    return if persisted? || send_after.present?
+
+    if daily?
+      self.send_after = user.next_daily_summary_time
+    else
+      self.send_after = Time.zone.now
     end
   end
 
@@ -55,7 +62,7 @@ class Notification < ApplicationRecord
   # Overridden #expired? so that we can check against the actual current state
   # of our request (or whatever else might expire a notification)
   def expired
-    send("#{info_request_event.event_type}_expired".to_sym)
+    send(:"#{info_request_event.event_type}_expired")
   end
 
   def expired?
@@ -64,26 +71,20 @@ class Notification < ApplicationRecord
 
   private
 
+  # rubocop:disable Naming/PredicateMethod -- the names come from event types
+
   def response_expired
     # New response notifications never expire
     false
   end
 
+  # Embargoes are removed (doc/FORK.md); legacy notifications are expired.
   def embargo_expiring_expired
-    # If someone has changed the embargo date on the request, or published it,
-    # they might not need this notification any more.
-    if info_request_event.info_request.embargo_expiring? ||
-        info_request_event.info_request.embargo_pending_expiry?
-      false
-    else
-      true
-    end
+    true
   end
 
   def expire_embargo_expired
-    # If someone has added a new embargo, they might not need this notification
-    # any more.
-    !info_request_event.info_request.embargo_expired?
+    true
   end
 
   def overdue_expired
@@ -99,4 +100,6 @@ class Notification < ApplicationRecord
     status = info_request.calculate_status
     !(user.active? && status == 'waiting_response_very_overdue')
   end
+
+  # rubocop:enable Naming/PredicateMethod
 end

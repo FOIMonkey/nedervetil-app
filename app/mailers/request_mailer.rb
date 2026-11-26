@@ -85,6 +85,11 @@ class RequestMailer < ApplicationMailer
 
   # Tell the requester that a new response has arrived
   def new_response(info_request, incoming_message)
+    if summarised_response?(info_request)
+      notify_of_response(info_request, incoming_message)
+      return
+    end
+
     @incoming_message = incoming_message
     @info_request = info_request
 
@@ -488,5 +493,22 @@ class RequestMailer < ApplicationMailer
 
   def set_footer_template
     @footer_template = 'default'
+  end
+
+  # With AI reading on, a reply waits for its reading and then goes into the
+  # requester's summary, so it becomes a notification instead of this email.
+  def summarised_response?(info_request)
+    IncomingAttention::Effective.active? && info_request.user &&
+      info_request.url_title != 'holding_pen' &&
+      !info_request.use_notifications?
+  end
+
+  def notify_of_response(info_request, incoming_message)
+    event = incoming_message.response_event
+    return unless event && event.info_request_id == info_request.id
+    return if Notification.exists?(user_id: info_request.user_id,
+                                   info_request_event_id: event.id)
+
+    info_request.user.notify(event)
   end
 end
