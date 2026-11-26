@@ -1,6 +1,10 @@
+# Renders and processes the form for visitors or signed-in users to suggest a
+# new authority or an updated request email, with honeypot and Turnstile checks.
 class PublicBodyChangeRequestsController < ApplicationController
+  include TurnstileCheck
+
   before_action :catch_spam, only: [:create]
-  before_action :set_render_recaptcha
+  before_action :set_turnstile_required
 
   def new
     @change_request =
@@ -22,41 +26,33 @@ class PublicBodyChangeRequestsController < ApplicationController
 
   def create
     @change_request =
-      PublicBodyChangeRequest.
-        from_params(params[:public_body_change_request], @user)
+      PublicBodyChangeRequest.from_params(change_request_params, @user)
 
-    verified =
-      if @render_recaptcha
-        recaptcha_args = {
-          model: @change_request,
-          message: _('There was an error with the reCAPTCHA. ' \
-                        'Please try again.')
-        }
-
-        verify_recaptcha(recaptcha_args)
-      else
-        true
-      end
-
-    if verified && @change_request.save
+    refusal = turnstile_refusal('change_request') if @turnstile_required
+    if refusal
+      @change_request.errors.add(:base, refusal)
+      render action: 'new', status: :unprocessable_content
+    elsif @change_request.save
       @change_request.send_message
       redirect_to frontpage_url, notice: @change_request.thanks_notice
     else
-      render action: 'new'
+      render action: 'new', status: :unprocessable_content
     end
   end
 
   private
 
   def catch_spam
-    if params[:public_body_change_request].key?(:comment)
-      unless params[:public_body_change_request][:comment].empty?
-        redirect_to frontpage_url
-      end
-    end
+    return unless change_request_params.key?(:comment)
+
+    redirect_to frontpage_url unless change_request_params[:comment].empty?
   end
 
-  def set_render_recaptcha
-    @render_recaptcha = !@user
+  def change_request_params
+    params.require(:public_body_change_request)
+  end
+
+  def set_turnstile_required
+    @turnstile_required = !@user
   end
 end

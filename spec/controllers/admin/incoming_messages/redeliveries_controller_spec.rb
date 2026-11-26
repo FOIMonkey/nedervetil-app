@@ -1,8 +1,10 @@
 require 'spec_helper'
 
 RSpec.describe Admin::IncomingMessages::RedeliveriesController do
+  # Arrange a fully authenticated admin; production has no test-only bypass.
+  before { sign_in users(:admin_user) }
+
   let(:admin_user) { FactoryBot.create(:admin_user) }
-  let(:pro_admin_user) { FactoryBot.create(:pro_admin_user) }
 
   before { sign_in(admin_user) }
 
@@ -18,16 +20,16 @@ RSpec.describe Admin::IncomingMessages::RedeliveriesController do
       allow(IncomingMessage).to receive(:find).and_return(incoming_message)
       expect(previous_info_request).to receive(:expire)
       post :create, params: {
-                         incoming_message_id: incoming_message.id,
-                         url_title: destination_info_request.url_title
-                       }
+        incoming_message_id: incoming_message.id,
+        url_title: destination_info_request.url_title
+      }
     end
 
     it 'takes no action if no message_id is supplied' do
       post :create, params: {
-                         incoming_message_id: incoming_message.id,
-                         url_title: ''
-                       }
+        incoming_message_id: incoming_message.id,
+        url_title: ''
+      }
       # It shouldn't delete this message
       assert_equal IncomingMessage.exists?(incoming_message.id), true
       # Should show an error to the user
@@ -62,34 +64,13 @@ RSpec.describe Admin::IncomingMessages::RedeliveriesController do
       end
     end
 
-    context 'if the request is embargoed', feature: :alaveteli_pro do
-      before do
-        incoming_message.info_request.create_embargo
-      end
-
-      context 'as non-pro admin' do
-        it 'raises ActiveRecord::RecordNotFound' do
-          expect {
-            post :create, params: {
-              incoming_message_id: incoming_message,
-              url_title: destination_info_request.url_title
-            }
-          }.to raise_error ActiveRecord::RecordNotFound
-        end
-      end
-
-      context 'as pro admin' do
-        before { sign_in(pro_admin_user) }
-
-        it 'redirects to destination request admin' do
-          post :create, params: {
-            incoming_message_id: incoming_message,
-            url_title: destination_info_request.url_title
-          }
-          expect(response).to redirect_to \
-            admin_request_url(destination_info_request)
-        end
-      end
+    it 'redirects to the destination request admin page' do
+      post :create, params: {
+        incoming_message_id: incoming_message,
+        url_title: destination_info_request.url_title
+      }
+      expect(response).to redirect_to \
+        admin_request_url(destination_info_request)
     end
 
     context 'when the raw email has been erased' do

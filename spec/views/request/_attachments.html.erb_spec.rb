@@ -27,22 +27,21 @@ RSpec.describe 'request/_attachments' do
     allow(incoming_message).to receive(:get_main_body_text_part).
       and_return(main_body_part)
     allow(view).to receive(:concealed_prominence?).and_return(false)
-    allow(view).to receive(:can?).and_return(false)
-    allow(view).to receive(:can?).with(:read, attachment).and_return(true)
-    allow(view).to receive(:cannot?).and_return(false)
+    allow(view).to receive(:is_admin?).and_return(false)
+    allow(view).to receive(:current_user).and_return(nil)
     assign(:user, nil)
   end
 
-  context 'when an attachment could not be masked' do
-    it 'shows a message that it could not be processed' do
-      render_view
-      expect(rendered).
-        to have_content('We were not able to process this attachment')
-    end
+  context 'when masking hit a fault on an attachment' do
+    it 'lists the file for the requester as usual, with no note' do
+      ability = Ability.new(info_request.user)
+      allow(view).to receive(:can?) { |*args| ability.can?(*args) }
+      allow(view).to receive(:cannot?) { |*args| ability.cannot?(*args) }
 
-    it 'does not offer a download link' do
       render_view
-      expect(rendered).to_not have_link('Download')
+      expect(rendered).to have_link('Download')
+      expect(rendered).
+        to have_no_content('We were not able to process this attachment')
     end
   end
 end

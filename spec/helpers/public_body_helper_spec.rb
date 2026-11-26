@@ -82,6 +82,21 @@ RSpec.describe PublicBodyHelper do
       expect(type_of_authority(public_body)).to eq(expected)
     end
 
+    it 'escapes a description once and marks the sentence safe' do
+      FactoryBot.create(:category, :public_body,
+                        category_tag: 'spec_a', description: "a & b's <b>")
+      FactoryBot.create(:category, :public_body,
+                        category_tag: 'spec_b', description: 'other')
+      public_body = FactoryBot.create(:public_body,
+                                      tag_string: 'spec_a spec_b')
+      html = type_of_authority(public_body)
+      expect(html).to eq(
+        '<a href="/body/list/spec_a">A &amp; b&#39;s &lt;b&gt;</a> and ' \
+        '<a href="/body/list/spec_b">other</a>'
+      )
+      expect(html).to be_html_safe
+    end
+
     it 'ignores categories without descriptions' do
       3.times do |i|
         FactoryBot.create(

@@ -3,7 +3,7 @@ require 'spec_helper'
 RSpec.describe User::WithRequest, type: :model do
   describe '#ip' do
     it 'delegates to request' do
-      user = mock_model(User)
+      user = FactoryBot.build_stubbed(:user)
       request = double(:request, ip: '127.0.0.1')
 
       instance = User::WithRequest.new(user, request)
@@ -13,7 +13,7 @@ RSpec.describe User::WithRequest, type: :model do
 
   describe '#user_agent' do
     it 'delegates to request' do
-      user = mock_model(User)
+      user = FactoryBot.build_stubbed(:user)
       request = double(:request, user_agent: 'Safari')
 
       instance = User::WithRequest.new(user, request)

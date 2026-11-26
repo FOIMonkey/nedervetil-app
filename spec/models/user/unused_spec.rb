@@ -8,7 +8,9 @@ RSpec.describe User::Unused do
   describe '.unused' do
     subject { User.unused }
 
-    let!(:unused_user) { FactoryBot.create(:user, :unused) }
+    let!(:unused_user) do
+      FactoryBot.create(:user, :unused)
+    end
 
     context 'when user has no activity' do
       it 'includes users with zero counters and no roles or sign-ins' do
@@ -66,26 +68,6 @@ RSpec.describe User::Unused do
       end
     end
 
-    context 'when user has tracked things' do
-      let!(:user_with_tracks) do
-        FactoryBot.create(:user, :unused, track_things_count: 1)
-      end
-
-      it 'excludes users with track_things_count > 0' do
-        is_expected.not_to include(user_with_tracks)
-      end
-    end
-
-    context 'when user has comments' do
-      let!(:user_with_comments) do
-        FactoryBot.create(:user, :unused, comments_count: 1)
-      end
-
-      it 'excludes users with comments_count > 0' do
-        is_expected.not_to include(user_with_comments)
-      end
-    end
-
     context 'when user public body change requests' do
       let!(:user_with_change_request) do
         FactoryBot.create(:user, :unused, public_body_change_requests_count: 1)
@@ -96,45 +78,35 @@ RSpec.describe User::Unused do
       end
     end
 
-    context 'when user has citations' do
-      let!(:user_with_citations) { FactoryBot.create(:user, :unused) }
-
-      before do
-        FactoryBot.create(:citation, user: user_with_citations)
-      end
-
-      it 'excludes users with citations' do
-        is_expected.not_to include(user_with_citations)
-      end
-    end
-
     context 'when user with certain roles' do
       let!(:admin_user) { FactoryBot.create(:admin_user, :unused) }
-      let!(:pro_user) { FactoryBot.create(:pro_user, :unused) }
-      let!(:pro_admin_user) { FactoryBot.create(:pro_admin_user, :unused) }
 
       it 'excludes admin users' do
         is_expected.not_to include(admin_user)
       end
-
-      it 'excludes pro users' do
-        is_expected.not_to include(pro_user)
-      end
-
-      it 'excludes pro admin users' do
-        is_expected.not_to include(pro_admin_user)
-      end
     end
 
-    context 'when user has submitted to a project' do
-      let!(:contributor) { FactoryBot.create(:user, :unused) }
+    # Deleting a request keeps its documents, owned by the requester, and
+    # takes the requester's request count back to 0.
+    context 'when user owns documents kept after their request went' do
+      include DisclosuresHelpers
+      include_context 'with document OCR off'
+
+      let!(:document_owner) { FactoryBot.create(:user, :unused) }
 
       before do
-        FactoryBot.create(:project_submission, user: contributor)
+        document = delivered_document(FactoryBot.create(:info_request),
+                                      'runs.txt', 'text/plain',
+                                      "Gritting runs: 12\n")
+        document.update_columns(request_deleted_at: Time.current,
+                                owner_id: document_owner.id,
+                                info_request_id: nil,
+                                incoming_message_id: nil,
+                                foi_attachment_id: nil)
       end
 
-      it 'excludes users who have submitted to a project' do
-        is_expected.not_to include(contributor)
+      it 'excludes them, so their public documents stay up' do
+        is_expected.not_to include(document_owner)
       end
     end
 

@@ -8,7 +8,5 @@ if File.exist?(path)
     File.read(path),
     permitted_classes: [Regexp]
   )['user_spam_scorer']
-  settings.each do |key, value|
-    UserSpamScorer.public_send("#{key}=", value)
-  end
+  UserSpamScorer.configure(settings)
 end

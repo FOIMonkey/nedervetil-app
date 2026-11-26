@@ -2,9 +2,17 @@ class AddTrackThingsCountToUsers < ActiveRecord::Migration[4.2] # 3.2
   def up
     add_column :users, :track_things_count, :integer, default: 0, null: false
 
-    TrackThing.distinct.pluck(:tracking_user_id).compact.each do |user_id|
-      User.reset_counters(user_id, :track_things)
-    end
+    # Neither the removed model nor User's removed association is needed here.
+    execute <<~SQL
+      UPDATE users
+      SET track_things_count = tracks.count
+      FROM (
+        SELECT tracking_user_id, COUNT(*) AS count
+        FROM track_things
+        GROUP BY tracking_user_id
+      ) AS tracks
+      WHERE users.id = tracks.tracking_user_id
+    SQL
   end
 
   def down

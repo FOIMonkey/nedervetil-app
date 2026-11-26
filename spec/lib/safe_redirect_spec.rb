@@ -27,6 +27,22 @@ RSpec.describe SafeRedirect do
       end
     end
 
+    context 'with a relative path' do
+      let(:redirect_param) { 'request/foo' }
+
+      it 'makes it absolute' do
+        expect(subject).to eq('/request/foo')
+      end
+    end
+
+    context 'with a relative path, query parameters and an anchor' do
+      let(:redirect_param) { 'request/foo?x=y#incoming-1' }
+
+      it 'makes it absolute, strips the query and retains the anchor' do
+        expect(subject).to eq('/request/foo#incoming-1')
+      end
+    end
+
     context 'with query parameters' do
       let(:redirect_param) { '/request/the_cost_of_boring?x=y&y=z' }
 

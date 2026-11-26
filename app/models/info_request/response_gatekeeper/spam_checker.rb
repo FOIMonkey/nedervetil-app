@@ -1,11 +1,13 @@
 class InfoRequest
   module ResponseGatekeeper
+    # Checks incoming emails in InfoRequest#receive against the configured
+    # spam-score header and threshold, refusing mail that exceeds it.
     class SpamChecker
       DEFAULT_CONFIGURATION = {
         spam_action: ::AlaveteliConfiguration.incoming_email_spam_action,
         spam_header: ::AlaveteliConfiguration.incoming_email_spam_header,
         spam_threshold: ::AlaveteliConfiguration.incoming_email_spam_threshold
-      }
+      }.freeze
 
       attr_reader :spam_action, :spam_header, :spam_threshold
       alias rejection_action spam_action
@@ -13,7 +15,8 @@ class InfoRequest
       def initialize(opts = {})
         @spam_action = opts[:spam_action] || DEFAULT_CONFIGURATION[:spam_action]
         @spam_header = opts[:spam_header] || DEFAULT_CONFIGURATION[:spam_header]
-        @spam_threshold = opts[:spam_threshold] || DEFAULT_CONFIGURATION[:spam_threshold]
+        @spam_threshold =
+          opts[:spam_threshold] || DEFAULT_CONFIGURATION[:spam_threshold]
       end
 
       def allow?(mail)

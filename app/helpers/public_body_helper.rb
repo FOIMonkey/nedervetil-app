@@ -1,3 +1,5 @@
+# Builds explanations for unrequestable PublicBody records and linked category
+# descriptions for authority views.
 module PublicBodyHelper
   # Public: The reasons a request can't be made to a PublicBody
   # The returned reasons are ordered by priority. For example, if the body no
@@ -11,11 +13,13 @@ module PublicBodyHelper
     reasons = []
 
     if public_body.defunct?
-      reasons.push _('This authority no longer exists, so you cannot make a request to it.')
+      reasons.push _('This authority no longer exists, so you cannot ' \
+                     'make a request to it.')
     end
 
     if public_body.not_apply?
-      reasons.push _('Freedom of Information law does not apply to this authority, so you cannot make a request to it.')
+      reasons.push _('Freedom of Information law does not apply to this ' \
+                     'authority, so you cannot make a request to it.')
     end
 
     unless public_body.has_request_email?
@@ -51,7 +55,7 @@ module PublicBodyHelper
     end
 
     if types.any?
-      types.to_sentence(last_word_connector: ' and ').html_safe
+      to_sentence(types, last_word_connector: ' and ')
     else
       _("A public authority")
     end

@@ -1,3 +1,5 @@
+# Highlights and excerpts matching words or regular expressions in HTML or
+# plain text search results.
 module HighlightHelper
   include ERB::Util
 
@@ -5,32 +7,40 @@ module HighlightHelper
   # the phrases parameter.
   # https://github.com/rails/rails/pull/11793
   def highlight_matches(text, phrases, options = {})
-    if options.fetch(:sanitize, true)
-      text = ActionController::Base.helpers.sanitize(text).try(:html_safe)
-    end
+    sanitize_text = options.fetch(:sanitize, true)
+    text = ActionController::Base.helpers.sanitize(text) if sanitize_text
 
-    if text.blank? || phrases.blank?
-      text
-    else
-      match = Array(phrases).map do |p|
-        p.is_a?(Regexp) ? p.to_s : Regexp.escape(p)
-      end.join('|')
-
-      if block_given?
-        text.gsub(/(#{match})(?![^<]*?>)/i) { |found| yield found }
+    result =
+      if text.blank? || phrases.blank?
+        text.to_s
       else
-        highlighter = options.fetch(:highlighter, '<mark>\1</mark>')
-        text.gsub(/(#{match})(?![^<]*?>)/i, highlighter)
+        match = Array(phrases).map do |p|
+          p.is_a?(Regexp) ? p.to_s : Regexp.escape(p)
+        end.join('|')
+
+        if block_given?
+          text.gsub(/(#{match})(?![^<]*?>)/i) { |found| yield found }
+        else
+          highlighter = options.fetch(:highlighter, '<mark>\1</mark>')
+          text.gsub(/(#{match})(?![^<]*?>)/i, highlighter)
+        end
       end
-    end.html_safe
+
+    return result.to_str unless sanitize_text
+
+    # rubocop:disable Rails/OutputSafety -- the text was sanitised above and only the highlighter's own tags were added
+    result.html_safe
+    # rubocop:enable Rails/OutputSafety
   end
 
   # Highlight words, also escapes HTML (other than spans that we add)
   def highlight_words(t, words, html = true)
     if html
-      highlight_matches(h(t), words, highlighter: '<span class="highlight">\1</span>').html_safe
+      highlight_matches(
+        h(t), words, highlighter: '<span class="highlight">\1</span>'
+      )
     else
-      highlight_matches(t, words, highlighter: '*\1*')
+      highlight_matches(t, words, highlighter: '*\1*', sanitize: false)
     end
   end
 
@@ -66,8 +76,10 @@ module HighlightHelper
 
     first_part, second_part = text.split(phrase, 2)
 
-    prefix, first_part   = cut_excerpt_part(:first, first_part, separator, options)
-    postfix, second_part = cut_excerpt_part(:second, second_part, separator, options)
+    prefix, first_part =
+      cut_excerpt_part(:first, first_part, separator, options)
+    postfix, second_part =
+      cut_excerpt_part(:second, second_part, separator, options)
 
     affix = [first_part, separator, phrase, separator, second_part].join.strip
     [prefix, affix, postfix].join
@@ -86,11 +98,11 @@ module HighlightHelper
     affix = part.size > radius ? omission : ""
 
     part = if part_position == :first
-      drop_index = [part.length - radius, 0].max
-      part.drop(drop_index)
-    else
-      part.first(radius)
-    end
+             drop_index = [part.length - radius, 0].max
+             part.drop(drop_index)
+           else
+             part.first(radius)
+           end
 
     [affix, part.join(separator)]
   end

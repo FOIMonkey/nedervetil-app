@@ -11,7 +11,6 @@
 #  last_described_at   :datetime
 #  incoming_message_id :integer
 #  outgoing_message_id :integer
-#  comment_id          :integer
 #  updated_at          :datetime
 #  params              :jsonb
 #
@@ -19,63 +18,6 @@
 require 'spec_helper'
 
 RSpec.describe InfoRequestEvent do
-  describe '.is_searchable' do
-    subject(:searchable) { described_class.is_searchable }
-
-    let!(:visible) do
-      { sent: FactoryBot.create(:sent_event),
-        followup: FactoryBot.create(:followup_sent_event),
-        response: FactoryBot.create(:response_event),
-        comment: FactoryBot.create(:comment_event) }
-    end
-
-    let!(:hidden) do
-      { other_type: FactoryBot.create(:info_request_event, event_type: 'edit'),
-        resent: FactoryBot.create(:info_request_event, event_type: 'resent'),
-        hidden_outgoing: FactoryBot.create(
-          :sent_event,
-          outgoing_message: FactoryBot.create(:initial_request, :hidden)
-        ),
-        hidden_incoming: FactoryBot.create(
-          :response_event,
-          incoming_message_factory: [:incoming_message, :hidden]
-        ),
-        hidden_comment: FactoryBot.create(
-          :comment_event, comment: FactoryBot.create(:hidden_comment)
-        ),
-        hidden_request: FactoryBot.create(
-          :sent_event, info_request: FactoryBot.create(:info_request, :hidden)
-        ),
-        requester_only_request: FactoryBot.create(
-          :sent_event,
-          info_request: FactoryBot.create(:info_request, :requester_only)
-        ),
-        backpage_request: FactoryBot.create(
-          :sent_event,
-          info_request: FactoryBot.create(:info_request, :backpage)
-        ),
-        embargoed_request: FactoryBot.create(
-          :sent_event,
-          info_request: FactoryBot.create(:info_request, :embargoed)
-        ) }
-    end
-
-    it 'includes every event the search index would hold' do
-      expect(searchable).to include(*visible.values)
-    end
-
-    it 'excludes every event the search index would leave out' do
-      hidden.each_value { |event| expect(searchable).not_to include(event) }
-    end
-
-    it 'agrees with indexed_by_search? for all of them' do
-      events = visible.values + hidden.values
-      indexed = events.select { |event| event.send(:indexed_by_search?) }
-      expect(searchable.where(id: events).pluck(:id).sort).
-        to eq(indexed.map(&:id).sort)
-    end
-  end
-
   describe 'event_type scopes' do
     described_class::EVENT_TYPES.each do |event_type|
       it "for '#{event_type}' events" do
@@ -100,7 +42,8 @@ RSpec.describe InfoRequestEvent do
     it 'should add an error message for described_state if it is not valid' do
       ire = InfoRequestEvent.new(described_state: 'nope')
       ire.valid?
-      expect(ire.errors.messages[:described_state]).to eq ["is not a valid state"]
+      expect(ire.errors.messages[:described_state]).
+        to eq ["is not a valid state"]
     end
 
     it 'should not add an error message for described_state if it is valid' do
@@ -119,46 +62,44 @@ RSpec.describe InfoRequestEvent do
       expect(ire.params).to eq(example_params)
     end
 
-    it "should store the incoming_message, outgoing_message and comment ids" do
-      comment = FactoryBot.create(:comment)
+    it "should store the incoming_message and outgoing_message ids" do
       example_params = { incoming_message_id: 1,
-                        outgoing_message_id: 2,
-                        comment_id: comment.id }
+                         outgoing_message_id: 2 }
       ire.params = example_params
       expect(ire.incoming_message_id).to eq(1)
       expect(ire.outgoing_message_id).to eq(2)
-      expect(ire.comment_id).to eq(comment.id)
     end
 
     it "allow events to be created when association to deleted records" do
-      comment = FactoryBot.create(:comment)
-      comment.destroy
-      ire = FactoryBot.create(:info_request_event, params: { comment: comment })
-      expect(ire.comment).to be_nil
-      expect(ire.params[:comment]).to eq(comment.to_gid.to_s)
+      rule = FactoryBot.create(:censor_rule)
+      rule.destroy
+      ire = FactoryBot.create(:info_request_event, params: { rule: rule })
+      expect(ire.params[:rule]).to eq(rule.to_gid.to_s)
     end
 
     it 'stores keys suffixed with ID as GID' do
-      comment = FactoryBot.create(:comment)
-      ire.params = { comment_id: comment.id }
+      rule = FactoryBot.create(:censor_rule)
+      ire.params = { censor_rule_id: rule.id }
       expect(ire.params).to include(
-        comment: { gid: comment.to_global_id.to_s }
+        censor_rule: { gid: rule.to_global_id.to_s }
       )
     end
 
     it 'stores model instances as GID' do
-      comment = FactoryBot.create(:comment)
-      ire.params = { annotation: comment }
+      rule = FactoryBot.create(:censor_rule)
+      ire.params = { rule: rule }
       expect(ire.params).to include(
-        annotation: { gid: comment.to_global_id.to_s }
+        rule: { gid: rule.to_global_id.to_s }
       )
     end
 
     it 'stores correct class GID for AlaveteliPro models' do
-      ire.params = { embargo_id: 4 }
+      ire.params = { request_summary_id: 404_404 }
 
       expect(ire.params).to include(
-        embargo: { gid: 'gid://app/AlaveteliPro::Embargo/4' }
+        request_summary: {
+          gid: 'gid://app/AlaveteliPro::RequestSummary/404404'
+        }
       )
     end
 
@@ -166,73 +107,72 @@ RSpec.describe InfoRequestEvent do
       ire.params = { foo_id: 4 }
       expect(ire.params).to include(foo_id: 4)
     end
-  end
 
-  describe '.count_of_hides_by_week' do
-    it 'counts hide events by week' do
-      FactoryBot.create(:hide_event, created_at: Time.utc(2016, 1, 24))
-      FactoryBot.create(:edit_event, created_at: Time.utc(2016, 1, 18))
-      FactoryBot.create(:edit_event, created_at: Time.utc(2016, 1, 11))
-      FactoryBot.create(:hide_event, created_at: Time.utc(2016, 1, 7))
-      FactoryBot.create(:hide_event, created_at: Time.utc(2016, 1, 4))
+    it 'memoizes params and GlobalID lookups across repeated reads' do
+      rule = FactoryBot.create(:censor_rule)
+      event = FactoryBot.create(:info_request_event, params: { rule: rule })
 
-      expect(InfoRequestEvent.count_of_hides_by_week).to eql(
-        [
-          [Date.parse("2016-01-04"), 2],
-          [Date.parse("2016-01-18"), 1]
-        ]
-      )
+      expect(GlobalID::Locator).to receive(:locate).
+        with(rule.to_global_id.to_s).once.and_call_original
+
+      expect(event.params[:rule]).to eq(rule)
+      expect(event.params[:rule]).to eq(rule)
+      expect(event.params).to include(rule: { gid: rule.to_global_id.to_s })
+    end
+
+    it 'memoizes missing GlobalID lookups without querying twice' do
+      rule = FactoryBot.create(:censor_rule)
+      gid = rule.to_global_id.to_s
+      rule.destroy
+      event = FactoryBot.create(:info_request_event, params: { rule: rule })
+
+      expect(GlobalID::Locator).to receive(:locate).
+        with(gid).once.and_call_original
+
+      expect(event.params[:rule]).to eq(gid)
+      expect(event.params[:rule]).to eq(gid)
+    end
+
+    it 'invalidates memoized params on reassignment, write_attribute and reload' do
+      event = FactoryBot.create(:info_request_event, params: { foo: 'one' })
+      expect(event.params[:foo]).to eq('one')
+
+      event.params = { foo: 'two' }
+      expect(event.params[:foo]).to eq('two')
+
+      event.write_attribute(:params, { 'foo' => 'three' })
+      expect(event.params[:foo]).to eq('three')
+
+      event.reload
+      expect(event.params[:foo]).to eq('one')
+
+      event.write_attribute(:params, nil)
+      expect(event.params).to be_nil
+    end
+
+    it 'does not share memoized params across dup' do
+      event = FactoryBot.create(:info_request_event, params: { foo: 'one' })
+      expect(event.params[:foo]).to eq('one')
+
+      copy = event.dup
+      copy.params = { foo: 'two' }
+      expect(copy.params[:foo]).to eq('two')
+      expect(event.params[:foo]).to eq('one')
     end
   end
 
-  describe '#described_at' do
-    let(:ire) { FactoryBot.create(:info_request_event) }
-
-    it 'should return the created_at date if no description has been added' do
-      expect(ire.described_at).to eq(ire.created_at)
-    end
-
-    it 'should return the last_described_at date if a description has been added' do
-      ire.set_calculated_state!('not_held')
-      expect(ire.described_at).to eq(ire.last_described_at)
-    end
-  end
-
-  describe '#title' do
-    context 'a sent event' do
-      it 'should return the related info_request title' do
-        info_request = FactoryBot.create(:info_request, title: "Hi!")
-        ire = FactoryBot.create(:info_request_event,
-                                info_request: info_request,
-                                event_type: 'sent')
-
-        expect(ire.title).to eq("Hi!")
-      end
-    end
-
-    context 'not a sent event' do
-      it 'should return a blank string' do
-        ire = FactoryBot.create(:info_request_event)
-        expect(ire.title).to eq('')
-      end
-    end
-  end
-
-  describe '#visible' do
-    context 'is a comment' do
-      it 'should return the visibility of the comment' do
-        comment = FactoryBot.create(:comment, visible: false)
-        ire = FactoryBot.create(:info_request_event,
-                                event_type: 'comment',
-                                comment: comment)
-        expect(ire.visible).to eq(false)
+  describe '#visible?' do
+    context 'is a legacy comment event' do
+      it 'should return false, as comments are gone' do
+        ire = FactoryBot.create(:info_request_event, event_type: 'comment')
+        expect(ire.visible?).to eq(false)
       end
     end
 
     context 'is not a comment' do
       it 'should return true' do
         ire = FactoryBot.create(:info_request_event)
-        expect(ire.visible).to eq(true)
+        expect(ire.visible?).to eq(true)
       end
     end
   end
@@ -271,14 +211,6 @@ RSpec.describe InfoRequestEvent do
   describe 'after saving' do
     let(:request) { FactoryBot.create(:info_request) }
 
-    it 'should mark the model for reindexing in xapian if there is no no_xapian_reindex flag on the object' do
-      event = InfoRequestEvent.new(info_request: request,
-                                   event_type: 'sent',
-                                   params: {})
-      expect(event).to receive(:xapian_mark_needs_index)
-      event.run_callbacks(:save)
-    end
-
     context "the incoming_message is not hidden" do
       it "updates the parent info_request's last_public_response_at value" do
         im = FactoryBot.create(:incoming_message)
@@ -294,8 +226,8 @@ RSpec.describe InfoRequestEvent do
     context "the event is not a response" do
       it "does not update the info_request's last_public_response_at value" do
         expect_any_instance_of(InfoRequestEvent).not_to receive(:update_request)
-        event = FactoryBot.create(:info_request_event, event_type: 'comment',
-                                                       info_request: request)
+        FactoryBot.create(:info_request_event, event_type: 'edit',
+                                               info_request: request)
         expect(request.last_public_response_at).to be_nil
       end
     end
@@ -303,38 +235,10 @@ RSpec.describe InfoRequestEvent do
     context "the incoming_message is hidden" do
       it "sets the parent info_request's last_public_response_at to nil" do
         im = FactoryBot.create(:incoming_message, prominence: 'hidden')
-        response_event = FactoryBot.
-                           create(:info_request_event, event_type: 'response',
-                                                       info_request: request,
-                                                       incoming_message: im)
+        FactoryBot.create(:info_request_event, event_type: 'response',
+                                               info_request: request,
+                                               incoming_message: im)
         expect(request.last_public_response_at).to be_nil
-      end
-    end
-
-    context "the event is for a comment" do
-      it "enqueues NotifyCacheJob job for the comment" do
-        event = FactoryBot.build(:comment_event)
-        expect(NotifyCacheJob).to receive(:perform_later).with(event.comment)
-        event.save
-      end
-    end
-
-    context "the event is for an foi_attachment" do
-      it "enqueues NotifyCacheJob job for the attachment" do
-        attachment = mock_model(FoiAttachment)
-        allow(FoiAttachment).to receive(:find).and_return(attachment)
-        event = FactoryBot.build(:foi_attachment_event)
-        expect(NotifyCacheJob).to receive(:perform_later).with(attachment)
-        event.save
-      end
-    end
-
-    context "the event is for a request" do
-      it "enqueues NotifyCacheJob job for the request" do
-        event = FactoryBot.build(:info_request_event)
-        expect(NotifyCacheJob).to receive(:perform_later).
-          with(event.info_request)
-        event.save
       end
     end
 
@@ -348,51 +252,20 @@ RSpec.describe InfoRequestEvent do
 
   describe "should know" do
     it "that it's an incoming message" do
-      event = InfoRequestEvent.new(incoming_message: mock_model(IncomingMessage))
+      event = InfoRequestEvent.new(
+        incoming_message: FactoryBot.build_stubbed(:incoming_message)
+      )
       expect(event.is_incoming_message?).to be_truthy
       expect(event.is_outgoing_message?).to be_falsey
-      expect(event.is_comment?).to be_falsey
     end
 
     it "that it's an outgoing message" do
-      event = InfoRequestEvent.new(outgoing_message: mock_model(OutgoingMessage))
+      event = InfoRequestEvent.new(
+        outgoing_message: FactoryBot.build_stubbed(:initial_request)
+      )
       event.id = 1
       expect(event.is_incoming_message?).to be_falsey
       expect(event.is_outgoing_message?).to be_truthy
-      expect(event.is_comment?).to be_falsey
-    end
-
-    it "that it's a comment" do
-      event = InfoRequestEvent.new(comment: mock_model(Comment))
-      event.id = 1
-      expect(event.is_incoming_message?).to be_falsey
-      expect(event.is_outgoing_message?).to be_falsey
-      expect(event.is_comment?).to be_truthy
-    end
-  end
-
-  describe "doing search/index stuff" do
-    before(:each) do
-      parse_all_incoming_messages
-    end
-
-    it 'should get search text for outgoing messages' do
-      event = info_request_events(:useless_outgoing_message_event)
-      message = outgoing_messages(:useless_outgoing_message).body
-      expect(event.search_text_main).to eq(message + "\n\n")
-    end
-
-    it 'should get search text for incoming messages' do
-      event = info_request_events(:useless_incoming_message_event)
-      expect(event.search_text_main.strip).to eq("No way! I'm not going to tell you that in a month of Thursdays.\n\nThe Geraldine Quango")
-    end
-
-    it 'should get clipped text for incoming messages, and cache it too' do
-      event = info_request_events(:useless_incoming_message_event)
-
-      event.incoming_message_selective_columns("cached_main_body_text_folded").cached_main_body_text_folded = nil
-      expect(event.search_text_main(true).strip).to eq("No way! I'm not going to tell you that in a month of Thursdays.\n\nThe Geraldine Quango")
-      expect(event.incoming_message_selective_columns("cached_main_body_text_folded").cached_main_body_text_folded).not_to eq(nil)
     end
   end
 
@@ -401,38 +274,54 @@ RSpec.describe InfoRequestEvent do
 
     it 'should return true if the email in its params and the previous email the request was sent to are both nil' do
       allow(info_request_event).to receive(:params).and_return({})
-      allow(info_request_event).to receive_message_chain(:info_request, :get_previous_email_sent_to).and_return(nil)
+      allow(info_request_event).
+        to receive_message_chain(:info_request, :get_previous_email_sent_to).
+        and_return(nil)
       expect(info_request_event.same_email_as_previous_send?).to be true
     end
 
     it 'should return false if one email address exists and the other does not' do
-      allow(info_request_event).to receive(:params).and_return(email: 'test@example.com')
-      allow(info_request_event).to receive_message_chain(:info_request, :get_previous_email_sent_to).and_return(nil)
+      allow(info_request_event).
+        to receive(:params).and_return(email: 'test@example.com')
+      allow(info_request_event).
+        to receive_message_chain(:info_request, :get_previous_email_sent_to).
+        and_return(nil)
       expect(info_request_event.same_email_as_previous_send?).to be false
     end
 
     it 'should return true if the addresses are identical' do
-      allow(info_request_event).to receive(:params).and_return(email: 'test@example.com')
-      allow(info_request_event).to receive_message_chain(:info_request, :get_previous_email_sent_to).and_return('test@example.com')
+      allow(info_request_event).
+        to receive(:params).and_return(email: 'test@example.com')
+      allow(info_request_event).
+        to receive_message_chain(:info_request, :get_previous_email_sent_to).
+        and_return('test@example.com')
       expect(info_request_event.same_email_as_previous_send?).to be true
     end
 
     it 'should return false if the addresses are different' do
-      allow(info_request_event).to receive(:params).and_return(email: 'test@example.com')
-      allow(info_request_event).to receive_message_chain(:info_request, :get_previous_email_sent_to).and_return('different@example.com')
+      allow(info_request_event).
+        to receive(:params).and_return(email: 'test@example.com')
+      allow(info_request_event).
+        to receive_message_chain(:info_request, :get_previous_email_sent_to).
+        and_return('different@example.com')
       expect(info_request_event.same_email_as_previous_send?).to be false
     end
 
     it 'should return true if the addresses have different formats' do
-      allow(info_request_event).to receive(:params).and_return(email: 'A Test <test@example.com>')
-      allow(info_request_event).to receive_message_chain(:info_request, :get_previous_email_sent_to).and_return('test@example.com')
+      allow(info_request_event).
+        to receive(:params).and_return(email: 'A Test <test@example.com>')
+      allow(info_request_event).
+        to receive_message_chain(:info_request, :get_previous_email_sent_to).
+        and_return('test@example.com')
       expect(info_request_event.same_email_as_previous_send?).to be true
     end
 
     it 'should handle non-ascii characters in the name input' do
       address = "\"Someone’s name\" <test@example.com>"
       allow(info_request_event).to receive(:params).and_return(email: address)
-      allow(info_request_event).to receive_message_chain(:info_request, :get_previous_email_sent_to).and_return(address)
+      allow(info_request_event).
+        to receive_message_chain(:info_request, :get_previous_email_sent_to).
+        and_return(address)
       expect(info_request_event.same_email_as_previous_send?).to be true
     end
   end
@@ -467,7 +356,8 @@ RSpec.describe InfoRequestEvent do
 
   describe '#destroy' do
     let(:info_request) { FactoryBot.create(:info_request) }
-    let(:event) { InfoRequestEvent.create(info_request: info_request,
+    let(:event) {
+                   InfoRequestEvent.create(info_request: info_request,
                                            event_type: 'sent',
                                            params: {})
                  }
@@ -486,67 +376,6 @@ RSpec.describe InfoRequestEvent do
       event.destroy
       expect(UserInfoRequestSentAlert.where(info_request_event_id: event.id)).
         to be_empty
-    end
-
-    it 'should destroy associated track_things_sent_emails' do
-      track_thing = FactoryBot.create(:search_track,
-                                      info_request: info_request)
-      TrackThingsSentEmail.create(track_thing: track_thing,
-                                  info_request_event: event)
-      event.reload
-      event.destroy
-      expect(TrackThingsSentEmail.where(info_request_event_id: event.id)).
-        to be_empty
-    end
-  end
-
-  describe "editing requests" do
-    let(:unchanged_params) do
-      { editor: "henare",
-        old_title: "How much wood does a woodpecker peck?",
-        title: "How much wood does a woodpecker peck?",
-        old_described_state: "rejected",
-        described_state: "rejected",
-        old_awaiting_description: false,
-        awaiting_description: false,
-        old_allow_new_responses_from: "anybody",
-        allow_new_responses_from: "anybody",
-        old_handle_rejected_responses: "bounce",
-        handle_rejected_responses: "bounce",
-        old_tag_string: "",
-        tag_string: "",
-        old_comments_allowed: true,
-        comments_allowed: true }
-    end
-
-    it "should change type to hidden when only editing prominence to hidden" do
-      params = unchanged_params.merge({ old_prominence: "normal", prominence: "hidden" })
-
-      ire = InfoRequestEvent.create!(info_request: FactoryBot.create(:info_request),
-                                     event_type: "edit",
-                                     params: params)
-
-      expect(ire.event_type).to eql "hide"
-    end
-
-    it "should change type to hidden when only editing prominence to requester_only" do
-      params = unchanged_params.merge({ old_prominence: "normal", prominence: "requester_only" })
-
-      ire = InfoRequestEvent.create!(info_request: FactoryBot.create(:info_request),
-                                     event_type: "edit",
-                                     params: params)
-
-      expect(ire.event_type).to eql "hide"
-    end
-
-    it "should change type to hidden when only editing prominence to backpage" do
-      params = unchanged_params.merge({ old_prominence: "normal", prominence: "backpage" })
-
-      ire = InfoRequestEvent.create!(info_request: FactoryBot.create(:info_request),
-                                     event_type: "edit",
-                                     params: params)
-
-      expect(ire.event_type).to eql "hide"
     end
   end
 
@@ -693,290 +522,13 @@ RSpec.describe InfoRequestEvent do
     end
   end
 
-  # Testing a private callback helper
-  describe "#only_editing_prominence_to_hide?" do
-    let(:unchanged_params) do
-      { editor: "henare",
-        old_title: "How much wood does a woodpecker peck?",
-        title: "How much wood does a woodpecker peck?",
-        old_described_state: "rejected",
-        described_state: "rejected",
-        old_awaiting_description: false,
-        awaiting_description: false,
-        old_allow_new_responses_from: "anybody",
-        allow_new_responses_from: "anybody",
-        old_handle_rejected_responses: "bounce",
-        handle_rejected_responses: "bounce",
-        old_tag_string: "",
-        tag_string: "",
-        old_comments_allowed: true,
-        comments_allowed: true }
-    end
-
-    it "should be false if it's not an edit" do
-      ire = InfoRequestEvent.new(event_type: "resent")
-
-      expect(ire.send(:only_editing_prominence_to_hide?)).to be false
-    end
-
-    it "should be false if it's already a hide event" do
-      ire = InfoRequestEvent.new(event_type: "hide")
-
-      expect(ire.send(:only_editing_prominence_to_hide?)).to be false
-    end
-
-    it "should be false if editing multiple conditions" do
-      params = unchanged_params.merge({ old_prominence: "normal",
-                                        prominence: "backpage",
-                                        old_comments_allowed: true,
-                                        comments_allowed: false })
-
-      ire = InfoRequestEvent.new(event_type: "edit", params: params)
-
-      expect(ire.send(:only_editing_prominence_to_hide?)).to be false
-    end
-
-    context "when only editing prominence to hidden" do
-      let(:params) { unchanged_params.merge({ old_prominence: "normal", prominence: "hidden" }) }
-
-      it do
-        ire = InfoRequestEvent.new(event_type: "edit", params: params)
-
-        expect(ire.send(:only_editing_prominence_to_hide?)).to be true
-      end
-    end
-
-    context "when only editing prominence to requester_only" do
-      let(:params) { unchanged_params.merge({ old_prominence: "normal", prominence: "requester_only" }) }
-
-      it "should be true if only editing prominence to requester_only" do
-        ire = InfoRequestEvent.new(event_type: "edit", params: params)
-
-        expect(ire.send(:only_editing_prominence_to_hide?)).to be true
-      end
-    end
-
-    context "when only editing prominence to backpage" do
-      let(:params) { unchanged_params.merge({ old_prominence: "normal", prominence: "backpage" }) }
-
-      it "should be true if only editing prominence to backpage" do
-        ire = InfoRequestEvent.new(event_type: "edit", params: params)
-
-        expect(ire.send(:only_editing_prominence_to_hide?)).to be true
-      end
-    end
-
-    context "when the old prominence was hidden" do
-      let(:params) { unchanged_params.merge({ old_prominence: "hidden", prominence: "requester_only" }) }
-
-      it do
-        ire = InfoRequestEvent.new(event_type: "edit", params: params)
-
-        expect(ire.send(:only_editing_prominence_to_hide?)).to be false
-      end
-    end
-
-    context "when the old prominence was requester_only" do
-      let(:params) { unchanged_params.merge({ old_prominence: "requester_only", prominence: "hidden" }) }
-
-      it do
-        ire = InfoRequestEvent.new(event_type: "edit", params: params)
-
-        expect(ire.send(:only_editing_prominence_to_hide?)).to be false
-      end
-    end
-
-    context "when the old prominence was backpage" do
-      let(:params) { unchanged_params.merge({ old_prominence: "backpage", prominence: "hidden" }) }
-
-      it do
-        ire = InfoRequestEvent.new(event_type: "edit", params: params)
-
-        expect(ire.send(:only_editing_prominence_to_hide?)).to be false
-      end
-    end
-  end
-
-  # INDEXING HELPERS
-  #
-  # Technically don't need to test because these are private, but we want to
-  # ensure we're populating the search index with the correct values so these
-  # currently call the method via `send`.
-
-  describe 'when deciding if it is indexed by search' do
-    it 'returns a falsey value for a comment that is not visible' do
-      comment = FactoryBot.create(:hidden_comment)
-      comment_event = FactoryBot.build(:comment_event, comment: comment)
-      expect(comment_event.send(:indexed_by_search?)).to be_falsey
-    end
-
-    it 'returns a truthy value for a comment that is visible' do
-      comment = FactoryBot.create(:comment)
-      comment_event = FactoryBot.build(:comment_event, comment: comment)
-      expect(comment_event.send(:indexed_by_search?)).to be_truthy
-    end
-
-    it 'returns a falsey value for an incoming message that is not indexed by search' do
-      incoming_message = FactoryBot.create(:incoming_message, :hidden)
-      response_event = FactoryBot.build(:response_event,
-                                        incoming_message: incoming_message)
-      expect(response_event.send(:indexed_by_search?)).to be_falsey
-    end
-
-    it 'returns a truthy value for an incoming message that is indexed by search' do
-      incoming_message = FactoryBot.create(:incoming_message)
-      response_event = FactoryBot.build(:response_event,
-                                        incoming_message: incoming_message)
-      expect(response_event.send(:indexed_by_search?)).to be_truthy
-    end
-
-    it 'returns a falsey value for an outgoing message that is not indexed by search' do
-      outgoing_message = FactoryBot.create(:hidden_followup)
-      followup_event = FactoryBot.build(:followup_sent_event,
-                                        outgoing_message: outgoing_message)
-      expect(followup_event.send(:indexed_by_search?)).to be_falsey
-    end
-
-    it 'returns a truthy value for an outgoing message that is indexed by search' do
-      outgoing_message = FactoryBot.create(:new_information_followup)
-      followup_event = FactoryBot.build(:followup_sent_event,
-                                        outgoing_message: outgoing_message)
-      expect(followup_event.send(:indexed_by_search?)).to be_truthy
-    end
-
-    it 'returns a falsey value for an overdue event' do
-      overdue_event = FactoryBot.build(:overdue_event)
-      expect(overdue_event.send(:indexed_by_search?)).to be_falsey
-    end
-
-    it 'returns a falsey value for a very overdue event' do
-      very_overdue_event = FactoryBot.build(:very_overdue_event)
-      expect(very_overdue_event.send(:indexed_by_search?)).to be_falsey
-    end
-
-    it 'returns a falsey value for an embargo expiry event' do
-      expire_embargo_event = FactoryBot.build(:expire_embargo_event)
-      expect(expire_embargo_event.send(:indexed_by_search?)).to be_falsey
-    end
-  end
-
-  describe '#requested_by' do
-    it "should return the slug of the associated request's user" do
-      ire = FactoryBot.create(:info_request_event)
-      expect(ire.send(:requested_by)).to eq(ire.info_request.user_name_slug)
-    end
-  end
-
-  describe '#requested_from' do
-    it "should return an array of translated public body url_name values" do
-      ire = FactoryBot.create(:info_request_event)
-      public_body = ire.info_request.public_body
-      expect(ire.send(:requested_from)).to eq([public_body.url_name])
-    end
-  end
-
-  describe '#commented_by' do
-    context 'if it is a comment event' do
-      it "should return the commenter's url_name" do
-        user = FactoryBot.create(:user)
-        comment = FactoryBot.create(:comment, user: user)
-        ire = FactoryBot.create(:info_request_event,
-                                event_type: 'comment',
-                                comment: comment)
-        expect(ire.send(:commented_by)).to eq(user.url_name)
-      end
-    end
-
-    context 'if it is not a comment event' do
-      it 'should return a blank string' do
-        ire = FactoryBot.create(:info_request_event)
-        expect(ire.send(:commented_by)).to eq('')
-      end
-    end
-  end
-
-  describe '#variety' do
-    it 'should be an alias for event_type' do
-      ire = FactoryBot.create(:info_request_event)
-      expect(ire.send(:variety)).to eq(ire.event_type)
-    end
-  end
-
-  describe '#latest_variety' do
-    it 'should return the variety for the most recent event of the related request' do
-      ire = FactoryBot.create(:info_request_event)
-      request = ire.info_request
-      new_event = FactoryBot.create(:info_request_event,
-                                    event_type: 'comment',
-                                    info_request: request)
-      request.reload
-      expect(ire.send(:latest_variety)).to eq('comment')
-    end
-  end
-
-  describe '#latest_status' do
-    it 'should return the calculated_state of the most recent event of the related request' do
-      ire = FactoryBot.create(:info_request_event)
-      request = ire.info_request
-      new_event = FactoryBot.create(:info_request_event,
-                                    event_type: 'comment',
-                                    info_request: request)
-      new_event.set_calculated_state!('internal_review')
-      request.reload
-      expect(ire.send(:latest_status)).to eq('internal_review')
-    end
-  end
-
-  describe '#filetype' do
-    context 'a response event' do
-      let(:ire) { ire = FactoryBot.create(:response_event) }
-
-      it 'should raise an error if there is not incoming_message' do
-        ire.incoming_message = nil
-        expect { ire.send(:filetype) }.to raise_error.
-          with_message(/event type is 'response' but no incoming message for event/)
-      end
-
-      it 'returns an empty array if there are no attachments' do
-        info_request = ire.info_request
-        expect(ire.send(:filetype)).to eq([])
-      end
-
-      it 'returns an array with the attachment file type' do
-        info_request = ire.info_request
-        incoming = FactoryBot.create(:incoming_message, :with_pdf_attachment,
-                                     info_request: info_request)
-        ire.incoming_message = incoming
-        expect(ire.send(:filetype)).to eq(%w[pdf])
-      end
-
-      it 'returns separate entries for each attachment type' do
-        info_request = ire.info_request
-        incoming = FactoryBot.create(
-          :incoming_message,
-          foi_attachments_factories: [[:pdf_attachment], [:rtf_attachment]],
-          info_request: info_request
-        )
-        ire.incoming_message = incoming
-        expect(ire.send(:filetype)).to eq(%w[pdf rtf])
-      end
-    end
-
-    context 'not a response event' do
-      it 'returns an empty array' do
-        ire = FactoryBot.create(:info_request_event, event_type: 'comment')
-        expect(ire.send(:filetype)).to eq([])
-      end
-    end
-  end
-
   describe '#foi_attachment' do
     it 'loads FoiAttachment from params as if it was an association' do
       event = FactoryBot.build(
         :info_request_event, params: { attachment_id: 1 }
       )
 
-      attachment = mock_model(FoiAttachment)
+      attachment = instance_double(FoiAttachment)
       allow(FoiAttachment).to receive(:find).with(1).and_return(attachment)
 
       expect(event.foi_attachment).to eq(attachment)

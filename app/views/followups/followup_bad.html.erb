@@ -1,10 +1,10 @@
-<% if @incoming_message.nil? || !@incoming_message.valid_to_reply_to? %>
+<% if @incoming_message.nil? || !@incoming_message.followup_to_sender? %>
   <% @title = _("Unable to send follow up message to {{username}}", :username => OutgoingMailer.name_for_followup(@info_request, nil)) %>
 <% else %>
   <% @title = _("Unable to send a reply to {{username}}", :username => OutgoingMailer.name_for_followup(@info_request, @incoming_message)) %>
 <% end %>
 
-<h1><%= @title %></h1>
+<%= page_band %>
 
 <% if @reason == 'not_apply' %>
   <!-- we should never get here, but just in case give a sensible message -->
@@ -38,13 +38,6 @@
           'up and asking. If you manage to find one, then please ' \
           '<a href="{{help_url}}">send it to us</a>.',
           :help_url => help_contact_path.html_safe) %>
-  </p>
-<% elsif @reason == 'external' %>
-  <p>
-    <%= _("Followups cannot be sent for this request, as it was made " \
-          "externally, and published here by {{public_body_name}} on the " \
-          "requester's behalf.",
-          :public_body_name => @info_request.public_body.name) %>
   </p>
 <% else %>
   <% raise _("unknown reason ") + @reason %>

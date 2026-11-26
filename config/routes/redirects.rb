@@ -7,7 +7,7 @@ info_request_redirect = redirect do |params, request|
   raise ActiveRecord::RecordNotFound unless info_request
 
   # check if current user can read the request
-  ability = Ability.new(User.authenticate_from_session(request.session))
+  ability = Ability.new(Authentication::Session.user(request))
   raise ActiveRecord::RecordNotFound if ability.cannot?(:read, info_request)
 
   # split path components
@@ -43,6 +43,8 @@ get '/request/:id(/*suffix)',
   constraints: { id: /\d+/, suffix: %r(report/new) },
   to: info_request_redirect
 
+# Widgets were removed. For someone who can read the request, the old link
+# still redirects to the widget URL, now a 404, as it did while switched off.
 get '/request/:id(/*suffix)',
   constraints: { id: /\d+/, suffix: %r(widget(/new)?) },
   to: info_request_redirect
@@ -52,13 +54,11 @@ get '/:prefix/request/:url_title',
   to: info_request_redirect
 
 get '/:prefix/request/:url_title',
-  constraints: { prefix: 'similar' },
-  to: info_request_redirect
-
-get '/:prefix/request/:url_title',
   constraints: { prefix: 'upload' },
   to: info_request_redirect
 
+# Comments (annotations) were removed. For someone who can read the request,
+# the old link still redirects to the annotation URL, now a 404.
 get '/:prefix/request/:url_title',
   constraints: { prefix: 'annotate' },
   to: info_request_redirect
@@ -67,6 +67,9 @@ get '/:prefix/request/:url_title',
   constraints: { prefix: /(track|feed)/ },
   to: info_request_redirect
 
+# The request game was removed. For someone who can read the request, the old
+# link still redirects to the game's URL, now a 404, as it did while switched
+# off.
 get '/:prefix/request/:url_title',
   constraints: { prefix: 'categorise' },
   to: info_request_redirect
@@ -90,14 +93,18 @@ get ':locale',
 
 get ':locale/*path',
   constraints: locale_constraint,
-  to: redirect('%{path}?locale=%{locale}')
+  to: redirect { |params, _request|
+    path = params[:path].to_s.sub(%r{\A[/\\]+}, '')
+    path = path.split('/').map do |part|
+      URI.encode_uri_component(part)
+    end.join('/')
+    "/#{path}?locale=#{URI.encode_uri_component(params[:locale].to_s)}"
+  }
 
-constraints FeatureConstraint.new(:alaveteli_pro) do
-  get '/alaveteli_pro/info_requests/:url_title',
-    constraints: { url_title: /(?!new).*/ },
-    to: redirect('/request/%{url_title}')
+get '/alaveteli_pro/info_requests/:url_title',
+  constraints: { url_title: /(?!new).*/ },
+  to: redirect('/request/%{url_title}')
 
-  get '/alaveteli_pro', to: redirect('/pro/dashboard')
+get '/alaveteli_pro', to: redirect('/pro/dashboard')
 
-  get '/alaveteli_pro/*path', to: redirect('/pro/%{path}')
-end
+get '/alaveteli_pro/*path', to: redirect('/pro/%{path}')

@@ -130,7 +130,7 @@ RSpec.describe AttachmentManagement::Attribution do
     sign_in(owner)
     get "/request/#{info_request.url_title}"
     page = Nokogiri::HTML(response.body)
-    expect(page.css('.attachment__attribution').
+    expect(page.css('.requester-page .attachment__attribution').
              map { |node| node.text.squish }).to match_array(lines)
     expect(page.at_css("#attachment-#{notes.id} .attachment__attribution")).
       to be_present

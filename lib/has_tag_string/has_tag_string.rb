@@ -10,7 +10,7 @@ module HasTagString
   # Represents one tag of one model.
   # The migration to make this is currently only in WDTK code.
   class HasTagStringTag < ActiveRecord::Base
-    # TODO: strip_attributes
+    # TODO: normalise whitespace (see Whitespace)
 
     belongs_to :model, polymorphic: true, optional: true
 
@@ -19,11 +19,6 @@ module HasTagString
     def self.from_string(tag)
       name, value = split_tag_into_name_value(tag)
       new(name: name, value: value)
-    end
-
-    # Return instance of the model that this tag tags
-    def tagged_model
-      model_type.constantize.find(model_id)
     end
 
     # For display purposes, returns the name and value as a:b, or
@@ -37,7 +32,7 @@ module HasTagString
     # Parses a text version of one single tag, such as 'a:b' and returns
     # the name and value, with nil for value if there isn't one.
     def self.split_tag_into_name_value(tag)
-      sections = tag.split(/:/)
+      sections = tag.split(":")
       name = sections[0]
       if sections[1]
         value = sections[1, sections.size].join(':')
@@ -81,13 +76,6 @@ module HasTagString
       tags.map(&:name_and_value).join(' ')
     end
 
-    # Returns the tags the model has, as an array of pairs of key/value
-    # (this can't be a dictionary as you can have multiple instances of a
-    # key with different values)
-    def tag_array
-      tags.map { |t| [t.name, t.value] }
-    end
-
     # Returns a list of all the strings someone might want to search for.
     # So that is the key by itself, or the key and value.
     # e.g. if a request was tagged openlylocal_id:12345, they might
@@ -104,7 +92,7 @@ module HasTagString
     end
 
     # Test to see if class is tagged with the given tag
-    def has_tag?(tag_as_string) # rubocop:disable Naming::PredicateName
+    def has_tag?(tag_as_string)
       tags.each do |tag|
         return true if tag.name == tag_as_string
       end
@@ -178,9 +166,11 @@ module HasTagString
   ######################################################################
   # Main entry point, add has_tag_string to your model.
   module HasMethods
-    def has_tag_string # rubocop:disable Naming/PredicateName
+    def has_tag_string
       klass = to_s
-      has_many :tags, -> { where(model_type: klass) },
+      # In the order they were added, which is the order of a tag string.
+      # The database keeps no order of its own.
+      has_many :tags, -> { where(model_type: klass).order(:id) },
                foreign_key: "model_id",
                class_name: 'HasTagString::HasTagStringTag'
 
@@ -190,4 +180,6 @@ module HasTagString
   end
 end
 
-ActiveRecord::Base.extend HasTagString::HasMethods
+ActiveSupport.on_load(:active_record) do
+  extend HasTagString::HasMethods
+end

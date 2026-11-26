@@ -1,5 +1,7 @@
 class OutgoingMessage
   module Template
+    # Default letter template for a follow-up addressed to the sender of an
+    # IncomingMessage, using a named salutation and "Yours sincerely,".
     class IncomingMessageFollowup
       def body(opts = {})
         assert_required_keys(opts, :public_body_name)
@@ -29,7 +31,7 @@ class OutgoingMessage
         msg += letter(replacements)
         msg += "\n\n\n\n"
         msg += signoff(replacements)
-        msg += "\n\n"
+        msg + "\n\n"
       end
 
       def assert_required_keys(hash, *required_keys)

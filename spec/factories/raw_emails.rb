@@ -8,6 +8,7 @@
 #  erased_at        :datetime
 #  message_id       :string
 #  message_checksum :string
+#  read_at          :datetime
 #
 
 FactoryBot.define do

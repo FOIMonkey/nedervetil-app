@@ -11,6 +11,9 @@
 #  updated_at :datetime         not null
 #
 
+# Audit record of a User's old and new email addresses, written when the user
+# completes their own email change (PendingEmailChange#complete). An admin's
+# edit of the address is not recorded, and erasure deletes these rows.
 class User::EmailHistory < ApplicationRecord
   belongs_to :user
 

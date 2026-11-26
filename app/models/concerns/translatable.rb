@@ -1,8 +1,11 @@
+# Shared nested-translation helpers for Globalize models, ordering translations
+# by available locales, building missing locales and ignoring blank submissions.
 module Translatable
   extend ActiveSupport::Concern
 
   included do
-    accepts_nested_attributes_for :translations, reject_if: :empty_translation_in_params?
+    accepts_nested_attributes_for :translations,
+                                  reject_if: :empty_translation_in_params?
   end
 
   def find_translation_by_locale(locale)
@@ -14,9 +17,10 @@ module Translatable
   end
 
   def ordered_translations
+    locales = AlaveteliLocalization.available_locales
     translations.
-      select { |translation| AlaveteliLocalization.available_locales.include?(translation.locale.to_s) }.
-      sort_by { |translation| AlaveteliLocalization.available_locales.index(translation.locale.to_s) }
+      select { |translation| locales.include?(translation.locale.to_s) }.
+      sort_by { |translation| locales.index(translation.locale.to_s) }
   end
 
   def build_all_translations

@@ -1,5 +1,8 @@
 class OutgoingMessage
   module Template
+    # Default letter template for an initial request or general authority
+    # follow-up, falling back to a placeholder salutation before an authority
+    # is chosen.
     class InitialRequest
       def body(opts = {})
         assert_required_keys(opts, :public_body_name)
@@ -44,7 +47,7 @@ class OutgoingMessage
         msg += letter(replacements)
         msg += "\n\n\n\n"
         msg += signoff(replacements)
-        msg += "\n\n"
+        msg + "\n\n"
       end
 
       def assert_required_keys(hash, *required_keys)

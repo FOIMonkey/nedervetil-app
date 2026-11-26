@@ -3,17 +3,20 @@ require 'integration/alaveteli_dsl'
 
 RSpec.describe 'when handling incoming mail' do
   let(:info_request) { FactoryBot.create(:info_request) }
+  let(:requester) { login(info_request.user) }
 
-  it "receives incoming messages, sends email to requester, and shows them" do
+  it "receives incoming messages, puts them in the requester's daily summary, and shows them" do
     receive_incoming_mail('incoming-request-plain.eml',
                           to: info_request.incoming_email)
-    deliveries = ActionMailer::Base.deliveries
-    expect(deliveries.size).to eq(1)
-    mail = deliveries[0]
-    expect(mail.to).to eq([info_request.user.email])
-    expect(mail.body).to match(/You have a new response to the Freedom of Information request/)
-    visit show_request_path info_request.url_title
-    expect(page).to have_content("No way!")
+    expect(ActionMailer::Base.deliveries).to be_empty
+    notification = info_request.user.notifications.last
+    expect(notification).to be_daily
+    expect(notification.info_request_event.incoming_message).
+      to eq(info_request.incoming_messages.last)
+    using_session(requester) do
+      visit show_request_path info_request.url_title
+      expect(page).to have_content("No way!")
+    end
   end
 
   it "makes attachments available for download" do
@@ -33,68 +36,30 @@ RSpec.describe 'when handling incoming mail' do
       file_name: 'hello world.txt'
     )
 
-    visit attachment_1_path
-    visit attachment_2_path
-    perform_enqueued_jobs
+    using_session(requester) do
+      visit attachment_1_path
+      visit attachment_2_path
+      perform_enqueued_jobs
 
-    visit attachment_1_path
-    expect(page.response_headers['Content-Type']).to eq("text/plain")
-    expect(page).to have_content "Second hello"
+      visit attachment_1_path
+      expect(page.response_headers['Content-Type']).
+        to eq('text/plain; charset=utf-8')
+      expect(page).to have_content "Second hello"
 
-    visit attachment_2_path
-    expect(page.response_headers['Content-Type']).to eq("text/plain")
-    expect(page).to have_content "First hello"
+      visit attachment_2_path
+      expect(page.response_headers['Content-Type']).
+        to eq('text/plain; charset=utf-8')
+      expect(page).to have_content "First hello"
+    end
   end
 
   it "converts message body to UTF8" do
     receive_incoming_mail('iso8859_2_raw_email.eml',
                           to: info_request.incoming_email)
-    visit show_request_path(info_request.url_title)
-    expect(page).to have_content "tënde"
-  end
-
-  it "generates a valid HTML version of plain text attachments" do
-    receive_incoming_mail('incoming-request-two-same-name.eml',
-                          to: info_request.incoming_email)
-    attachment_path = get_attachment_as_html_path(
-      info_request.url_title,
-      incoming_message_id: info_request.incoming_messages.first.id,
-      part: 2,
-      file_name: 'hello world.txt.html'
-    )
-
-    visit attachment_path
-    perform_enqueued_jobs
-
-    visit attachment_path
-    expect(page.response_headers['Content-Type']).to eq("text/html; charset=utf-8")
-    expect(page).to have_content "Second hello"
-  end
-
-  it "generates a valid HTML version of PDF attachments" do
-    receive_incoming_mail('incoming-request-pdf-attachment.eml',
-                          to: info_request.incoming_email)
-    attachment_as_html_path = get_attachment_as_html_path(
-      info_request.url_title,
-      incoming_message_id: info_request.incoming_messages.first.id,
-      part: 2,
-      file_name: 'fs 50379341.pdf.html'
-    )
-
-    attachment_url = get_attachment_url(
-      info_request.url_title,
-      incoming_message_id: info_request.incoming_messages.first.id,
-      part: 2,
-      file_name: 'fs 50379341.pdf',
-      cookie_passthrough: 1
-    )
-
-    visit attachment_as_html_path
-    perform_enqueued_jobs
-
-    visit attachment_as_html_path
-    expect(page.response_headers['Content-Type']).to eq("text/html; charset=utf-8")
-    expect(page).to have_element('iframe', src: attachment_url)
+    using_session(requester) do
+      visit show_request_path(info_request.url_title)
+      expect(page).to have_content "tënde"
+    end
   end
 
   it "redirects back to incoming message when the attachment can't be found" do
@@ -102,14 +67,18 @@ RSpec.describe 'when handling incoming mail' do
                           to: info_request.incoming_email)
     # asking for an attachment by the wrong filename should result in
     # redirecting back to the incoming message
-    visit get_attachment_as_html_path(
-      info_request.url_title,
-      incoming_message_id: info_request.incoming_messages.first.id,
-      part: 2,
-      file_name: 'hello world.txt.baz.html'
-    )
+    using_session(requester) do
+      visit get_attachment_path(
+        info_request.url_title,
+        incoming_message_id: info_request.incoming_messages.first.id,
+        part: 2,
+        file_name: 'hello world.txt.baz'
+      )
 
-    expect(current_path).to eq(show_request_path(info_request.url_title))
+      expect(page).to have_current_path(
+        show_request_path(info_request.url_title), ignore_query: true
+      )
+    end
   end
 
   it "treats attachments with unknown extensions as binary" do
@@ -123,21 +92,26 @@ RSpec.describe 'when handling incoming mail' do
       file_name: 'hello.qwglhm'
     )
 
-    visit attachment_path
-    perform_enqueued_jobs
+    using_session(requester) do
+      visit attachment_path
+      perform_enqueued_jobs
 
-    visit attachment_path
-    expect(page.response_headers['Content-Type']).to eq("application/octet-stream")
-    expect(page).to have_content "an unusual sort of file"
+      visit attachment_path
+      expect(page.response_headers['Content-Type']).
+        to eq("application/octet-stream")
+      expect(page).to have_content "an unusual sort of file"
+    end
   end
 
-  it "does not automatically extract attachments after receiving email" do
+  it "extracts attachments in the background, not while receiving email" do
     receive_incoming_mail('incoming-request-plain.eml',
                           to: info_request.incoming_email)
-    perform_enqueued_jobs
-
     im = info_request.incoming_messages.first
     expect(im.foi_attachments).to be_empty
+
+    # Reading the reply in the background parses it.
+    perform_enqueued_jobs
+    expect(im.foi_attachments.reload).not_to be_empty
   end
 
   it "extract attachments when inbound email contains an Excel spreadsheet" do

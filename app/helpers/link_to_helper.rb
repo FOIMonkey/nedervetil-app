@@ -1,10 +1,9 @@
-# app/helpers/link_to_helper.rb:
-# This module is included into all controllers via controllers/application.rb
-# -
-#
 # Copyright (c) 2007 UK Citizens Online Democracy. All rights reserved.
 # Email: hello@mysociety.org; WWW: http://www.mysociety.org/
 
+# URL, path, link and DOM-ID helpers for requests, messages, attachments,
+# authorities, users and locale switching, shared by views, controllers,
+# mailers and models.
 module LinkToHelper
   # Links to various models
 
@@ -53,16 +52,8 @@ module LinkToHelper
     foi_attachment_url(foi_attachment, options.merge(only_path: true))
   end
 
-  def comment_url(comment, options = {})
-    request_url(comment.info_request, options.merge(anchor: "comment-#{comment.id}"))
-  end
-
-  def comment_path(comment, options = {})
-    comment_url(comment, options.merge(only_path: true))
-  end
-
-  # Used in mailers where we want to give a link to a new response. Requests
-  # are private, so link via sign-in back to the message.
+  # Used in mailers where we want to give a link to a new response. Every
+  # request is private to its requester, so the link goes through sign-in.
   def new_response_url(_info_request, incoming_message)
     message_url = incoming_message_url(incoming_message, cachebust: true)
     signin_url(r: message_url)
@@ -70,7 +61,7 @@ module LinkToHelper
 
   # Respond to request
   def respond_to_last_url(info_request, options = {})
-    last_response = info_request.get_last_public_response
+    last_response = info_request.last_public_response
     if last_response.nil?
       new_request_followup_url(info_request.url_title, options)
     else
@@ -87,15 +78,15 @@ module LinkToHelper
 
   # Public bodies
   def public_body_url(public_body, options = {})
-    public_body.url_name.nil? ? '' : show_public_body_url(options.merge(url_name: public_body.url_name))
+    if public_body.url_name.nil?
+      ''
+    else
+      show_public_body_url(options.merge(url_name: public_body.url_name))
+    end
   end
 
   def public_body_path(public_body, options = {})
     public_body_url(public_body, options.merge(only_path: true))
-  end
-
-  def public_body_link_short(public_body)
-    link_to public_body.short_or_long_name, public_body_path(public_body)
   end
 
   def public_body_link(public_body)
@@ -126,152 +117,23 @@ module LinkToHelper
   end
 
   def user_link_for_request(request)
-    if request.is_external?
-      user_name = request.external_user_name || _("Anonymous user")
-      if !request.external_url.nil?
-        link_to user_name, request.external_url
-      else
-        user_name
-      end
-    else
-      link_to request.user.name, user_path(request.user)
-    end
+    link_to request.user.name, user_path(request.user)
   end
 
-  def user_admin_link_for_request(request, external_text=nil, internal_text=nil)
-    if request.is_external?
-      external_text || (request.external_user_name || _("Anonymous user")) + " (external)"
-    else
-      link_to(internal_text || request.user.name, admin_user_url(request.user))
-    end
+  def user_admin_link_for_request(request, text = nil)
+    link_to(text || request.user.name, admin_user_url(request.user))
   end
 
-  def external_user_link(request, text = nil)
-    if request.external_user_name
-      request.external_user_name
-    else
-      text ||= _("Anonymous user")
-      link_to(text, help_privacy_path(anchor: 'anonymous'))
-    end
+  def request_user_link_absolute(request)
+    user_link_absolute(request.user, request.safe_from_name)
   end
 
-  def external_user_link_absolute(request, text = nil)
-    if request.external_user_name
-      request.external_user_name
-    else
-      text ||= _("Anonymous user")
-      link_to(text, help_privacy_url(anchor: 'anonymous'))
-    end
+  def request_user_link(request)
+    user_link(request.user, request.safe_from_name)
   end
 
-  def request_user_link_absolute(request, anonymous_text = nil)
-    if request.is_external?
-      external_user_link_absolute(request, anonymous_text)
-    else
-      user_link_absolute(request.user, request.safe_from_name)
-    end
-  end
-
-  def request_user_link(request, anonymous_text = nil)
-    if request.is_external?
-      external_user_link(request, anonymous_text)
-    else
-      user_link(request.user, request.safe_from_name)
-    end
-  end
-
-  def user_or_you_link(user)
-    if @user && user == @user
-      link_to h("you"), user_path(user)
-    else
-      link_to h(user.name), user_path(user)
-    end
-  end
-
-  def user_or_you_capital(user)
-    if @user && user == @user
-      h("You")
-    else
-      h(user.name)
-    end
-  end
-
-  def user_or_you_capital_link(user)
-    link_to user_or_you_capital(user), user_path(user)
-  end
-
-  def user_admin_link(user, name="admin")
+  def user_admin_link(user, name = "admin")
     link_to name, admin_user_url(user)
-  end
-
-  # Tracks. feed can be 'track' or 'feed'
-  def do_track_url(track_thing, feed = 'track', options = {})
-    if track_thing.track_type == 'request_updates'
-      track_request_url(options.merge(url_title: track_thing.info_request.url_title, feed: feed))
-    elsif track_thing.track_type == 'all_new_requests'
-      track_list_url(options.merge(view: 'recent', feed: feed))
-    elsif track_thing.track_type == 'all_successful_requests'
-      track_list_url(options.merge(view: 'successful', feed: feed))
-    elsif track_thing.track_type == 'public_body_updates'
-      track_public_body_url(options.merge(url_name: track_thing.public_body.url_name, feed: feed))
-    elsif track_thing.track_type == 'user_updates'
-      track_user_url(options.merge(url_name: track_thing.tracked_user.url_name, feed: feed))
-    elsif track_thing.track_type == 'search_query'
-      track_search_url(options.merge(query_array: track_thing.track_query, feed: feed))
-    else
-      raise "unknown tracking type " + track_thing.track_type
-    end
-  end
-
-  def do_track_path(track_thing, feed = 'track', options = {})
-    do_track_url(track_thing, feed, options.merge(only_path: true))
-  end
-
-  # General pages.
-  def search_url(query, options = nil)
-    if query.is_a?(Array)
-      query -= ["", nil]
-      query = query.join("/")
-    end
-    routing_info = { controller: 'general',
-                    action: 'search',
-                    combined: query,
-                    view: nil }
-    routing_info = options.merge(routing_info) unless options.nil?
-
-    if routing_info.is_a?(Hash)
-      routing_info = ActionController::Parameters.new(routing_info)
-    end
-
-    allowed_keys =
-      %w[query latest_status view combined only_path controller action page]
-    unpermitted = routing_info.keys - allowed_keys
-    routing_info = routing_info.reject { |k| unpermitted.include?(k) }.permit!
-
-    url = url_for(routing_info)
-    # Here we can't escape the slashes, as RFC 2396 doesn't allow slashes
-    # within a path component. Rails is assuming when generating URLs that
-    # either there aren't slashes, or we are in a query part where you can
-    # have escaped slashes. Apache complains if you do include slashes
-    # within a path component.
-    # See http://www.webmasterworld.com/apache/3279075.htm
-    # and also 3.3 of http://www.ietf.org/rfc/rfc2396.txt
-    # It turns out this is a regression in Rails 2.1, caused by this bug fix:
-    #   http://rails.lighthouseapp.com/projects/8994/tickets/144-patch-bug-in-rails-route-globbing
-    url.gsub("%2F", "/")
-  end
-
-  def search_path(query, options = {})
-    search_url(query, options.merge(only_path: true))
-  end
-
-  def search_link(query)
-    link_to h(query), search_url(query)
-  end
-
-  # About page URLs
-  def about_url(options = {})
-    help_general_url(options.merge(template: 'about'))
   end
 
   def unhappy_url(info_request = nil, options = {})
@@ -290,12 +152,6 @@ module LinkToHelper
   def current_path_with_locale(locale)
     path_with_query(safe_request_path,
                     request.query_parameters.merge('locale' => locale))
-  end
-
-  def current_path_as_json
-    unsafe_keys = %w[protocol host]
-    sanitized_params = params.reject { |k| unsafe_keys.include?(k) }.permit!
-    url_for(sanitized_params.merge(format: :json, only_path: true))
   end
 
   def incoming_message_dom_id(incoming_message)
@@ -345,14 +201,5 @@ module LinkToHelper
     end
 
     [prefix, param_key, record.to_param].compact.join('-')
-  end
-
-  def add_query_params_to_url(url, new_params)
-    uri = Addressable::URI.parse(url)
-    uri.query = Rack::Utils.parse_nested_query(uri.query).
-      with_indifferent_access.
-      merge(new_params).
-      to_param
-    uri.to_s
   end
 end

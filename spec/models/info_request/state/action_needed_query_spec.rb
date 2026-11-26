@@ -5,7 +5,8 @@ RSpec.describe InfoRequest::State::ActionNeededQuery do
     it 'includes those that have a new response, need clarification
         and are overdue or very_overdue' do
       response_received = FactoryBot.create(:awaiting_description)
-      needing_clarification = FactoryBot.create(:waiting_clarification_info_request)
+      needing_clarification =
+        FactoryBot.create(:waiting_clarification_info_request)
       overdue = FactoryBot.create(:overdue_request)
       very_overdue = FactoryBot.create(:very_overdue_request)
       results = described_class.new.call

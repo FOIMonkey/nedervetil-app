@@ -1,3 +1,5 @@
+# Coordinates FastGettext and I18n available locales, fallback chains, default
+# locale, session locale selection and scoped locale blocks.
 class AlaveteliLocalization
   require_relative 'alaveteli_localization/railtie'
 
@@ -22,7 +24,6 @@ class AlaveteliLocalization
     end
     # rubocop:enable Naming/AccessorMethodName
 
-    # rubocop:disable Naming/AccessorMethodName
     def set_session_locale(*args)
       requested = args.compact.delete_if(&:empty?).first
       new_locale = FastGettext.best_locale_in(requested) || default_locale
@@ -33,7 +34,6 @@ class AlaveteliLocalization
 
       locale.canonicalize.to_s
     end
-    # rubocop:enable Naming/AccessorMethodName
 
     def with_locale(tmp_locale = nil, &block)
       tmp_locale = Locale.parse(tmp_locale).hyphenate.to_sym if tmp_locale

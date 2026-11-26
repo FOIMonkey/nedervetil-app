@@ -1,3 +1,4 @@
+# Registers locale subclass autoloads and defines AlaveteliLocalization::Locale.
 class AlaveteliLocalization
   autoload :HyphenatedLocale, 'alaveteli_localization/hyphenated_locale'
   autoload :UnderscorredLocale, 'alaveteli_localization/underscorred_locale'
@@ -6,13 +7,11 @@ class AlaveteliLocalization
   class Locale
     include Comparable
 
-    # rubocop:disable Layout/LineLength
     PARSERS = {
       /\A[a-z]{2,3}-[A-Z]{2,3}\z/ => AlaveteliLocalization::HyphenatedLocale,
       /\A[a-z]{2,3}_[A-Z1-9]{2,3}\z/ => AlaveteliLocalization::UnderscorredLocale,
       /\A[a-z]{2,3}\z/ => AlaveteliLocalization::Locale
     }.freeze
-    # rubocop:enable Layout/LineLength
 
     def self.parse(identifier)
       return identifier if identifier.is_a?(Locale)

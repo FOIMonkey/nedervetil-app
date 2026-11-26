@@ -11,7 +11,7 @@ class CreateCategoryTranslationTables < ActiveRecord::Migration[4.2] # 3.2
     default_locale = AlaveteliLocalization.default_locale
 
     fields = { title: :text,
-              description: :text }
+               description: :text }
     PublicBodyCategory.create_translation_table!(fields)
 
     # copy current values across to the default locale

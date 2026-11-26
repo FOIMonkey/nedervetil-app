@@ -1,5 +1,7 @@
 class InfoRequest
   module State
+    # Query for InfoRequest.other: selects classified requests in postal,
+    # internal review, appeal, error or administrator-managed states.
     class OtherQuery
       def initialize(relation = InfoRequest)
         @relation = relation

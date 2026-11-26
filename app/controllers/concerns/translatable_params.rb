@@ -1,3 +1,5 @@
+# Permits base attributes and nested Globalize translations_attributes hashes
+# in admin controllers for Translatable models.
 module TranslatableParams
   def translatable_params(params, **keys)
     return {} unless params

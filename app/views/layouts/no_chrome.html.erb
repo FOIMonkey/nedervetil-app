@@ -4,7 +4,6 @@
     <meta charset="utf-8">
     <meta name="turbo-cache-control" content="no-cache">
     <%= csrf_meta_tags %>
-    <%= csp_meta_tag %>
 
     <title>
       <% if @title %>
@@ -14,10 +13,12 @@
       <% end %>
     </title>
 
+    <%= javascript_importmap_tags("public") %>
+
     <%= render :partial => 'general/responsive_stylesheets' %>
     <%= render :partial => 'layouts/favicon' %>
-    <%= javascript_importmap_tags("public") %>
   </head>
+  <%# The sign-in form in a dialog's frame: off Turbo Drive (doc/FORK.md). %>
   <body data-turbo="false" data-controller="confirm method-link form-lock" data-action="click->confirm#click submit->confirm#submit click->method-link#follow submit->form-lock#lock">
     <div class="entirebody">
       <div id="content">

@@ -1,0 +1,52 @@
+# Names `bin/rails dead_code` must not report, with the reason each is used.
+# Keys are regular expressions matched against the whole reported name.
+
+partials:
+  "admin/general/.+": admin/general/timeline renders event.event_type
+  "request/events/.+": request/_correspondence renders request/events/#{event_type}
+  "request/describe_notices/.+": ClassificationsController renders describe_notices/#{status}
+  "request/request_subtitle/allow_new_responses_from/.+": rendered by allow_new_responses_from value
+  "outgoing_messages/delivery_statuses/.+": rendered by delivery status
+  "general/default_footer": layouts/default_mailer renders general/#{@footer_template}_footer
+  "active_storage/blobs/blob": Action Text renders it for attachments
+  "layouts/action_text/contents/content": Action Text's content layout
+  "outgoing_message/snippets/snippet": render @refusal_advice.snippets (OutgoingMessage::Snippet)
+  "help/refusal_advice": render @refusal_advice (RefusalAdvice#to_partial_path)
+  "alaveteli_pro/draft_info_request_batches/draft_info_request_batch": render of a DraftInfoRequestBatch
+  "alaveteli_pro/draft_info_requests/draft_info_request": render of a DraftInfoRequest
+  "alaveteli_pro/info_request_batches/info_request_batch": render of an InfoRequestBatch
+  "admin/topic_(holders|questions|routes|sources)/form": admin/topic_rows/new and edit render 'form', which Rails finds in each subclass of Admin::TopicRowsController's own view folder
+
+stimulus:
+  "modal": no markup in core, the themes or the add-on attaches it, but responsive/modal.scss styles it and both themes load that file; remove the three together with a theme change
+
+methods:
+  ".+#(.+_transition_label)": InfoRequest::State::Transitions sends "#{user}_#{state}_transition_label"
+  ".+#status_text_.+": InfoRequestHelper sends "status_text_#{status}"
+  ".+#.+_both_links": Admin::LinkHelper sends "#{type}_both_links"
+  ".+#prepare_.+": AttachmentManagement::RevisionsController sends "prepare_#{kind}"
+  ".+#.+_expired": Notification sends "#{event_type}_expired"
+  "app/models/info_request/state/calculator.rb#.+_states": the calculator sends "#{group}_states"
+  "app/controllers/admin_controller.rb#handle_unverified_request": Rails CSRF hook
+  "app/jobs/foi_attachment/mask_job.rb#rescue_with_handler": Active Job calls it for an error a run raises
+  "app/controllers/concerns/signing_in.rb#form_authenticity_token": Rails CSRF hook
+  "app/controllers/users/passwords_controller.rb#assert_reset_token_passed": Devise::PasswordsController callback
+  "app/models/authentication/failure_app.rb#store_location!": Devise::FailureApp hook
+  "app/models/user/authentication.rb#authenticatable_salt": Devise session hook (serialize_into_session)
+  "app/models/topic_change.rb#readonly\\?": Active Record persistence hook
+  "app/models/info_request_event.rb#initialize_copy": Ruby dup/clone hook
+  "app/helpers/pagination_helper.rb#rel_value": will_paginate LinkRenderer hook
+  "app/models/incoming_message/parsing_lock.rb#.+": Active Record transaction callback hooks
+  "app/models/user/slug.rb#.+": friendly_id hooks
+  "app/validators/not_nil_validator.rb#validate_each": ActiveModel::EachValidator hook
+  "lib/configuration.rb#(method_missing|respond_to_missing\\?)": configuration readers
+  "lib/core_ext/.+": overrides of Rails internals
+  "lib/custom_cops/.+": RuboCop callbacks
+  "lib/routing_filters.rb#optimize_helper\\?": Rails routing override
+
+routes:
+  "help#action": /help/:template exists to build help_general_url; specific help routes and the theme's help_site serve the pages
+
+actions:
+  "alaveteli_pro/batch_request_authority_searches#(search|browse)": index calls public_send(mode)
+  "devise/(unlocks|omniauth_callbacks)#.+": Devise's own controllers for modules User doesn't use (lockable, omniauthable); loaded with the gem, never routed

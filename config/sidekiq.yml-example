@@ -4,11 +4,15 @@ development:
 production:
   :concurrency: 2
 
+# Every queue the app enqueues to: upstream's default and low, plus documents
+# and reply reading. A worker that serves only the first two never processes
+# documents or reads replies. Action Mailbox's jobs run on default under
+# Rails 8.1's defaults. Production may split the queues across workers.
 :queues:
   - default
-  - xapian
   - low
+  - documents
+  - incoming_attention
 
 :limits:
-  xapian: 1
   low: 1

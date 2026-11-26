@@ -1,3 +1,5 @@
+# Sends scheduled reminder emails to administrators when public holiday records
+# need updating.
 class ReminderMailer < ApplicationMailer
   # Send reminder message to administrator
   def public_holidays(name, email, subject)

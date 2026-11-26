@@ -1,8 +1,10 @@
 require 'spec_helper'
+require 'integration/alaveteli_dsl'
 
 RSpec.describe 'Turbo Drive', js: true do
+  # The footer's contact link, in core and in both themes.
   def click_contact_link
-    find("a[href='#{help_contact_path}']", match: :first).click
+    find("#footer a[href='#{help_contact_path}']").click
   end
 
   def opt_out(*actions)
@@ -10,10 +12,20 @@ RSpec.describe 'Turbo Drive', js: true do
       to receive(:turbo_drive?) { |c| !actions.include?(c.action_name.to_sym) }
   end
 
-  it 'follows a link with a Turbo visit, and Back restores the page' do
+  it 'is on for the public site, and full Turbo Drive is off on admin pages' do
     visit help_about_path
     expect(page.evaluate_script('Turbo.session.drive')).to be(true)
 
+    using_session(login(FactoryBot.create(:admin_user))) do
+      visit admin_request_path(FactoryBot.create(:info_request))
+      expect(page).to have_css('#content, .container', match: :first)
+      expect(page.evaluate_script('Turbo.session.drive')).to be(false)
+      expect_full_load { find('#admin-bar a', text: 'Users').click }
+    end
+  end
+
+  it 'follows a link with a Turbo visit, and Back restores the page' do
+    visit help_about_path
     expect_turbo_visit { click_contact_link }
     expect(page).to have_current_path(help_contact_path)
 
@@ -33,6 +45,16 @@ RSpec.describe 'Turbo Drive', js: true do
     visit help_about_path
     expect_full_load { click_contact_link }
     expect(page).to have_current_path(help_contact_path)
+  end
+
+  # Turbo only renders 422 failures (not 200). Signed in to bypass Turnstile,
+  # which opts the page out of Drive.
+  it "shows a failed form's errors without a full page load" do
+    using_session(login(FactoryBot.create(:user))) do
+      visit new_change_request_path
+      expect_turbo_visit { click_button 'Submit request' }
+      expect(page).to have_css('#errorExplanation')
+    end
   end
 
   # Turbo creates the new page's scripts from its own code, and the CSP's

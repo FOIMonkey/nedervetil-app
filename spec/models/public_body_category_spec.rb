@@ -35,12 +35,13 @@ RSpec.describe PublicBodyCategory do
     it 'should require a description' do
       category = PublicBodyCategory.new
       expect(category).not_to be_valid
-      expect(category.errors[:description]).to eq(["Description can't be blank"])
+      expect(category.errors[:description]).
+        to eq(["Description can't be blank"])
     end
 
     it 'validates the translations' do
       category = FactoryBot.build(:public_body_category)
-      translation = category.translations.build
+      category.translations.build
       expect(category).to_not be_valid
     end
 
@@ -58,9 +59,11 @@ RSpec.describe PublicBodyCategory do
   describe '#save' do
     it 'saves translations' do
       category = FactoryBot.build(:public_body_category)
-      category.translations_attributes = { es: { locale: 'es',
-                                                    title: 'El Category',
-                                                    description: 'Spanish description' } }
+      category.translations_attributes = {
+        es: { locale: 'es',
+              title: 'El Category',
+              description: 'Spanish description' }
+      }
 
       category.save!
       expect(PublicBodyCategory.find(category.id).translations.size).to eq(2)
@@ -71,18 +74,22 @@ RSpec.describe PublicBodyCategory do
     context 'translation_attrs is a Hash' do
       it 'does not persist translations' do
         category = FactoryBot.create(:public_body_category)
-        category.translations_attributes = { es: { locale: 'es',
-                                                      title: 'El Category',
-                                                      description: 'Spanish description' } }
+        category.translations_attributes = {
+          es: { locale: 'es',
+                title: 'El Category',
+                description: 'Spanish description' }
+        }
 
         expect(PublicBodyCategory.find(category.id).translations.size).to eq(1)
       end
 
       it 'creates a new translation' do
         category = FactoryBot.create(:public_body_category)
-        category.translations_attributes = { es: { locale: 'es',
-                                                      title: 'El Category',
-                                                      description: 'Spanish description' } }
+        category.translations_attributes = {
+          es: { locale: 'es',
+                title: 'El Category',
+                description: 'Spanish description' }
+        }
         category.save!
         category.reload
         expect(category.title(:es)).to eq('El Category')
@@ -95,10 +102,12 @@ RSpec.describe PublicBodyCategory do
                                                        description: 'Desc' } }
         category.save!
 
-        category.translations_attributes = { 'es' => { id: category.translation_for(:es).id,
-                                                       locale: 'es',
-                                                       title: 'Renamed',
-                                                       description: 'Desc' } }
+        category.translations_attributes = {
+          'es' => { id: category.translation_for(:es).id,
+                    locale: 'es',
+                    title: 'Renamed',
+                    description: 'Desc' }
+        }
         category.save!
         expect(category.title(:es)).to eq('Renamed')
       end
@@ -173,7 +182,8 @@ RSpec.describe PublicBodyCategory::Translation do
   it 'requires a description if another required attribute is assigned' do
     translation = PublicBodyCategory::Translation.new(title: 'spec')
     translation.valid?
-    expect(translation.errors[:description]).to eq(["Description can't be blank"])
+    expect(translation.errors[:description]).
+      to eq(["Description can't be blank"])
   end
 
   describe '#default_locale?' do

@@ -1,4 +1,6 @@
 class AlaveteliLocalization
+  # Boots AlaveteliLocalization with Rails, loading the .po repositories,
+  # enabling I18n fallbacks and applying configured locales.
   class Railtie < Rails::Railtie
     config.before_configuration do
       require 'rails_i18n/common_pluralizations/one_other'
@@ -10,16 +12,15 @@ class AlaveteliLocalization
       require 'routing_filters'
       require 'i18n_fixes'
 
-      paths = ['locale']
-      paths << 'locale_alaveteli_pro' if AlaveteliConfiguration.
-        enable_alaveteli_pro
+      # The inbox's wording is in locale_alaveteli_pro, for every account.
+      paths = %w[locale locale_alaveteli_pro]
 
       repos = paths.map do |path|
         FastGettext::TranslationRepository.build('app', path: path, type: :po)
       end
       AlaveteliLocalization.set_default_text_domain('app', repos)
 
-      I18n::Backend::Simple.send(:include, I18n::Backend::Fallbacks)
+      I18n::Backend::Simple.include I18n::Backend::Fallbacks
 
       set_locales
     end

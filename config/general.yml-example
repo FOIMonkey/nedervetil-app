@@ -45,6 +45,11 @@ SITE_NAME: 'Alaveteli'
 # ---
 DOMAIN: 'www.example.org'
 
+# Additional Host header names accepted in production alongside DOMAIN and
+# loopback (e.g. an apex domain or internal proxy hostname).
+#
+# ALLOWED_HOSTS: []
+
 # If true forces everyone (in the production environment) to use encrypted
 # connections (via https) by redirecting unencrypted connections. This is
 # *highly* recommended so that logins can't be intercepted by naughty people.
@@ -66,23 +71,6 @@ FORCE_SSL: true
 # ---
 ISO_COUNTRY_CODE: GB
 
-# ISO currency code of the currency Alaveteli Professional cost should be
-# displayed in.
-# (https://en.wikipedia.org/wiki/ISO_4217#Active_codes)
-#
-# Doesn't affect what currency the plans are setup in so this should match what
-# is configured at Stripe.com
-# (https://stripe.com/docs/currencies)
-#
-# ISO_CURRENCY_CODE - String currency code (default: GBP)
-#
-# Examples:
-#
-#   ISO_CURRENCY_CODE: GBP
-#
-# ---
-ISO_CURRENCY_CODE: GBP
-
 # This is the timezone that times and dates are displayed in
 # If not set defaults to UTC.
 #
@@ -95,28 +83,6 @@ ISO_CURRENCY_CODE: GBP
 #
 # ---
 TIME_ZONE: UTC
-
-# These feeds are displayed accordingly on the Alaveteli "blog" page. Currently
-# WordPress is the only "officially supported" external blog feed, but other
-# feeds may work if they use the same data format.
-#
-# BLOG_FEED - String url to the blog feed (default: nil)
-#
-# Examples:
-#
-#   BLOG_FEED: https://www.mysociety.org/category/projects/whatdotheyknow/feed/
-#
-# ---
-BLOG_FEED: ''
-
-# BLOG_TIMEOUT -  Integer seconds before reading the blog feed fails (default: 60)
-#
-# Examples:
-#
-#   BLOG_TIMEOUT: 90
-#
-# ---
-BLOG_TIMEOUT: 60
 
 # Makes your Facebook page/group name available to the application.
 #
@@ -141,26 +107,15 @@ FACEBOOK_USERNAME: ''
 # ---
 TWITTER_USERNAME: ''
 
-# Set the widget_id to get the Twitter sidebar on the blog page.
-# To get one https://twitter.com/settings/widgets
-#
-# TWITTER_WIDGET_ID - String widget ID (default: false)
-#
-# Examples:
-#
-#   TWITTER_WIDGET_ID: '833549204689320031'
-#
-# ---
-TWITTER_WIDGET_ID: ''
-
 # The locales you want your site to support. If there is more than one, use
-# spaces between the entries.
+# spaces between the entries. Core ships translations for English and Welsh
+# only; a theme can add others in its locale-theme directory.
 #
 # AVAILABLE_LOCALES – String of space-separated locales (default: en)
 #
 # Examples:
 #
-#   AVAILABLE_LOCALES: 'en es'
+#   AVAILABLE_LOCALES: 'en cy'
 #
 # ---
 AVAILABLE_LOCALES: 'en'
@@ -207,16 +162,16 @@ AUTHORITY_MUST_RESPOND: true
 REPLY_LATE_AFTER_DAYS: 20
 REPLY_VERY_LATE_AFTER_DAYS: 40
 
-# The WORKING_OR_CALENDAR_DAYS setting can be either "working" (the default) or
-# "calendar", and determines which days are counted when calculating whether a
-# request is officially late.
+# Request deadlines require "working" and use the request's legal calendar.
+# Other values prevent the application from starting. Recalculation also checks
+# this setting, including an adjusted very overdue date; it cannot select the
+# inherited calendar-day calculator.
 #
-# WORKING_OR_CALENDAR_DAYS - String in [working, calendar] (default: working)
+# WORKING_OR_CALENDAR_DAYS - String (only supported value: working)
 #
 # Examples:
 #
 #   WORKING_OR_CALENDAR_DAYS: working
-#   WORKING_OR_CALENDAR_DAYS: calendar
 #
 # ---
 WORKING_OR_CALENDAR_DAYS: working
@@ -236,23 +191,6 @@ WORKING_OR_CALENDAR_DAYS: working
 # ---
 RESTRICT_NEW_RESPONSES_ON_OLD_REQUESTS_AFTER_MONTHS: 6
 
-# Specify which public bodies you want to be listed as examples on the home
-# page, using their short_names. If you want more than one, separate them with
-# semicolons. List is auto-generated if not set.
-#
-# *Warning:* this is slow — don't use in production!
-#
-# FRONTPAGE_PUBLICBODY_EXAMPLES - String semicolon-separated list of public
-#                                 bodies (default: nil)
-#
-# Examples:
-#
-#   FRONTPAGE_PUBLICBODY_EXAMPLES: 'tgq'
-#   FRONTPAGE_PUBLICBODY_EXAMPLES: 'tgq;foo;bar'
-#
-# ---
-FRONTPAGE_PUBLICBODY_EXAMPLES: ''
-
 # URLs of themes to download and use (when running the rails-post-deploy
 # script). The earlier in the list means the templates have a higher priority.
 #
@@ -265,8 +203,7 @@ FRONTPAGE_PUBLICBODY_EXAMPLES: ''
 #     - 'https://github.com/mysociety/whatdotheyknow-theme.git'
 #
 # ---
-THEME_URLS:
-  - 'https://github.com/mysociety/alavetelitheme.git'
+THEME_URLS: []
 
 # When rails-post-deploy installs the themes, it will try to use the branch
 # specified by THEME_BRANCH first. If the branch doesn't exist it will fall
@@ -368,34 +305,10 @@ INCOMING_EMAIL_SPAM_THRESHOLD: false
 # ---
 BLACKHOLE_PREFIX: 'do-not-reply-to-this-address'
 
-# Emergency admin user login username. YOU SHOULD CHANGE THIS.
-#
-# ADMIN_USERNAME - String (default: nil)
-#
-# Examples:
-#
-#   ADMIN_USERNAME: 'admin-alaveteli'
-#
-# ---
-ADMIN_USERNAME: 'adminxxxx'
-
-# Emergency admin user login password. YOU SHOULD CHANGE THIS.
-#
-# ADMIN_USERNAME - String (default: nil)
-#
-# Examples:
-#
-#   ADMIN_PASSWORD: 'b38bCHBl;28'
-#
-# ---
-ADMIN_PASSWORD: 'passwordx'
-
-# Disable the emergency admin user?
-#
-# DISABLE_EMERGENCY_USER - Boolean (default: false)
-#
-# ---
-DISABLE_EMERGENCY_USER: false
+# Emergency admin login has been removed. Sign in with a normal admin account.
+# Legacy ADMIN_USERNAME, ADMIN_PASSWORD and DISABLE_EMERGENCY_USER settings
+# no longer affect authentication. Keep this true for older-code recovery.
+DISABLE_EMERGENCY_USER: true
 
 # Set this to true, and the admin interface will be available to anonymous
 # users. Obviously, you should not set this to be true in production
@@ -420,22 +333,8 @@ CONTACT_EMAIL: 'contact@localhost'
 # ---
 CONTACT_NAME: 'Alaveteli'
 
-# Email "from" email address for track messages
-#
-# TRACK_SENDER_EMAIL - String email address (default: contact@localhost)
-#
-# ---
-TRACK_SENDER_EMAIL: 'contact@localhost'
-
-# Email "from" name for track messages
-#
-# TRACK_SENDER_NAME - String contact name (default: Alaveteli)
-#
-# ---
-TRACK_SENDER_NAME: 'Alaveteli'
-
-# Directory where the raw incoming email data gets stored; make sure you back
-# this up!
+# Legacy setting. Back up the raw_emails Active Storage service configured in
+# config/storage.yml. Its default disk root is storage/raw_emails.
 #
 # RAW_EMAILS_LOCATION - String path (default: files/raw_emails)
 #
@@ -449,7 +348,8 @@ RAW_EMAILS_LOCATION: 'files/raw_emails'
 #
 # Rails 4.0 introduces ActiveSupport::KeyGenerator and uses this as a base from
 # which to generate and verify signed cookies (among other things). You can
-# generate a key with `rake secret`.
+# generate a key with `rake secret`. Production refuses to start with the
+# default below, the placeholder, or anything shorter than 64 characters.
 #
 # SECRET_KEY_BASE - String (default: 'this default is insecure as
 #                           code is open source, please override
@@ -477,13 +377,24 @@ SECRET_KEY_BASE: 'your secret key here, make it long and random'
 # ---
 READ_ONLY: ''
 
+# Caps on sending (`RequestLimits`): 1 request/minute, 3/24 hours and 10/30
+# days; 25 follow-ups/30 days and 3 per request/5 minutes. Batches are for
+# trusted accounts only (`User#trusted?`), capped at 50 authorities each.
+# On in production unless false; turning it off allows unlimited requests for
+# non-suspended accounts, as no other request cap backs it up, so disable it
+# deliberately. Outside production, REQUEST_LIMITS=on turns the caps on.
+#
+# ENFORCE_REQUEST_LIMITS - Boolean (default: true)
+#
+# ---
+ENFORCE_REQUEST_LIMITS: true
+
 # READ_ONLY_FEATURES - Array of strings (default: [])
 #
 # Granular read-only control for specific features. This allows you to disable
 # specific functionality without putting the entire site in read-only mode.
 #
 # Available features:
-#   'annotations'     - Blocks annotations on requests
 #   'classifications' - Blocks request status classifications
 #   'followups'       - Blocks followup messages on requests
 #   'requests'        - Blocks new FOI requests
@@ -494,8 +405,8 @@ READ_ONLY: ''
 # Block only new requests:
 #   READ_ONLY_FEATURES: ['requests']
 #
-# Block new requests and annotations:
-#   READ_ONLY_FEATURES: ['requests', 'annotations']
+# Block new requests and followups:
+#   READ_ONLY_FEATURES: ['requests', 'followups']
 #
 # ---
 READ_ONLY_FEATURES: []
@@ -517,34 +428,21 @@ READ_ONLY_FEATURES: []
 # ---
 STAGING_SITE: 1
 
-# Recaptcha, for detecting humans. Get keys here:
-# https://www.google.com/recaptcha
-# Currently Alaveteli requires a reCAPTCHA v2 Checkbox key.
+# Cloudflare Turnstile, the person check on sign-up, on an account's first
+# request, and on the contact and change-request forms for signed-out
+# visitors (app/services/turnstile.rb). Create a widget in the Cloudflare
+# dashboard for this site's hostname and copy its two keys here.
 #
-# RECAPTCHA_SITE_KEY - String (default: 'x')
+# Outside development and test both are needed: without them, or when
+# Cloudflare can't be reached, those forms refuse ("try again later") and
+# the admins are told. In development and test, blank keys turn it off.
 #
-# ---
-RECAPTCHA_SITE_KEY: 'x'
-
-# Recaptcha, for detecting humans. Get keys here:
-# https://www.google.com/recaptcha
-# Currently Alaveteli requires a reCAPTCHA v2 Checkbox key.
-#
-# RECAPTCHA_SECRET_KEY - String (default: 'x')
+# TURNSTILE_SITE_KEY - String (default: '')
+# TURNSTILE_SECRET_KEY - String (default: '')
 #
 # ---
-RECAPTCHA_SECRET_KEY: 'x'
-
-# Number of days after which to send a 'new response reminder'
-#
-# NEW_RESPONSE_REMINDER_AFTER_DAYS – Array of Integers (default: [3, 10, 24])
-#
-# Examples:
-#
-#   NEW_RESPONSE_REMINDER_AFTER_DAYS: [3, 7]
-#
-# ---
-NEW_RESPONSE_REMINDER_AFTER_DAYS: [3, 10, 24]
+TURNSTILE_SITE_KEY: ''
+TURNSTILE_SECRET_KEY: ''
 
 # For debugging memory problems. If true, Alaveteli logs the memory use
 # increase of the Ruby process due to the request (Linux only). Since Ruby
@@ -556,40 +454,17 @@ NEW_RESPONSE_REMINDER_AFTER_DAYS: [3, 10, 24]
 # ---
 DEBUG_RECORD_MEMORY: false
 
-# Currently we default to using pdftk to compress PDFs. You can optionally try
-# Ghostscript, which should do a better job of compression. Some versions of
-# pdftk are buggy with respect to compression, in which case Alaveteli doesn't
-# recompress the PDFs at all and logs a warning message "Unable to compress
-# PDF" — which would be another reason to try this setting.
+# Run the programs that read attachments (LibreOffice, poppler, pdftk, qpdf,
+# ImageMagick, tesseract, elinks, tnef) inside a bubblewrap sandbox: no
+# network, no environment, read-only system files and only the conversion's
+# own files.
 #
-# USE_GHOSTSCRIPT_COMPRESSION - Boolean (default: false)
+# off (the default) runs them directly, as before. With required, a
+# conversion is refused if the sandbox can't start; it never runs unsandboxed.
+# required needs bubblewrap, unprivileged user namespaces and SANDBOX_VOLUME.
+# Check it with `bin/rails sandbox:check`.
 #
-# ---
-USE_GHOSTSCRIPT_COMPRESSION: false
-
-# Alaveteli uses a GeoIP database to determine the country from the IP address
-# of an HTTP request to the site (this lets us suggest an Alaveteli in the user's
-# country if one exists). You shouldn't need to change this if you have the
-# geoip-database package installed as specified in the config/packages files.
-#
-# You **must** add MAXMIND_LICENSE_KEY with this setting.
-#
-# GEOIP_DATABASE - String (default: vendor/data/GeoLite2-Country.mmdb)
-#
-# ---
-GEOIP_DATABASE: vendor/data/GeoLite2-Country.mmdb
-
-# MaxMind requires a free license key to download the GeoLite2 databases.
-# https://blog.maxmind.com/2019/12/18/significant-changes-to-accessing-and-using-geolite2-databases/
-#
-# MAXMIND_LICENSE_KEY - String (default: '')
-#
-# ---
-MAXMIND_LICENSE_KEY: ''
-
-# Run external attachment converters in bubblewrap sandboxes instead of the
-# app's own environment. With required, a conversion is refused if the sandbox
-# can't start; it never runs unsandboxed. Check it with `bin/rails sandbox:check`.
+# Outside development and test this app won't start unless it's required.
 #
 # SANDBOX_CONVERTERS - String, off or required (default: off)
 #
@@ -597,16 +472,35 @@ MAXMIND_LICENSE_KEY: ''
 SANDBOX_CONVERTERS: 'off'
 
 # Where sandboxed conversions keep their files: a tmpfs, mounted nosuid,
-# nodev and noexec, owned by the app user with mode 0700 (or 0710 shared with
-# converter cells).
+# nodev and noexec, owned by the app user with mode 0700. Its size is the most
+# that all conversions together can write. Conversions are refused if it isn't
+# mounted like that. With converter cells (below) it is shared with them.
 #
 # SANDBOX_VOLUME - String (default: /run/alaveteli-convert)
 #
 # ---
 SANDBOX_VOLUME: '/run/alaveteli-convert'
 
-# The UNIX sockets of the three converter cells (pdf, office, mail). Set all
-# three, or none; they require SANDBOX_CONVERTERS: required.
+# The UNIX sockets of the three converter cells: separate services, each
+# running as a user of its own, that run the sandboxed conversions in place of
+# this app (script/sandbox_cell.rb starts one). The PDF cell runs poppler,
+# qpdf, pdftk, ImageMagick, tesseract, elinks and PDF masking; the Office
+# cell runs LibreOffice and the Office worker; the mail cell runs tnef and
+# msgconvert, which only the reading of incoming mail uses. A cell has no
+# network and nothing of the app's but the conversion volume. The PDF cell
+# won't start unless lib/alaveteli_sandbox/imagemagick-policy.xml is
+# installed as /etc/ImageMagick-7/policy.xml. The mail and Office cells are
+# told the directories of their workers' gems in SANDBOX_MAIL_GEMS and
+# SANDBOX_OFFICE_GEMS, which script/mail_worker_gems and
+# script/office_worker_gems print; without them each refuses its worker's
+# steps.
+#
+# Set all three, or none; they need SANDBOX_CONVERTERS: required. When set,
+# every conversion runs in a cell, and is refused if its cell can't be
+# reached; it is never run in this app. SANDBOX_VOLUME must then be owned by
+# the app user with mode 0710, and its group must be one whose only members
+# are the app user and the three cells' users. Empty (the default) runs
+# sandboxed conversions in this app.
 #
 # SANDBOX_PDF_CELL - String (default: '')
 # SANDBOX_OFFICE_CELL - String (default: '')
@@ -624,7 +518,8 @@ SANDBOX_MAIL_CELL: ''
 # ---
 SANDBOX_BWRAP: '/usr/bin/bwrap'
 
-# Stop every conversion without stopping the site.
+# Stop every conversion without stopping the site. Attachments are still
+# served; extracted text, previews and OCR are missing while it's on.
 #
 # CONVERTERS_DISABLED - Boolean (default: false)
 #
@@ -643,17 +538,6 @@ CONVERTERS_DISABLED: false
 # ---
 FORWARD_NONBOUNCE_RESPONSES_TO: user-support@localhost
 
-# The email address to which non-bounce responses to emails sent out to
-# Alaveteli Professional users by Alaveteli should be forwarded
-#
-# FORWARD_PRO_NONBOUNCE_RESPONSES_TO - String (default: pro-user-support@localhost)
-#
-# Examples:
-#
-#   FORWARD_PRO_NONBOUNCE_RESPONSES_TO: pro-user-support@example.com
-#
-# ---
-FORWARD_PRO_NONBOUNCE_RESPONSES_TO: pro-user-support@localhost
 
 # Email address used for sending exception notifications.
 #
@@ -679,32 +563,6 @@ EXCEPTION_NOTIFICATIONS_FROM: do-not-reply-to-this-address@localhost
 # ---
 EXCEPTION_NOTIFICATIONS_TO:
   - alaveteli@localhost
-
-# This rate limiting can be turned off per-user via the admin interface
-#
-# MAX_REQUESTS_PER_USER_PER_DAY - Integer (default: 6)
-#
-# Examples:
-#
-#   MAX_REQUESTS_PER_USER_PER_DAY: 1
-#   MAX_REQUESTS_PER_USER_PER_DAY: '' # No limit
-#
-# ---
-MAX_REQUESTS_PER_USER_PER_DAY: 6
-
-# If you're running behind Varnish set this to work out where to send purge
-# requests. Otherwise, don't set it.
-#
-# VARNISH_HOSTS - Array of Strings (default: nil)
-#
-# Examples:
-#
-#   VARNISH_HOSTS:
-#     - host1
-#     - host2
-#
-# ---
-VARNISH_HOSTS: null
 
 # Adding a value here will enable Google Analytics on all non-admin pages for
 # non-admin users.
@@ -734,12 +592,98 @@ GA_CODE: ''
 # ---
 OVERRIDE_ALL_PUBLIC_BODY_REQUEST_EMAILS: ''
 
-# Optional link to another Alaveteli site shown when sign-ups are closed.
+# Another Freedom of Information site to point people to: for authorities that
+# aren't listed here, and for visitors when sign-ups are closed (READ_ONLY_FEATURES
+# includes 'signups'). OTHER_FOI_SITE_URL is an Alaveteli site's select_authority
+# page; a search adds ?query= to it. Leave both blank to point nowhere.
+#
 # OTHER_FOI_SITE_NAME - String (default: '')
 # OTHER_FOI_SITE_URL - String (default: '')
+#
+# Examples:
+#
+#   OTHER_FOI_SITE_NAME: WhatDoTheyKnow
+#   OTHER_FOI_SITE_URL: https://www.whatdotheyknow.com/select_authority
+#
 # ---
 OTHER_FOI_SITE_NAME: ''
 OTHER_FOI_SITE_URL: ''
+
+# What a request's requester may do with its attachments; admins may do
+# everything. redact draws boxes on PDFs and images and replaces text with
+# [redacted], so content can be hidden but never added, swapped or revealed.
+# replace also uploads replacements, converts Office files and edits text
+# freely. none leaves it to admins.
+#
+# A working copy keeps its file for ATTACHMENT_MANAGEMENT_DRAFT_HOURS, or for
+# seven days while DISCLOSURES_REQUESTER_EDITING is off.
+# Page images nobody has used for ATTACHMENT_MANAGEMENT_PREVIEW_HOURS are
+# removed; they're made again when needed.
+#
+# ATTACHMENT_MANAGEMENT_REQUESTER_ACCESS - String, redact, replace or none
+#                                          (default: redact)
+# ATTACHMENT_MANAGEMENT_DRAFT_HOURS - Number (default: 4)
+# ATTACHMENT_MANAGEMENT_PREVIEW_HOURS - Number (default: 4)
+#
+# ---
+ATTACHMENT_MANAGEMENT_REQUESTER_ACCESS: 'redact'
+ATTACHMENT_MANAGEMENT_DRAFT_HOURS: 4
+ATTACHMENT_MANAGEMENT_PREVIEW_HOURS: 4
+
+# Released records and decision letters, as documents of their own.
+# DISCLOSURES_REQUESTER_EDITING lets requesters edit and publish their
+# documents. DISCLOSURES_REVIEW_REQUESTER_REDACTIONS holds requester edits made
+# in the redaction tool as requester_only until an admin approves publication.
+# With DISCLOSURES_REQUESTER_EDITING off it is always on, and requesters redact
+# with boxes only, not in the text editor.
+# DISCLOSURES_OCR reads scanned pages with Tesseract on this server;
+# nothing is sent anywhere.
+# DISCLOSURES_REMOVE_OFFICE_METADATA rewrites a Word, Excel or PowerPoint file
+# as it is published, without what a reader doesn't need: accepted tracked
+# changes, comments, document properties apart from the title, and other
+# hidden data (Disclosures::Tidy). The file in the thread becomes the
+# rewritten one. A file that can't be rewritten isn't published. Off, files
+# are published as they were received.
+#
+# DISCLOSURES_REQUESTER_EDITING - Boolean (default: true)
+# DISCLOSURES_REVIEW_REQUESTER_REDACTIONS - Boolean (default: true)
+# DISCLOSURES_OCR - Boolean (default: true)
+# DISCLOSURES_REMOVE_OFFICE_METADATA - Boolean (default: false)
+#
+# ---
+DISCLOSURES_REQUESTER_EDITING: true
+DISCLOSURES_REVIEW_REQUESTER_REDACTIONS: true
+DISCLOSURES_OCR: true
+DISCLOSURES_REMOVE_OFFICE_METADATA: false
+
+# A check for personal data (above all people's names) in hidden Office content
+# (`Disclosures::PiiCheck`). Calls an optional self-hosted PII checking service
+# over HTTPS (or HTTP on loopback: `127.0.0.1`, `localhost`, `::1`), supporting
+# either the `badger/v1` JSON contract (`DISCLOSURES_PII_CHECK: ai`, e.g.
+# serving https://huggingface.co/HMC83/name-detector-32m-cells) or
+# Presidio (`DISCLOSURES_PII_CHECK: presidio`). Off for the whole site unless
+# `DISCLOSURES_PII_CHECK` is set to `ai` or `presidio`. The bearer token comes
+# from the `DISCLOSURES_PII_CHECK_AUTH_TOKEN` environment variable (never in
+# this file). A requester can't turn this check off: opting out of AI reading
+# applies only to external reply reading, which this check never uses. Content
+# the service can't check fails closed and goes to an admin instead.
+# `DISCLOSURES_PII_CHECK_ENTITIES` lists the finding types that count (blank
+# means `PERSON` and `EMAIL_ADDRESS`).
+#
+# DISCLOSURES_PII_CHECK - String, off, ai or presidio (default: off)
+# DISCLOSURES_PII_CHECK_ENDPOINT - String (default: '')
+# DISCLOSURES_PII_CHECK_ENTITIES - Array of strings (default: [])
+#
+# Examples:
+#
+#   DISCLOSURES_PII_CHECK: ai
+#   DISCLOSURES_PII_CHECK_ENDPOINT: http://127.0.0.1:8080
+#   DISCLOSURES_PII_CHECK_ENTITIES: [PERSON, EMAIL_ADDRESS]
+#
+# ---
+DISCLOSURES_PII_CHECK: 'off'
+DISCLOSURES_PII_CHECK_ENDPOINT: ''
+DISCLOSURES_PII_CHECK_ENTITIES: []
 
 # Reading replies with an AI service at INCOMING_ATTENTION_ENDPOINT, which
 # flags the ones that need the requester. Off unless INCOMING_ATTENTION_ENABLED
@@ -803,7 +747,7 @@ INCOMING_OUTCOME_MODE: 'off'
 INCOMING_OUTCOME_STRICT_DOCUMENTS: false
 INCOMING_OUTCOME_OCR: false
 
-# Search path for external commandline utilities (such as pdftk, unrtf).
+# Search path for external commandline utilities (such as pdftk, qpdf).
 # When set to an empty array the the standard environment PATH will be used to
 # search for external commandline utilities.
 #
@@ -818,14 +762,6 @@ INCOMING_OUTCOME_OCR: false
 #
 # ---
 UTILITY_SEARCH_PATH: ["/usr/bin", "/usr/local/bin"]
-
-# Selects which search backend answers queries. Xapian is the default and
-# only built-in backend; see doc/SEARCH.md for registering others.
-#
-# SEARCH_BACKEND - String (default: xapian)
-#
-# ---
-SEARCH_BACKEND: xapian
 
 # Path to your exim or postfix log files that will get sucked up by
 # script/load-mail-server-logs
@@ -852,35 +788,22 @@ MTA_LOG_PATH: '/var/log/exim4/exim-mainlog-*'
 MTA_LOG_TYPE: exim
 
 # URL where people can donate to the organisation running the site. If set,
-# this will be included in the message people see when their request is
-# successful.
+# a Donate link shows on request pages and in the message people see when
+# their request is successful. Leave it blank unless the site has its own
+# donation page.
 #
 # DONATION_URL - String (default: nil)
 #
 # Examples:
 #
-#   DONATION_URL: http://www.mysociety.org/donate
+#   DONATION_URL: https://example.org/donate
 #
 # ---
-DONATION_URL: "http://www.mysociety.org/donate/"
+DONATION_URL: ''
 
-# If PUBLIC_BODY_STATISTICS_PAGE is set to true, Alaveteli will make a page of
-# statistics on the performance of public bodies (which you can see at
-# /body_statistics).
-#
-# PUBLIC_BODY_STATISTICS_PAGE - Boolean (default: false)
-#
-# ---
-PUBLIC_BODY_STATISTICS_PAGE: false
-
-# The page of statistics for public bodies will only consider public
-# bodies that have had at least the number of requests set by
-# MINIMUM_REQUESTS_FOR_STATISTICS.
-#
-# MINIMUM_REQUESTS_FOR_STATISTICS - Integer (default: 100)
-#
-# ---
-MINIMUM_REQUESTS_FOR_STATISTICS: 100
+# The public statistics page has been removed, so PUBLIC_BODY_STATISTICS_PAGE
+# and MINIMUM_REQUESTS_FOR_STATISTICS are no longer read. Existing values are
+# ignored.
 
 # If you would like the public body list page to include bodies that have no
 # translation in the current locale (but which do have a translation in the
@@ -931,8 +854,7 @@ BUNDLE_PATH: vendor/bundle
 # In some deployments of Alaveteli you may wish to install each newly
 # deployed version alongside the previous ones, in which case certain
 # files and resources should be shared between these installations.
-# For example, the 'files' directory, the 'cache' directory and the
-# generated graphs such as 'public/foi-live-creation.png'.  If you're
+# For example, the 'files' directory and the 'cache' directory.  If you're
 # installing Alaveteli in such a setup then set SHARED_FILES_PATH to
 # the directory you're keeping these files under. Otherwise, leave it
 # blank.
@@ -966,8 +888,6 @@ SHARED_FILES:
   - config/storage.yml
   - config/rails_env.rb
   - config/httpd.conf
-  - public/foi-live-creation.png
-  - public/foi-user-use.png
   - config/aliases
 
 # If you have SHARED_FILES_PATH set, then these options list the directories
@@ -986,7 +906,6 @@ SHARED_FILES:
 SHARED_DIRECTORIES:
   - files/
   - cache/
-  - lib/acts_as_xapian/xapiandbs/
   - log/
   - storage/
   - tmp/pids
@@ -1019,103 +938,25 @@ SHARED_DIRECTORIES:
 # ---
 PRODUCTION_MAILER_DELIVERY_METHOD: sendmail
 
-# If ENABLE_WIDGETS is set to true, Alaveteli will allow the embedding of a
-# 'widget' linking to a request on other sites. This widget will record
-# how many people click on an 'I also want to know' button.
+# Request widgets have been removed, so ENABLE_WIDGETS is no longer read. An
+# existing value is ignored.
+
+# Enable two-factor authentication (TOTP + recovery codes via Devise and
+# devise-two-factor) for sign-in, password reset and email changes. Mandatory
+# for admins and accounts present at the Devise cutover. Other users can opt in.
 #
-# ENABLE_WIDGETS - Boolean (default: false)
+# ENABLE_TWO_FACTOR_AUTH – Boolean (default: true)
 #
 # ---
-ENABLE_WIDGETS: false
+ENABLE_TWO_FACTOR_AUTH: true
 
-# Enable a second step of authentication for dangerous account actions.
-# Currently only active for changing password. Two factor auth is opt-in per
-# user.
-#
-# ENABLE_TWO_FACTOR_AUTH – Boolean (default: false)
-#
-# ---
-ENABLE_TWO_FACTOR_AUTH: false
+# The "About me" profile text has been removed, so BLOCK_SPAM_ABOUT_ME_TEXT is
+# no longer read. An existing value is ignored.
 
-# Enable referral of requests to external reviewers. This is likely to be an
-# Information Commissioner or similar.
-#
-# EXTERNAL_REVIEWERS – String (default: '')
-#
-# Examples:
-#
-#   EXTERNAL_REVIEWERS: ico@example.net
-#
-# ---
-EXTERNAL_REVIEWERS: ''
-
-# Enable annotations on requests.
-# If ENABLE_ANNOTATIONS is set to true, Alaveteli will include a link in the
-# "Things to do with this request" section to allow users to add extra
-# comments or information to it. This is a standard feature which is usually
-# turned on, but if you want to disable it, you can set this to false.
-#
-# Note: We don't recommend disabling annotations after users have started
-# making comments. Setting this to false won't hide existing comments, or
-# stop email alerts being sent about comments that were created before you
-# turned them off.
-#
-# ENABLE_ANNOTATIONS – Boolean (default: true)
-#
-# ---
-ENABLE_ANNOTATIONS: true
-
-# Enable anti-spam measures.
-# If ENABLE_ANTI_SPAM is set to true, Alaveteli will enforce a set of extra
-# restrictions to combat spam requests, annotations and profile content. This
-# will include the ability to restrict IP addresses from some countries from
-# performing some actions (see RESTRICTED_COUNTRIES), showing a reCAPTCHA
-# on new request submission, and preventing the submission of requests,
-# annotations and profile text matching a set of spam content patterns.
-#
-# ENABLE_ANTI_SPAM – Boolean (default: false)
-#
-# ---
-ENABLE_ANTI_SPAM: false
-
-# Prevent user signups if several signup attempts from the same IP address are
-# made in quick succession.
-#
-# BLOCK_RATE_LIMITED_IPS - Boolean (default: false)
-#
-# ---
-BLOCK_RATE_LIMITED_IPS: false
-
-# Prevent users signing up and making requests if their IP originates in one of
-# the RESTRICTED_COUNTRIES.
-#
-# BLOCK_RESTRICTED_COUNTRY_IPS - Boolean (default: false)
-#
-# ---
-BLOCK_RESTRICTED_COUNTRY_IPS: false
-
-# Prevent users submitting spam as their "About Me" profile text.
-#
-# BLOCK_SPAM_ABOUT_ME_TEXT - Boolean (default: false)
-#
-# ---
-BLOCK_SPAM_ABOUT_ME_TEXT: false
-
-# Prevent users submitting comments that appear to be spam.
-#
-# BLOCK_SPAM_COMMENTS - Boolean (default: false)
-#
-# ---
-BLOCK_SPAM_COMMENTS: false
-
-# Prevent users submitting user to user messages that appear to be spam.
-#
-# BLOCK_SPAM_USER_MESSAGES - Boolean (default: false)
-#
-# ---
-BLOCK_SPAM_USER_MESSAGES: false
-
-# Prevent user signups from spam email domains or names which appear to be spam.
+# Prevent user signups from spam email domains or names which appear to be spam
+# (UserSpamScorer.for_accounts). Without it, a suspected spammer's sign-up goes
+# ahead and the admins are told. A suspected spammer's email change always goes
+# ahead, with the admins told.
 #
 # BLOCK_SPAM_SIGNUPS - Boolean (default: false)
 #
@@ -1135,119 +976,6 @@ BLOCK_SPAM_SIGNINS: false
 #
 # ---
 BLOCK_SPAM_REQUESTS: false
-
-# Restrict IP addresses from some countries from performing some actions.
-# If set, requests from IP addresses in the countries specified will be
-# prevented from making new requests on the site.
-#
-# Country codes can be prefixed with ! to invert the list from restricted
-# to permitted (i.e., only allow requests from the specified countries).
-#
-# RESTRICTED_COUNTRIES – String of space-separated uppercase ISO Alpha-2 codes
-# (default '')
-#
-# Examples:
-#
-#    RESTRICTED_COUNTRIES: 'GB ES'     # Block GB and ES
-#    RESTRICTED_COUNTRIES: '!GB !ES'   # Only allow GB and ES
-#
-# ---
-RESTRICTED_COUNTRIES: ''
-
-# Show a reCAPTCHA on new request submission form if a user is not signed in or
-# not marked as confirmed_not_spam.
-#
-# NEW_REQUEST_RECAPTCHA – Boolean (default: false)
-#
-# ---
-NEW_REQUEST_RECAPTCHA: false
-
-# Show a reCAPTCHA on the contact form to discourage spammers
-#
-# Add the following code to `help/_contact_form.html.erb` in your theme (just
-# above the submit button works best) and a reCAPTCHA will be shown if
-# CONTACT_FORM_RECAPTCHA is set to true.
-#
-#     <% if @recaptcha_required %>
-#       <%= recaptcha_tags %><br />
-#     <% end %>
-#
-# CONTACT_FORM_RECAPTCHA – Boolean (default: false)
-#
-# ---
-CONTACT_FORM_RECAPTCHA: false
-
-# Show a reCAPTCHA on the user to user contact form to discourage spammers
-#
-# USER_CONTACT_FORM_RECAPTCHA – Boolean (default: false)
-#
-# ---
-USER_CONTACT_FORM_RECAPTCHA: false
-
-# Enable AlaveteliProfessional
-# If ENABLE_ALAVETELI_PRO is set to true, Alaveteli will include extra
-# functionality and account levels for professional FOI users, e.g.
-# journalists. Professional users have access to a new dashboard, a more
-# streamlined request process, and crucially, the ability to embargo their
-# requests so that they remain private.
-#
-# Enabling this is a large change, and this is still in Alpha development, so
-# you may want to contact the Alaveteli team before doing so.
-#
-# ENABLE_ALAVETELI_PRO – Boolean (default: false)
-#
-# ---
-ENABLE_ALAVETELI_PRO: false
-
-# Contact email address for Alaveteli Professional.
-# Requests made through Alaveteli Professional may be embargoed, meaning that
-# the user has an expectation that they're private, and this can include
-# being private from some of the site's administration team. Even if this is
-# not the case, you may wish to redirect pro support email away from the usual
-# email address for everybody else. These details allow you to specify a
-# different address.
-#
-# If you want all support mail to go to the same address, make this the same
-# as CONTACT_EMAIL.
-#
-# PRO_CONTACT_EMAIL - String email address (default: pro-contact@localhost)
-#
-# ---
-PRO_CONTACT_EMAIL: 'pro-contact@localhost'
-
-# Contact name for Alaveteli Professional.
-# The corresponding name to address emails to when sending email to
-# PRO_CONTACT_EMAIL.
-#
-# If you want all support mail to go to the same address, make this the same
-# as CONTACT_NAME.
-#
-# PRO_CONTACT_NAME - String contact name (default: Alaveteli Professional)
-#
-# ---
-PRO_CONTACT_NAME: 'Alaveteli Professional'
-
-# Site name for Alaveteli Professional.
-# The name to use when referring to the Alaveteli Professional parts of an
-# Alaveteli site. For example, in the UK our Alaveteli instance is called
-# "WhatDoTheyKnow" but we refer to the pro parts of the site as
-# "WhatDoTheyKnow Pro".
-#
-# If you don't want a different name for the pro pages, make this the same as
-# SITE_NAME.
-#
-# PRO_SITE_NAME - String site name (default: Alaveteli Professional)
-#
-# ---
-PRO_SITE_NAME: 'Alaveteli Professional'
-
-# The total number of authorities that can be added to a Alaveteli Professional
-# batch request.
-#
-# PRO_BATCH_AUTHORITY_LIMIT - Integer (default: 500)
-#
-# ---
-PRO_BATCH_AUTHORITY_LIMIT: 500
 
 # Define the mailer retriever method to be used only in the production environment.
 # By default, mail is accepted passively via script/mailin. You can set this param
@@ -1327,141 +1055,6 @@ POP_MAILER_PASSWORD: ''
 # ---
 POP_MAILER_ENABLE_SSL: true
 
-# Stripe.com publishable key. Only required for Alaveteli Pro.
-#
-# STRIPE_PUBLISHABLE_KEY - String (default: '')
-#
-# Examples:
-#
-# STRIPE_PUBLISHABLE_KEY: pk_test_UD6BDsARFZIYb8273dbdl
-#
-# ---
-STRIPE_PUBLISHABLE_KEY: ''
-
-# Stripe.com secret key. Only required for Alaveteli Pro.
-#
-# STRIPE_SECRET_KEY - String (default: '')
-#
-# Examples:
-#
-# STRIPE_SECRET_KEY: sk_test_UD6BDsARFZIYb8273dbdl
-#
-# ---
-STRIPE_SECRET_KEY: ''
-
-# An optional Stripe.com namespace which allows plans & coupons to be separated
-# from other resources within Stripe. If used the Stripe resources will need IDs
-# like: '<namespace>-<id>'
-#
-# **Must be uppercase**.
-#
-# STRIPE_NAMESPACE - String (default: '')
-#
-# Examples:
-#
-# STRIPE_NAMESPACE: 'ALAVETELI'
-#
-# ---
-STRIPE_NAMESPACE: ''
-
-# List of Stripe Prices which if a user signs up to will grant them access to
-# Alaveteli Pro. Rendered on the Pro pricing pages in the order defined here.
-#
-# STRIPE_PRICES - Hash of objects with key equal to the Stripe Price IDs as the
-# value equal to parameterise short human readable string.
-#
-# Note: Historical Stripe Price IDs listed here should include STRIPE_NAMESPACE.
-#
-# STRIPE_PRICES = Hash (default: { pro: 'pro' })
-#
-# Examples:
-#
-# STRIPE_PRICES:
-#   ALAVETELI-pro: pro
-#   price_123: pro-new-price
-#   price_456: pro-annual-billing
-#
-# ---
-STRIPE_PRICES:
-  pro: pro
-
-# Stripe.com webhook secret. Only required for Alaveteli Pro.
-#
-# STRIPE_WEBHOOK_SECRET: - String (default: '')
-#
-# Examples:
-#
-# STRIPE_WEBHOOK_SECRET: wh_test_UD6BDsARFZIYb8273dbdl
-# ---
-STRIPE_WEBHOOK_SECRET: ''
-
-# The rate of Tax / VAT to add to Pro subscriptions. Note that the Price per
-# unit of your Stripe Product Plan must be created without tax. Alaveteli will
-# automatically calculate the gross amount to charge.
-#
-# STRIPE_TAX_RATE: - String (default: '0.20')
-#
-# Examples:
-#
-# STRIPE_TAX_RATE: '0.21' # 21%
-# ---
-STRIPE_TAX_RATE: '0.20'
-
-# A Stripe coupon code – displayed to existing Pro users on their subscriptions
-# page – that they can share with friends for their friends to receive a signup
-# discount.
-#
-# This should *not* include the `STRIPE_NAMESPACE`.
-#
-# You *must* set a `humanized_terms` key in the Coupon Metadata to display the
-# discount that will be applied when using the coupon (e.g. "50% off for 1
-# month").
-#
-# PRO_REFERRAL_COUPON: - String (default: '')
-#
-# Examples:
-#
-# PRO_REFERRAL_COUPON: 'PROREFERRAL'
-# ---
-PRO_REFERRAL_COUPON: ''
-
-# If ENABLE_PRO_PRICING is set to true, Alaveteli let users enter their bank
-# details and subscribe to a Stripe subscription which grants them access to the
-# pro role and all the features of Alaveteli Professional.
-#
-# ENABLE_PRO_PRICING – Boolean (default: false)
-#
-# ---
-ENABLE_PRO_PRICING: false
-
-# This option is only used when ENABLE_PRO_PRICING is set to false.
-#
-# If ENABLE_PRO_SELF_SERVE is set to true, Alaveteli will let users upgrade
-# their accounts to Pro without needing to enter payment details.
-#
-# If ENABLE_PRO_SELF_SERVE is set to false, admins will receive an account
-# request email and has to assign the role in the Alaveteli admin interface.
-#
-# ENABLE_PRO_SELF_SERVE – Boolean (default: false)
-#
-# ---
-ENABLE_PRO_SELF_SERVE: false
-
-# **WARNING** Projects is not ready for re-use.
-#
-# ENABLE_PROJECTS – Boolean (default: false)
-#
-# ---
-ENABLE_PROJECTS: false
-
-# If SURVEY_URL is present, one month after a request has been made, Alaveteli
-# will email users with a link to a survey.
-#
-# SURVEY_URL – String (default: '')
-#
-# ---
-SURVEY_URL: ''
-
 # Retains records of IP addresses used to sign in to user accounts for the
 # configured number of days. This value should be less than or equal to the
 # number of days of logs retained according to your logrotate configuration,
@@ -1474,24 +1067,3 @@ SURVEY_URL: ''
 #
 # ---
 USER_SIGN_IN_ACTIVITY_RETENTION_DAYS: 0
-
-# If ENABLE_PUBLIC_ANNOTATIONS is set to true, comments (annotations) will
-# be allowed on all requests regardless of who made the request.
-#
-# If set to false, comments will only be allowed by the requester or admin
-# users.
-#
-# ENABLE_PUBLIC_ANNOTATIONS - Boolean (default: true)
-#
-# ---
-ENABLE_PUBLIC_ANNOTATIONS: true
-
-# If ENABLE_USER_TO_USER_MESSAGING is set to true, Alaveteli will allow users
-# to send messages to each other through the site.
-#
-# If set to false, user-to-user messaging functionality will be disabled.
-#
-# ENABLE_USER_TO_USER_MESSAGING- Boolean (default: true)
-#
-# ---
-ENABLE_USER_TO_USER_MESSAGING: true

@@ -1,3 +1,6 @@
+# Abstract base class for ActiveRecord models. Includes ConfigHelper and
+# AdminColumn, and extends belongs_to with a :via option for typed associations
+# backed by a polymorphic relation.
 class ApplicationRecord < ActiveRecord::Base
   include ConfigHelper
 

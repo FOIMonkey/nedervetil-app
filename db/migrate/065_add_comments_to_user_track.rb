@@ -1,4 +1,8 @@
 class AddCommentsToUserTrack < ActiveRecord::Migration[4.2] # 2.1
+  class TrackThing < ActiveRecord::Base
+    self.table_name = 'track_things'
+  end
+
   def self.up
     TrackThing.update_all "track_query = replace(track_query, 'variety:sent ', '') where track_type in ('public_body_updates', 'user_updates')"
     TrackThing.where(track_type: 'user_updates').each do |track_thing|

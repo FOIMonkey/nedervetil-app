@@ -58,7 +58,11 @@ end
 def build_incoming_message_mail(im)
   mail = Mail.new
 
-  mail.to = im.info_request.incoming_email rescue ''
+  mail.to = begin
+              im.info_request.incoming_email
+            rescue
+              ''
+            end
   mail.from = im.read_attribute(:from_email)
   mail.subject = im.read_attribute(:subject)
   mail.date = im.read_attribute(:sent_at)

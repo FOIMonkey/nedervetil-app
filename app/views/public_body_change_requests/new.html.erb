@@ -1,4 +1,4 @@
-<h1><%= @title %></h1>
+<%= page_band %>
 
 <%= foi_error_messages_for :change_request %>
 
@@ -62,8 +62,8 @@
     <%= f.text_area :notes, :rows => 10, :cols => 60 %>
   </p>
 
-  <% if @render_recaptcha %>
-    <%= recaptcha_tags(nonce: content_security_policy_nonce) %>
+  <% if @turnstile_required %>
+    <%= turnstile_box('change_request') %>
   <% end %>
 
   <p style="display:none;">

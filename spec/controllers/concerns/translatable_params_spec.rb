@@ -4,8 +4,10 @@ RSpec.describe TranslatableParams do
   include TranslatableParams
 
   describe '#translatable_params' do
-    let(:keys) { { translated_keys: [ :name, :locale ],
-                   general_keys: [ :status ] } }
+    let(:keys) {
+  { translated_keys: [:name, :locale],
+    general_keys: [:status] }
+}
 
     it 'whitelists translatable_params' do
       params = {
@@ -46,8 +48,10 @@ end
 
 RSpec.describe TranslatableParams::WhitelistedParams do
   describe '#whitelist' do
-    let(:keys) { { translated_keys: [ :name, :locale ],
-                   general_keys: [ :status ] } }
+    let(:keys) {
+  { translated_keys: [:name, :locale],
+    general_keys: [:status] }
+}
 
     it 'removes a non-whitelisted model param' do
       params = { name: 'Some name',
@@ -74,7 +78,7 @@ RSpec.describe TranslatableParams::WhitelistedParams do
       }
       expected = ActionController::Parameters.new(params).permit!
 
-      params = params = ActionController::Parameters.new(params)
+      params = ActionController::Parameters.new(params)
       expect(
         TranslatableParams::WhitelistedParams.new(**keys).whitelist(params.dup)
       ).to eq(expected)

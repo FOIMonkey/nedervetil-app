@@ -1,4 +1,6 @@
 module AlaveteliPro
+  # Mixed into requests, drafts and batches to keep their inbox RequestSummary
+  # (or parent batch summary) in sync after create and update commits.
   module RequestSummaries
     extend ActiveSupport::Concern
 
@@ -42,18 +44,18 @@ module AlaveteliPro
     end
 
     def request_summary_body
-      raise NotImplementedError("You must implement this method in the " \
-                                "class that includes this concern")
+      raise NotImplementedError, "You must implement this method in the " \
+                                 "class that includes this concern"
     end
 
     def request_summary_public_body_names
-      raise NotImplementedError("You must implement this method in the " \
-                                "class that includes this concern")
+      raise NotImplementedError, "You must implement this method in the " \
+                                 "class that includes this concern"
     end
 
     def request_summary_categories
-      raise NotImplementedError("You must implement this method in the " \
-                                "class that includes this concern")
+      raise NotImplementedError, "You must implement this method in the " \
+                                 "class that includes this concern"
     end
   end
 end

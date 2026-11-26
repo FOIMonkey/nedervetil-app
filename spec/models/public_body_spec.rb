@@ -9,13 +9,6 @@
 #  created_at                             :datetime         not null
 #  updated_at                             :datetime         not null
 #  home_page                              :text
-#  api_key                                :string           not null
-#  info_requests_count                    :integer          default(0), not null
-#  info_requests_successful_count         :integer
-#  info_requests_not_held_count           :integer
-#  info_requests_overdue_count            :integer
-#  info_requests_visible_classified_count :integer
-#  info_requests_visible_count            :integer          default(0), not null
 #  name                                   :text
 #  short_name                             :text
 #  request_email                          :text
@@ -150,21 +143,21 @@ RSpec.describe PublicBody do
     it 'should returns all authorities' do
       pbs = PublicBody.with_tag('all')
       expect(pbs).to match_array([
-        public_bodies(:geraldine_public_body),
-        public_bodies(:humpadink_public_body),
-        public_bodies(:forlorn_public_body),
-        public_bodies(:silly_walks_public_body),
-        public_bodies(:sensible_walks_public_body),
-        public_bodies(:other_public_body)
-      ])
+                                   public_bodies(:geraldine_public_body),
+                                   public_bodies(:humpadink_public_body),
+                                   public_bodies(:forlorn_public_body),
+                                   public_bodies(:silly_walks_public_body),
+                                   public_bodies(:sensible_walks_public_body),
+                                   public_bodies(:other_public_body)
+                                 ])
     end
 
     it 'should returns authorities without categories' do
       pbs = PublicBody.with_tag('other')
       expect(pbs).to match_array([
-        public_bodies(:sensible_walks_public_body),
-        public_bodies(:other_public_body)
-      ])
+                                   public_bodies(:sensible_walks_public_body),
+                                   public_bodies(:other_public_body)
+                                 ])
     end
   end
 
@@ -186,17 +179,9 @@ RSpec.describe PublicBody do
     it 'should ignore tag if greater than one character' do
       pbs = PublicBody.with_query('Department', 'Åč')
       expect(pbs).to match_array([
-        public_bodies(:humpadink_public_body),
-        public_bodies(:forlorn_public_body)
-      ])
-    end
-  end
-
-  describe '.cached_urls' do
-    it 'includes the correct paths' do
-      body = FactoryBot.create(:public_body)
-      body_path = "/body/" + body.url_name
-      expect(body.cached_urls).to eq([body_path, '/body', '^/body/list'])
+                                   public_bodies(:humpadink_public_body),
+                                   public_bodies(:forlorn_public_body)
+                                 ])
     end
   end
 
@@ -236,48 +221,6 @@ RSpec.describe PublicBody do
       it 'removes the missing email tag' do
         subject
         expect(public_body).not_to be_tagged('missing_email')
-      end
-    end
-
-    context 'when there are not many public requests' do
-      let!(:public_body) { FactoryBot.create(:public_body) }
-
-      it 'adds the not many requests tag' do
-        subject
-        expect(public_body).to be_tagged('not_many_requests')
-      end
-    end
-
-    context 'when a request email is removed' do
-      let!(:public_body) { FactoryBot.create(:public_body) }
-
-      # Reduce size for test so we have to create fewer records
-      around do |example|
-        original_size = PublicBody.not_many_public_requests_size
-        PublicBody.not_many_public_requests_size = 2
-        example.run
-        PublicBody.not_many_public_requests_size = original_size
-      end
-
-      before do
-        FactoryBot.create_list(:info_request, 2, public_body: public_body)
-      end
-
-      it 'removes the not many requests tag' do
-        subject
-        expect(public_body).not_to be_tagged('not_many_requests')
-      end
-    end
-
-    context 'when a not_requestable body is is tagged not_many_requests' do
-      let!(:public_body) { FactoryBot.create(:public_body) }
-
-      before { public_body.add_tag_if_not_already_present('not_many_requests') }
-      before { public_body.update(request_email: '') }
-
-      it 'removes the not many requests tag' do
-        subject
-        expect(public_body).not_to be_tagged('not_many_requests')
       end
     end
   end
@@ -413,6 +356,59 @@ RSpec.describe PublicBody do
       expect(subject.url_name).to eq('body')
     end
 
+    it 'numbers names in a non-Latin script, which all give the default' do
+      FactoryBot.create(:public_body, name: 'Δήμος Πατρέων', short_name: '')
+      second = FactoryBot.create(:public_body, name: 'Δήμος Λαρισαίων',
+                                               short_name: '')
+      third = FactoryBot.build(:public_body, name: 'Δήμος Βόλου',
+                                             short_name: '')
+      expect(second.url_name).to eq('body_2')
+      expect(third.url_name).to eq('body_3')
+      expect(third).to be_valid
+    end
+
+    it 'numbers a slug another body already has' do
+      FactoryBot.create(:public_body, name: 'St. Helens Council',
+                                      short_name: '')
+      other = FactoryBot.build(:public_body, name: 'St Helens Council',
+                                             short_name: '')
+      expect(other.url_name).to eq('st_helens_council_2')
+      expect(other).to be_valid
+    end
+
+    it 'keeps its own slug when the name changes but the slug does not' do
+      body = FactoryBot.create(:public_body, name: 'Grit Council',
+                                             short_name: '')
+      body.update!(name: 'Grit council')
+      expect(body.reload.url_name).to eq('grit_council')
+    end
+
+    it "numbers a slug another body has in another language, since " \
+       'lookups search every language' do
+      english = FactoryBot.create(:public_body, name: 'Grit Council',
+                                                short_name: '')
+      other = FactoryBot.create(:public_body, name: 'Other Council',
+                                              short_name: '')
+      AlaveteliLocalization.with_locale(:es) do
+        other.update!(name: 'Grit Council')
+        expect(other.url_name).to eq('grit_council_2')
+      end
+
+      expect(described_class.find_by_url_name_with_historic('grit_council')).
+        to eq(english)
+      expect(described_class.find_by_url_name_with_historic('grit_council_2')).
+        to eq(other)
+    end
+
+    it "does not count the body's own slug in another language" do
+      body = FactoryBot.create(:public_body, name: 'Grit Council',
+                                             short_name: '')
+      AlaveteliLocalization.with_locale(:es) do
+        body.update!(name: 'Grit Council')
+        expect(body.url_name).to eq('grit_council')
+      end
+    end
+
     context 'short_name has not been set' do
       it 'updates the url_name when name is changed' do
         subject = PublicBody.new
@@ -438,6 +434,25 @@ RSpec.describe PublicBody do
         subject = PublicBody.new(short_name: 'Test Name')
         subject.short_name = 'Short Name'
         expect(subject.url_name).to eq('short_name')
+      end
+    end
+
+    context 'short_name is only whitespace' do
+      let(:body) { FactoryBot.create(:public_body, name: 'Some Authority') }
+
+      it 'takes the url_name from the name' do
+        body.update!(short_name: " \u200B ")
+        expect(body.reload.url_name).to eq('some_authority')
+      end
+
+      it 'does the same in a translation' do
+        body.update!(translations_attributes: {
+                       '1' => { locale: 'es',
+                                name: 'Una Autoridad',
+                                short_name: '   ' }
+                     })
+        es = body.translations.find_by(locale: 'es')
+        expect(es.url_name).to eq('una_autoridad')
       end
     end
   end
@@ -488,26 +503,6 @@ RSpec.describe PublicBody do
     end
   end
 
-  describe '#api_key' do
-    it 'is empty on initialization' do
-      subject = FactoryBot.build(:public_body)
-      expect(subject.api_key).to be_nil
-    end
-
-    it 'gets set on save' do
-      subject = FactoryBot.build(:public_body)
-      subject.save!
-      expect(subject.api_key).not_to be_blank
-    end
-
-    it 'does not get changed on update' do
-      subject = FactoryBot.create(:public_body)
-      existing = subject.api_key
-      subject.save!
-      expect(subject.api_key).to eq(existing)
-    end
-  end
-
   describe '#last_edit_editor' do
     it 'is invalid when nil' do
       subject = PublicBody.new(last_edit_editor: nil)
@@ -547,6 +542,82 @@ RSpec.describe PublicBody do
     it 'strips blank attributes' do
       subject = FactoryBot.create(:public_body, last_edit_comment: '')
       expect(subject.last_edit_comment).to be_nil
+    end
+  end
+
+  describe 'home page validation' do
+    ['javascript:alert(1)', 'javascript:alert(1)//http://example.org',
+     'data:text/html,x', 'not a web address'].each do |home_page|
+      it "refuses #{home_page.inspect}" do
+        public_body = FactoryBot.build(:public_body, home_page: home_page)
+        expect(public_body).not_to be_valid
+        expect(public_body.errors[:home_page]).
+          to eq(['Home page must be a web address, such as ' \
+                 'https://www.example.org'])
+      end
+    end
+
+    ['https://www.example.org', 'http://example.org', 'example.org', ''].
+      each do |home_page|
+      it "accepts #{home_page.inspect}" do
+        public_body = FactoryBot.build(:public_body, home_page: home_page)
+        expect(public_body).to be_valid
+      end
+    end
+
+    it 'still saves other changes to a body whose stored home page is bad' do
+      public_body = FactoryBot.create(:public_body)
+      public_body.update_column(:home_page, 'javascript:alert(1)')
+      public_body = PublicBody.find(public_body.id)
+      public_body.last_edit_editor = 'someadmin'
+      public_body.last_edit_comment = 'Synthetic unrelated change'
+      expect(public_body.save).to be(true)
+    end
+
+    it 'refuses it in a CSV import, and imports nothing' do
+      csv = <<-CSV.strip_heredoc
+      #id,request_email,name,tag_string,home_page
+      ,q@localhost,Quango,,javascript:alert(1)//http://example.org
+      CSV
+      errors, = PublicBody.import_csv(csv, '', 'add', false, 'someadmin')
+      expect(errors.join).to include('Home page must be a web address')
+      expect(PublicBody.find_by_name('Quango')).to be_nil
+    end
+  end
+
+  describe 'publication scheme and disclosure log' do
+    valid_urls = %w[https://www.example.org/foi example.org]
+
+    %i[publication_scheme disclosure_log].each do |attribute|
+      it "refuses a #{attribute} that isn't a web address" do
+        public_body = FactoryBot.build(:public_body,
+                                       attribute => 'javascript:alert(1)')
+        expect(public_body).not_to be_valid
+      end
+
+      it "accepts a #{attribute} that is one, or a bare host" do
+        valid_urls.each do |value|
+          public_body = FactoryBot.build(:public_body, attribute => value)
+          expect(public_body).to be_valid, value
+        end
+      end
+
+      it "refuses a #{attribute} set in another locale's translation" do
+        public_body = FactoryBot.create(:public_body)
+        public_body.translations.
+          build(locale: 'es', name: 'Synthetic').
+          public_send(:"#{attribute}=", 'javascript:alert(1)')
+        expect(public_body).not_to be_valid
+      end
+
+      it "doesn't link a #{attribute} stored before it was checked" do
+        public_body = FactoryBot.create(:public_body)
+        public_body.translations.update_all(attribute => 'javascript:alert(1)')
+        public_body = PublicBody.find(public_body.id)
+        expect(public_body.public_send(:"#{attribute}_link")).to be_nil
+        public_body.last_edit_comment = 'Synthetic unrelated change'
+        expect(public_body.save).to be(true)
+      end
     end
   end
 
@@ -662,7 +733,7 @@ RSpec.describe PublicBody do
       it 'does not persist translations' do
         body = FactoryBot.create(:public_body)
         body.translations_attributes = { es: { locale: 'es',
-                                                  name: 'El Body' } }
+                                               name: 'El Body' } }
 
         expect(PublicBody.find(body.id).translations.size).to eq(1)
       end
@@ -670,7 +741,7 @@ RSpec.describe PublicBody do
       it 'creates a new translation' do
         body = FactoryBot.create(:public_body)
         body.translations_attributes = { es: { locale: 'es',
-                                                  name: 'El Body' } }
+                                               name: 'El Body' } }
         body.save!
         body.reload
         expect(body.name(:es)).to eq('El Body')
@@ -682,9 +753,11 @@ RSpec.describe PublicBody do
                                                    name: 'El Body' } }
         body.save!
 
-        body.translations_attributes = { 'es' => { id: body.translation_for(:es).id,
-                                                   locale: 'es',
-                                                   name: 'Renamed' } }
+        body.translations_attributes = {
+          'es' => { id: body.translation_for(:es).id,
+                    locale: 'es',
+                    name: 'Renamed' }
+        }
         body.save!
         expect(body.name(:es)).to eq('Renamed')
       end
@@ -732,38 +805,6 @@ RSpec.describe PublicBody do
     end
   end
 
-  describe '#set_api_key' do
-    it 'generates and sets an API key' do
-      allow(SecureRandom).to receive(:base64).and_return('APIKEY')
-      body = PublicBody.new
-      body.set_api_key
-      expect(body.api_key).to eq('APIKEY')
-    end
-
-    it 'does not overwrite an existing API key' do
-      allow(SecureRandom).to receive(:base64).and_return('APIKEY')
-      body = PublicBody.new(api_key: 'EXISTING')
-      body.set_api_key
-      expect(body.api_key).to eq('EXISTING')
-    end
-  end
-
-  describe '#set_api_key!' do
-    it 'generates and sets an API key' do
-      allow(SecureRandom).to receive(:base64).and_return('APIKEY')
-      body = PublicBody.new
-      body.set_api_key!
-      expect(body.api_key).to eq('APIKEY')
-    end
-
-    it 'overwrites an existing API key' do
-      allow(SecureRandom).to receive(:base64).and_return('APIKEY')
-      body = PublicBody.new(api_key: 'EXISTING')
-      body.set_api_key!
-      expect(body.api_key).to eq('APIKEY')
-    end
-  end
-
   describe '#expire_requests' do
     subject { body.expire_requests }
 
@@ -784,6 +825,15 @@ RSpec.describe PublicBody do
     it 'returns the name if short_name has not been set' do
       public_body = PublicBody.new(name: 'Test Name')
       expect(public_body.short_or_long_name).to eq('Test Name')
+    end
+
+    it 'returns the name if short_name is only whitespace' do
+      public_body = PublicBody.new(name: 'Test Name', short_name: "\t\u200B")
+      expect(public_body.short_or_long_name).to eq('Test Name')
+    end
+
+    it 'returns an empty string if neither has been set' do
+      expect(PublicBody.new.short_or_long_name).to eq('')
     end
   end
 
@@ -941,51 +991,6 @@ RSpec.describe PublicBody do
       is_expected.to_not include(blank_body)
     end
   end
-
-  describe 'when generating json for the api' do
-    around do |example|
-      disable_not_many_requests_auto_tagging { example.run }
-    end
-
-    let(:public_body) do
-      FactoryBot.create(:public_body,
-                        name: 'Marmot Appreciation Society',
-                        short_name: 'MAS',
-                        request_email: 'marmots@flourish.org',
-                        last_edit_editor: 'test',
-                        last_edit_comment: '',
-                        info_requests_count: 10,
-                        info_requests_successful_count: 2,
-                        info_requests_not_held_count: 2,
-                        info_requests_overdue_count: 3,
-                        info_requests_visible_classified_count: 3)
-    end
-
-    it 'should return info about request counts' do
-      expect(public_body.json_for_api).
-        to eq(
-            {
-              name: 'Marmot Appreciation Society',
-              notes: "",
-              publication_scheme: "",
-              disclosure_log: "",
-              short_name: "MAS",
-              tags: [],
-              updated_at: public_body.updated_at,
-              url_name: "mas",
-              created_at: public_body.created_at,
-              home_page: "https://www.flourish.org",
-              id: public_body.id,
-              info: {
-                requests_count: 10,
-                requests_successful_count: 2,
-                requests_not_held_count: 2,
-                requests_overdue_count: 3,
-                requests_visible_classified_count: 3
-              }
-            })
-    end
-  end
 end
 
 RSpec.describe PublicBody, " using tags" do
@@ -1078,7 +1083,8 @@ RSpec.describe PublicBody, " using machine tags" do
   it 'should allow multiple tags of the same sort' do
     @public_body.tag_string = 'url:http://www.theyworkforyou.com/ url:http://www.fixmystreet.com/'
     expect(@public_body.has_tag?('url')).to be true
-    expect(@public_body.get_tag_values('url')).to eq(['http://www.theyworkforyou.com/', 'http://www.fixmystreet.com/'])
+    expect(@public_body.get_tag_values('url')).
+      to eq(['http://www.theyworkforyou.com/', 'http://www.fixmystreet.com/'])
   end
 end
 
@@ -1092,12 +1098,12 @@ RSpec.describe PublicBody, "when finding_by_tags" do
 
   it 'should be able to find bodies by string' do
     found = PublicBody.find_by_tag('rabbit')
-    expect(found).to eq([ @geraldine ])
+    expect(found).to eq([@geraldine])
   end
 
   it 'should be able to find when there are multiple tags in one body, without returning duplicates' do
     found = PublicBody.find_by_tag('coney')
-    expect(found).to eq([ @humpadink ])
+    expect(found).to eq([@humpadink])
   end
 end
 
@@ -1106,7 +1112,7 @@ RSpec.describe PublicBody, " when saving" do
     @public_body = PublicBody.new
   end
 
-  def set_default_attributes(public_body)
+  def assign_default_attributes(public_body)
     public_body.name = "Testing Public Body"
     public_body.short_name = "TPB"
     public_body.request_email = "request@localhost"
@@ -1119,19 +1125,20 @@ RSpec.describe PublicBody, " when saving" do
   end
 
   it "should not be valid with misformatted request email" do
-    set_default_attributes(@public_body)
+    assign_default_attributes(@public_body)
     @public_body.request_email = "requestBOOlocalhost"
     expect(@public_body).not_to be_valid
     expect(@public_body.errors[:request_email].size).to eq(1)
   end
 
   it "should save" do
-    set_default_attributes(@public_body)
+    assign_default_attributes(@public_body)
     @public_body.save!
   end
 
   it 'should create a url_name for a translation' do
-    existing = FactoryBot.create(:public_body, first_letter: 'T', short_name: 'Test body')
+    existing = FactoryBot.create(:public_body, first_letter: 'T',
+                                               short_name: 'Test body')
     AlaveteliLocalization.with_locale(:es) do
       existing.update short_name: 'Prueba', name: 'Prueba body'
       expect(existing.url_name).to eq('prueba')
@@ -1157,7 +1164,7 @@ RSpec.describe PublicBody, " when saving" do
 
   it 'should not create a new version when nothing has changed' do
     expect(@public_body.versions.size).to eq(0)
-    set_default_attributes(@public_body)
+    assign_default_attributes(@public_body)
     @public_body.save!
     expect(@public_body.versions.size).to eq(1)
     @public_body.save!
@@ -1166,7 +1173,7 @@ RSpec.describe PublicBody, " when saving" do
 
   it 'should create a new version if something has changed' do
     expect(@public_body.versions.size).to eq(0)
-    set_default_attributes(@public_body)
+    assign_default_attributes(@public_body)
     @public_body.save!
     expect(@public_body.versions.size).to eq(1)
     @public_body.name = 'Test'
@@ -1175,43 +1182,11 @@ RSpec.describe PublicBody, " when saving" do
     expect(@public_body.versions.last.name).to eq('Test')
   end
 
-  it 'triggers cache invalidation when updated' do
+  it 'expires its requests when url_name has changed' do
     body = FactoryBot.create(:public_body)
-    expect(NotifyCacheJob).to receive(:perform_later).with(body)
+    expect(InfoRequest::ExpireJob).
+      to receive(:perform_later).with(body, :info_requests)
     body.update!(url_name: 'baz-bar-foo')
-  end
-
-  it 'reindexes request events when url_name has changed' do
-    body = FactoryBot.create(:public_body, name: 'foo-bar-baz')
-    requests =
-      2.times.map { FactoryBot.create(:info_request, public_body: body) }
-    event_ids = InfoRequestEvent.where(info_request_id: requests.map(&:id))
-
-    ActsAsXapian::ActsAsXapianJob.destroy_all
-
-    body.update!(url_name: 'baz-bar-foo')
-    perform_enqueued_jobs
-
-    expected_events =
-      ActsAsXapian::ActsAsXapianJob.
-      where(action: 'update', model: 'InfoRequestEvent', model_id: event_ids)
-
-    expect(expected_events.size).to eq(event_ids.size)
-  end
-
-  it 'does not reindex request events when url_name has not changed' do
-    body = FactoryBot.create(:public_body, name: 'foo-bar-baz')
-    FactoryBot.create(:info_request, public_body: body)
-
-    ActsAsXapian::ActsAsXapianJob.destroy_all
-
-    body.update!(request_email: 'other@localhost')
-
-    expected_events =
-      ActsAsXapian::ActsAsXapianJob.
-      where(action: 'update', model: 'InfoRequestEvent')
-
-    expect(expected_events.count).to eq(0)
   end
 end
 
@@ -1267,7 +1242,9 @@ RSpec.describe PublicBody, "when searching" do
   end
 
   it 'should not raise an error on a name with a single quote in it' do
-    body = PublicBody.find_by_url_name_with_historic("belfast city council'")
+    expect {
+      PublicBody.find_by_url_name_with_historic("belfast city council'")
+    }.not_to raise_error
   end
 end
 
@@ -1279,17 +1256,8 @@ RSpec.describe PublicBody, "when destroying" do
     expect(PublicBody.where(id: public_body.id)).to be_empty
   end
 
-  it 'should destroy the associated track_things' do
-    FactoryBot.create(:public_body_track,
-                      public_body: public_body,
-                      track_medium: 'email_daily',
-                      track_query: 'test')
-    public_body.destroy
-    expect(TrackThing.where(public_body_id: public_body.id)).to be_empty
-  end
-
   it 'should destroy the associated censor_rules' do
-    censor_rule = FactoryBot.create(:censor_rule, censorable: public_body)
+    FactoryBot.create(:censor_rule, censorable: public_body)
     public_body.destroy
     expect(CensorRule.public_body.where(censorable_id: public_body.id)).
       to be_empty
@@ -1315,39 +1283,58 @@ RSpec.describe PublicBody, "when destroying" do
 end
 
 RSpec.describe PublicBody, " when loading CSV files" do
-  around do |example|
-    disable_not_many_requests_auto_tagging { example.run }
-  end
-
   before(:each) do
-    # InternalBody is created the first time it's accessed, which happens sometimes during imports,
-    # depending on the tag used. By accessing it here before every test, it doesn't disturb our checks later on
+    # InternalBody is created the first time it's accessed, which happens
+    # sometimes during imports, depending on the tag used. By accessing it here
+    # before every test, it doesn't disturb our checks later on
     PublicBody.internal_admin_body
   end
 
   it "should import even if no email is provided" do
-    errors, notes = PublicBody.import_csv("1,aBody", '', 'replace', true, 'someadmin') # true means dry run
+    errors, notes = PublicBody.import_csv("1,aBody", '', 'replace',
+                                          true, # true means dry run
+                                          'someadmin')
     expect(errors).to eq([])
     expect(notes.size).to eq(2)
-    expect(notes[0]).to eq("line 1: creating new authority 'aBody' (locale: en):\n\t{\"name\":\"aBody\"}")
+    expect(notes[0]).to eq("line 1: creating new authority 'aBody' " \
+                           "(locale: en):\n\t{\"name\":\"aBody\"}")
+    # rubocop:disable Layout/LineLength -- a regex
     expect(notes[1]).to match(/Notes: Some  bodies are in database, but not in CSV file:\n(    .+\n)*You may want to delete them manually.\n/)
+    # rubocop:enable Layout/LineLength
   end
 
   it "should do a dry run successfully" do
     original_count = PublicBody.count
 
-    csv_contents = normalize_string_to_utf8(load_file_fixture("fake-authority-type.csv"))
-    errors, notes = PublicBody.import_csv(csv_contents, '', 'replace', true, 'someadmin') # true means dry run
+    csv_contents =
+      normalize_string_to_utf8(load_file_fixture("fake-authority-type.csv"))
+    errors, notes = PublicBody.import_csv(csv_contents, '', 'replace',
+                                          true, # true means dry run
+                                          'someadmin')
     expect(errors).to eq([])
     expect(notes.size).to eq(6)
-    expect(notes[0..4]).to eq([
-      "line 1: creating new authority 'North West Fake Authority' (locale: en):\n\t\{\"name\":\"North West Fake Authority\",\"request_email\":\"north_west_foi@localhost\"\}",
-      "line 2: creating new authority 'Scottish Fake Authority' (locale: en):\n\t\{\"name\":\"Scottish Fake Authority\",\"request_email\":\"scottish_foi@localhost\"\}",
-      "line 3: creating new authority 'Fake Authority of Northern Ireland' (locale: en):\n\t\{\"name\":\"Fake Authority of Northern Ireland\",\"request_email\":\"ni_foi@localhost\"\}",
-      "line 4: creating new authority 'Gobierno de Aragón' (locale: en):\n\t\{\"name\":\"Gobierno de Aragón\",\"request_email\":\"spain_foi@localhost\"}",
-      "line 5: creating new authority 'Nordic æøå' (locale: en):\n\t{\"name\":\"Nordic æøå\",\"request_email\":\"no_foi@localhost\"}"
-    ])
+    expect(notes[0..4]).to eq(
+      [
+        "line 1: creating new authority 'North West Fake Authority' " \
+        "(locale: en):\n\t\{\"name\":\"North West Fake Authority\"," \
+        "\"request_email\":\"north_west_foi@localhost\"\}",
+        "line 2: creating new authority 'Scottish Fake Authority' " \
+        "(locale: en):\n\t\{\"name\":\"Scottish Fake Authority\"," \
+        "\"request_email\":\"scottish_foi@localhost\"\}",
+        "line 3: creating new authority 'Fake Authority of Northern Ireland' " \
+        "(locale: en):\n\t\{\"name\":\"Fake Authority of Northern Ireland\"," \
+        "\"request_email\":\"ni_foi@localhost\"\}",
+        "line 4: creating new authority 'Gobierno de Aragón' " \
+        "(locale: en):\n\t\{\"name\":\"Gobierno de Aragón\"," \
+        "\"request_email\":\"spain_foi@localhost\"}",
+        "line 5: creating new authority 'Nordic æøå' " \
+        "(locale: en):\n\t{\"name\":\"Nordic æøå\"," \
+        "\"request_email\":\"no_foi@localhost\"}"
+      ]
+    )
+    # rubocop:disable Layout/LineLength -- a regex
     expect(notes[5]).to match(/Notes: Some  bodies are in database, but not in CSV file:\n(    .+\n)*You may want to delete them manually.\n/)
+    # rubocop:enable Layout/LineLength
 
     expect(PublicBody.count).to eq(original_count)
   end
@@ -1355,18 +1342,35 @@ RSpec.describe PublicBody, " when loading CSV files" do
   it "should do full run successfully" do
     original_count = PublicBody.count
 
-    csv_contents = normalize_string_to_utf8(load_file_fixture("fake-authority-type.csv"))
-    errors, notes = PublicBody.import_csv(csv_contents, '', 'replace', false, 'someadmin') # false means real run
+    csv_contents =
+      normalize_string_to_utf8(load_file_fixture("fake-authority-type.csv"))
+    errors, notes = PublicBody.import_csv(csv_contents, '', 'replace',
+                                          false, # false means real run
+                                          'someadmin')
     expect(errors).to eq([])
     expect(notes.size).to eq(6)
-    expect(notes[0..4]).to eq([
-      "line 1: creating new authority 'North West Fake Authority' (locale: en):\n\t\{\"name\":\"North West Fake Authority\",\"request_email\":\"north_west_foi@localhost\"\}",
-      "line 2: creating new authority 'Scottish Fake Authority' (locale: en):\n\t\{\"name\":\"Scottish Fake Authority\",\"request_email\":\"scottish_foi@localhost\"\}",
-      "line 3: creating new authority 'Fake Authority of Northern Ireland' (locale: en):\n\t\{\"name\":\"Fake Authority of Northern Ireland\",\"request_email\":\"ni_foi@localhost\"\}",
-      "line 4: creating new authority 'Gobierno de Aragón' (locale: en):\n\t\{\"name\":\"Gobierno de Aragón\",\"request_email\":\"spain_foi@localhost\"}",
-      "line 5: creating new authority 'Nordic æøå' (locale: en):\n\t{\"name\":\"Nordic æøå\",\"request_email\":\"no_foi@localhost\"}"
-    ])
+    expect(notes[0..4]).to eq(
+      [
+        "line 1: creating new authority 'North West Fake Authority' " \
+        "(locale: en):\n\t\{\"name\":\"North West Fake Authority\"," \
+        "\"request_email\":\"north_west_foi@localhost\"\}",
+        "line 2: creating new authority 'Scottish Fake Authority' " \
+        "(locale: en):\n\t\{\"name\":\"Scottish Fake Authority\"," \
+        "\"request_email\":\"scottish_foi@localhost\"\}",
+        "line 3: creating new authority 'Fake Authority of Northern Ireland' " \
+        "(locale: en):\n\t\{\"name\":\"Fake Authority of Northern Ireland\"," \
+        "\"request_email\":\"ni_foi@localhost\"\}",
+        "line 4: creating new authority 'Gobierno de Aragón' " \
+        "(locale: en):\n\t\{\"name\":\"Gobierno de Aragón\"," \
+        "\"request_email\":\"spain_foi@localhost\"}",
+        "line 5: creating new authority 'Nordic æøå' " \
+        "(locale: en):\n\t{\"name\":\"Nordic æøå\"," \
+        "\"request_email\":\"no_foi@localhost\"}"
+      ]
+    )
+    # rubocop:disable Layout/LineLength -- a regex
     expect(notes[5]).to match(/Notes: Some  bodies are in database, but not in CSV file:\n(    .+\n)*You may want to delete them manually.\n/)
+    # rubocop:enable Layout/LineLength
 
     expect(PublicBody.count).to eq(original_count + 5)
   end
@@ -1374,18 +1378,35 @@ RSpec.describe PublicBody, " when loading CSV files" do
   it "should do imports without a tag successfully" do
     original_count = PublicBody.count
 
-    csv_contents = normalize_string_to_utf8(load_file_fixture("fake-authority-type.csv"))
-    errors, notes = PublicBody.import_csv(csv_contents, '', 'replace', false, 'someadmin') # false means real run
+    csv_contents =
+      normalize_string_to_utf8(load_file_fixture("fake-authority-type.csv"))
+    errors, notes = PublicBody.import_csv(csv_contents, '', 'replace',
+                                          false, # false means real run
+                                          'someadmin')
     expect(errors).to eq([])
     expect(notes.size).to eq(6)
-    expect(notes[0..4]).to eq([
-      "line 1: creating new authority 'North West Fake Authority' (locale: en):\n\t\{\"name\":\"North West Fake Authority\",\"request_email\":\"north_west_foi@localhost\"\}",
-      "line 2: creating new authority 'Scottish Fake Authority' (locale: en):\n\t\{\"name\":\"Scottish Fake Authority\",\"request_email\":\"scottish_foi@localhost\"\}",
-      "line 3: creating new authority 'Fake Authority of Northern Ireland' (locale: en):\n\t\{\"name\":\"Fake Authority of Northern Ireland\",\"request_email\":\"ni_foi@localhost\"\}",
-      "line 4: creating new authority 'Gobierno de Aragón' (locale: en):\n\t\{\"name\":\"Gobierno de Aragón\",\"request_email\":\"spain_foi@localhost\"}",
-      "line 5: creating new authority 'Nordic æøå' (locale: en):\n\t{\"name\":\"Nordic æøå\",\"request_email\":\"no_foi@localhost\"}"
-    ])
+    expect(notes[0..4]).to eq(
+      [
+        "line 1: creating new authority 'North West Fake Authority' " \
+        "(locale: en):\n\t\{\"name\":\"North West Fake Authority\"," \
+        "\"request_email\":\"north_west_foi@localhost\"\}",
+        "line 2: creating new authority 'Scottish Fake Authority' " \
+        "(locale: en):\n\t\{\"name\":\"Scottish Fake Authority\"," \
+        "\"request_email\":\"scottish_foi@localhost\"\}",
+        "line 3: creating new authority 'Fake Authority of Northern Ireland' " \
+        "(locale: en):\n\t\{\"name\":\"Fake Authority of Northern Ireland\"," \
+        "\"request_email\":\"ni_foi@localhost\"\}",
+        "line 4: creating new authority 'Gobierno de Aragón' " \
+        "(locale: en):\n\t\{\"name\":\"Gobierno de Aragón\"," \
+        "\"request_email\":\"spain_foi@localhost\"}",
+        "line 5: creating new authority 'Nordic æøå' " \
+        "(locale: en):\n\t{\"name\":\"Nordic æøå\"," \
+        "\"request_email\":\"no_foi@localhost\"}"
+      ]
+    )
+    # rubocop:disable Layout/LineLength -- a regex
     expect(notes[5]).to match(/Notes: Some  bodies are in database, but not in CSV file:\n(    .+\n)*You may want to delete them manually.\n/)
+    # rubocop:enable Layout/LineLength
     expect(PublicBody.count).to eq(original_count + 5)
   end
 
@@ -1393,54 +1414,89 @@ RSpec.describe PublicBody, " when loading CSV files" do
     original_count = PublicBody.count
 
     csv_contents = load_file_fixture("fake-authority-type-with-field-names.csv")
-    errors, notes = PublicBody.import_csv(csv_contents, '', 'replace', true, 'someadmin') # true means dry run
+    errors, notes = PublicBody.import_csv(csv_contents, '', 'replace',
+                                          true, # true means dry run
+                                          'someadmin')
     expect(errors).to eq([])
     expect(notes.size).to eq(4)
-    expect(notes[0..2]).to eq([
-      "line 2: creating new authority 'North West Fake Authority' (locale: en):\n\t\{\"name\":\"North West Fake Authority\",\"request_email\":\"north_west_foi@localhost\",\"home_page\":\"http://northwest.org\"\}",
-      "line 3: creating new authority 'Scottish Fake Authority' (locale: en):\n\t\{\"name\":\"Scottish Fake Authority\",\"request_email\":\"scottish_foi@localhost\",\"home_page\":\"http://scottish.org\",\"tag_string\":\"scottish\"\}",
-      "line 4: creating new authority 'Fake Authority of Northern Ireland' (locale: en):\n\t\{\"name\":\"Fake Authority of Northern Ireland\",\"request_email\":\"ni_foi@localhost\",\"tag_string\":\"fake aTag\"\}"
-    ])
+    expect(notes[0..2]).to eq(
+      [
+        "line 2: creating new authority 'North West Fake Authority' " \
+        "(locale: en):\n\t\{\"name\":\"North West Fake Authority\"," \
+        "\"request_email\":\"north_west_foi@localhost\"," \
+        "\"home_page\":\"http://northwest.org\"\}",
+        "line 3: creating new authority 'Scottish Fake Authority' " \
+        "(locale: en):\n\t\{\"name\":\"Scottish Fake Authority\"," \
+        "\"request_email\":\"scottish_foi@localhost\"," \
+        "\"home_page\":\"http://scottish.org\",\"tag_string\":\"scottish\"\}",
+        "line 4: creating new authority 'Fake Authority of Northern Ireland' " \
+        "(locale: en):\n\t\{\"name\":\"Fake Authority of Northern Ireland\"," \
+        "\"request_email\":\"ni_foi@localhost\"," \
+        "\"tag_string\":\"fake aTag\"\}"
+      ]
+    )
+    # rubocop:disable Layout/LineLength -- a regex
     expect(notes[3]).to match(/Notes: Some  bodies are in database, but not in CSV file:\n(    .+\n)*You may want to delete them manually.\n/)
+    # rubocop:enable Layout/LineLength
 
     expect(PublicBody.count).to eq(original_count)
   end
 
   it "should import tags successfully when the import tag is not set" do
     csv_contents = load_file_fixture("fake-authority-type-with-field-names.csv")
-    errors, notes = PublicBody.import_csv(csv_contents, '', 'replace', false, 'someadmin') # false means real run
+    PublicBody.import_csv(csv_contents, '', 'replace',
+                          false, # false means real run
+                          'someadmin')
 
-    expect(PublicBody.find_by_name('North West Fake Authority').tag_array_for_search).to eq([])
-    expect(PublicBody.find_by_name('Scottish Fake Authority').tag_array_for_search).to eq(['scottish'])
-    expect(PublicBody.find_by_name('Fake Authority of Northern Ireland').tag_array_for_search).to eq(%w[aTag fake])
+    expect(PublicBody.find_by_name('North West Fake Authority').
+             tag_array_for_search).to eq([])
+    expect(PublicBody.find_by_name('Scottish Fake Authority').
+             tag_array_for_search).to eq(['scottish'])
+    expect(PublicBody.find_by_name('Fake Authority of Northern Ireland').
+             tag_array_for_search).to eq(%w[aTag fake])
 
     # Import again to check the 'add' tag functionality works
     new_tags_file = load_file_fixture('fake-authority-add-tags.csv')
-    errors, notes = PublicBody.import_csv(new_tags_file, '', 'add', false, 'someadmin') # false means real run
+    PublicBody.import_csv(new_tags_file, '', 'add',
+                          false, # false means real run
+                          'someadmin')
 
     # Check tags were added successfully
-    expect(PublicBody.find_by_name('North West Fake Authority').tag_array_for_search).to eq(['aTag'])
-    expect(PublicBody.find_by_name('Scottish Fake Authority').tag_array_for_search).to eq(%w[aTag scottish])
-    expect(PublicBody.find_by_name('Fake Authority of Northern Ireland').tag_array_for_search).to eq(%w[aTag fake])
+    expect(PublicBody.find_by_name('North West Fake Authority').
+             tag_array_for_search).to eq(['aTag'])
+    expect(PublicBody.find_by_name('Scottish Fake Authority').
+             tag_array_for_search).to eq(%w[aTag scottish])
+    expect(PublicBody.find_by_name('Fake Authority of Northern Ireland').
+             tag_array_for_search).to eq(%w[aTag fake])
   end
 
   it "should import tags successfully when the import tag is set" do
     csv_contents = load_file_fixture("fake-authority-type-with-field-names.csv")
-    errors, notes = PublicBody.import_csv(csv_contents, 'fake', 'add', false, 'someadmin') # false means real run
+    PublicBody.import_csv(csv_contents, 'fake', 'add',
+                          false, # false means real run
+                          'someadmin')
 
     # Check new bodies were imported successfully
-    expect(PublicBody.find_by_name('North West Fake Authority').tag_array_for_search).to eq(['fake'])
-    expect(PublicBody.find_by_name('Scottish Fake Authority').tag_array_for_search).to eq(%w[fake scottish])
-    expect(PublicBody.find_by_name('Fake Authority of Northern Ireland').tag_array_for_search).to eq(%w[aTag fake])
+    expect(PublicBody.find_by_name('North West Fake Authority').
+             tag_array_for_search).to eq(['fake'])
+    expect(PublicBody.find_by_name('Scottish Fake Authority').
+             tag_array_for_search).to eq(%w[fake scottish])
+    expect(PublicBody.find_by_name('Fake Authority of Northern Ireland').
+             tag_array_for_search).to eq(%w[aTag fake])
 
     # Import again to check the 'replace' tag functionality works
     new_tags_file = load_file_fixture('fake-authority-add-tags.csv')
-    errors, notes = PublicBody.import_csv(new_tags_file, 'fake', 'replace', false, 'someadmin') # false means real run
+    PublicBody.import_csv(new_tags_file, 'fake', 'replace',
+                          false, # false means real run
+                          'someadmin')
 
     # Check tags were added successfully
-    expect(PublicBody.find_by_name('North West Fake Authority').tag_array_for_search).to eq(%w[aTag fake])
-    expect(PublicBody.find_by_name('Scottish Fake Authority').tag_array_for_search).to eq(%w[aTag fake])
-    expect(PublicBody.find_by_name('Fake Authority of Northern Ireland').tag_array_for_search).to eq(%w[aTag fake])
+    expect(PublicBody.find_by_name('North West Fake Authority').
+             tag_array_for_search).to eq(%w[aTag fake])
+    expect(PublicBody.find_by_name('Scottish Fake Authority').
+             tag_array_for_search).to eq(%w[aTag fake])
+    expect(PublicBody.find_by_name('Fake Authority of Northern Ireland').
+             tag_array_for_search).to eq(%w[aTag fake])
   end
 
   context 'when the import tag is set' do
@@ -1455,7 +1511,8 @@ RSpec.describe PublicBody, " when loading CSV files" do
         PublicBody.import_csv(csv, 'imported', 'add', false, 'someadmin')
 
         expected = %w(imported)
-        expect(PublicBody.find_by_name('Quango').tag_array_for_search).to eq(expected)
+        expect(PublicBody.find_by_name('Quango').tag_array_for_search).
+          to eq(expected)
       end
 
       it 'appends the import tag when a tag_string is specified' do
@@ -1468,7 +1525,8 @@ RSpec.describe PublicBody, " when loading CSV files" do
         PublicBody.import_csv(csv, 'imported', 'add', false, 'someadmin')
 
         expected = %w(first_tag imported second_tag)
-        expect(PublicBody.find_by_name('Quango').tag_array_for_search).to eq(expected)
+        expect(PublicBody.find_by_name('Quango').tag_array_for_search).
+          to eq(expected)
       end
 
       it 'replaces with the import tag when no tag_string is specified' do
@@ -1481,7 +1539,8 @@ RSpec.describe PublicBody, " when loading CSV files" do
         PublicBody.import_csv(csv, 'imported', 'replace', false, 'someadmin')
 
         expected = %w(imported)
-        expect(PublicBody.find_by_name('Quango').tag_array_for_search).to eq(expected)
+        expect(PublicBody.find_by_name('Quango').tag_array_for_search).
+          to eq(expected)
       end
 
       it 'replaces with the import tag and tag_string when a tag_string is specified' do
@@ -1494,7 +1553,8 @@ RSpec.describe PublicBody, " when loading CSV files" do
         PublicBody.import_csv(csv, 'imported', 'replace', false, 'someadmin')
 
         expected = %w(first_tag imported second_tag)
-        expect(PublicBody.find_by_name('Quango').tag_array_for_search).to eq(expected)
+        expect(PublicBody.find_by_name('Quango').tag_array_for_search).
+          to eq(expected)
       end
     end
 
@@ -1510,16 +1570,19 @@ RSpec.describe PublicBody, " when loading CSV files" do
         CSV
 
         # csv, tag, tag_behaviour, dry_run, editor
-        errors, notes = PublicBody.import_csv(csv, 'imported', 'add', false, 'someadmin')
+        errors, _notes = PublicBody.import_csv(csv, 'imported', 'add', false,
+                                               'someadmin')
 
-        expected = %w(imported)
-        expect(errors).to include("error: line 2: Name Name is already taken for authority 'Existing Body'")
+        expect(errors).
+          to include("error: line 2: Name Name is already taken for " \
+                     "authority 'Existing Body'")
       end
     end
 
     context 'an existing body with tags' do
       before do
-        @body = FactoryBot.create(:public_body, tag_string: 'imported first_tag second_tag')
+        @body = FactoryBot.create(:public_body,
+                                  tag_string: 'imported first_tag second_tag')
       end
 
       it 'created with tags, different tags in csv, add import tag' do
@@ -1561,7 +1624,8 @@ RSpec.describe PublicBody, " when loading CSV files" do
         PublicBody.import_csv(csv, '', 'add', false, 'someadmin')
 
         expected = []
-        expect(PublicBody.find_by_name('Quango').tag_array_for_search).to eq(expected)
+        expect(PublicBody.find_by_name('Quango').tag_array_for_search).
+          to eq(expected)
       end
 
       it 'uses the specified tag_string' do
@@ -1574,7 +1638,8 @@ RSpec.describe PublicBody, " when loading CSV files" do
         PublicBody.import_csv(csv, '', 'add', false, 'someadmin')
 
         expected = %w(first_tag)
-        expect(PublicBody.find_by_name('Quango').tag_array_for_search).to eq(expected)
+        expect(PublicBody.find_by_name('Quango').tag_array_for_search).
+          to eq(expected)
       end
 
       it 'replaces with empty if no tag_string is set' do
@@ -1587,7 +1652,8 @@ RSpec.describe PublicBody, " when loading CSV files" do
         PublicBody.import_csv(csv, '', 'replace', false, 'someadmin')
 
         expected = []
-        expect(PublicBody.find_by_name('Quango').tag_array_for_search).to eq(expected)
+        expect(PublicBody.find_by_name('Quango').tag_array_for_search).
+          to eq(expected)
       end
 
       it 'replaces with the specified tag_string' do
@@ -1600,7 +1666,8 @@ RSpec.describe PublicBody, " when loading CSV files" do
         PublicBody.import_csv(csv, '', 'replace', false, 'someadmin')
 
         expected = %w(first_tag)
-        expect(PublicBody.find_by_name('Quango').tag_array_for_search).to eq(expected)
+        expect(PublicBody.find_by_name('Quango').tag_array_for_search).
+          to eq(expected)
       end
     end
 
@@ -1664,7 +1731,8 @@ RSpec.describe PublicBody, " when loading CSV files" do
 
     describe 'with an existing body with tags' do
       before do
-        @body = FactoryBot.create(:public_body, tag_string: 'first_tag second_tag')
+        @body = FactoryBot.create(:public_body,
+                                  tag_string: 'first_tag second_tag')
       end
 
       it 'created with tags, different tags in csv, add tags' do
@@ -1699,24 +1767,40 @@ RSpec.describe PublicBody, " when loading CSV files" do
     original_count = PublicBody.count
 
     csv_contents = load_file_fixture("fake-authority-type-with-field-names.csv")
-    errors, notes = PublicBody.import_csv(csv_contents, '', 'replace', false, 'someadmin', [:en, :es])
+    errors, notes = PublicBody.import_csv(csv_contents, '', 'replace', false,
+                                          'someadmin', [:en, :es])
     expect(errors).to eq([])
     expect(notes.size).to eq(7)
-    expect(notes[0..5]).to eq([
-      "line 2: creating new authority 'North West Fake Authority' (locale: en):\n\t{\"name\":\"North West Fake Authority\",\"request_email\":\"north_west_foi@localhost\",\"home_page\":\"http://northwest.org\"}",
-      "line 2: creating new authority 'North West Fake Authority' (locale: es):\n\t{\"name\":\"Autoridad del Nordeste\"}",
-      "line 3: creating new authority 'Scottish Fake Authority' (locale: en):\n\t{\"name\":\"Scottish Fake Authority\",\"request_email\":\"scottish_foi@localhost\",\"home_page\":\"http://scottish.org\",\"tag_string\":\"scottish\"}",
-      "line 3: creating new authority 'Scottish Fake Authority' (locale: es):\n\t{\"name\":\"Autoridad Escocesa\"}",
-      "line 4: creating new authority 'Fake Authority of Northern Ireland' (locale: en):\n\t{\"name\":\"Fake Authority of Northern Ireland\",\"request_email\":\"ni_foi@localhost\",\"tag_string\":\"fake aTag\"}",
-      "line 4: creating new authority 'Fake Authority of Northern Ireland' (locale: es):\n\t{\"name\":\"Autoridad Irlandesa\"}"
-    ])
+    expect(notes[0..5]).to eq(
+      [
+        "line 2: creating new authority 'North West Fake Authority' " \
+        "(locale: en):\n\t{\"name\":\"North West Fake Authority\"," \
+        "\"request_email\":\"north_west_foi@localhost\"," \
+        "\"home_page\":\"http://northwest.org\"}",
+        "line 2: creating new authority 'North West Fake Authority' " \
+        "(locale: es):\n\t{\"name\":\"Autoridad del Nordeste\"}",
+        "line 3: creating new authority 'Scottish Fake Authority' " \
+        "(locale: en):\n\t{\"name\":\"Scottish Fake Authority\"," \
+        "\"request_email\":\"scottish_foi@localhost\"," \
+        "\"home_page\":\"http://scottish.org\",\"tag_string\":\"scottish\"}",
+        "line 3: creating new authority 'Scottish Fake Authority' " \
+        "(locale: es):\n\t{\"name\":\"Autoridad Escocesa\"}",
+        "line 4: creating new authority 'Fake Authority of Northern Ireland' " \
+        "(locale: en):\n\t{\"name\":\"Fake Authority of Northern Ireland\"," \
+        "\"request_email\":\"ni_foi@localhost\",\"tag_string\":\"fake aTag\"}",
+        "line 4: creating new authority 'Fake Authority of Northern Ireland' " \
+        "(locale: es):\n\t{\"name\":\"Autoridad Irlandesa\"}"
+      ]
+    )
+    # rubocop:disable Layout/LineLength -- a regex
     expect(notes[6]).to match(/Notes: Some  bodies are in database, but not in CSV file:\n(    .+\n)*You may want to delete them manually.\n/)
+    # rubocop:enable Layout/LineLength
 
     expect(PublicBody.count).to eq(original_count + 3)
 
-    # TODO: Not sure why trying to do a I18n.with_locale fails here. Seems related to
-    # the way categories are loaded every time from the PublicBody class. For now we just
-    # test some translation was done.
+    # TODO: Not sure why trying to do a I18n.with_locale fails here. Seems
+    # related to the way categories are loaded every time from the PublicBody
+    # class. For now we just test some translation was done.
     body = PublicBody.find_by_name('North West Fake Authority')
     expect(body.translated_locales.map(&:to_s).sort).to eq(%w[en es])
   end
@@ -1725,18 +1809,33 @@ RSpec.describe PublicBody, " when loading CSV files" do
     original_count = PublicBody.count
 
     csv_contents = load_file_fixture("fake-authority-type-with-field-names.csv")
-    # Depending on the runtime environment (Ruby version? OS?) the list of available locales
-    # is made of strings or symbols, so we use 'en' here as a string to test both scenarios.
+    # Depending on the runtime environment (Ruby version? OS?) the list of
+    # available locales is made of strings or symbols, so we use 'en' here as a
+    # string to test both scenarios.
     # See https://github.com/mysociety/alaveteli/issues/193
-    errors, notes = PublicBody.import_csv(csv_contents, '', 'replace', true, 'someadmin', ['en', :xx]) # true means dry run
+    errors, notes = PublicBody.import_csv(csv_contents, '', 'replace',
+                                          true, # true means dry run
+                                          'someadmin', ['en', :xx])
     expect(errors).to eq([])
     expect(notes.size).to eq(4)
-    expect(notes[0..2]).to eq([
-      "line 2: creating new authority 'North West Fake Authority' (locale: en):\n\t{\"name\":\"North West Fake Authority\",\"request_email\":\"north_west_foi@localhost\",\"home_page\":\"http://northwest.org\"}",
-      "line 3: creating new authority 'Scottish Fake Authority' (locale: en):\n\t{\"name\":\"Scottish Fake Authority\",\"request_email\":\"scottish_foi@localhost\",\"home_page\":\"http://scottish.org\",\"tag_string\":\"scottish\"}",
-      "line 4: creating new authority 'Fake Authority of Northern Ireland' (locale: en):\n\t{\"name\":\"Fake Authority of Northern Ireland\",\"request_email\":\"ni_foi@localhost\",\"tag_string\":\"fake aTag\"}"
-    ])
+    expect(notes[0..2]).to eq(
+      [
+        "line 2: creating new authority 'North West Fake Authority' " \
+        "(locale: en):\n\t{\"name\":\"North West Fake Authority\"," \
+        "\"request_email\":\"north_west_foi@localhost\"," \
+        "\"home_page\":\"http://northwest.org\"}",
+        "line 3: creating new authority 'Scottish Fake Authority' " \
+        "(locale: en):\n\t{\"name\":\"Scottish Fake Authority\"," \
+        "\"request_email\":\"scottish_foi@localhost\"," \
+        "\"home_page\":\"http://scottish.org\",\"tag_string\":\"scottish\"}",
+        "line 4: creating new authority 'Fake Authority of Northern Ireland' " \
+        "(locale: en):\n\t{\"name\":\"Fake Authority of Northern Ireland\"," \
+        "\"request_email\":\"ni_foi@localhost\",\"tag_string\":\"fake aTag\"}"
+      ]
+    )
+    # rubocop:disable Layout/LineLength -- a regex
     expect(notes[3]).to match(/Notes: Some  bodies are in database, but not in CSV file:\n(    .+\n)*You may want to delete them manually.\n/)
+    # rubocop:enable Layout/LineLength
 
     expect(PublicBody.count).to eq(original_count)
   end
@@ -1789,9 +1888,12 @@ Foobar Test,b@example.com,foobar
 CSV
 
     csv_contents = normalize_string_to_utf8(csv)
-    errors, notes = PublicBody.import_csv(csv_contents, '', 'replace', true, 'someadmin') # true means dry run
+    errors, _notes = PublicBody.import_csv(csv_contents, '', 'replace',
+                                           true, # true means dry run
+                                           'someadmin')
 
-    expect(errors).to include("error: line 3: Url name URL name is already taken for authority 'Foobar Test'")
+    expect(errors).to include("error: line 3: Short name Short name is " \
+                              "already taken for authority 'Foobar Test'")
   end
 
   it 'has a default list of fields to import' do
@@ -1849,14 +1951,24 @@ CSV
 
     csv_contents = load_file_fixture("multiple-locales-same-name.csv")
 
-    errors, notes = PublicBody.import_csv(csv_contents, '', 'replace', true, 'someadmin', %w[en es]) # true means dry run
+    errors, notes = PublicBody.import_csv(csv_contents, '', 'replace',
+                                          true, # true means dry run
+                                          'someadmin', %w[en es])
     expect(errors).to eq([])
     expect(notes.size).to eq(3)
-    expect(notes[0..1]).to eq([
-      "line 2: creating new authority 'Test' (locale: en):\n\t{\"name\":\"Test\",\"request_email\":\"test@test.es\",\"home_page\":\"http://www.test.es/\",\"tag_string\":\"37\"}",
-      "line 2: creating new authority 'Test' (locale: es):\n\t{\"name\":\"Test\"}"
-    ])
+    expect(notes[0..1]).to eq(
+      [
+        "line 2: creating new authority 'Test' " \
+        "(locale: en):\n\t{\"name\":\"Test\"," \
+        "\"request_email\":\"test@test.es\"," \
+        "\"home_page\":\"http://www.test.es/\",\"tag_string\":\"37\"}",
+        "line 2: creating new authority 'Test' " \
+        "(locale: es):\n\t{\"name\":\"Test\"}"
+      ]
+    )
+    # rubocop:disable Layout/LineLength -- a regex
     expect(notes[2]).to match(/Notes: Some  bodies are in database, but not in CSV file:\n(    .+\n)*You may want to delete them manually.\n/)
+    # rubocop:enable Layout/LineLength
 
     expect(PublicBody.count).to eq(original_count)
   end
@@ -1937,6 +2049,15 @@ RSpec.describe PublicBody do
       expect(public_body.calculated_home_page).to eq('https://example.com')
     end
 
+    it "gives no link, and no guess, for a stored home page that isn't " \
+       'a web address' do
+      public_body = FactoryBot.create(:public_body,
+                                      request_email: 'foi@example.org')
+      public_body.update_column(:home_page,
+                                'javascript:alert(1)//http://example.org')
+      expect(PublicBody.find(public_body.id).calculated_home_page).to be_nil
+    end
+
     it 'does not calculate the homepage for excluded domains' do
       public_body = PublicBody.new(request_email: 'x@example.net')
       expect(public_body.calculated_home_page).to be_nil
@@ -1957,66 +2078,6 @@ RSpec.describe PublicBody do
     it 'is false when the body does not have the site_administration tag' do
       p = FactoryBot.build(:public_body)
       expect(p.site_administration?).to be false
-    end
-  end
-
-  describe '#is_foi_officer?' do
-    subject { FactoryBot.build(:public_body).is_foi_officer?(user) }
-
-    let(:user) { FactoryBot.build(:user, email: email) }
-
-    context 'the user email domain is different to the body' do
-      let(:email) { 'u@example.net' }
-      it { is_expected.to eq false }
-    end
-
-    context 'the user email domain is the same as the body' do
-      let(:email) { 'u@example.com' }
-      it { is_expected.to eq true }
-    end
-
-    context 'the body domain is excluded from general access' do
-      before do
-        described_class.excluded_foi_officer_access_domains << 'example.com'
-      end
-
-      after do
-        described_class.
-          excluded_foi_officer_access_domains.delete('example.com')
-      end
-
-      context 'the user is from the body but not the main foi address' do
-        let(:email) { 'u@example.com' }
-        it { is_expected.to eq false }
-      end
-
-      context 'the user is the main foi address' do
-        let(:email) { 'request@example.com' }
-        it { is_expected.to eq true }
-      end
-    end
-  end
-
-  describe '#foi_officer_domain_excluded?' do
-    subject do
-      FactoryBot.build(:public_body).foi_officer_domain_excluded?
-    end
-
-    context 'there are no exclusions for the domain' do
-      it { is_expected.to eq(false) }
-    end
-
-    context 'the body domain is excluded from general access' do
-      before do
-        described_class.excluded_foi_officer_access_domains << 'example.com'
-      end
-
-      after do
-        described_class.
-          excluded_foi_officer_access_domains.delete('example.com')
-      end
-
-      it { is_expected.to eq(true) }
     end
   end
 
@@ -2068,7 +2129,9 @@ end
 
 RSpec.describe PublicBody, " when override all public body request emails set" do
   it "should return the overridden request email" do
-    expect(AlaveteliConfiguration).to receive(:override_all_public_body_request_emails).twice.and_return("catch_all_test_email@foo.com")
+    expect(AlaveteliConfiguration).
+      to receive(:override_all_public_body_request_emails).twice.
+      and_return("catch_all_test_email@foo.com")
     @geraldine = public_bodies(:geraldine_public_body)
     expect(@geraldine.request_email).to eq("catch_all_test_email@foo.com")
   end
@@ -2113,15 +2176,12 @@ RSpec.describe PublicBody, "when indexing for postgres search" do
     it 'finds UK public bodies' do
       with_default_locale(:en) do
         nhs = FactoryBot.create(:public_body, name: "NHS England")
-        bodies = [
-          nhs,
-          FactoryBot.create(:public_body, name: "NHS Improving Quality"),
-          FactoryBot.create(:public_body, name: "NHSX"),
-          FactoryBot.create(
-            :public_body,
-            name: "Northern England NHS fictitious center"
-          )
-        ]
+        FactoryBot.create(:public_body, name: "NHS Improving Quality")
+        FactoryBot.create(:public_body, name: "NHSX")
+        FactoryBot.create(
+          :public_body,
+          name: "Northern England NHS fictitious center"
+        )
         expect(PublicBody.newsearch("NHS England").first).to eq(nhs)
       end
     end
@@ -2163,7 +2223,6 @@ RSpec.describe PublicBody, "when indexing for postgres search" do
         st.translations.create(locale: "sv",
                                name: "Skånetrafiken")
         st.reindex
-        s = SearchDocument.first
         AlaveteliLocalization.with_locale(:sv) do
           expect(PublicBody.newsearch(
                    "Skånetrafiken",
@@ -2178,93 +2237,6 @@ RSpec.describe PublicBody, "when indexing for postgres search" do
         end
       end
     end
-  end
-end
-
-RSpec.describe PublicBody, "when calculating statistics" do
-  it "should not include hidden requests in totals" do
-    with_hidden_and_successful_requests do
-      totals_data = PublicBody.get_request_totals(n=3,
-                                                  highest=true,
-                                                  minimum_requests=1)
-
-      expect(totals_data['public_bodies'][-1].name).to eq("Geraldine Quango")
-      expect(totals_data['totals'][-1]).to eq(3)
-    end
-  end
-
-  it "should not include unclassified or hidden requests in percentages" do
-    with_hidden_and_successful_requests do
-      # For percentages don't include the hidden or
-      # unclassified requests.  So, for the Geraldine Quango
-      # we've made sure that there are only two visible and
-      # classified requests, one of which is successful, so the
-      # percentage should be 50%:
-
-      percentages_data = PublicBody.get_request_percentages(column='info_requests_successful_count',
-                                                            n=3,
-                                                            highest=false,
-                                                            minimum_requests=1)
-      geraldine_index = percentages_data['public_bodies'].index do |pb|
-        pb.name == "Geraldine Quango"
-      end
-
-      expect(percentages_data['y_values'][geraldine_index]).to eq(50)
-    end
-  end
-
-  it "should only return totals for those with at least a minimum number of requests" do
-    minimum_requests = 1
-    with_enough_info_requests = PublicBody.where(["info_requests_count >= ?",
-                                                  minimum_requests]).length
-    all_data = PublicBody.get_request_totals 5, true, minimum_requests
-    expect(all_data['public_bodies'].length).to eq(with_enough_info_requests)
-  end
-
-  it "should only return percentages for those with at least a minimum number of requests" do
-    with_hidden_and_successful_requests do
-      # With minimum requests at 3, this should return nil
-      # (corresponding to zero public bodies) since the only
-      # public body with just more than 3 info requests (The
-      # Geraldine Quango) has a hidden and an unclassified
-      # request within this block:
-      minimum_requests = 3
-      with_enough_info_requests = PublicBody.where(["info_requests_visible_classified_count >= ?",
-                                                    minimum_requests]).length
-      all_data = PublicBody.get_request_percentages(column='info_requests_successful_count',
-                                                    n=10,
-                                                    true,
-                                                    minimum_requests)
-      expect(all_data).to be_nil
-    end
-  end
-
-  it "should only return those with at least a minimum number of requests, but not tagged 'test'" do
-    hpb = PublicBody.find_by_name 'Department for Humpadinking'
-
-    original_tag_string = hpb.tag_string
-    hpb.add_tag_if_not_already_present 'test'
-
-    begin
-      minimum_requests = 1
-      with_enough_info_requests = PublicBody.where(["info_requests_count >= ?", minimum_requests])
-      all_data = PublicBody.get_request_totals 4, true, minimum_requests
-      expect(all_data['public_bodies'].length).to eq(4)
-    ensure
-      hpb.tag_string = original_tag_string
-    end
-  end
-end
-
-RSpec.describe PublicBody, 'when asked for popular bodies' do
-  it 'should return bodies correctly when passed the hyphenated version of the locale' do
-    allow(AlaveteliConfiguration).to receive(:frontpage_publicbody_examples).and_return('')
-    expect(PublicBody.popular_bodies('he-IL')).to eq([public_bodies(:humpadink_public_body)])
-  end
-
-  it 'returns example bodies if some are specified' do
-    allow(AlaveteliConfiguration).to receive(:frontpage_publicbody_examples).and_return('tgq')
-    expect(PublicBody.popular_bodies('en')).to eq([public_bodies(:geraldine_public_body)])
   end
 end
 
@@ -2390,132 +2362,9 @@ RSpec.describe PublicBody do
     end
 
     it 'should raise an error if the body is not defunct, FOI applies and has an email address' do
-      expected_error = "not_requestable_reason called with type that has no reason"
+      expected_error =
+        "not_requestable_reason called with type that has no reason"
       expect { @body.not_requestable_reason }.to raise_error(expected_error)
-    end
-  end
-
-  describe '#update_counter_cache' do
-    let(:public_body) { FactoryBot.create(:public_body) }
-    let(:tmp_body) { FactoryBot.create(:public_body) }
-
-    it 'does not create a new version of the authority' do
-      expect { public_body.update_counter_cache }.
-        not_to change { public_body.versions.count }
-    end
-
-    it 'does not mark the authority for reindexing' do
-      # Call public_body so that any unrelated indexing events are created
-      # before we call update_counter_cache
-      public_body.save!
-      jobs = ActsAsXapian::ActsAsXapianJob.where(model: 'PublicBody')
-      expect { public_body.update_counter_cache }.not_to change { jobs.count }
-    end
-
-    it 'does not touch updated_at' do
-      expect { public_body.update_counter_cache }.
-        not_to change { public_body.updated_at }
-    end
-
-    it 'increments info_requests_not_held_count' do
-      request = FactoryBot.create(:not_held_request)
-      request.update_column(:public_body_id, public_body.id)
-      expect { public_body.update_counter_cache }.
-        to change { public_body.info_requests_not_held_count }.from(nil).to(1)
-    end
-
-    it 'decrements info_requests_not_held_count' do
-      request = FactoryBot.create(:not_held_request, public_body: public_body)
-      public_body.update_counter_cache
-      request.update_column(:public_body_id, tmp_body.id)
-
-      expect { public_body.update_counter_cache }.
-        to change { public_body.info_requests_not_held_count }.from(1).to(0)
-    end
-
-    it 'increments info_requests_successful_count' do
-      request = FactoryBot.create(:successful_request)
-      request.update_column(:public_body_id, public_body.id)
-      expect { public_body.update_counter_cache }.
-        to change { public_body.info_requests_successful_count }.from(nil).to(1)
-    end
-
-    it 'decrements info_requests_successful_count' do
-      request =
-        FactoryBot.create(:successful_request, public_body: public_body)
-      public_body.update_counter_cache
-      request.update_column(:public_body_id, tmp_body.id)
-
-      expect { public_body.update_counter_cache }.
-        to change { public_body.info_requests_successful_count }.from(1).to(0)
-    end
-
-    it 'increments info_requests_visible_classified_count' do
-      request = FactoryBot.create(:info_request)
-      request.update_column(:public_body_id, public_body.id)
-      expect { public_body.update_counter_cache }.
-        to change { public_body.info_requests_visible_classified_count }.
-        from(nil).to(1)
-    end
-
-    it 'decrements info_requests_visible_classified_count' do
-      request = FactoryBot.create(:info_request, public_body: public_body)
-      public_body.update_counter_cache
-      request.update_column(:public_body_id, tmp_body.id)
-
-      expect { public_body.update_counter_cache }.
-        to change { public_body.info_requests_visible_classified_count }.
-        from(1).to(0)
-    end
-
-    it 'increments info_requests_visible_count' do
-      request = FactoryBot.create(:info_request, awaiting_description: true)
-      request.update_column(:public_body_id, public_body.id)
-      expect { public_body.update_counter_cache }.
-        to change { public_body.info_requests_visible_count }.from(0).to(1)
-    end
-
-    it 'decrements info_requests_visible_count' do
-      request = FactoryBot.create(:info_request, public_body: public_body,
-                                                 awaiting_description: true)
-      public_body.update_counter_cache
-      request.update_column(:public_body_id, tmp_body.id)
-
-      expect { public_body.update_counter_cache }.
-        to change { public_body.info_requests_visible_count }.from(1).to(0)
-    end
-  end
-
-  describe '#info_request_count_changed' do
-    subject { public_body.info_request_count_changed }
-
-    around do |example|
-      original_size = PublicBody.not_many_public_requests_size
-      PublicBody.not_many_public_requests_size = 2
-      example.run
-      PublicBody.not_many_public_requests_size = original_size
-    end
-
-    context 'when there are not many public requests' do
-      let!(:public_body) { FactoryBot.create(:public_body) }
-
-      it 'adds the not many requests tag' do
-        subject
-        expect(public_body).to be_tagged('not_many_requests')
-      end
-    end
-
-    context 'when a request email is removed' do
-      let!(:public_body) { FactoryBot.create(:public_body) }
-
-      before do
-        FactoryBot.create_list(:info_request, 3, public_body: public_body)
-      end
-
-      it 'removes the not many requests tag' do
-        subject
-        expect(public_body).not_to be_tagged('not_many_requests')
-      end
     end
   end
 end
@@ -2538,6 +2387,113 @@ end
 
 RSpec.describe PublicBody::Version do
   let(:public_body) { FactoryBot.create(:public_body) }
+
+  describe 'saving a public body' do
+    def snapshot(version)
+      version.attributes.slice('public_body_id', 'version', 'name',
+                               'short_name', 'url_name', 'request_email',
+                               'last_edit_editor', 'last_edit_comment')
+    end
+
+    it 'records version 1 with the new body' do
+      expect(public_body.version).to eq(1)
+      expect(public_body.versions.map { snapshot(_1) }).to eq(
+        [{ 'public_body_id' => public_body.id,
+           'version' => 1,
+           'name' => public_body.name,
+           'short_name' => public_body.short_name,
+           'url_name' => public_body.url_name,
+           'request_email' => 'request@example.com',
+           'last_edit_editor' => 'admin user',
+           'last_edit_comment' => 'Making an edit' }]
+      )
+    end
+
+    it 'records nothing for a save that changes nothing' do
+      public_body
+      expect { public_body.save! }.
+        not_to(change { [public_body.versions.count, public_body.version] })
+    end
+
+    it 'records nothing when reloaded and saved unchanged' do
+      body = PublicBody.find(public_body.id)
+      expect { body.save! }.not_to change(described_class, :count)
+      expect(body.reload.version).to eq(1)
+    end
+
+    it 'numbers the next version one past the highest recorded' do
+      public_body.update!(name: 'Second name')
+      public_body.update!(name: 'Third name')
+      expect(public_body.version).to eq(3)
+      expect(public_body.versions.order(:version).pluck(:version, :name)).
+        to eq([[1, public_body.versions.first.name],
+               [2, 'Second name'], [3, 'Third name']])
+    end
+
+    it 'numbers from the recorded versions, not the body' do
+      public_body.update!(name: 'Second name')
+      public_body.versions.find_by(version: 2).delete
+      public_body.update!(name: 'Third name')
+      expect(public_body.version).to eq(2)
+      expect(public_body.versions.order(:version).pluck(:version)).
+        to eq([1, 2])
+    end
+
+    it 'has no previous version for a row without a number' do
+      row = described_class.create!(public_body: public_body, version: nil)
+      expect(row.previous).to be_nil
+    end
+
+    it 'finds the latest version and the one before it' do
+      public_body.update!(name: 'Second name')
+      latest = public_body.versions.latest
+      expect([latest.version, latest.name]).to eq([2, 'Second name'])
+      expect(latest.previous.version).to eq(1)
+      expect(latest.previous.previous).to be_nil
+      expect(latest.public_body).to eq(public_body)
+    end
+
+    it 'records a version when only a non-versioned column changes' do
+      public_body
+      expect { public_body.update!(first_letter: 'Z') }.
+        to change { public_body.versions.count }.by(1)
+    end
+
+    it 'records a version when only the edit comment changes' do
+      public_body
+      expect { public_body.update!(last_edit_comment: 'Another edit') }.
+        to change { public_body.versions.count }.by(1)
+      expect(public_body.versions.latest.last_edit_comment).
+        to eq('Another edit')
+    end
+
+    it 'records the values of the locale the body is saved in' do
+      english = public_body.name
+      AlaveteliLocalization.with_locale(:es) do
+        public_body.name = 'Nombre'
+        public_body.save!
+      end
+      expect(public_body.versions.order(:version).pluck(:version, :name)).
+        to eq([[1, english], [2, 'Nombre']])
+    end
+
+    it 'counts the change made in another locale like any other change' do
+      public_body
+      expect do
+        AlaveteliLocalization.with_locale(:es) do
+          public_body.name = 'Nombre'
+          public_body.save!
+        end
+      end.to change { public_body.versions.count }.by(1)
+    end
+
+    it 'removes its versions when the body is destroyed' do
+      public_body.update!(name: 'Second name')
+      id = public_body.id
+      public_body.destroy!
+      expect(described_class.where(public_body_id: id)).to be_empty
+    end
+  end
 
   describe '#compare' do
     describe 'when no block is given' do
@@ -2566,7 +2522,7 @@ RSpec.describe PublicBody::Version do
           expected = { name: "Request email",
                        from: "request@example.com",
                        to: "new@example.com" }
-          expect(current.compare(current.previous)).to eq([ expected ])
+          expect(current.compare(current.previous)).to eq([expected])
         end
       end
     end

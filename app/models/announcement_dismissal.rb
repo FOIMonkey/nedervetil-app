@@ -9,6 +9,7 @@
 #  updated_at      :datetime         not null
 #
 
+# Records that a User has dismissed an Announcement so it is not shown again.
 class AnnouncementDismissal < ApplicationRecord
   belongs_to :announcement,
              inverse_of: :dismissals

@@ -48,6 +48,17 @@ RSpec.describe Announcement do
       end
     end
 
+    # The inbox is for every signed-in account (#93): its announcements go
+    # to anyone, whatever their roles or the flag.
+    describe '.for_user' do
+      it 'returns undismissed announcements made after the user signed up, whatever their roles' do
+        inbox = FactoryBot.create(:announcement,
+                                  visibility: Announcement::INBOX)
+        expect(Announcement.for_user(user, Announcement::INBOX)).
+          to match_array([inbox])
+      end
+    end
+
     describe '.for_user_with_roles' do
       it 'returns undismissed announcements made after the user signed up which match visibility with the user roles' do
         expect(Announcement.for_user_with_roles(admin, 'admin')).

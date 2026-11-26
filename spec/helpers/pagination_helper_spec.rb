@@ -4,7 +4,7 @@ RSpec.describe PaginationHelper do
   include PaginationHelper
 
   describe '#will_paginate_translate' do
-    let(:options) {}
+    let(:options) { nil }
     subject { will_paginate_translate(key, options) }
 
     context 'with :previous_label key' do

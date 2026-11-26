@@ -1,3 +1,5 @@
+# Splits a start-to-finish date range into calendar-quarter [start, end] pairs
+# for the statistics rake tasks.
 module DateQuarter
   extend self
 

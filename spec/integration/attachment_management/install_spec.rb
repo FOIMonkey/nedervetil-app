@@ -22,7 +22,7 @@ RSpec.describe 'Attachment management installation' do
       to eq(1)
     versions = ActiveRecord::MigrationContext.new(paths).migrations.
       map(&:version)
-    expect(versions).to include(20261008000100)
+    expect(versions).to include(20261008000100, 20261006000100)
     expect(ActiveRecord::Base.connection.
              table_exists?(:attachment_management_revisions)).to be true
   end

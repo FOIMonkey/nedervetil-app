@@ -188,7 +188,6 @@ class IncomingMessage < ApplicationRecord
 
   # A reading not queued here is queued by IncomingAttention::Recovery.
   def queue_attention_prediction
-
     IncomingAttention::Prediction.for_message(self)&.enqueue!
   rescue StandardError => e
     Rails.logger.warn(
@@ -197,7 +196,6 @@ class IncomingMessage < ApplicationRecord
   end
 
   def create_attention_prediction
-
     IncomingAttention::Prediction.ensure_for(self)
   end
 

@@ -7,21 +7,31 @@ module InfoRequestCustomStates
   def theme_calculate_status
     return 'waiting_classification' if awaiting_description
 
-    waiting_response = described_state == "waiting_response" || described_state == "deadline_extended"
+    waiting_response = described_state == "waiting_response" ||
+                       described_state == "deadline_extended"
     return described_state unless waiting_response
 
     if described_state == 'deadline_extended'
-      return 'deadline_extended' if
-      Time.zone.now.strftime("%Y-%m-%d") < date_deadline_extended.strftime("%Y-%m-%d")
-      return 'waiting_response_very_overdue'  if
-      Time.zone.now.strftime("%Y-%m-%d") > Holiday.due_date_from_working_days(date_deadline_extended, 15).strftime("%Y-%m-%d")
+      if Time.zone.now.strftime("%Y-%m-%d") <
+         date_deadline_extended.strftime("%Y-%m-%d")
+        return 'deadline_extended'
+      end
+      if Time.zone.now.strftime("%Y-%m-%d") >
+         Holiday.due_date_from_working_days(date_deadline_extended, 15).
+         strftime("%Y-%m-%d")
+        return 'waiting_response_very_overdue'
+      end
 
       return 'waiting_response_overdue'
     end
-    return 'waiting_response_very_overdue' if
-    Time.zone.now.strftime("%Y-%m-%d") > date_very_overdue_after.strftime("%Y-%m-%d")
-    return 'waiting_response_overdue' if
-    Time.zone.now.strftime("%Y-%m-%d") > date_response_required_by.strftime("%Y-%m-%d")
+    if Time.zone.now.strftime("%Y-%m-%d") >
+       date_very_overdue_after.strftime("%Y-%m-%d")
+      return 'waiting_response_very_overdue'
+    end
+    if Time.zone.now.strftime("%Y-%m-%d") >
+       date_response_required_by.strftime("%Y-%m-%d")
+      return 'waiting_response_overdue'
+    end
 
     'waiting_response'
   end
@@ -68,7 +78,8 @@ module RequestControllerCustomStates
       flash[:notice] = _("Authority has requested extension of the deadline.")
       redirect_to unhappy_url(info_request)
     elsif info_request.calculate_status == 'wrong_response'
-      flash[:notice] = _("Oh no! Sorry to hear that your request was wrong. Here is what to do now.")
+      flash[:notice] = _("Oh no! Sorry to hear that your request was " \
+                         "wrong. Here is what to do now.")
       redirect_to unhappy_url(info_request)
     else
       raise "unknown calculate_status " + info_request.calculate_status

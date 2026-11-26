@@ -5,14 +5,18 @@ RSpec.describe ApplicationMailer do
     def set_base_views
       ApplicationMailer.class_eval do
         @previous_view_paths = view_paths.dup
-        self.view_paths = [File.join(Rails.root, 'spec', 'fixtures', 'theme_views', 'core')]
+        self.view_paths = [
+          File.join(Rails.root, 'spec', 'fixtures', 'theme_views', 'core')
+        ]
       end
     end
 
     def add_mail_methods(method_names)
       @previous_layout = ApplicationMailer._layout.dup
       ApplicationMailer.send(:layout, nil)
-      method_names.each { |method_name| ApplicationMailer.send(:define_method, method_name) { mail } }
+      method_names.each do |method_name|
+        ApplicationMailer.send(:define_method, method_name) { mail }
+      end
     end
 
     def remove_mail_methods(method_names)
@@ -26,13 +30,17 @@ RSpec.describe ApplicationMailer do
 
     def prepend_theme_views(theme_name)
       ApplicationMailer.class_eval do
-        prepend_view_path File.join(Rails.root, 'spec', 'fixtures', 'theme_views', theme_name)
+        prepend_view_path File.join(
+          Rails.root, 'spec', 'fixtures', 'theme_views', theme_name
+        )
       end
     end
 
     def append_theme_views(theme_name)
       ApplicationMailer.class_eval do
-        append_view_path File.join(Rails.root, 'spec', 'fixtures', 'theme_views', theme_name)
+        append_view_path File.join(
+          Rails.root, 'spec', 'fixtures', 'theme_views', theme_name
+        )
       end
     end
 

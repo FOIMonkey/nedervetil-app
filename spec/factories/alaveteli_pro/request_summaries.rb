@@ -16,7 +16,7 @@
 #
 
 FactoryBot.define do
-  factory :request_summary, class: AlaveteliPro::RequestSummary do
+  factory :request_summary, class: 'AlaveteliPro::RequestSummary' do
     sequence(:title) { |n| "Example Title #{n}" }
     sequence(:body) { |n| "Example request #{n}" }
     public_body_names { 'Example Public Body' }
@@ -46,15 +46,15 @@ FactoryBot.define do
     end
 
     factory :draft_request_summary do
-      association :summarisable , factory: :draft_info_request
+      association :summarisable, factory: :draft_info_request
     end
 
     factory :batch_request_summary do
-      association :summarisable , factory: :info_request_batch
+      association :summarisable, factory: :info_request_batch
     end
 
     factory :draft_batch_request_summary do
-      association :summarisable , factory: :draft_info_request_batch
+      association :summarisable, factory: :draft_info_request_batch
     end
   end
 end

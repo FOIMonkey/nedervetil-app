@@ -11,8 +11,8 @@ RSpec.describe "request/details" do
       event_type: 'edit',
       info_request: mock_request,
       params: {
-        "allow_new_responses_from": "nobody",
-        "old_allow_new_responses_from": "authority_only"
+        allow_new_responses_from: "nobody",
+        old_allow_new_responses_from: "authority_only"
       }
     )
 

@@ -167,7 +167,7 @@ RSpec.describe Category, type: :model do
           child.title
           child.children.each(&:title)
         end
-      }.to_not change { @query_count }
+      }.to_not(change { @query_count })
     end
   end
 
@@ -214,7 +214,7 @@ RSpec.describe Category, type: :model do
       list = root.list.to_a
 
       # iterate through list and ensure translations have been preloaded
-      expect { list.each(&:title) }.to_not change { @query_count }
+      expect { list.each(&:title) }.to_not(change { @query_count })
     end
   end
 
@@ -248,5 +248,11 @@ RSpec.describe Category, type: :model do
       AlaveteliLocalization.with_locale(:es) { category.body = 'content' }
       expect(plain_body).to include(es: 'content')
     end
+  end
+
+  describe '#body' do
+    let(:record) { FactoryBot.build(:category) }
+
+    include_examples 'a rich text field without attachments', :body
   end
 end

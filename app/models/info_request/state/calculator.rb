@@ -1,88 +1,45 @@
 class InfoRequest
   module State
+    # Returned by InfoRequest#state. Maps a request's status to its inbox
+    # phase, summarised phase group and allowed status transitions.
     class Calculator
+      PHASES = {
+        'not_held' => :complete,
+        'rejected' => :complete,
+        'successful' => :complete,
+        'partially_successful' => :complete,
+        'user_withdrawn' => :complete,
+        'waiting_clarification' => :clarification_needed,
+        'waiting_response' => :awaiting_response,
+        'waiting_response_overdue' => :overdue,
+        'waiting_response_very_overdue' => :very_overdue,
+        'gone_postal' => :other,
+        'internal_review' => :other,
+        'under_appeal' => :other,
+        'error_message' => :other,
+        'requires_admin' => :other,
+        'attention_requested' => :other,
+        'vexatious' => :other,
+        'not_foi' => :other
+      }.freeze
+
       def initialize(info_request)
         @info_request = info_request
       end
 
-      def phase(cached_value_ok=false)
-        if @info_request.awaiting_description?
-          :response_received
-        else
-          state = @info_request.calculate_status(cached_value_ok)
-          case state
-            when 'not_held',
-                 'rejected',
-                 'successful',
-                 'partially_successful',
-                 'user_withdrawn'
-              :complete
-            when 'waiting_clarification'
-              :clarification_needed
-            when 'waiting_response'
-              :awaiting_response
-            when 'waiting_response_overdue'
-              :overdue
-            when 'waiting_response_very_overdue'
-              :very_overdue
-            when 'gone_postal',
-                 'internal_review',
-                 'under_appeal',
-                 'error_message',
-                 'requires_admin',
-                 'attention_requested',
-                 'vexatious',
-                 'not_foi'
-              :other
-          end
-        end
+      def phase(cached_value_ok = false)
+        return :response_received if @info_request.awaiting_description?
+
+        PHASES[@info_request.calculate_status(cached_value_ok)]
       end
 
-      # Calculates the available state transitions for the current request
-      # and returns a hash of hashes, containing groups of states and their
-      # accompanying labels, for presenting options to a user when updating
-      # the request's status.
+      # Available status choices, grouped as :pending, :complete and :other.
       #
-      # @see InfoRequest::State::Transitions for the full list of labels
-      # @see InfoRequest::State::Transitions.transition_label for options
-      #   which can be passed through to control which labels are returned.
-      #
-      # @param [Hash] opts options to control the transition labels that are
-      #   returned. Options will also be passed through to
-      #    InfoRequest::State::Transitions#transition_label, so see
-      #    documentation there for a full list.
-      # @option opts [Boolean] :cached_value_ok is it ok to use a cached value
-      #   for the request's current status? (optional, defaults to false)
-      # @option opts [Boolean] :user_asked_to_update_status has the user
-      #   explicitly asked to update the request status, or is the form just
-      #   being shown incidentally? If true, more status options will be given
-      #   (optional, defaults to false)
-      #
-      # @example transitions for a user
-      #   calculator.transitions(is_owning_user: true,
-      #                          user_asked_to_update_status: true)
-      #   #=> {
-      #     pending:  {
-      #       "waiting_response"      => "I'm still <strong>waiting</strong> for my information <small>(maybe you got an acknowledgement)</small>",
-      #       "waiting_clarification" => "I've been asked to <strong>clarify</strong> my request",
-      #       "internal_review"       => "I'm waiting for an <strong>internal review</strong> response",
-      #       "gone_postal"           => "They are going to reply <strong>by postal mail</strong>"
-      #     },
-      #     complete: {
-      #       "not_held"              => "They do <strong>not have</strong> the information <small>(maybe they say who does)</small>",
-      #       "partially_successful"  => "I've received <strong>some of the information</strong>",
-      #       "successful"            => "I've received <strong>all the information</strong>",
-      #       "rejected"              => "My request has been <strong>refused</strong>"
-      #     },
-      #     other: {
-      #       "error_message"         => "I've received an <strong>error message</strong>",
-      #       "requires_admin"        => "This request <strong>requires administrator attention</strong>",
-      #       "user_withdrawn"        => "I would like to <strong>withdraw this request</strong>"
-      #     }
-      #   }
-      #
-      # @return [Hash] a hash with three keys, :pending, :complete, and :other
-      #   which themselves contain hashes of the form state => label.
+      # @option opts [Boolean] :cached_value_ok allow cached status (false)
+      # @option opts [Boolean] :user_asked_to_update_status offer more choices
+      #   when the user explicitly requests a status update (false)
+      # @see InfoRequest::State::Transitions.transition_label
+      # @return [Hash] group => { state => label }; other options are forwarded
       def transitions(opts = {})
         cached_value_ok = opts.fetch(:cached_value_ok, false)
         state = @info_request.calculate_status(cached_value_ok)
@@ -100,20 +57,20 @@ class InfoRequest
       end
 
       # A summarised version of #phase, grouping the phases down into 3 groups
-      def summarised_phase(cached_value_ok=false)
+      def summarised_phase(cached_value_ok = false)
         phase = phase(cached_value_ok)
         case phase
-          when :awaiting_response
-            :in_progress
-          when :complete
-            :complete
-          when :other
-            :other
-          when :response_received,
+        when :awaiting_response
+          :in_progress
+        when :complete
+          :complete
+        when :other
+          :other
+        when :response_received,
                :clarification_needed,
                :overdue,
                :very_overdue
-            :action_needed
+          :action_needed
         end
       end
 
@@ -154,8 +111,8 @@ class InfoRequest
 
       def complete_states(_opts = {})
         # States from which a request can go no further, because it's complete
+        # (not_held is stored as rejected)
         %w[
-          not_held
           partially_successful
           successful
           rejected
@@ -170,7 +127,8 @@ class InfoRequest
 
       def other_states(opts = {})
         is_owning_user = opts.fetch(:is_owning_user, false)
-        user_asked_to_update_status = opts.fetch(:user_asked_to_update_status, false)
+        user_asked_to_update_status =
+          opts.fetch(:user_asked_to_update_status, false)
         states = ['error_message']
         if user_asked_to_update_status && is_owning_user
           states += %w[requires_admin user_withdrawn]

@@ -4,10 +4,92 @@ RSpec.describe ApplicationHelper do
   include ApplicationHelper
   include LinkToHelper
 
+  describe '#is_admin?' do
+    before { session[:using_admin] = 1 }
+
+    def signed_in_as(user)
+      allow(helper).to receive(:can?) { |*args| Ability.new(user).can?(*args) }
+    end
+
+    it 'is true for an active admin' do
+      signed_in_as(FactoryBot.create(:admin_user))
+      expect(helper.is_admin?).to be(true)
+    end
+
+    it 'is false for a banned admin, though the session says admin' do
+      signed_in_as(FactoryBot.create(:admin_user, ban_text: 'Banned'))
+      expect(helper.is_admin?).to be(false)
+    end
+
+    it 'is false signed out, though the session says admin' do
+      signed_in_as(nil)
+      expect(helper.is_admin?).to be(false)
+    end
+  end
+
   describe '#can_ask_the_eu?' do
     it 'delegates to WorldFOIWebsites.can_ask_the_eu?' do
       expect(WorldFOIWebsites).to receive(:can_ask_the_eu?).with('US')
       can_ask_the_eu?('US')
+    end
+  end
+
+  describe '#band_notice' do
+    # Matches Rails' annotate_rendered_view_with_filenames output when empty.
+    let(:only_comments) do
+      "<!-- BEGIN app/views/general/_flashes.html.erb\n-->" \
+        '<!-- END app/views/general/_flashes.html.erb -->'.html_safe
+    end
+
+    it 'places nothing when the notice partial holds only those comments' do
+      allow(helper).to receive(:page_flashes).and_return(only_comments)
+      expect(helper.band_notice).to be_nil
+      expect(helper.band_notice_placed?).to be(false)
+    end
+
+    it 'places a notice wrapped in those comments' do
+      # rubocop:disable Rails/OutputSafety -- fixed markup standing in for the flashes partial
+      allow(helper).to receive(:page_flashes).and_return(
+        only_comments.sub('-->', '--><div id="notice">Saved.</div>').html_safe
+      )
+      # rubocop:enable Rails/OutputSafety
+      expect(helper.band_notice).to include('class="band-flash"', 'Saved.')
+      expect(helper.band_notice_placed?).to be(true)
+    end
+  end
+
+  describe '#page_band' do
+    it 'draws the band for a view that none of the site\'s controllers drew' do
+      band = helper.page_band('Title')
+      expect(band).to include('class="page-band"', 'page-band__title', 'Title')
+    end
+
+    it 'draws a plain title when the controller says the page is in the ' \
+       'sign-in dialog' do
+      helper.controller.define_singleton_method(:in_sign_in_dialog?) { true }
+      expect(helper.page_band('Title')).to eq('<h1>Title</h1>')
+    end
+
+    context 'with a notice to show' do
+      before do
+        allow(helper).to receive(:page_flashes).
+          and_return('<div id="notice">Saved.</div>'.html_safe)
+      end
+
+      it 'puts the notice straight after the band' do
+        expect(helper.page_band('Title')).
+          to match(%r{</header><div class="band-flash".*Saved\.}m)
+        expect(helper.band_notice_placed?).to be(true)
+      end
+
+      # The admin layout prints the notice itself, so here it would show twice.
+      it 'leaves the notice to the layout on an admin page' do
+        allow(helper).to receive(:controller).and_return(AdminController.new)
+        band = helper.page_band('Title')
+        expect(band).to include('page-band__title')
+        expect(band).not_to include('band-flash', 'Saved.')
+        expect(helper.band_notice_placed?).to be(false)
+      end
     end
   end
 
@@ -22,17 +104,39 @@ RSpec.describe ApplicationHelper do
     end
   end
 
+  describe '#inside_layout' do
+    it 'passes captured ERB to a layout without treating it as a template' do
+      literal = '<%= 1 + 1 %>'.html_safe
+      expect(helper).to receive(:render).with(template: 'layouts/admin') do
+        helper.view_flow.get(:layout)
+      end
+
+      expect(helper.inside_layout('admin') { literal }).to eq(literal)
+    end
+
+    it 'restores the previous layout content after rendering' do
+      previous_content = '<p>previous</p>'.html_safe
+      helper.view_flow.set(:layout, previous_content)
+      allow(helper).to receive(:render).and_return('rendered')
+
+      helper.inside_layout('admin') { '<p>inside</p>'.html_safe }
+
+      expect(helper.view_flow.get(:layout)).to eq(previous_content)
+    end
+  end
+
   describe '#read_asset_file' do
     it "raises an Exception if it can't find the file" do
       expect { read_asset_file('nosuchfile.css') }.
-        to raise_error(Sprockets::FileNotFound,
-                       "Asset file 'nosuchfile.css' was not found in the " \
-                       "assets directory")
+        to raise_error(Propshaft::MissingAssetError,
+                       "The asset 'nosuchfile.css' was not found in the " \
+                       "load path.")
     end
 
-    it 'returns the contents of the file if it finds the asset' do
-      expect(read_asset_file('responsive/application.css')).
-        to match(/font-size/)
+    it 'returns the built stylesheet, with its images at their asset URLs' do
+      css = read_asset_file('responsive/application.css')
+      expect(css).to match(/font-size/)
+      expect(css).to match(%r{url\("/assets/status/status-sprite-\h{8}\.png"\)})
     end
 
     it 'returns the file content as UTF-8' do
@@ -89,11 +193,18 @@ RSpec.describe ApplicationHelper do
     end
 
     it 'returns true if the file exists' do
-      expect(theme_asset_exists?('images/logo-opengraph.png')).to eq true
+      Dir.mktmpdir do |theme|
+        images = File.join(theme, 'app/assets/images')
+        FileUtils.mkdir_p(images)
+        FileUtils.touch(File.join(images, 'logo-opengraph.png'))
+        allow(view_paths).to receive(:paths).
+          and_return([File.join(theme, 'lib/views'), app_view_path])
+        expect(theme_asset_exists?('images/logo-opengraph.png')).to eq true
+      end
     end
 
     context 'without a theme installed' do
-      let(:paths) { [ app_view_path ] }
+      let(:paths) { [app_view_path] }
 
       it 'looks in the core app file path' do
         expected_path = app_view_path.gsub('/app/views', '/app/assets')
@@ -108,41 +219,6 @@ RSpec.describe ApplicationHelper do
         expect(theme_asset_exists?('images/social-facebook.png')).to eq true
       end
     end
-  end
-
-  describe '#show_pro_upsell?' do
-    subject { show_pro_upsell?(user) }
-
-    context 'when the user is not logged in', feature: :alaveteli_pro do
-      let(:user) { nil }
-      it { is_expected.to eq(true) }
-    end
-
-    context 'when a regular user is logged in', feature: :alaveteli_pro do
-      let(:user) { FactoryBot.create(:user) }
-      it { is_expected.to eq(true) }
-    end
-
-    context 'when a pro user is logged in', feature: :alaveteli_pro do
-      let(:user) { FactoryBot.create(:pro_user) }
-      it { is_expected.to eq(false) }
-    end
-
-    context 'when pro is disabled' do
-      let(:user) { FactoryBot.create(:user) }
-      it { with_feature_disabled(:alaveteli_pro) { is_expected.to eq(false) } }
-    end
-  end
-
-  describe '#pro_upsell_text' do
-    subject { pro_upsell_text }
-
-    let(:expected) do
-      '<strong><a href="/pro">Alaveteli Professional</a></strong> is a ' \
-      'powerful, fully-featured FOI toolkit for journalists.'
-    end
-
-    it { is_expected.to eq(expected) }
   end
 
   describe 'when creating an event description' do
@@ -222,7 +298,7 @@ RSpec.describe ApplicationHelper do
 
       it 'calls cache with the provided arguments and locale' do
         cache_if_caching_fragments('key') { block_result }
-        expect(self).to have_received(:cache).with(['key', 'en'])
+        expect(self).to have_received(:cache).with(%w[key en])
       end
 
       it 'yields the block within the cache block' do
@@ -247,43 +323,15 @@ RSpec.describe ApplicationHelper do
     end
   end
 
-  describe '#request_list_cache_key' do
-    subject { helper.request_list_cache_key }
-
-    before do
-      allow(helper).to receive(:params).
-        and_return(params.with_indifferent_access)
+  describe '#large_file_size' do
+    it 'gives the size of a file of a megabyte or more' do
+      expect(large_file_size(3.5.megabytes)).to eq('3.5 MB')
     end
 
-    context 'when params contain only cacheable keys' do
-      let(:params) do
-        { controller: 'request', action: 'list', view: 'all' }
-      end
-
-      it 'returns a cache key' do
-        is_expected.to eq(['request-list', 'all'])
-      end
-    end
-
-    context 'when params contain a non-cacheable key' do
-      let(:params) do
-        {
-          controller: 'request', action: 'list', view: 'all',
-          page: '2'
-        }
-      end
-
-      it 'returns nil' do
-        is_expected.to be_nil
-      end
-    end
-
-    context 'when params are empty' do
-      let(:params) { {} }
-
-      it 'returns nil' do
-        is_expected.to be_nil
-      end
+    it 'gives nothing for a smaller file, or an unknown size' do
+      expect(large_file_size(324)).to be_nil
+      expect(large_file_size(1.megabyte - 1)).to be_nil
+      expect(large_file_size(nil)).to be_nil
     end
   end
 end

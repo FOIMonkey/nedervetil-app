@@ -1,6 +1,5 @@
-# ApplicationController privacy gate: restricts requests, batches, messages,
-# attachments and user accounts to their owners and active admins, and adds
-# private, no-store cache headers.
+# ApplicationController privacy gate: restricts requests/accounts to owners
+# and admins, disables public features, and redirects body pages to documents.
 module PrivateArchive
   SWITCHED_OFF_PREFIXES = %w[active_storage/].freeze
 
@@ -52,11 +51,7 @@ module PrivateArchive
       private_archive_request!(message.info_request)
     elsif path == 'attachment_masks'
       private_archive_attachment_mask
-    elsif path == 'info_request_batch' && action == 'show'
-      batch = InfoRequestBatch.find(params[:id])
-      raise ActiveRecord::RecordNotFound unless can?(:read, batch)
-    elsif path == 'public_body' && action == 'show' &&
-          defined?(Disclosures::Search)
+    elsif path == 'public_body' && action == 'show'
       private_archive_body_page
     end
   end

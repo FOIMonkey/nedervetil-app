@@ -57,6 +57,7 @@ class OutgoingMailerPreview < ActionMailer::Preview
       info_request: info_request,
       raw_email: RawEmail.new,
       last_parsed: Time.now,
+      sent_at: Time.now,
       cached_main_body_text_folded: 'We acknowledge your FOI request.'
     )
   end

@@ -168,9 +168,6 @@ msgstr ""
 msgid "Add all"
 msgstr ""
 
-msgid "Add an annotation"
-msgstr "Ychwanegu anodiad"
-
 msgid "Add annotation"
 msgstr ""
 
@@ -675,9 +672,6 @@ msgstr ""
 msgid "New Pro requests this week:"
 msgstr ""
 
-msgid "New Pro subscriptions this week:"
-msgstr ""
-
 msgid "New batches made this week:"
 msgstr ""
 
@@ -727,9 +721,6 @@ msgid "Number of discounted users:"
 msgstr ""
 
 msgid "Number of expired embargoes this week:"
-msgstr ""
-
-msgid "Number of free trial users:"
 msgstr ""
 
 msgid "Number of paying users:"

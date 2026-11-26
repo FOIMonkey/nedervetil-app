@@ -86,7 +86,7 @@ scope 'admin', module: 'admin/authority_feeds', as: 'admin' do
                            constraints: { id: /\d+/ }
 end
 
-# Topics, one per topic page, and a page for each question.
+# Topics, one per topic file a theme supplies, and a page for each question.
 get 'topics', to: 'topics/topics#index', as: :topics
 get 'topics/:slug', to: 'topics/topics#show',
                     as: :topic,

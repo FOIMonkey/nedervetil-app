@@ -34,9 +34,7 @@ class ReplyToAddressValidator
       return false
     end
 
-    prefix = email
-    prefix =~ /^(.*)@/
-    prefix = $1
+    prefix = email[/^(.*)@/, 1]
 
     return false unless prefix
 

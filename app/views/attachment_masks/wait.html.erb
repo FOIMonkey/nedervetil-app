@@ -1,11 +1,16 @@
 <% @title = _('Attachment processing...') %>
-<h1><%= @title %></h1>
+<%= page_band %>
+<div data-controller="wait-reload">
+  <p>
+    <%= _("We're still preparing this attachment. The page will reload " \
+          "automatically once it's ready.") %>
+  </p>
+  <%# For a browser whose scripts didn't start, where neither the controller
+      nor the noscript refresh runs. %>
+  <p><%= link_to _('Check again'), request.fullpath, data: { turbo: false } %></p>
+</div>
 
-<p>
-  <%= _("We're still preparing this attachment. The page will reload " \
-        "automatically once it's ready.") %>
-</p>
-
+<%# The wait-reload controller asks again; without scripts, this does. %>
 <% content_for :javascript_head do %>
-  <meta http-equiv="refresh" content="2">
-<% end%>
+  <noscript><meta http-equiv="refresh" content="2"></noscript>
+<% end %>

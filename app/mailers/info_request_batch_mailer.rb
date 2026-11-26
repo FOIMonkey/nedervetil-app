@@ -1,9 +1,8 @@
-# models/info_request_batch_mailer.rb:
-# Emails relating to user accounts. e.g. Confirming a new account
-#
 # Copyright (c) 2013 UK Citizens Online Democracy. All rights reserved.
 # Email: hello@mysociety.org; WWW: http://www.mysociety.org/
 
+# Emails the requester once an InfoRequestBatch finishes sending, listing any
+# authorities that could not be contacted.
 class InfoRequestBatchMailer < ApplicationMailer
   def batch_sent(info_request_batch, unrequestable, user)
     @info_request_batch = info_request_batch
@@ -15,7 +14,7 @@ class InfoRequestBatchMailer < ApplicationMailer
       subject: -> {
         _(
           "Your batch request \"{{title}}\" has been sent",
-          title: info_request_batch.title.html_safe
+          title: info_request_batch.title
         )
       }
     )

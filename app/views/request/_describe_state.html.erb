@@ -8,10 +8,7 @@
       <h2><%= _('What best describes the status of this request now?') %></h2>
     <% else %>
       <h2>
-        <%= _("Hi! We need your help. The person who made the following " \
-              "request hasn't told us whether or not it was successful. " \
-              "Would you mind taking a moment to read it and help us keep " \
-              "the place tidy for everyone? Thanks.") %>
+        <%= _('Update the status of this request.') %>
       </h2>
     <% end %>
 
@@ -64,10 +61,10 @@
     </p>
   <% end %>
 <% else %>
-  <% if !@info_request.is_external? && !@old_unclassified %>
-    <%=  _("We don't know whether the most recent response to this request " \
-           "contains information or not &ndash; if you are {{user_link}} " \
-           "please <a href=\"{{url}}\">sign in</a> and let everyone know.",
+  <% if !@old_unclassified %>
+    <%=  _('The most recent response to this request has not been ' \
+           'classified yet. If you are {{user_link}}, <a ' \
+           'href="{{url}}">sign in</a> to set its status.',
            user_link: user_link(@info_request.user),
            url: signin_url(r: request.fullpath)) %>
   <% end %>

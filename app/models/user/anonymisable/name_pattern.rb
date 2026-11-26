@@ -1,7 +1,7 @@
 # Split a name into parts to construct a pattern suitable for a Regexp
 # CensorRule#text
 class User::Anonymisable::NamePattern
-  DEFAULT_HONORIFICS = 'Mr|Mrs|Miss|Ms|Mx'
+  DEFAULT_HONORIFICS = 'Mr|Mrs|Miss|Ms|Mx'.freeze
   DEFAULT_PATTERN = /
     \b
     (?:
@@ -51,11 +51,11 @@ class User::Anonymisable::NamePattern
   end
 
   def first_initial
-    parts.first.mb_chars.first.to_s
+    parts.first[0].to_s
   end
 
   def last_initial
-    parts.last.mb_chars.first.to_s
+    parts.last[0].to_s
   end
 
   protected
@@ -67,6 +67,7 @@ class User::Anonymisable::NamePattern
   def pattern_string
     return pattern unless pattern.is_a?(Regexp)
     return pattern.source unless (pattern.options & Regexp::EXTENDED).nonzero?
+
     "(?x:#{pattern.source})"
   end
 

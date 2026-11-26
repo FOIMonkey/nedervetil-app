@@ -367,9 +367,6 @@ msgstr ""
 msgid "Add a widget"
 msgstr ""
 
-msgid "Add an annotation"
-msgstr ""
-
 msgid "Add an annotation to &ldquo;{{request_title}}&rdquo;"
 msgstr ""
 
@@ -1172,9 +1169,6 @@ msgid "Follow this link to see the requests:"
 msgstr ""
 
 msgid "Follow this person"
-msgstr ""
-
-msgid "Follow this request"
 msgstr ""
 
 #. TRANSLATORS: "Follow up" in this context means a further
@@ -3141,9 +3135,6 @@ msgid "There is nothing to display yet."
 msgstr ""
 
 msgid "There was a <strong>delivery error</strong> or similar, which needs fixing by the {{site_name}} team. Can you help by <a href=\"{{change_request_url}}\">finding updated contact details</a>?"
-msgstr ""
-
-msgid "There was an error with the reCAPTCHA. Please try again."
 msgstr ""
 
 msgid "There was no data calculated for this graph yet."

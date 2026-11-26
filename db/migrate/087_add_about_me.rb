@@ -5,6 +5,6 @@ class AddAboutMe < ActiveRecord::Migration[4.2] # 2.3
 
   def self.down
     raise "No reverse migration"
-    #remove_column :users, :about_me
+    # remove_column :users, :about_me
   end
 end

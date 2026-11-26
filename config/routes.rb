@@ -6,8 +6,6 @@
 
 require 'sidekiq/web'
 
-include AlaveteliFeatures::Constraints
-
 # Allow easy extension from themes. Note these will have the highest priority.
 $alaveteli_route_extensions.each do |f|
   load File.join('config', f)
@@ -19,14 +17,9 @@ class AdminConstraint # :nodoc:
   end
 end
 
-class PreviewConstraint # :nodoc:
-  def self.matches?(request)
-    request.params[:preview].present? && request.params[:preview].to_i > 0
-  end
-end
-
 Rails.application.routes.draw do
   devise_for :users, skip: :all
+
   draw :features
   draw :redirects
 
@@ -38,9 +31,6 @@ Rails.application.routes.draw do
   root :to => 'general#frontpage',
        :as => :frontpage,
        :via => :get
-  match '/blog' => 'general#blog',
-        :as => :blog,
-        :via => :get
   # Requests are private, so the published documents are the only search.
   # The old search URLs put their words in the path, with the kind of result
   # and the sort order as trailing segments, or in ?query=.
@@ -52,25 +42,20 @@ Rails.application.routes.draw do
     path = '/documents'
     words.present? ? "#{path}?q=#{ERB::Util.url_encode(words)}" : path
   end
-  get '/search(/*combined)', to: documents_search, format: false, as: :search_redirect
-  get '/advancedsearch', to: documents_search, as: :advanced_search
+  get '/search(/*combined)', to: documents_search, format: false
+  get '/advancedsearch', to: documents_search
   match '/version.:format' => 'general#version',
         :as => :version,
         :via => :get
 
   #####
 
-  ##### AtiNetwork controller
-  match '/access-to-information-around-the-world' => 'ati_network#showcase',
-        as: :ati_network_showcase,
-        via: :get
-
-  ##### Statistics controller
-  get '/statistics' => 'statistics#index'
-  get '/body_statistics' => redirect('/statistics#public_bodies'), :as => :public_bodies_statistics
+  # The statistics page was removed and /statistics is a 404, as it was while
+  # switched off. This old link keeps the redirect it has always given.
+  get '/body_statistics' => redirect('/statistics#public_bodies')
 
   ##### Request controller
-  # Public request listings are closed in private-archive mode.
+  # The public request listings are gone; their URLs lead to the documents.
   get '/browse' => redirect('/documents')
   get '/list(/*rest)' => redirect('/documents'), format: false
 
@@ -85,10 +70,6 @@ Rails.application.routes.draw do
         :as => :new_request_to_body,
         :via => [:get, :post]
 
-  match '/request/search_ahead' => 'request#search_typeahead',
-        :as => :search_ahead,
-        :via => :get
-
   match '/request/:url_title' => 'request#show',
         :as => :show_request,
         :via => :get
@@ -98,16 +79,7 @@ Rails.application.routes.draw do
   match '/request/:url_title/details' => 'request#details',
         :as => :details_request,
         :via => :get
-  match '/request/:url_title/similar' => 'request#similar',
-        :as => :similar_request,
-        :via => :get
 
-  match '/request/:request_url_title/response/:incoming_message_id/attach' \
-        '/html/(:part(/*file_name))' => 'attachments#show_as_html',
-        :format => false,
-        :as => :get_attachment_as_html,
-        :via => :get,
-        :constraints => { :part => /\d+/ }
   match '/request/:request_url_title/response/:incoming_message_id/attach' \
         '/:part(/*file_name)' => 'attachments#show',
         :format => false,
@@ -126,10 +98,6 @@ Rails.application.routes.draw do
         :as => :info_request_event,
         :via => :get
 
-  match '/request/:url_title/upload' => 'upload_response#new',
-        :as => :upload_response,
-        :via => [:get, :post]
-
   match '/request/:url_title/download' => 'request#download_entire_request',
         :as => :download_entire_request,
         :via => :get
@@ -138,20 +106,8 @@ Rails.application.routes.draw do
       as: :download_regulator_pack
   ####
 
-  #### Citations controller
-  resources :citations, only: [:index]
-
-  scope path: 'request/:url_title' do
-    resources :citations,
-      only: [:new, :create],
-      defaults: { resource: 'InfoRequest' }
-  end
-
-  resources :info_request_batch, :only => :show do
-    resources :citations,
-      only: [:new, :create],
-      defaults: { resource: 'InfoRequestBatch' }
-  end
+  #### InfoRequestBatch controller
+  resources :info_request_batch, :only => :show
   ####
 
   #### Classifications controller
@@ -178,31 +134,6 @@ Rails.application.routes.draw do
         :via => :post
   ####
 
-  #### Projects
-  constraints FeatureConstraint.new(:projects) do
-    match '/p/:token' => 'projects/invites#create',
-          as: :project_invite,
-          via: :get
-
-    scope module: :projects do
-      resources :projects, only: [:show] do
-        resource :extract, only: [:show, :create, :edit, :update] do
-          patch :skip
-        end
-        resource :classify, only: [:show, :create, :edit, :update] do
-          patch :skip
-          get :message
-        end
-
-        resource :contributors, only: [:destroy]
-
-        resource :dataset, controller: :dataset, only: [:show, :edit, :update]
-        resource :leaderboard, only: [:show], format: true
-      end
-    end
-  end
-  ####
-
   namespace :health do
     resources :checks, :only => [:index]
     resources :metrics, :only => [:index], :defaults => { :format => 'txt' }
@@ -211,8 +142,6 @@ Rails.application.routes.draw do
 
   resources :request, :only => [], param: :url_title do
     resource :report, :only => [:new, :create]
-    resource :widget, :only => [:new, :show]
-    resources :widget_votes, :only => [:create]
   end
 
   #### OutgoingMessage controller
@@ -264,8 +193,8 @@ Rails.application.routes.draw do
            only: [:show, :create],
            path: '/profile/two_factor/backup_codes',
            controller: 'one_time_passwords/backup_codes'
-
   match '/tor', to: 'user#tor', via: :get
+
   match '/user/:url_name' => 'user#show',
         :as => :show_user,
         :via => :get
@@ -288,18 +217,6 @@ Rails.application.routes.draw do
   match '/profile/change_email/confirm/:email_token' =>
           'users/email_changes#update',
         :via => :post
-  match '/profile/set_photo' => 'user#set_profile_photo',
-        :as => :set_profile_photo,
-        :via => [:get, :post]
-  match '/profile/clear_photo' => 'user#clear_profile_photo',
-        :as => :clear_profile_photo,
-        :via => :post
-  match '/user/:url_name/photo.png' => 'user#get_profile_photo',
-        :as => :get_profile_photo,
-        :via => :get
-  match '/profile/draft_photo/:id.png' => 'user#get_draft_profile_photo',
-        :as => :get_draft_profile_photo,
-        :via => :get
 
   namespace :users do
     get 'email_alerts/disable/:token',
@@ -311,22 +228,12 @@ Rails.application.routes.draw do
     resource :name, only: [:edit, :update]
   end
 
-  namespace :profile, :module => 'user_profile' do
-    resource :about_me, :only => [:edit, :update], :controller => 'about_me'
-  end
-
-  # Legacy route for setting about_me
-  match '/profile/set_about_me' => redirect('/profile/about_me/edit'),
-        :as => :set_profile_about_me,
-        :via => [:get, :post]
-
+  # A form only: a link that changed a setting could be followed from
+  # another site.
   match '/profile/set_receive_alerts' => 'user#set_receive_email_alerts',
         :as => :set_receive_email_alerts,
-        :via => [:get, :post]
+        :via => :post
 
-  match '/profile/river' => 'user#river',
-        :as => :river,
-        :via => :get
   ####
 
   #### PublicBody controller
@@ -376,33 +283,25 @@ Rails.application.routes.draw do
   ####
 
   #### PublicBodyChangeRequest controller
-  resource :change_request, :only => [:new, :create], :controller => 'public_body_change_requests'
+  resource :change_request, :only => [:new, :create],
+                            :controller => 'public_body_change_requests'
   match 'change_request/new/:body' => 'public_body_change_requests#new',
         :as => :new_change_request_body,
         :via => :get
 
-  #### Comment controller
-  get '/request/:url_title/annotate' => 'comments#new',
-      as: :new_comment,
-      type: 'request'
-  post '/request/:url_title/annotate' => 'comments#preview',
-       as: :comments,
-       type: 'request',
-       constraints: PreviewConstraint
-  post '/request/:url_title/annotate' => 'comments#create',
-       type: 'request'
-  ####
-
-  #### Services controller
-  match '/country_message' => 'services#other_country_message',
-        :as => :other_country_message,
-        :via => :get
-  match '/hidden_user_explanation' => 'services#hidden_user_explanation',
-        :as => :hidden_user_explanation,
-        :via => :get
-  ####
-
-  #### Track controller (retired in private-archive mode)
+  #### Old feeds
+  # Tracks and their feeds were removed (see doc/FORK.md). The list, authority
+  # and search feeds lead to the published documents feed; the rest 404.
+  documents_feed = redirect(status: 302) do |path_params, _request|
+    Rails.application.routes.url_helpers.disclosure_documents_path(
+      format: path_params[:format], feed: '1',
+      body: path_params[:url_name], q: path_params[:query_array]
+    )
+  end
+  get '/feed/list/:view' => documents_feed, :view => nil
+  get '/feed/body/:url_name' => documents_feed
+  get '/feed/search/:query_array' => documents_feed,
+      :constraints => { :query_array => /.*/ }
   ####
 
   #### Refusal Advice controller
@@ -463,38 +362,14 @@ Rails.application.routes.draw do
         :via => :get
   ####
 
-  #### RequestGame controller
-  match '/categorise/play' => 'request_game#play',
-        :as => :categorise_play,
-        :via => [:get, :post]
-  match '/request/:url_title/categorise' => 'request_game#show',
-        :as => :categorise_request,
-        :via => :get
-  match '/categorise/stop' => 'request_game#stop',
-        :as => :categorise_stop,
-        :via => :post
-  ####
-
   #### Announcement controller
   resources :announcements, :only => [:destroy]
-  ####
-
-  #### Admin::BlogPosts controller
-  namespace :admin do
-    resources :blog_posts, only: [:index, :edit, :update]
-  end
   ####
 
   #### Admin::Changelog controller
   namespace :admin do
     resources :changelog, only: [:index]
   end
-
-  #### Admin::Citations controller
-  namespace :admin do
-    resources :citations, only: [:index, :edit, :update, :destroy]
-  end
-  ####
 
   #### Admin::Debug controller
   namespace :admin do
@@ -508,7 +383,7 @@ Rails.application.routes.draw do
 
   namespace :admin do
     resources :tags, param: :tag, only: [:index, :show],
-      constraints: { tag: /.+/ }
+                     constraints: { tag: /.+/ }
   end
   ####
 
@@ -522,6 +397,23 @@ Rails.application.routes.draw do
     resources :notes, except: [:show]
   end
 
+  #### Admin::TopicGuides controller
+  namespace :admin do
+    resources :topic_guides, except: [:show]
+  end
+
+  #### Admin topic content controllers
+  namespace :admin do
+    resources :topic_pages, path: 'topics', except: [:show] do
+      resources :topic_holders, path: 'holders', except: %i[index show]
+      resources :topic_questions, path: 'questions', except: %i[index show]
+      resources :topic_sources, path: 'sources', except: %i[index show]
+      resources :topic_routes, path: 'routes', except: %i[index show]
+    end
+    resources :topic_datasets, path: 'datasets', except: [:show]
+    resources :topic_changes, path: 'topic_history', only: [:index]
+  end
+
   direct :admin_note_parent do |note|
     if note.notable_tag
       admin_tag_path(tag: note.notable_tag)
@@ -531,22 +423,6 @@ Rails.application.routes.draw do
       admin_general_index_path
     end
   end
-
-  #### Admin::Projects controller
-  namespace :admin do
-    resources :projects, except: [:new, :create] do
-      scope module: :projects do
-        resources :submissions, only: [:destroy]
-      end
-    end
-  end
-  ####
-
-  #### Admin::PostRedirectsController
-  namespace :admin do
-    resources :post_redirects, only: [:destroy]
-  end
-  ####
 
   #### Admin::TwoFactor controller
   namespace :admin do
@@ -792,23 +668,15 @@ Rails.application.routes.draw do
   end
   ####
 
-  #### Admin::Insights controller
-  namespace :admin do
-    resources :info_requests, only: [], path: 'requests' do
-      resources :insights, only: [:show, :new, :create, :destroy]
-    end
-  end
-  ####
-
   #### Pro Pages
   namespace :alaveteli_pro, path: :pro, as: :pro do
     resources :pages, only: [:show]
   end
 
-  #### Unified Inbox (alaveteli_pro naming kept for theme compatibility)
+  #### Alaveteli Pro
   namespace :alaveteli_pro, path: 'pro' do
     get :dashboard, to: 'dashboard#index'
-    resources :draft_info_requests, :only => [:create, :update, :destroy]
+    resources :draft_info_requests, :only => [:destroy]
     resources :info_requests, only: [:new, :create, :index] do
       get :preview, on: :new # /info_request/new/preview
     end
@@ -827,34 +695,15 @@ Rails.application.routes.draw do
       get :preview, on: :new # /info_request_batch/new/preview
       resource :batch_download, only: [:show], format: true, path: 'download'
     end
-    resources :public_bodies, :only => [:index]
   end
 
   scope path: :pro do
-    # Show a batch request in the inbox context
+    # So that we can show a batch request using the existing controller from
+    # the pro context
     match '/info_request_batches/:id' => 'info_request_batch#show',
           :as => :show_alaveteli_pro_batch_request,
           :via => :get,
           :defaults => { :pro => '1' }
-
-    # Show the authority selection screen in the inbox context
-    match '/select_authority' => 'request#select_authority',
-          :as => :alaveteli_pro_select_authority,
-          :via => :get,
-          :defaults => { :pro => '1' }
   end
   ####
-
-  #### Admin topic guides and topic content controllers
-  namespace :admin do
-    resources :topic_guides, except: [:show]
-    resources :topic_pages, path: 'topics', except: [:show] do
-      resources :topic_holders, path: 'holders', except: %i[index show]
-      resources :topic_questions, path: 'questions', except: %i[index show]
-      resources :topic_sources, path: 'sources', except: %i[index show]
-      resources :topic_routes, path: 'routes', except: %i[index show]
-    end
-    resources :topic_datasets, path: 'datasets', except: [:show]
-    resources :topic_changes, path: 'topic_history', only: [:index]
-  end
 end

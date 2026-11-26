@@ -9,47 +9,31 @@ RSpec.describe 'request/sidebar' do
            locals: stub_locals
   end
 
-  let(:info_request) { FactoryBot.build(:info_request) }
-  let(:similar_requests) { double.as_null_object }
-  let(:similar_more) { double.as_null_object }
-  let(:citations) { double.as_null_object }
+  let(:info_request) { FactoryBot.create(:info_request) }
   let(:ability) { Object.new.extend(CanCan::Ability) }
 
   let(:stub_locals) do
-    { info_request: info_request,
-      similar_requests: similar_requests,
-      similar_more: similar_more,
-      citations: citations }
+    { info_request: info_request }
   end
 
   it 'renders the new request CTA' do
+    stub_template 'general/_new_request.html.erb' => 'NEW REQUEST CTA'
     render_view
-    expect(rendered).to render_template(partial: 'general/_new_request')
+    expect(rendered).to include('NEW REQUEST CTA')
   end
 
-  it 'renders the pro upsell' do
+  it 'renders the privacy note' do
+    stub_template 'alaveteli_pro/info_requests/_privacy.html.erb' =>
+                    'PRIVACY NOTE'
     render_view
-    expect(rendered).to render_template(partial: '_sidebar_pro_upsell')
+    expect(rendered).to include('PRIVACY NOTE')
   end
 
-  context 'when the user can create_embargo', feature: :alaveteli_pro do
-    before { ability.can :create_embargo, info_request }
-
-    it 'renders the embargo_form' do
-      render_view
-      partial = 'alaveteli_pro/info_requests/_embargo_form'
-      expect(rendered).to render_template(partial: partial)
-    end
-  end
-
-  context 'when the user cannot create_embargo', feature: :alaveteli_pro do
-    before { ability.cannot :create_embargo, info_request }
-
-    it 'does not render the embargo_form' do
-      render_view
-      partial = 'alaveteli_pro/info_requests/_embargo_form'
-      expect(rendered).not_to render_template(partial: partial)
-    end
+  it 'shows the request stays private, with no form to change that' do
+    render_view
+    expect(rendered).
+      to have_css('.request-privacy', text: 'This request stays private.')
+    expect(rendered).to have_no_css('.request-privacy form')
   end
 
   context 'when the request is attention_requested' do
@@ -60,8 +44,10 @@ RSpec.describe 'request/sidebar' do
     end
 
     it 'renders attention_requested' do
+      stub_template 'request/_attention_requested.html.erb' =>
+                      'ATTENTION REQUESTED'
       render_view
-      expect(rendered).to render_template(partial: '_attention_requested')
+      expect(rendered).to include('ATTENTION REQUESTED')
     end
   end
 
@@ -73,42 +59,29 @@ RSpec.describe 'request/sidebar' do
     end
 
     it 'does not render attention_requested' do
+      stub_template 'request/_attention_requested.html.erb' =>
+                      'ATTENTION REQUESTED'
       render_view
-      expect(rendered).not_to render_template(partial: '_attention_requested')
+      expect(rendered).not_to include('ATTENTION REQUESTED')
     end
   end
 
   it 'renders act links' do
+    stub_template 'request/_act.html.erb' => 'ACT LINKS'
     render_view
-    expect(rendered).to render_template(partial: 'request/_act')
+    expect(rendered).to include('ACT LINKS')
   end
 
   it 'renders next_actions' do
+    stub_template 'request/_next_actions.html.erb' => 'NEXT ACTIONS'
     render_view
-    expect(rendered).to render_template(partial: 'request/_next_actions')
+    expect(rendered).to include('NEXT ACTIONS')
   end
 
   it 'renders batch' do
+    stub_template 'request/_batch.html.erb' => 'BATCH'
     render_view
-    expect(rendered).to render_template(partial: 'request/_batch')
-  end
-
-  context 'when there are similar requests' do
-    let(:similar_requests) { double(any?: true).as_null_object }
-
-    it 'renders the similar requests' do
-      render_view
-      expect(rendered).to render_template(partial: 'request/_similar')
-    end
-  end
-
-  context 'when there are no similar requests' do
-    let(:similar_requests) { double(any?: false) }
-
-    it 'does not renders the similar requests' do
-      render_view
-      expect(rendered).not_to render_template(partial: 'request/_similar')
-    end
+    expect(rendered).to include('BATCH')
   end
 
   it 'renders the copyright notice' do

@@ -11,6 +11,8 @@ require 'active_record/connection_adapters/postgresql_adapter'
 module ActiveRecord
   module ConnectionAdapters
     class PostgreSQLAdapter < AbstractAdapter
+      # Replaces disable_referential_integrity with a plain transaction so the
+      # test suite runs without PostgreSQL superuser privileges.
       module ReferentialIntegrity
         def disable_referential_integrity
           transaction {
@@ -23,8 +25,11 @@ module ActiveRecord
 end
 
 module ActiveRecord
+  # Overrides create_fixtures to delete fixture tables in reverse order before
+  # inserting in forward order so foreign keys stay satisfied without disabling
+  # constraints.
   class FixtureSet
-    def self.create_fixtures(fixtures_directory, fixture_set_names, class_names = {}, config = ActiveRecord::Base)
+    def self.create_fixtures(fixtures_directory, fixture_set_names, class_names = {}, _config = ActiveRecord::Base)
       fixture_set_names = Array(fixture_set_names).map(&:to_s)
       class_names.stringify_keys!
 
@@ -46,7 +51,8 @@ module ActiveRecord
               conn,
               fs_name,
               klass,
-              ::File.join(fixtures_directory, fs_name))
+              ::File.join(fixtures_directory, fs_name)
+            )
           end
 
           update_all_loaded_fixtures fixtures_map
@@ -55,11 +61,13 @@ module ActiveRecord
             # Patch - replace this...
             # ***
             # fixture_sets.each do |fs|
+            # rubocop:disable Layout/LineLength -- a verbatim copy of Rails code
             #   conn = fs.model_class.respond_to?(:connection) ? fs.model_class.connection : connection
             #   table_rows = fs.table_rows
 
             #   table_rows.keys.each do |table|
             #     conn.delete "DELETE FROM #{conn.quote_table_name(table)}", 'Fixture Delete'
+            # rubocop:enable Layout/LineLength
             #   end
 
             #   table_rows.each do |fixture_set_name, rows|
@@ -75,19 +83,28 @@ module ActiveRecord
             # end
             # ***
             # ... with this
-            fixture_sets.reverse.each do |fs|
-              conn = fs.model_class.respond_to?(:connection) ? fs.model_class.connection : connection
+            fixture_sets.reverse_each do |fs|
+              conn = if fs.model_class.respond_to?(:connection)
+                       fs.model_class.connection
+                     else
+                       connection
+                     end
               table_rows = fs.table_rows
 
               table_rows.keys.each do |table|
-                conn.delete "DELETE FROM #{conn.quote_table_name(table)}", 'Fixture Delete'
+                conn.delete "DELETE FROM #{conn.quote_table_name(table)}",
+                            'Fixture Delete'
               end
             end
 
             fixture_sets.each do |fs|
-              conn = fs.model_class.respond_to?(:connection) ? fs.model_class.connection : connection
+              conn = if fs.model_class.respond_to?(:connection)
+                       fs.model_class.connection
+                     else
+                       connection
+                     end
               table_rows = fs.table_rows
-              table_rows.each do |table_name,rows|
+              table_rows.each do |table_name, rows|
                 rows.each do |row|
                   conn.insert_fixture(row, table_name)
                 end

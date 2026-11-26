@@ -62,43 +62,58 @@ RSpec.describe Holiday do
       end
 
       it "handles Time objects" do
-        expect(Holiday.due_date_from_working_days(Time.utc(2009, 03, 16, 12, 0, 0), 20).strftime('%F')).to eq('2009-04-16')
+        expect(
+          Holiday.due_date_from_working_days(
+            Time.utc(2009, 3, 16, 12, 0, 0), 20
+          ).strftime('%F')
+        ).to eq('2009-04-16')
       end
     end
 
     context "in calendar days" do
       it "handles no holidays" do
-        expect(Holiday.due_date_from_calendar_days(Date.new(2008, 10, 1), 20)).to eq(Date.new(2008, 10, 21))
+        expect(Holiday.due_date_from_calendar_days(Date.new(2008, 10, 1), 20)).
+          to eq(Date.new(2008, 10, 21))
       end
 
       it "handles the due date falling on a Friday" do
-        expect(Holiday.due_date_from_calendar_days(Date.new(2008, 10, 4), 20)).to eq(Date.new(2008, 10, 24))
+        expect(Holiday.due_date_from_calendar_days(Date.new(2008, 10, 4), 20)).
+          to eq(Date.new(2008, 10, 24))
       end
 
-      # If the due date would fall on a Saturday it should in fact fall on the next day that isn't a weekend
-      # or a holiday
+      # If the due date would fall on a Saturday it should in fact fall on the
+      # next day that isn't a weekend or a holiday
       it "handles the due date falling on a Saturday" do
-        expect(Holiday.due_date_from_calendar_days(Date.new(2008, 10, 5), 20)).to eq(Date.new(2008, 10, 27))
+        expect(Holiday.due_date_from_calendar_days(Date.new(2008, 10, 5), 20)).
+          to eq(Date.new(2008, 10, 27))
       end
 
       it "handles the due date falling on a Sunday" do
-        expect(Holiday.due_date_from_calendar_days(Date.new(2008, 10, 6), 20)).to eq(Date.new(2008, 10, 27))
+        expect(Holiday.due_date_from_calendar_days(Date.new(2008, 10, 6), 20)).
+          to eq(Date.new(2008, 10, 27))
       end
 
       it "handles the due date falling on a Monday" do
-        expect(Holiday.due_date_from_calendar_days(Date.new(2008, 10, 7), 20)).to eq(Date.new(2008, 10, 27))
+        expect(Holiday.due_date_from_calendar_days(Date.new(2008, 10, 7), 20)).
+          to eq(Date.new(2008, 10, 27))
       end
 
       it "handles the due date falling on a day before a Holiday" do
-        expect(Holiday.due_date_from_calendar_days(Date.new(2008, 12, 4), 20)).to eq(Date.new(2008, 12, 24))
+        expect(Holiday.due_date_from_calendar_days(Date.new(2008, 12, 4), 20)).
+          to eq(Date.new(2008, 12, 24))
       end
 
       it "handles the due date falling on a Holiday" do
-        expect(Holiday.due_date_from_calendar_days(Date.new(2008, 12, 5), 20)).to eq(Date.new(2008, 12, 29))
+        expect(Holiday.due_date_from_calendar_days(Date.new(2008, 12, 5), 20)).
+          to eq(Date.new(2008, 12, 29))
       end
 
       it "handles Time objects" do
-        expect(Holiday.due_date_from_calendar_days(Time.utc(2009, 03, 17, 12, 0, 0), 20)).to eq(Date.new(2009, 4, 6))
+        expect(
+          Holiday.due_date_from_calendar_days(
+            Time.utc(2009, 3, 17, 12, 0, 0), 20
+          )
+        ).to eq(Date.new(2009, 4, 6))
       end
     end
   end

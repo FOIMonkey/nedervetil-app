@@ -1,9 +1,0 @@
-<% @title = _('Recent Events') %>
-
-<div class="single_user">
-  <h1><%=@title%></h1>
-
-  <% for event in @results %>
-    <%= render :partial => 'request/request_listing_via_event', :locals => { :event => event } %>
-  <% end %>
-</div>

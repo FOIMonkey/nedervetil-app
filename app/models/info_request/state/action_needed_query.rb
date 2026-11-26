@@ -1,5 +1,7 @@
 class InfoRequest
   module State
+    # Query for InfoRequest.action_needed: selects requests awaiting
+    # description, waiting for clarification, or past their response due date.
     class ActionNeededQuery
       def initialize(relation = InfoRequest)
         @relation = relation

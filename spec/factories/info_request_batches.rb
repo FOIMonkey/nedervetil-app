@@ -2,14 +2,13 @@
 #
 # Table name: info_request_batches
 #
-#  id               :integer          not null, primary key
-#  title            :text             not null
-#  user_id          :integer          not null
-#  created_at       :datetime         not null
-#  updated_at       :datetime         not null
-#  body             :text
-#  sent_at          :datetime
-#  embargo_duration :string
+#  id         :integer          not null, primary key
+#  title      :text             not null
+#  user_id    :integer          not null
+#  created_at :datetime         not null
+#  updated_at :datetime         not null
+#  body       :text
+#  sent_at    :datetime
 #
 
 FactoryBot.define do
@@ -21,24 +20,14 @@ FactoryBot.define do
     # NB order of the traits is important as the after callbacks are run in the
     # order the traits are defined.
 
-    trait :embargoed do
-      embargo_duration { '3_months' }
-
-      after(:build) do |batch, _evaluator|
-        batch.info_requests.each do |request|
-          request.embargo = build(:embargo)
-        end
-      end
-    end
-
     trait :sent do
       transient do
         public_body_count { 1 }
       end
 
       after(:build) do |batch, evaluator|
-        factory = batch.embargo_duration ? :embargoed_request : :info_request
-        batch.info_requests = build_list(factory, evaluator.public_body_count,
+        batch.info_requests = build_list(:info_request,
+                                         evaluator.public_body_count,
                                          user: batch.user)
 
         batch.info_requests.each do |request|

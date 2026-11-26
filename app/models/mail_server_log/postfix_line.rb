@@ -1,11 +1,13 @@
+# Wraps a Postfix log line to extract its status= token and map it to a
+# delivery status value object (MailServerLog::DeliveryStatus).
 class MailServerLog::PostfixLine
   include Comparable
 
   LOG_LINE_FLAGS = {
-    'status=sent' =>        :sent,
-    'status=deferred' =>    :deferred,
-    'status=bounced' =>     :bounced,
-    'status=expired' =>     :expired
+    'status=sent' => :sent,
+    'status=deferred' => :deferred,
+    'status=bounced' => :bounced,
+    'status=expired' => :expired
   }.freeze
 
   DELIVERED_FLAGS = [
@@ -55,7 +57,7 @@ class MailServerLog::PostfixLine
   end
 
   def inspect
-    %Q(#<#{self.class}:#{format("0x00%x", (object_id << 1))} @line="#{ line }">)
+    %Q(#<#{self.class}:#{format("0x00%x", object_id << 1)} @line="#{ line }">)
   end
 
   private
@@ -64,8 +66,6 @@ class MailServerLog::PostfixLine
 
   def parse_delivery_status
     case status
-    when nil?
-      :unknown
     when *DELIVERED_FLAGS
       :delivered
     when *SENT_FLAGS

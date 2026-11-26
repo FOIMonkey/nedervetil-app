@@ -30,10 +30,6 @@ Rails.application.configure do
   config.consider_all_requests_local = true
   config.cache_store = :null_store
 
-  # Rate limiting reads and writes through the controller cache store.
-  config.action_controller.cache_store = :memory_store
-  config.action_controller.perform_caching = false
-
   # Rate limiting reads and writes through the controller cache store, so give
   # it a real in-memory store rather than the :null_store used for Rails.cache.
   # Keep fragment/view caching switched off so rendered output is never reused
@@ -54,9 +50,6 @@ Rails.application.configure do
   # The :test delivery method accumulates sent emails in the
   # ActionMailer::Base.deliveries array.
   config.action_mailer.delivery_method = :test
-
-  # Set host to be used by links generated in mailer templates.
-  config.action_mailer.default_url_options = { host: "example.com" }
 
   # Print deprecation notices to the stderr.
   config.active_support.deprecation = :stderr

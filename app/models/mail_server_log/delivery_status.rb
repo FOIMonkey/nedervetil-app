@@ -1,3 +1,5 @@
+# Comparable value object representing an outgoing email's delivery state
+# (:unknown, :failed, :sent or :delivered) with translated display strings.
 class MailServerLog::DeliveryStatus
   include Comparable
 
@@ -55,11 +57,11 @@ class MailServerLog::DeliveryStatus
   #
   # Returns a String
   def capitalize
-    to_s!.mb_chars.capitalize.to_s
+    to_s!.capitalize
   end
 
   def inspect
-    obj_id = format("0x00%x", (object_id << 1))
+    obj_id = format("0x00%x", object_id << 1)
     %Q(#<#{self.class}:#{obj_id} @status=:#{ status }>)
   end
 
@@ -68,10 +70,10 @@ class MailServerLog::DeliveryStatus
   attr_reader :status
 
   def assert_valid_status(status)
-    if TranslatedConstants.humanized.keys.include?(status)
-      status
-    else
+    unless TranslatedConstants.humanized.key?(status)
       raise ArgumentError, "Invalid delivery status: #{ status }"
     end
+
+    status
   end
 end

@@ -14,7 +14,8 @@ RSpec.describe 'public_body_change_request_mailer/update_public_body' do
       :update_body_request,
       public_body_email: 'new@localhost',
       public_body: public_body,
-      user: user)
+      user: user
+    )
   end
 
   before do

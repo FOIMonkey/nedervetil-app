@@ -11,31 +11,26 @@
 #  updated_at            :datetime
 #
 
-# models/user_info_request_sent_alert.rb:
-# Whether an alert has been sent to this user for this info_request, for a
-# given type of alert.
-#
 # Copyright (c) 2008 UK Citizens Online Democracy. All rights reserved.
 # Email: hello@mysociety.org; WWW: http://www.mysociety.org/
 
+# Records an alert sent to a User about an InfoRequest and optional
+# InfoRequestEvent. Keeps retired alert types in ALERT_TYPES valid so stored
+# rows continue to load and validate.
 class UserInfoRequestSentAlert < ApplicationRecord
   ALERT_TYPES = [
-    'overdue_1', # tell user that info request has become overdue
-    'very_overdue_1', # tell user that info request has become very overdue
-    'new_response_reminder_1', # reminder user to classify the recent
-    # response
-    'new_response_reminder_2', # repeat reminder user to classify the
-    # recent response
-    'new_response_reminder_3', # repeat reminder user to classify the
-    # recent response
-    'not_clarified_1', # reminder that user has to explain part of the
-    # request
-    'comment_1', # tell user that info request has a new comment
-    'embargo_expiring_1', # tell user that their embargo is expiring
-    'embargo_expired_1', # tell user that their embargo has expired
-    'survey_1' # ask the user to complete a survey regarding their recent
-    # request
-  ]
+    # retired: the reminder emails are gone (doc/FORK.md); kept so old rows
+    # stay valid
+    'overdue_1', # the request became overdue
+    'very_overdue_1', # the request became very overdue
+    'new_response_reminder_1', # classify the recent response
+    'new_response_reminder_2', # repeat of the classify reminder
+    'new_response_reminder_3', # repeat of the classify reminder
+    'not_clarified_1', # explain part of the request
+    'comment_1', # retired: comments are gone (doc/FORK.md)
+    'embargo_expiring_1', # retired: embargoes are gone (doc/FORK.md)
+    'embargo_expired_1' # retired: embargoes are gone (doc/FORK.md)
+  ].freeze
 
   belongs_to :user,
              inverse_of: :user_info_request_sent_alerts

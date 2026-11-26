@@ -1,25 +1,15 @@
-##
-# This module provides sortable functionality for admin controllers.
-# It allows controllers to easily add sorting capabilities to their actions by
-# defining sortable attributes and handling sort parameters.
-#
-# Usage:
-#   class Admin::UsersController < ApplicationController
-#     include Admin::Sortable
-#
-#     sortable :name, :email, :created_at, default: :created_at_desc
-#   end
-#
+# Restricts sort_order to declared attributes in either sort direction.
+#   sortable :name, :email, default: :name_asc
 module Admin::Sortable
   extend ActiveSupport::Concern
+
+  DEFAULT_SORTABLE_ATTRS = [:created_at, :updated_at].freeze
 
   included do
     helper_method :sort_options, :sort_query, :sort_order
   end
 
   class_methods do
-    DEFAULT_SORTABLE_ATTRS = [:created_at, :updated_at]
-
     def sortable(*attrs, default: nil, only: nil, except: nil,
                  relevance: nil)
       attrs = attrs.any? ? attrs : DEFAULT_SORTABLE_ATTRS
@@ -43,11 +33,18 @@ module Admin::Sortable
     @sort_options[@sort_order]
   end
 
+  # Break ties by id in the same direction for stable pagination.
   def sorted(relation)
-    sort_query ? relation.reorder(sort_query) : relation
+    return relation unless sort_query
+
+    relation.reorder(sort_query).order(id: tie_direction)
   end
 
   private
+
+  def tie_direction
+    sort_query.end_with?('DESC') ? :desc : :asc
+  end
 
   def configure_sort_options(attrs, relevance: nil)
     options = attrs.each_with_object({}) do |attr, h|
@@ -56,7 +53,7 @@ module Admin::Sortable
     end
 
     offer_relevance = relevance && send(relevance)
-    options = { 'relevance': nil }.merge(options) if offer_relevance
+    options = { relevance: nil }.merge(options) if offer_relevance
 
     @sort_options = options.with_indifferent_access
   end

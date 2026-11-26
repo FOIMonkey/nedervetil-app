@@ -15,6 +15,9 @@
 #  request_updated_at :datetime         not null
 #
 
+# Denormalised inbox index row for an InfoRequest, DraftInfoRequest,
+# InfoRequestBatch or DraftInfoRequestBatch. Stores searchable text, timestamps
+# and phase categories so inbox lists can be queried across all four types.
 class AlaveteliPro::RequestSummary < ApplicationRecord
   belongs_to :summarisable, polymorphic: true
   belongs_to :user,
@@ -35,7 +38,7 @@ class AlaveteliPro::RequestSummary < ApplicationRecord
 
   def self.category(category_slug)
     includes(:request_summary_categories).
-      where("request_summary_categories.slug = ?", category_slug.to_s).
+      where(request_summary_categories: { slug: category_slug.to_s }).
         references(:request_summary_categories)
   end
 
@@ -44,7 +47,7 @@ class AlaveteliPro::RequestSummary < ApplicationRecord
     results = includes(:request_summary_categories)
     unless summary_ids_to_exclude.blank?
       results = results.
-        where("request_summaries.id NOT IN (?)", summary_ids_to_exclude)
+        where.not(request_summaries: { id: summary_ids_to_exclude })
     end
     results
   end

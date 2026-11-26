@@ -12,11 +12,14 @@ RSpec.describe DateQuarter do
         start = Time.zone.parse('2014-01-01')
         finish = Time.zone.parse('2014-12-31')
 
-        expected = [['Wed Jan 01 00:00:00 +0000 2014', 'Mon Mar 31 23:59:59 +0000 2014'],
-                    ['Tue Apr 01 00:00:00 +0000 2014', 'Mon Jun 30 23:59:59 +0000 2014'],
-                    ['Tue Jul 01 00:00:00 +0000 2014', 'Tue Sep 30 23:59:59 +0000 2014'],
-        ['Wed Oct 01 00:00:00 +0000 2014', 'Wed Dec 31 23:59:59 +0000 2014']].
-          map { |pair| [Time.zone.parse(pair[0]).to_i, Time.zone.parse(pair[1]).to_i] }
+        expected = [
+          ['Wed Jan 01 00:00:00 +0000 2014', 'Mon Mar 31 23:59:59 +0000 2014'],
+          ['Tue Apr 01 00:00:00 +0000 2014', 'Mon Jun 30 23:59:59 +0000 2014'],
+          ['Tue Jul 01 00:00:00 +0000 2014', 'Tue Sep 30 23:59:59 +0000 2014'],
+          ['Wed Oct 01 00:00:00 +0000 2014', 'Wed Dec 31 23:59:59 +0000 2014']
+        ].map do |pair|
+          [Time.zone.parse(pair[0]).to_i, Time.zone.parse(pair[1]).to_i]
+        end
 
         quarters_between(start, finish).each_with_index do |pair, i|
           pair.map!(&:to_i)

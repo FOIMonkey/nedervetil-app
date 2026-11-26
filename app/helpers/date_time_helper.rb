@@ -1,4 +1,20 @@
+# Formats dates and times for HTML <time> tags, plain text and ISO date inputs.
 module DateTimeHelper
+  # Formats a date filter for <input type="date"> (YYYY-MM-DD), accepting
+  # legacy slash-separated URL dates (DD/MM/YYYY, YYYY/MM/DD).
+  def date_field_value(value)
+    text = value.to_s.strip
+    date =
+      case text
+      when /\A\d{4}-\d{2}-\d{2}\z/ then Date.iso8601(text)
+      when %r{\A\d{4}/\d{1,2}/\d{1,2}\z} then Date.strptime(text, '%Y/%m/%d')
+      when %r{\A\d{1,2}/\d{1,2}/\d{4}\z} then Date.strptime(text, '%d/%m/%Y')
+      end
+    date&.iso8601
+  rescue Date::Error
+    nil
+  end
+
   # Public: Usually-correct format for a DateTime-ish object
   # To define a new new format define the `simple_date_{FORMAT}` method
   #
@@ -21,11 +37,11 @@ module DateTimeHelper
     opts = { format: :html }.merge(opts)
     date_formatter = "simple_date_#{ opts[:format] }"
 
-    if respond_to?(date_formatter)
-      send(date_formatter, date)
-    else
+    unless respond_to?(date_formatter)
       raise ArgumentError, "Unrecognized format :#{ opts[:format] }"
     end
+
+    send(date_formatter, date)
   end
 
   # Usually-correct HTML formatting of a DateTime-ish object

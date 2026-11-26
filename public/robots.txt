@@ -26,3 +26,15 @@ Disallow: */request/*/similar
 Disallow: */request/*/track
 Disallow: */request/*/upload
 Disallow: */profile/change_password/*
+Disallow: /documents?
+Disallow: /documents.
+Disallow: /documents/*?
+Disallow: /documents/*/thumbnail
+Disallow: /documents/*/pages/
+Disallow: /topics?*step=
+Disallow: /topics/*step=
+Disallow: /topics/*view=
+Disallow: /body/*?
+Disallow: /pro/
+Disallow: /select_authority
+Disallow: /body/search_ahead

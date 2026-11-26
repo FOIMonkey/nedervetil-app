@@ -8,6 +8,7 @@
 #  erased_at        :datetime
 #  message_id       :string
 #  message_checksum :string
+#  read_at          :datetime
 #
 
 require 'spec_helper'
@@ -35,18 +36,8 @@ RSpec.describe RawEmail do
     let(:raw_email) { incoming_message.raw_email }
 
     it 'delegates to info_request' do
-      expect(raw_email.info_request).to receive(:log_event).with('edit')
-      raw_email.log_event('edit')
-    end
-  end
-
-  describe '#lock_all_attachments' do
-    let(:incoming_message) { FactoryBot.create(:incoming_message) }
-    let(:raw_email) { incoming_message.raw_email }
-
-    it 'delegates to incoming_message' do
-      expect(raw_email.incoming_message).to receive(:lock_all_attachments)
-      raw_email.lock_all_attachments
+      expect(raw_email.info_request).to receive(:log_event).with('edit', {})
+      raw_email.log_event('edit', {})
     end
   end
 
@@ -118,6 +109,16 @@ RSpec.describe RawEmail do
 
   describe '#mail=' do
     let(:raw_email) { FactoryBot.create(:incoming_message).raw_email }
+
+    it 'forgets the Mail object parsed from the email as it was' do
+      expect(raw_email.mail.subject).not_to eq('Another email')
+
+      raw_email.mail = Mail.read_from_string(
+        "From: alice@example.com\nSubject: Another email\n\nBody\n"
+      )
+
+      expect(raw_email.mail.subject).to eq('Another email')
+    end
 
     context 'when Mail::Message was parsed from a string' do
       let(:inbound_email) do
@@ -192,7 +193,7 @@ RSpec.describe RawEmail do
 
     it 'updates the cache of the Mail object' do
       # Store a cached Mail
-      initial = raw_email.mail
+      raw_email.mail
 
       # Call mail! again to get a fresh cache
       updated = double('updated')
@@ -361,17 +362,36 @@ RSpec.describe RawEmail do
     let(:editor) { FactoryBot.create(:admin_user) }
     let(:reason) { 'Removing PII' }
 
-    it 'locks all attachments' do
-      expect(raw_email.incoming_message).to receive(:lock_all_attachments).with(
-        editor: editor,
-        reason: 'RawEmail#erase',
-        raw_email: raw_email
-      )
-      subject
-    end
-
     it 'purges later' do
       expect { subject }.to have_enqueued_job(ActiveStorage::PurgeJob)
+    end
+
+    # It may be stored as it came, so nothing of the email would stay
+    # otherwise.
+    context 'with a part whose masking failed' do
+      let(:message) { raw_email.incoming_message }
+      let!(:failed) do
+        FactoryBot.create(:pdf_attachment, incoming_message: message,
+                                           masking_failed_at: Time.current)
+      end
+      let!(:masked) do
+        FactoryBot.create(:body_text, incoming_message: message)
+      end
+
+      it 'erases that part with the email, and keeps the masked one' do
+        blob = failed.file.blob
+
+        perform_enqueued_jobs { expect(subject).to eq(true) }
+
+        expect(raw_email.reload).to be_erased
+        expect(failed.reload).to be_erased
+        expect(ActiveStorage::Blob.exists?(blob.id)).to be(false)
+        event = message.info_request.info_request_events.
+                find_by(event_type: 'erase_attachment')
+        expect(event.params[:reason]).to eq('RawEmail#erase')
+        expect(masked.reload).not_to be_erased
+        expect(masked.file).to be_attached
+      end
     end
 
     it 'purges the attached file' do
@@ -452,7 +472,6 @@ RSpec.describe RawEmail do
       before { allow(raw_email).to receive(:erased?).and_return(true) }
 
       it 'does not erase raw email again' do
-        expect(raw_email).to_not receive(:lock_all_attachments)
         expect(raw_email).to_not receive(:log_event)
         expect(raw_email.file).to_not receive(:purge_later)
         expect(raw_email).to_not receive(:touch)
@@ -471,19 +490,6 @@ RSpec.describe RawEmail do
         expect { subject }.
           to raise_error(described_class::UnmaskedAttachmentsError)
       end
-    end
-
-    context 'when an attachment cannot be locked' do
-      before do
-        expect(raw_email).to receive(:lock_all_attachments).and_return(false)
-      end
-
-      it 'does not erase the file' do
-        subject
-        expect(raw_email.reload).not_to be_erased
-      end
-
-      it { is_expected.to eq(false) }
     end
 
     context 'when an event cannot be logged' do

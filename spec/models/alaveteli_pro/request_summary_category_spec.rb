@@ -35,7 +35,8 @@ RSpec.describe AlaveteliPro::RequestSummaryCategory do
 
   describe "#clarification_needed" do
     it "returns the clarification_needed category" do
-      expect(described_class.clarification_needed.slug).to eq "clarification_needed"
+      expect(described_class.clarification_needed.slug).
+        to eq "clarification_needed"
     end
   end
 
@@ -66,12 +67,6 @@ RSpec.describe AlaveteliPro::RequestSummaryCategory do
   describe "#other" do
     it "returns the other category" do
       expect(described_class.other.slug).to eq "other"
-    end
-  end
-
-  describe "#embargo_expiring" do
-    it "returns the embargo_expiring category" do
-      expect(described_class.embargo_expiring.slug).to eq "embargo_expiring"
     end
   end
 end

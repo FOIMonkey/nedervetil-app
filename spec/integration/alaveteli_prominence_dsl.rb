@@ -49,35 +49,35 @@ module AlaveteliPromienceDsl
     attachment.update(prominence: prominence)
   end
 
-  def guest_session(&block)
+  def guest_session
     @guest_id ||= without_login
     using_session(@guest_id) do
       within_session.call
-      block.call
+      yield
     end
   end
 
-  def requester_session(&block)
+  def requester_session
     @requester_id ||= login(requester)
     using_session(@requester_id) do
       within_session.call
-      block.call
+      yield
     end
   end
 
-  def other_user_session(&block)
+  def other_user_session
     @other_user_id ||= login(other_user)
     using_session(@other_user_id) do
       within_session.call
-      block.call
+      yield
     end
   end
 
-  def admin_session(&block)
+  def admin_session
     @admin_id ||= login(admin)
     using_session(@admin_id) do
       within_session.call
-      block.call
+      yield
     end
   end
 end

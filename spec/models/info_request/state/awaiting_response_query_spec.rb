@@ -10,8 +10,8 @@ RSpec.describe InfoRequest::State::AwaitingResponseQuery do
 
     it 'excludes those that are waiting for description' do
       old_unclassified_request = FactoryBot.create(:old_unclassified_request)
-      expect(described_class.new.call.include?(old_unclassified_request))
-        .to be false
+      expect(described_class.new.call.include?(old_unclassified_request)).
+        to be false
     end
   end
 end

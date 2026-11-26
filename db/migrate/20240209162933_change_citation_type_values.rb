@@ -1,4 +1,9 @@
 class ChangeCitationTypeValues < ActiveRecord::Migration[7.0]
+  class Citation < ActiveRecord::Base
+    self.table_name = 'citations'
+    self.inheritance_column = nil
+  end
+
   CHANGES = {
     'news_story' => 'journalism',
     'academic_paper' => 'academic'

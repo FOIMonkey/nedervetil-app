@@ -20,28 +20,43 @@ RSpec.describe "When filtering" do
 
   describe "when not in test mode" do
     it "should not fail handling a bounce mail" do
-      xc = ExternalCommand.new("script/handle-mail-replies", {
-        stdin_string: load_file_fixture("track-response-exim-bounce.eml")
-      })
+      xc = ExternalCommand.new(
+        "script/handle-mail-replies",
+        { stdin_string: load_file_fixture("track-response-exim-bounce.eml") }
+      )
       xc.run
       expect(xc.err).to eq("")
+    end
+
+    # Runs the script itself with a stand-in for sendmail, so the forward
+    # goes down a pipe without waiting on a mail server.
+    def forward_live(email_filename, env = {})
+      Dir.mktmpdir do |dir|
+        out = File.join(dir, 'forwarded')
+        raw = load_file_fixture(email_filename)
+        xc = ExternalCommand.new(
+          'bundle', 'exec', 'ruby', '-W0',
+          '-r', Rails.root.join('spec/script/stub_sendmail.rb').to_s,
+          Rails.root.join('script/handle-mail-replies.rb').to_s,
+          env: env.merge('STUB_SENDMAIL_OUT' => out),
+          stdin_string: raw
+        )
+        Dir.chdir(Rails.root) { xc.run }
+        expect(xc.err).to eq("")
+        expect(xc.status).to eq(0)
+        expect(File.read("#{out}.cmd")).
+          to eq(JSON.generate(['/usr/sbin/sendmail', '-i', '--',
+                               'user-support@localhost']))
+        expect(File.binread(out)).to eq(raw)
+      end
     end
 
     it 'should not fail handling a UTF8 encoded mail' do
-      xc = ExternalCommand.new("script/handle-mail-replies", {
-        stdin_string: load_file_fixture("russian.eml")
-      })
-      xc.run
-      expect(xc.err).to eq("")
+      forward_live('russian.eml')
     end
 
-    it "should pass on a non-bounce message with Received headers and Pro enabled" do
-      xc = ExternalCommand.new("script/handle-mail-replies", {
-        env: { 'ALAVETELI_ENABLE_ALAVETELI_PRO' => 'true' },
-        stdin_string: load_file_fixture("apple-mail-with-attachments.eml")
-      })
-      xc.run
-      expect(xc.err).to eq("")
+    it "should pass on a non-bounce message with Received headers" do
+      forward_live('apple-mail-with-attachments.eml')
     end
   end
 

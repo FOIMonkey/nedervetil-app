@@ -1,4 +1,16 @@
-# Record metadata about User sign-in activity.
+# == Schema Information
+#
+# Table name: user_sign_ins
+#
+#  id         :bigint           not null, primary key
+#  user_id    :bigint
+#  ip         :inet
+#  created_at :datetime         not null
+#  updated_at :datetime         not null
+#  user_agent :text
+#
+
+# Record medadata about User sign in activity
 class User::SignIn < ApplicationRecord
   default_scope { order(created_at: :desc) }
 

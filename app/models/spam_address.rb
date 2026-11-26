@@ -8,6 +8,8 @@
 #  updated_at :datetime         not null
 #
 
+# Blocklisted email address checked by RequestMailbox before routing incoming
+# mail, stored normalised and lower-cased.
 class SpamAddress < ApplicationRecord
   validates_presence_of :email,
                         message: 'Enter the email address to mark as spam'
@@ -15,7 +17,7 @@ class SpamAddress < ApplicationRecord
   validates_uniqueness_of :email,
                           message: 'This address is already marked as spam'
 
-  strip_attributes
+  normalizes :email, with: Whitespace::TRIM_TO_NIL
 
   before_save :downcase_email
 

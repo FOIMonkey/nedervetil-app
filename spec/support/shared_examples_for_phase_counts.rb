@@ -4,17 +4,17 @@ shared_examples_for "PhaseCounts" do
   let(:factory) { class_name.demodulize.underscore }
 
   let(:resource) do
-    resource = FactoryBot.build(factory)
+    resource = FactoryBot.create(factory)
     summary =
       AlaveteliPro::RequestSummary.
-        create_or_update_from(FactoryBot.create(:info_request))
+        create_or_update_from(FactoryBot.create(:info_request, user: resource))
     resource.request_summaries << summary
     summary =
       AlaveteliPro::RequestSummary.
-        create_or_update_from(FactoryBot.create(:info_request))
+        create_or_update_from(FactoryBot.create(:info_request, user: resource))
     resource.request_summaries << summary
     overdue = travel_to(2.months.ago) do
-      FactoryBot.create(:info_request)
+      FactoryBot.create(:info_request, user: resource)
     end
     summary = AlaveteliPro::RequestSummary.create_or_update_from(overdue)
     resource.request_summaries << summary
@@ -62,33 +62,12 @@ shared_examples_for "PhaseCounts" do
       end
     end
 
-    context 'with expiring embargoes' do
-      before do
-        embargo = AlaveteliPro::RequestSummary.create_or_update_from(
-          FactoryBot.create(:embargo_expiring_request)
-        )
-        resource.request_summaries << embargo
-        resource.save!
-      end
-
-      it 'counts the expiring embargoes' do
-        expect(resource.phase_counts['embargo_expiring']).to eq 1
-      end
-
-      it 'includes the expiring embargo request in the phase total' do
-        expect(resource.phase_counts['awaiting_response']).to eq 3
-      end
-
-      it 'does not double count the expiring embargo in the not_drafts total' do
-        expect(resource.phase_counts['not_drafts']).to eq 4
-      end
-    end
-
     it 'caches the results' do
       before = resource.phase_counts['awaiting_response']
       summary =
         AlaveteliPro::RequestSummary.
-          create_or_update_from(FactoryBot.create(:info_request))
+          create_or_update_from(FactoryBot.create(:info_request,
+                                                  user: resource))
       resource.request_summaries << summary
       resource.save!
       expect(resource.phase_counts['awaiting_response']).to eq(before)
@@ -100,7 +79,8 @@ shared_examples_for "PhaseCounts" do
       before = resource.phase_counts!['awaiting_response']
       summary =
         AlaveteliPro::RequestSummary.
-          create_or_update_from(FactoryBot.create(:info_request))
+          create_or_update_from(FactoryBot.create(:info_request,
+                                                  user: resource))
       resource.request_summaries << summary
       resource.save!
       expect(resource.phase_counts!['awaiting_response']).to eq(before + 1)

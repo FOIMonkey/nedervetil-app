@@ -5,54 +5,51 @@ RSpec.describe AlaveteliPro::BaseController do
     def index
       head :ok
     end
+
+    def create
+      head :ok
+    end
   end
 
-  describe "#pro_user_authenticated?" do
-    # Testing the fact that every controller action inherits the before_action
-    # of pro_user_authenticated?
-
-    before do
-      allow(controller).
-        to receive(:feature_enabled?).
-        with(:alaveteli_pro).
-        and_return(true)
-    end
-
-    context "when the user is not logged in" do
-      it "redirects to the signin path" do
+  # Every inbox action inherits the require_inbox_sign_in before_action.
+  describe '#require_inbox_sign_in' do
+    context 'when nobody is signed in' do
+      it 'redirects to the sign-in page' do
         get :index
+        expect(@response.redirect_url).
+          to match(/http:\/\/test\.host\/profile\/sign_in/)
+      end
+
+      it 'asks to sign in for a form sent as well, not a 404' do
+        post :create
         expect(@response.redirect_url).
           to match(/http:\/\/test\.host\/profile\/sign_in/)
       end
     end
 
-    context "when the user is logged in but not a pro" do
+    it 'is private, not an action' do
+      expect(controller.public_methods).not_to include(:require_inbox_sign_in)
+    end
+
+    context 'when an account without the Pro role is signed in' do
       let(:user) { FactoryBot.create(:user) }
 
       before do
         sign_in user
       end
 
-      it "redirects to the homepage" do
+      it 'serves the page' do
         get :index
-        expect(@response).to redirect_to frontpage_path
-      end
-
-      it "sets a flash notice to inform the user they're not a pro" do
-        get :index
-        expect(flash[:notice]).to eq "This page is only accessible to " \
-                                     "Alaveteli Professional users"
+        expect(@response.status).to be 200
       end
     end
 
-    context "when the user is logged in and is a pro" do
+    context 'when a Pro account is signed in' do
       let(:user) { FactoryBot.create(:pro_user) }
 
-      before do
-        sign_in user
-      end
+      before { sign_in user }
 
-      it "doesn't redirect anywhere" do
+      it 'serves the page' do
         get :index
         expect(@response.status).to be 200
       end

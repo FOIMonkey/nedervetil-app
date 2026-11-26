@@ -1,53 +1,56 @@
 class MockPOP3
-  @@start = false
+  # Shared by every instance, as one mailbox on a server would be.
+  class << self
+    attr_accessor :started, :mail_list
+  end
+
+  self.started = false
 
   def initialize(number_of_mails = 20)
-    @@popmails = []
+    self.class.mail_list = []
     number_of_mails.times do |i|
       # "test00", "test01", "test02", ..., "test19"
-      @@popmails << MockPopMail.new("test#{i.to_s.rjust(2, '0')}", i)
+      self.class.mail_list << MockPopMail.new("test#{i.to_s.rjust(2, '0')}", i)
     end
   end
 
   def self.popmails
-    @@popmails.clone
-  end
-
-  def each_mail(*_args)
-    @@popmails.each do |popmail|
-      yield popmail
-    end
-  end
-
-  def mails(*_args)
-    @@popmails.clone
-  end
-
-  def start(*_args)
-    @@start = true
-    block_given? ? yield(self) : self
-  end
-
-  def enable_ssl(*_args)
-    true
-  end
-
-  def started?
-    @@start == true
+    mail_list.clone
   end
 
   def self.started?
-    @@start == true
+    started == true
+  end
+
+  def each_mail(*_args, &block)
+    self.class.mail_list.each(&block)
+  end
+
+  def mails(*_args)
+    self.class.mail_list.clone
+  end
+
+  def start(*_args)
+    self.class.started = true
+    block_given? ? yield(self) : self
+  end
+
+  # Stands in for Net::POP3#enable_ssl, whose result the poller ignores.
+  def enable_ssl(*_args)
+  end
+
+  def started?
+    self.class.started?
   end
 
   def reset
   end
 
   def finish
-    @@start = false
+    self.class.started = false
   end
 
   def delete_all
-    @@popmails = []
+    self.class.mail_list = []
   end
 end

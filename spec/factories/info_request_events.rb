@@ -11,7 +11,6 @@
 #  last_described_at   :datetime
 #  incoming_message_id :integer
 #  outgoing_message_id :integer
-#  comment_id          :integer
 #  updated_at          :datetime
 #  params              :jsonb
 #
@@ -115,15 +114,6 @@ FactoryBot.define do
       end
     end
 
-    factory :comment_event do
-      event_type { 'comment' }
-
-      after(:build) do |event|
-        event.comment ||= build(:comment, info_request: event.info_request)
-        event.info_request = event.comment.info_request
-      end
-    end
-
     factory :edit_event do
       event_type { 'edit' }
     end
@@ -149,14 +139,6 @@ FactoryBot.define do
 
     factory :very_overdue_event do
       event_type { 'very_overdue' }
-    end
-
-    factory :expire_embargo_event do
-      event_type { 'expire_embargo' }
-    end
-
-    factory :embargo_expiring_event do
-      event_type { 'embargo_expiring' }
     end
 
     factory :status_update_event do

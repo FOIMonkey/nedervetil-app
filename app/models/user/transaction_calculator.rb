@@ -1,12 +1,13 @@
 class User
+  # Counts a User's transactions across requests, authority change requests and
+  # classifications, either overall or within a date range. Returned by
+  # User#transactions.
   class TransactionCalculator
     DEFAULT_TRANSACTION_ASSOCIATIONS = [
-      :comments,
       :info_requests,
       :public_body_change_requests,
-      :request_classifications,
-      :track_things
-    ]
+      :request_classifications
+    ].freeze
 
     attr_reader :transaction_associations
     attr_reader :user
@@ -36,7 +37,7 @@ class User
       case filter
       when :current
         transaction_associations.
-          reduce(0) { |accum, assoc| accum += user.send(assoc).count }
+          reduce(0) { |accum, assoc| accum + user.send(assoc).count }
       when Symbol
         range_total_count(named_range(filter))
       when Range
@@ -44,44 +45,6 @@ class User
       else
         raise ArgumentError, "Invalid argument `#{ filter }'"
       end
-    end
-
-    # Public: Hash of total transactions grouped by month.
-    # Months with no transactions are not included
-    #
-    # Returns a Hash
-    def total_per_month
-      results = transaction_associations.reduce({}) do |memo, assoc|
-        # Get the grouped counts for the association
-        assoc_results =
-          user.
-            send(assoc).
-              group("DATE_TRUNC('month', created_at)").
-                reorder(:date_trunc_month_created_at).
-                  count
-
-        # Add the counts to existing keys, or set new keys if they don't exist
-        assoc_results.each do |key, value|
-          memo[key] ||= 0
-          memo[key] += value
-        end
-
-        memo
-      end
-
-      # Convert DateTime keys to String keys
-      results.reduce({}) do |memo, pair|
-        memo[pair.first.to_date.to_s] = pair.last
-        memo
-      end
-    end
-
-    # Public: Returns the average transactions per month since the User was
-    # created.
-    #
-    # Returns a Float
-    def average_per_month
-      total / approx_user_age_in_months.to_f
     end
 
     def ==(other)
@@ -94,7 +57,7 @@ class User
     def range_total_count(range)
       transaction_associations.
         reduce(0) do |accum, assoc|
-          accum += user.send(assoc).where(created_at: range).count
+          accum + user.send(assoc).where(created_at: range).count
         end
     end
 
@@ -102,8 +65,6 @@ class User
       case symbol
       when :last_7_days
         7.days.ago.beginning_of_day..Time.zone.now.end_of_day
-      when :last_30_days
-        30.days.ago.beginning_of_day..Time.zone.now.end_of_day
       when :last_30_days
         30.days.ago.beginning_of_day..Time.zone.now.end_of_day
       when :last_quarter
@@ -114,11 +75,6 @@ class User
       else
         raise ArgumentError, "Invalid range `:#{ symbol }'"
       end
-    end
-
-    def approx_user_age_in_months
-      difference_in_days = Time.zone.now.to_date - user.created_at.to_date
-      (difference_in_days / 30).floor
     end
   end
 end

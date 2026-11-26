@@ -1,0 +1,12 @@
+<%= raw @name %>,
+
+<%= _('Someone, perhaps you, asked to change the email address of your ' \
+      'account on {{site_name}} to {{new_email}}.',
+      :site_name => site_name.html_safe,
+      :new_email => @new_email.html_safe) %>
+
+<%= _('Your address only changes if the link we sent to {{new_email}} is ' \
+      'used. If you did not ask for this, change your password.',
+      :new_email => @new_email.html_safe) %>
+
+-- <%= _('the {{site_name}} team', :site_name => site_name.html_safe) %>

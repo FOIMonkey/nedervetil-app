@@ -2,16 +2,14 @@
   <% if can?(:adjust_deadlines, info_request) %>
     <%= render partial: 'deadlines/case_panel', locals: { info_request: info_request } %>
   <% end %>
+
   <%= render partial: 'disclosures/request_documents', locals: { info_request: info_request } %>
+
   <div class="sidebar__section new-request-cta">
     <%= render partial: 'general/new_request' %>
   </div>
 
-  <% if (feature_enabled?(:alaveteli_pro) &&
-         can?(:create_embargo, info_request)) %>
-    <%= render partial: 'alaveteli_pro/info_requests/embargo_form',
-               locals: { info_request: info_request } %>
-  <% end %>
+  <%= render partial: 'alaveteli_pro/info_requests/privacy' %>
 
   <% if info_request.attention_requested %>
     <%= render partial: 'request/attention_requested',
@@ -27,14 +25,6 @@
 
   <%= render partial: 'request/batch',
              locals: { info_request: info_request } %>
-
-  <% if local_assigns[:citations] %>
-    <%= render partial: 'request/citations',
-               locals: { citations: citations, info_request: info_request } %>
-  <% end %>
-
-  <%= render partial: 'blog_posts/blog_posts',
-             locals: { taggable: info_request } %>
 
   <div class="sidebar__section">
     <!-- this link with this wording is here for legal reasons, discuss with

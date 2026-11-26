@@ -17,8 +17,9 @@
         "displayed on the site.</p>") %>
 <% end %>
 <% if contains_postcode %>
-  <%= _("<p>Your request contains a <strong>postcode</strong>. " \
-       "Unless it directly relates to the subject of your " \
-       "request, please remove any address as it will <strong>" \
-       "appear publicly on the Internet</strong>.</p>") %>
+  <%= _('<p>Your request contains a <strong>postcode</strong>. ' \
+       'Unless it directly relates to the subject of your ' \
+       'request, please remove any address: it is sent to the ' \
+       'authority, and will <strong>appear publicly</strong> ' \
+       'if you publish the request.</p>') %>
 <% end %>

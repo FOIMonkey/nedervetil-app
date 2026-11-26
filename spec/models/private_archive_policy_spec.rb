@@ -19,18 +19,6 @@ RSpec.describe 'PrivateArchive core policy overrides' do
     end
   end
 
-  describe 'message prominence' do
-    it 'allows normal or hidden and rejects requester_only' do
-      request = FactoryBot.create(:info_request)
-      message = request.outgoing_messages.first
-      expect(message).to be_valid
-      message.prominence = 'hidden'
-      expect(message).to be_valid
-      message.prominence = 'requester_only'
-      expect(message).not_to be_valid
-    end
-  end
-
   describe 'admin field placement' do
     it 'keeps fields admin-only' do
       options = PrivateArchive::Policy.searchable_options(
@@ -47,6 +35,7 @@ RSpec.describe 'PrivateArchive core policy overrides' do
   end
 
   describe 'the complete public-to-admin search index moves' do
+    # User and InfoRequestEvent were already admin-only upstream.
     {
       InfoRequest => {
         admin_index: { title: 'A', url_title: 'B', prominence_reason: 'D' }

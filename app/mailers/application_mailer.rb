@@ -1,13 +1,15 @@
-# models/application_mailer.rb:
-# Shared code between different mailers.
-#
 # Copyright (c) 2008 UK Citizens Online Democracy. All rights reserved.
 # Email: hello@mysociety.org; WWW: http://www.mysociety.org/
 
 require 'action_mailer/version'
+
+# Base mailer configuring default layout, plain-text translation helpers,
+# locale-aware user delivery, auto-generated headers and SPF-safe Return-Path.
 class ApplicationMailer < ActionMailer::Base
   # Include all the functions views get, as emails call similar things.
   helper :application
+  helper PlainTextTranslation::View
+  include PlainTextTranslation::Mailer
   layout 'default_mailer'
   include MailerHelper
   include AlaveteliFeatures::Helpers
@@ -50,10 +52,6 @@ class ApplicationMailer < ActionMailer::Base
     }
     default_opts.merge!(opts)
     mail(default_opts)
-  end
-
-  def contact_for_user(_user = nil)
-    contact_from_name_and_email
   end
 
   # Set headers that mark an email as being auto-generated and suppress out of

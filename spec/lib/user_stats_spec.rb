@@ -67,16 +67,9 @@ RSpec.describe UserStats do
     before do
       travel_to(2.weeks.ago) do
         requester = FactoryBot.create(:user, email: "active@example.com")
-        commenter = FactoryBot.create(:user, email: "commenter@example.com")
-        tracker = FactoryBot.create(:user, email: "tracker@example.com")
-        dormant = FactoryBot.create(:user, email: "dormant1@example.com")
+        FactoryBot.create(:user, email: "dormant1@example.com")
 
-        request = FactoryBot.create(:info_request, user: requester)
-        comment = FactoryBot.create(:comment, body: "hi!",
-                                              user: commenter,
-                                              info_request: request)
-        track = FactoryBot.create(:search_track,
-                                  tracking_user: tracker)
+        FactoryBot.create(:info_request, user: requester)
       end
 
       FactoryBot.create(:user, email: "dormant2@example.com")
@@ -112,7 +105,8 @@ RSpec.describe UserStats do
     end
 
     it "does not include banned users" do
-      expect(UserStats.unbanned_by_domain("example.com")).to_not include(@banned)
+      expect(UserStats.unbanned_by_domain("example.com")).
+        to_not include(@banned)
     end
 
     it "does not include admins" do

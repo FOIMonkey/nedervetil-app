@@ -1,31 +1,16 @@
 class InfoRequest
   module State
+    # Builds localised HTML labels for status-choice forms, tailored to
+    # whether the viewer owns the request. Used by State::Calculator.
     module Transitions
-      # Returns a label for the given state, suitable for using in a form to
-      # update the status of a request.
+      # A status-choice label for the target state and current user.
       #
-      # @param to_state [String] the state which the request will be
-      #   transitioned to if the user chooses this option.
-      # @param [Hash] opts extra options for controlling which label is
-      #   returned.
-      # @option opts [Boolean] :is_owning_user does the current user own the
-      #   request or not? (required).
-      # @option opts [Boolean] :is_pro_user is the current user a pro?
-      #   (optional, defaults to false).
-      # @option opts [Boolean] :in_internal_review is the request currently in
-      #   the internal_review state? (optional, defaults to false).
-      #
-      # @return [String] a label for the given state.
+      # @param to_state [String] target status
+      # @option opts [Boolean] :is_owning_user required
+      # @option opts [Boolean] :in_internal_review default false
+      # @return [String]
       def self.transition_label(to_state, opts = {})
-        is_owning_user = opts.fetch(:is_owning_user)
-        is_pro_user = opts.fetch(:is_pro_user, false)
-        if is_pro_user
-          user = "pro"
-        elsif is_owning_user
-          user = "owner"
-        else
-          user = "other_user"
-        end
+        user = opts.fetch(:is_owning_user) ? "owner" : "other_user"
         method = "#{user}_#{to_state}_transition_label"
         if respond_to?(method, true)
           send(method, opts)
@@ -36,19 +21,9 @@ class InfoRequest
         end
       end
 
-      # Returns a hash, with the given states as keys and their accompanying
-      # labels as values.
-      #
-      # @see .transition_label for the full list of options available to
-      #   control which labels are returned, all options passed to this method
-      #   will be passed through.
-      #
-      # @param states [Array<String>] a list of states for which labels are
-      #   required.
-      # @param opts [Hash] a hash of options which will be passed through to
-      #   .transition_label
-      #
-      # @return [Hash] a hash of state => label
+      # @param states [Array<String>] target statuses
+      # @param opts [Hash] forwarded to .transition_label
+      # @return [Hash] state => label
       def self.labelled_hash(states, opts = {})
         hash = {}
         states.each do |state|
@@ -58,15 +33,17 @@ class InfoRequest
       end
 
       def self.owner_waiting_response_transition_label(_opts = {})
-        _("I'm still <strong>waiting</strong> for my information <small>(maybe you got an acknowledgement)</small>")
+        _("I'm still <strong>waiting</strong> for my information " \
+          "<small>(maybe you got an acknowledgement)</small>")
       end
 
       def self.owner_not_held_transition_label(_opts = {})
-        _("They do <strong>not have</strong> the information <small>(maybe they say who does)</small>")
+        _("They do <strong>not have</strong> the information " \
+          "<small>(maybe they say who does)</small>")
       end
 
       def self.owner_rejected_transition_label(_opts = {})
-        _("My request has been <strong>refused</strong>")
+        _("I've received <strong>no information</strong>")
       end
 
       def self.owner_partially_successful_transition_label(_opts = {})
@@ -121,7 +98,7 @@ class InfoRequest
       end
 
       def self.other_user_rejected_transition_label(_opts = {})
-        _("The request has been <strong>refused</strong>")
+        _('<strong>No information</strong> has been sent')
       end
 
       def self.other_user_partially_successful_transition_label(_opts = {})
@@ -156,50 +133,6 @@ class InfoRequest
 
       def self.other_user_error_message_transition_label(_opts = {})
         _("An <strong>error message</strong> has been received")
-      end
-
-      def self.pro_waiting_response_transition_label(_opts = {})
-        State.short_description('waiting_response')
-      end
-
-      def self.pro_not_held_transition_label(_opts = {})
-        State.short_description('not_held')
-      end
-
-      def self.pro_rejected_transition_label(_opts = {})
-        State.short_description('rejected')
-      end
-
-      def self.pro_partially_successful_transition_label(_opts = {})
-        State.short_description('partially_successful')
-      end
-
-      def self.pro_successful_transition_label(_opts = {})
-        State.short_description('successful')
-      end
-
-      def self.pro_waiting_clarification_transition_label(_opts = {})
-        State.short_description('waiting_clarification')
-      end
-
-      def self.pro_gone_postal_transition_label(_opts = {})
-        State.short_description('gone_postal')
-      end
-
-      def self.pro_internal_review_transition_label(_opts = {})
-        State.short_description('internal_review')
-      end
-
-      def self.pro_error_message_transition_label(_opts = {})
-        State.short_description('error_message')
-      end
-
-      def self.pro_requires_admin_transition_label(_opts = {})
-        State.short_description('requires_admin')
-      end
-
-      def self.pro_user_withdrawn_transition_label(_opts = {})
-        State.short_description('user_withdrawn')
       end
     end
   end

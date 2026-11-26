@@ -1,4 +1,6 @@
 class MailServerLog::DeliveryStatus
+  # Ordered translated labels and sentences for MailServerLog::DeliveryStatus;
+  # key order defines DeliveryStatus#<=> sorting.
   module TranslatedConstants
     def self.humanized
       # The order of these is important as we use the keys for sorting in #<=>

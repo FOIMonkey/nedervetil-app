@@ -2,13 +2,9 @@ class NotificationMailerPreview < ActionMailer::Preview
   def daily_summary
     NotificationMailer.daily_summary(
       user, [
-        notification('embargo_expiring'),
-        notification('expire_embargo'),
         notification('overdue'),
         notification('response'),
         notification('very_overdue'),
-        batch_notification('embargo_expiring'),
-        batch_notification('expire_embargo'),
         batch_notification('overdue'),
         batch_notification('response'),
         batch_notification('very_overdue')
@@ -18,14 +14,6 @@ class NotificationMailerPreview < ActionMailer::Preview
 
   def response_notification
     NotificationMailer.response_notification(notification)
-  end
-
-  def embargo_expiring_notification
-    NotificationMailer.embargo_expiring_notification(notification)
-  end
-
-  def expire_embargo_notification
-    NotificationMailer.expire_embargo_notification(notification)
   end
 
   def overdue_notification

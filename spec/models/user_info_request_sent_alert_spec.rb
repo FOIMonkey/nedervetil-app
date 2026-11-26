@@ -30,11 +30,4 @@ RSpec.describe UserInfoRequestSentAlert do
       is_expected.to_not include(old)
     end
   end
-
-  it 'should allow an alert type of "survey_1"' do
-    alert = FactoryBot.create(
-      :user_info_request_sent_alert, alert_type: 'survey_1'
-    )
-    expect(alert).to be_valid
-  end
 end

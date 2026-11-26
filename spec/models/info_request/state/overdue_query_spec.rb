@@ -21,8 +21,8 @@ RSpec.describe InfoRequest::State::OverdueQuery do
     end
 
     it 'excludes those that are not waiting for a response' do
-      expect(described_class.new.call.include?(info_request))
-        .to be false
+      expect(described_class.new.call.include?(info_request)).
+        to be false
     end
 
     it 'excludes those that are waiting for description' do
@@ -32,8 +32,8 @@ RSpec.describe InfoRequest::State::OverdueQuery do
         info_request.save!
       end
       travel_to(Time.zone.parse('2015-10-31')) do
-        expect(described_class.new.call.include?(info_request))
-          .to be false
+        expect(described_class.new.call.include?(info_request)).
+          to be false
       end
     end
   end

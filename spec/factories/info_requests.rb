@@ -4,22 +4,19 @@
 #
 #  id                                    :integer          not null, primary key
 #  title                                 :text             not null
-#  user_id                               :integer
+#  user_id                               :integer          not null
 #  public_body_id                        :integer          not null
 #  created_at                            :datetime         not null
 #  updated_at                            :datetime         not null
 #  described_state                       :string           not null
 #  awaiting_description                  :boolean          default(FALSE), not null
-#  prominence                            :string           default("normal"), not null
+#  prominence                            :string           default("requester_only"), not null
 #  url_title                             :text             not null
 #  law_used                              :string           default("foi"), not null
 #  allow_new_responses_from              :string           default("anybody"), not null
 #  handle_rejected_responses             :string           default("bounce"), not null
 #  idhash                                :string           not null
-#  external_user_name                    :string
-#  external_url                          :string
 #  attention_requested                   :boolean          default(FALSE)
-#  comments_allowed                      :boolean          default(TRUE), not null
 #  info_request_batch_id                 :integer
 #  last_public_response_at               :datetime
 #  reject_incoming_at_mta                :boolean          default(FALSE), not null
@@ -31,8 +28,8 @@
 #  use_notifications                     :boolean
 #  last_event_time                       :datetime
 #  incoming_messages_count               :integer          default(0)
-#  public_token                          :string
 #  prominence_reason                     :text
+#  last_activity_at                      :datetime
 #
 
 FactoryBot.define do
@@ -42,7 +39,7 @@ FactoryBot.define do
     user
 
     transient do
-      initial_request {}
+      initial_request { nil }
     end
 
     after(:create) do |info_request, evaluator|
@@ -170,39 +167,7 @@ FactoryBot.define do
 
     trait :with_internal_review_request do
       after(:create) do |info_request, _evaluator|
-        outgoing_message = create(:internal_review_request,
-                                  info_request: info_request)
-      end
-    end
-
-    trait :embargoed do
-      after(:create) do |info_request, _evaluator|
-        create(:embargo, info_request: info_request)
-        info_request.reload
-      end
-    end
-
-    trait :embargo_expiring do
-      after(:create) do |info_request, _evaluator|
-        create(:expiring_embargo, info_request: info_request)
-        info_request.reload
-      end
-    end
-
-    trait :re_embargoed do
-      after(:create) do |info_request, _evaluator|
-        info_request.log_event('set_embargo', {})
-        info_request.log_event('expire_embargo', {})
-        create(:embargo, info_request: info_request)
-        info_request
-      end
-    end
-
-    trait :embargo_expired do
-      after(:create) do |info_request, _evaluator|
-        info_request.log_event('set_embargo', {})
-        info_request.log_event('expire_embargo', {})
-        info_request.reload
+        create(:internal_review_request, info_request: info_request)
       end
     end
 
@@ -214,22 +179,12 @@ FactoryBot.define do
       end
     end
 
-    trait :external do
-      user { nil }
-      external_user_name { 'External User' }
-      external_url { 'http://www.example.org/request/external' }
-    end
-
     trait :hidden do
       prominence { 'hidden' }
     end
 
     trait :requester_only do
       prominence { 'requester_only' }
-    end
-
-    trait :backpage do
-      prominence { 'backpage' }
     end
 
     trait :waiting_clarification do
@@ -305,18 +260,11 @@ FactoryBot.define do
             traits: [:with_incoming_with_pdf_attachment]
     factory :info_request_with_internal_review_request,
             traits: [:with_internal_review_request]
-    factory :embargoed_request,
-            traits: [:embargoed, :with_incoming_with_pdf_attachment]
-    factory :embargo_expiring_request, traits: [:embargo_expiring]
-    factory :re_embargoed_request, traits: [:re_embargoed]
-    factory :embargo_expired_request, traits: [:embargo_expired]
-    factory :external_request, traits: [:external]
     factory :old_unclassified_request,
             traits: [:with_old_incoming, :awaiting_description]
     factory :awaiting_description, traits: [:awaiting_description]
     factory :hidden_request, traits: [:hidden]
     factory :requester_only_request, traits: [:requester_only]
-    factory :backpage_request, traits: [:backpage]
     factory :overdue_request, traits: [:overdue]
     factory :very_overdue_request, traits: [:very_overdue]
     factory :use_notifications_request, traits: [:use_notifications]

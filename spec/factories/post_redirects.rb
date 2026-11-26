@@ -36,7 +36,7 @@ FactoryBot.define do
                       "This is my test\r\n\r\n\r\n" \
                       "Yours faithfully,\r\n\r\n" \
                       "Steve Day",
-            "what_doing"=>"normal_sort"
+            "what_doing" => "normal_sort"
           },
           "info_request" => {
             "title" => "Testing the post redirect to pro things",

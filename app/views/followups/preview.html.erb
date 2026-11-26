@@ -1,5 +1,7 @@
 <% @title = _("Preview follow up to '") + h(@info_request.public_body.name) + "'" %>
 
+<%= page_band(@internal_review ? _('Now preview your message asking for an internal review') : _('Now preview your follow up')) %>
+
 <div id="followup" class="followup">
   <% form_url =
        request_followups_url(
@@ -8,18 +10,9 @@
        )
   %>
 
-  <%= form_for @outgoing_message, html: { id: 'preview_form' }, url: form_url do |o| %>
-    <% if @internal_review %>
-      <h1><%= _('Now preview your message asking for an internal review') %></h1>
-    <% else %>
-      <h1><%= _('Now preview your follow up') %></h1>
-    <% end %>
-
-    <% if @info_request.embargo %>
-      <%= render partial: 'alaveteli_pro/followups/preview_notes' %>
-    <% else %>
-      <%= render partial: 'preview_notes' %>
-    <% end %>
+  <%# data-turbo="false": the next step renders a page after the submit, which Turbo would drop (doc/FORK.md). %>
+  <%= form_for @outgoing_message, html: { id: 'preview_form', data: { turbo: false } }, url: form_url do |o| %>
+    <%= render partial: 'preview_notes' %>
 
     <%= fields_for :outgoing_message do |o| %>
       <div class="correspondence box" id="outgoing-0">
@@ -38,12 +31,11 @@
       </div>
     <% end %>
 
-    <% unless @info_request.embargo %>
-      <p>
-        <%= _('<strong>Privacy warning:</strong> Your message, and any response ' \
-              'to it, will be displayed publicly on this website.') %>
-      </p>
-    <% end %>
+    <p>
+      <%= _('<strong>Note:</strong> Your message, and any response to it, ' \
+            'will be visible on this website to anyone who can see the ' \
+            'request.') %>
+    </p>
     <%= o.hidden_field(:what_doing) %>
     <p>
       <%= hidden_field_tag(:submitted_followup, 1) %>
@@ -51,11 +43,7 @@
         <%= hidden_field_tag(:internal_review, 1 ) %>
       <% end %>
       <%= submit_tag _("Re-edit this message"), :name => 'reedit' %>
-      <% if @info_request.embargo %>
-        <%= render partial: 'alaveteli_pro/followups/submit' %>
-      <% else %>
-        <%= render partial: 'submit' %>
-      <% end %>
+      <%= render partial: 'submit' %>
     </p>
   <% end %>
 </div>

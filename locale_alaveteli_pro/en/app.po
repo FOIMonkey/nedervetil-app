@@ -163,9 +163,6 @@ msgstr "Add Card Details"
 msgid "Add all"
 msgstr "Add all"
 
-msgid "Add an annotation"
-msgstr "Add an annotation"
-
 msgid "Add annotation"
 msgstr "Add annotation"
 
@@ -670,9 +667,6 @@ msgstr "New Pro accounts this week:"
 msgid "New Pro requests this week:"
 msgstr "Pro requests this week:"
 
-msgid "New Pro subscriptions this week:"
-msgstr "New Pro subscriptions this week:"
-
 msgid "New batches made this week:"
 msgstr "New batches made this week:"
 
@@ -723,9 +717,6 @@ msgstr "Number of discounted users:"
 
 msgid "Number of expired embargoes this week:"
 msgstr "Number of expired embargoes this week:"
-
-msgid "Number of free trial users:"
-msgstr "Number of free trial users:"
 
 msgid "Number of paying users:"
 msgstr "Number of paying users:"

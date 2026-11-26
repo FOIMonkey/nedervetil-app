@@ -4,11 +4,18 @@
     <meta charset="utf-8">
     <%= csrf_meta_tags %>
     <% unless @render_to_file %>
+      <%# Turbo Drive (doc/FORK.md): the response's nonce, which Turbo and
+          helpers/turbo_script_guard.js read; no fetching pages a pointer rests
+          on; and a page on the opt-out list (TurboDrive) always loads in full. %>
       <%= csp_meta_tag %>
       <meta name="turbo-prefetch" content="false">
       <% if turbo_visit_reload? %>
         <meta name="turbo-visit-control" content="reload">
       <% end %>
+      <%# Turbo keeps no copy of a page rendered for someone signed in, so Back
+          asks the server again: signing out in another tab, or losing access,
+          leaves nothing private to show from Turbo's history. Nor of a page
+          that shows a visitor something private (keep_no_turbo_copy!). %>
       <% if current_user || keep_no_turbo_copy? %>
         <meta name="turbo-cache-control" content="no-cache">
       <% end %>
@@ -29,17 +36,6 @@
       <%= render :partial => 'general/admin_stylesheet' %>
     <% end %>
 
-    <% if @feed_autodetect %>
-      <% for feed in @feed_autodetect %>
-        <link rel="alternate" type="application/atom+xml" title="<%=h feed[:title] %>" href="<%=h feed[:url]%>">
-        <% if feed[:has_json] %>
-          <link rel="alternate" type="application/json" title="JSON version of <%=h feed[:title] %>" href="<%=h feed[:url]%>.json">
-        <% end %>
-      <% end %>
-    <% end %>
-    <% if @has_json %>
-      <link rel="alternate" type="application/json" title="JSON version of this page" href="<%= current_path_as_json %>">
-    <% end %>
     <% if @no_crawl %>
       <meta name="robots" content="noindex, nofollow">
     <% end %>
@@ -53,11 +49,16 @@
         H.className = H.className.replace(/\bno-js\b/,'js-loaded')
       })(document.documentElement);
     <% end %>
+    <%# Stimulus on every page. The three controllers on the body do what
+        jQuery UJS did for data-confirm, data-method and data-disable-with. %>
     <%= javascript_importmap_tags("public") unless @render_to_file %>
     <%= content_for :javascript_head %>
   </head>
   <body class="<%= yield :body_class -%> <% if @in_pro_area %>alaveteli-pro<% end %>" <% unless turbo_drive? || @render_to_file %>data-turbo="false" <% end %>data-controller="confirm method-link form-lock" data-action="click->confirm#click submit->confirm#submit click->method-link#follow submit->form-lock#lock">
     <% unless @render_to_file %>
+      <%# Each Turbo Drive visit's title is read out here (public/helpers/
+          page_announcer). Hidden inline, as not every theme's stylesheet has
+          a visually-hidden class. %>
       <div id="page-announcer" aria-live="polite" aria-atomic="true" data-turbo-permanent
            style="position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0"></div>
     <% end %>
@@ -73,8 +74,6 @@
       <% unless @render_to_file %>
       <!-- begin popups -->
         <%= render 'general/site_wide_announcement' if site_wide_announcement.present? %>
-        <div id="country-message">
-        </div>
       <!-- end popups -->
       <% end %>
 
@@ -82,6 +81,8 @@
 
       <div id="wrapper">
         <div id="content" role="main">
+          <%# The page is rendered first, so a band in it has already placed
+              the notice after itself (ApplicationHelper#band_notice). %>
           <% page = yield(:layout) %>
           <%= page_flashes unless band_notice_placed? %>
 
@@ -102,7 +103,16 @@
     </div>
 
     <% unless @render_to_file %>
+      <%# The role, not a permission: an admin's own visits aren't counted. %>
       <%= render partial: 'ga_code' unless @user&.is_admin? %>
+
+      <% if AlaveteliConfiguration::force_registration_on_new_request && !@user %>
+        <%# "Make request" opens the sign-in form here (signin-dialog). %>
+        <dialog class="signin-dialog" aria-label="<%= _('Sign in') %>" data-controller="signin-dialog" data-signin-dialog-src-value="<%= signin_path(modal: 1, r: select_authority_path) %>" data-signin-dialog-next-value="<%= select_authority_url %>" data-signin-dialog-trigger-value="#make-request-link" data-action="close->signin-dialog#closed">
+          <button type="button" class="signin-dialog__close" data-action="signin-dialog#close" aria-label="<%= _('Close') %>">&times;</button>
+          <iframe class="signin-dialog__frame" title="<%= _('Sign in') %>" src="about:blank" data-signin-dialog-target="frame"></iframe>
+        </dialog>
+      <% end %>
 
       <%= content_for :javascript %>
     <% end %>

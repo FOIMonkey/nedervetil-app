@@ -13,6 +13,30 @@ RSpec.describe FoiAttachment::EraseJob, type: :job do
     described_class.new.perform(attachment, editor: editor, reason: reason)
   end
 
+  describe 'uniqueness' do
+    before { described_class.unlock! }
+    after { described_class.unlock! }
+
+    it 'does not enqueue the same erasure twice' do
+      expect {
+        2.times do
+          described_class.perform_later(attachment,
+                                        editor: editor, reason: reason)
+        end
+      }.to have_enqueued_job(described_class).exactly(:once)
+    end
+
+    it 'enqueues erasures for distinct attachments' do
+      sibling = FactoryBot.create(:body_text,
+                                  incoming_message: incoming_message)
+      expect {
+        described_class.perform_later(attachment,
+                                      editor: editor, reason: reason)
+        described_class.perform_later(sibling, editor: editor, reason: reason)
+      }.to have_enqueued_job(described_class).twice
+    end
+  end
+
   it 'erases the attachment' do
     expect(attachment).to receive(:erase).with(editor: editor, reason: reason)
     perform

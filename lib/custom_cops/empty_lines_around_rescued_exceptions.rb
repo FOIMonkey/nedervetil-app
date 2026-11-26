@@ -1,20 +1,9 @@
 require 'rubocop'
 
 module CustomCops
-  # Enforces empty line before rescued exceptions. Enforces no empty line after
-  # rescued exceptions.
+  # Requires a blank line before rescue, with none after it.
   #
   # @example
-  #   # bad
-  #   begin
-  #     do_something
-  #     do_something_else
-  #   rescue FooError
-  #     error_notification
-  #     handle_error
-  #   end
-  #
-  #   # good
   #   begin
   #     do_something
   #     do_something_else
@@ -23,34 +12,12 @@ module CustomCops
   #     error_notification
   #     handle_error
   #   end
-  #
-  #   # bad
-  #   begin
-  #     do_something
-  #     do_something_else
-  #
-  #   rescue FooError
-  #
-  #     error_notification
-  #     handle_error
-  #   end
-  #
-  #   # good
-  #   begin
-  #     do_something
-  #     do_something_else
-  #
-  #   rescue FooError
-  #     error_notification
-  #     handle_error
-  #   end
-  #
   class EmptyLinesAroundRescuedExceptions < RuboCop::Cop::Base
     extend RuboCop::Cop::AutoCorrector
     include RuboCop::Cop::RangeHelp
 
-    MSG_BEFORE = 'Use empty line before rescued exceptions.'
-    MSG_AFTER = 'Avoid empty line after rescued exceptions.'
+    MSG_BEFORE = 'Use empty line before rescued exceptions.'.freeze
+    MSG_AFTER = 'Avoid empty line after rescued exceptions.'.freeze
 
     def on_rescue(node)
       return unless node.body.multiline?

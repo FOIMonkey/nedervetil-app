@@ -9,24 +9,12 @@
 #  updated_at            :datetime         not null
 #
 
+# Links a User to a status-update InfoRequestEvent when a request is
+# classified, updating the user's classification counter.
 class RequestClassification < ApplicationRecord
   belongs_to :user,
              inverse_of: :request_classifications,
              counter_cache: true
   belongs_to :info_request_event,
              inverse_of: :request_classification
-
-  # return classification instances representing the top n
-  # users, with a 'cnt' attribute representing the number
-  # of classifications the user has made.
-  def self.league_table(size, conditions=nil)
-    query = select('user_id, count(*) as cnt').
-      group('user_id').
-        order(cnt: :desc).
-          limit(size).
-            joins(:user).
-              merge(User.active)
-    query = query.where(*conditions) if conditions
-    query
-  end
 end

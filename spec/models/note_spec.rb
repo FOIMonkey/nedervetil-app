@@ -113,4 +113,23 @@ RSpec.describe Note, type: :model do
       it { is_expected.to eq('title') }
     end
   end
+
+  describe '#rich_body' do
+    let(:record) { FactoryBot.build(:note) }
+
+    include_examples 'a rich text field without attachments', :rich_body
+
+    it 'is blank when it held only an attachment' do
+      blob = ActiveStorage::Blob.create_and_upload!(
+        io: StringIO.new('uploaded'), filename: 'uploaded.txt'
+      )
+      record.style = 'red'
+      record.rich_body =
+        "<action-text-attachment sgid=\"#{blob.attachable_sgid}\">" \
+        '</action-text-attachment>'
+
+      expect(record).not_to be_valid
+      expect(record.errors[:rich_body]).to include("can't be blank")
+    end
+  end
 end

@@ -18,7 +18,8 @@ RSpec.describe InfoRequest::State::Calculator do
 
     it 'returns :very_overdue when the request is in state "waiting_response_very_overdue"' do
       travel_to(info_request.date_very_overdue_after + 2.days) do
-        expect(info_request.calculate_status).to eq "waiting_response_very_overdue"
+        expect(info_request.calculate_status).
+          to eq "waiting_response_very_overdue"
         expect(calculator.phase).to eq(:very_overdue)
       end
     end
@@ -67,7 +68,8 @@ RSpec.describe InfoRequest::State::Calculator do
           info_request.set_described_state(state)
           transitions = calculator.transitions(
             is_owning_user: true,
-            user_asked_to_update_status: true)
+            user_asked_to_update_status: true
+          )
           expect(transitions).to(eq(empty_hash))
         end
       end
@@ -76,43 +78,59 @@ RSpec.describe InfoRequest::State::Calculator do
     shared_examples_for "#transitions for an owner" do |states|
       let(:expected_when_asked_to_update) do
         {
-          pending:  {
-            "waiting_response"      => "I'm still <strong>waiting</strong> for my information <small>(maybe you got an acknowledgement)</small>",
-            "waiting_clarification" => "I've been asked to <strong>clarify</strong> my request",
-            "internal_review"       => "I'm waiting for an <strong>internal review</strong> response",
-            "gone_postal"           => "They are going to reply <strong>by postal mail</strong>",
-            "under_appeal"          => "I've <strong>appealed</strong> to the regulator or a tribunal"
+          pending: {
+            "waiting_response" =>
+              "I'm still <strong>waiting</strong> for my information " \
+              "<small>(maybe you got an acknowledgement)</small>",
+            "waiting_clarification" =>
+              "I've been asked to <strong>clarify</strong> my request",
+            "internal_review" =>
+              "I'm waiting for an <strong>internal review</strong> response",
+            "gone_postal" =>
+              "They are going to reply <strong>by postal mail</strong>",
+            "under_appeal" =>
+              "I've <strong>appealed</strong> to the regulator or a tribunal"
           },
           complete: {
-            "not_held"              => "They do <strong>not have</strong> the information <small>(maybe they say who does)</small>",
-            "partially_successful"  => "I've received <strong>some of the information</strong>",
-            "successful"            => "I've received <strong>all the information</strong>",
-            "rejected"              => "My request has been <strong>refused</strong>"
+            "partially_successful" =>
+              "I've received <strong>some of the information</strong>",
+            "successful" =>
+              "I've received <strong>all the information</strong>",
+            "rejected" => "I've received <strong>no information</strong>"
           },
           other: {
-            "error_message"         => "I've received an <strong>error message</strong>",
-            "requires_admin"        => "This request <strong>requires administrator attention</strong>",
-            "user_withdrawn"        => "I would like to <strong>withdraw this request</strong>"
+            "error_message" =>
+              "I've received an <strong>error message</strong>",
+            "requires_admin" =>
+              "This request <strong>requires administrator attention</strong>",
+            "user_withdrawn" =>
+              "I would like to <strong>withdraw this request</strong>"
           }
         }
       end
 
       let(:expected_when_not_asked_to_update) do
         {
-          pending:  {
-            "waiting_response"      => "I'm still <strong>waiting</strong> for my information <small>(maybe you got an acknowledgement)</small>",
-            "waiting_clarification" => "I've been asked to <strong>clarify</strong> my request",
-            "gone_postal"           => "They are going to reply <strong>by postal mail</strong>",
-            "under_appeal"          => "I've <strong>appealed</strong> to the regulator or a tribunal"
+          pending: {
+            "waiting_response" =>
+              "I'm still <strong>waiting</strong> for my information " \
+              "<small>(maybe you got an acknowledgement)</small>",
+            "waiting_clarification" =>
+              "I've been asked to <strong>clarify</strong> my request",
+            "gone_postal" =>
+              "They are going to reply <strong>by postal mail</strong>",
+            "under_appeal" =>
+              "I've <strong>appealed</strong> to the regulator or a tribunal"
           },
           complete: {
-            "not_held"              => "They do <strong>not have</strong> the information <small>(maybe they say who does)</small>",
-            "partially_successful"  => "I've received <strong>some of the information</strong>",
-            "successful"            => "I've received <strong>all the information</strong>",
-            "rejected"              => "My request has been <strong>refused</strong>"
+            "partially_successful" =>
+              "I've received <strong>some of the information</strong>",
+            "successful" =>
+              "I've received <strong>all the information</strong>",
+            "rejected" => "I've received <strong>no information</strong>"
           },
           other: {
-            "error_message"  => "I've received an <strong>error message</strong>"
+            "error_message" => "I've received an <strong>error message</strong>"
           }
         }
       end
@@ -123,7 +141,8 @@ RSpec.describe InfoRequest::State::Calculator do
               info_request.set_described_state(state)
               transitions = calculator.transitions(
                 is_owning_user: true,
-                user_asked_to_update_status: true)
+                user_asked_to_update_status: true
+              )
               expect(transitions).to eq expected_when_asked_to_update
             end
           end
@@ -133,7 +152,8 @@ RSpec.describe InfoRequest::State::Calculator do
               info_request.set_described_state(state)
               transitions = calculator.transitions(
                 is_owning_user: true,
-                user_asked_to_update_status: false)
+                user_asked_to_update_status: false
+              )
               expect(transitions).to eq expected_when_not_asked_to_update
             end
           end
@@ -144,19 +164,25 @@ RSpec.describe InfoRequest::State::Calculator do
     shared_examples "#transitions for some other user" do |states|
       let(:expected) do
         {
-          pending:  {
-            "waiting_response"      => "<strong>No response</strong> has been received <small>(maybe there's just an acknowledgement)</small>",
-            "waiting_clarification" => "<strong>Clarification</strong> has been requested",
-            "gone_postal"           => "A response will be sent <strong>by postal mail</strong>"
+          pending: {
+            "waiting_response" =>
+              "<strong>No response</strong> has been received " \
+              "<small>(maybe there's just an acknowledgement)</small>",
+            "waiting_clarification" =>
+              "<strong>Clarification</strong> has been requested",
+            "gone_postal" =>
+              "A response will be sent <strong>by postal mail</strong>"
           },
           complete: {
-            "not_held"              => "The authority do <strong>not have</strong> the information <small>(maybe they say who does)</small>",
-            "partially_successful"  => "<strong>Some of the information</strong> has been sent ",
-            "successful"            => "<strong>All the information</strong> has been sent",
-            "rejected"              => "The request has been <strong>refused</strong>"
+            "partially_successful" =>
+              "<strong>Some of the information</strong> has been sent ",
+            "successful" =>
+              "<strong>All the information</strong> has been sent",
+            "rejected" => "<strong>No information</strong> has been sent"
           },
           other: {
-            "error_message"  => "An <strong>error message</strong> has been received"
+            "error_message" =>
+              "An <strong>error message</strong> has been received"
           }
         }
       end
@@ -166,7 +192,8 @@ RSpec.describe InfoRequest::State::Calculator do
             info_request.set_described_state(state)
             transitions = calculator.transitions(
               is_owning_user: false,
-              user_asked_to_update_status: false)
+              user_asked_to_update_status: false
+            )
             expect(transitions).to eq expected
           end
         end
@@ -177,13 +204,15 @@ RSpec.describe InfoRequest::State::Calculator do
       context "and the user is the owner" do
         it_behaves_like(
           "#transitions for an owner",
-          %w[waiting_response waiting_clarification gone_postal])
+          %w[waiting_response waiting_clarification gone_postal]
+        )
       end
 
       context "and the user is some other user" do
         it_behaves_like(
           "#transitions for some other user",
-          %w[waiting_response waiting_clarification gone_postal])
+          %w[waiting_response waiting_clarification gone_postal]
+        )
       end
     end
 
@@ -191,13 +220,15 @@ RSpec.describe InfoRequest::State::Calculator do
       context "and the user is the owner" do
         it_behaves_like(
           "#transitions for an owner",
-          %w[not_held partially_successful successful rejected])
+          %w[not_held partially_successful successful rejected]
+        )
       end
 
       context "and the user is some other user" do
         it_behaves_like(
           "#transitions for some other user",
-          %w[not_held partially_successful successful rejected])
+          %w[not_held partially_successful successful rejected]
+        )
       end
     end
 
@@ -210,7 +241,8 @@ RSpec.describe InfoRequest::State::Calculator do
         it "returns only two pending states" do
           transitions = calculator.transitions(
             is_owning_user: true,
-            user_asked_to_update_status: false)
+            user_asked_to_update_status: false
+          )
           expected = %w[internal_review gone_postal under_appeal]
           expect(transitions[:pending].keys).to eq(expected)
         end
@@ -218,8 +250,10 @@ RSpec.describe InfoRequest::State::Calculator do
         it "returns a different label for the internal_review status" do
           transitions = calculator.transitions(
             is_owning_user: true,
-            user_asked_to_update_status: false)
-          expected = "I'm still <strong>waiting</strong> for the internal review"
+            user_asked_to_update_status: false
+          )
+          expected =
+            "I'm still <strong>waiting</strong> for the internal review"
           expect(transitions[:pending]["internal_review"]).to eq expected
         end
       end
@@ -228,7 +262,8 @@ RSpec.describe InfoRequest::State::Calculator do
         it "returns only two pending states" do
           transitions = calculator.transitions(
             is_owning_user: false,
-            user_asked_to_update_status: false)
+            user_asked_to_update_status: false
+          )
           expected = %w[internal_review gone_postal]
           expect(transitions[:pending].keys).to eq(expected)
         end
@@ -236,7 +271,8 @@ RSpec.describe InfoRequest::State::Calculator do
         it "returns a different label for the internal_review status" do
           transitions = calculator.transitions(
             is_owning_user: false,
-            user_asked_to_update_status: false)
+            user_asked_to_update_status: false
+          )
           expected = "Still awaiting an <strong>internal review</strong>"
           expect(transitions[:pending]["internal_review"]).to eq expected
         end
@@ -274,7 +310,8 @@ RSpec.describe InfoRequest::State::Calculator do
             is_owning_user: true,
             user_asked_to_update_status: false
           )
-          expected = "I'm still <strong>waiting</strong> for the internal review"
+          expected =
+            "I'm still <strong>waiting</strong> for the internal review"
           expect(transitions[:pending]["internal_review"]).to eq expected
         end
       end
@@ -305,13 +342,15 @@ RSpec.describe InfoRequest::State::Calculator do
       context "and the user is the owner" do
         it_behaves_like(
           "#transitions for an owner",
-          %w[waiting_response waiting_clarification gone_postal under_appeal])
+          %w[waiting_response waiting_clarification gone_postal under_appeal]
+        )
       end
 
       context "and the user is some other user" do
         it_behaves_like(
           "#transitions for some other user",
-          %w[waiting_response waiting_clarification gone_postal])
+          %w[waiting_response waiting_clarification gone_postal]
+        )
       end
     end
   end

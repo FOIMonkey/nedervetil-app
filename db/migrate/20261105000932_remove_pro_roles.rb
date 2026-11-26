@@ -1,10 +1,11 @@
-# The Pro and pro_admin roles are retired: the inbox is available to every
+# The Pro and pro_admin roles are gone (#93): what Pro gave is for every
 # account, and there is one admin level. pro_admin always required admin,
 # so this refuses to run if any pro_admin lacks the admin role: nobody may
 # lose admin. Announcements for pro_admins go to admins.
 #
 # The down recreates both roles and gives every account but the internal
-# admin the Pro role so a code rollback finds what it expects.
+# admin the Pro role, as the old code's hook did, so a code rollback finds
+# what it expects. pro_admin assignments aren't restored.
 class RemoveProRoles < ActiveRecord::Migration[8.1]
   class AdminWouldBeLost < StandardError; end
 

@@ -6,40 +6,41 @@ RSpec.describe ContactMailer do
       expect(ContactMailer.to_admin_message("A,B,C.",
                                      "test@example.com",
                                      "test",
-                                     "test", nil, nil, nil)['from'].to_s).to \
-      eq('"A,B,C." <do-not-reply-to-this-address@localhost>')
+                                     "test", nil, nil, nil)['from'].to_s).
+        to eq('"A,B,C." <do-not-reply-to-this-address@localhost>')
     end
 
     it 'sets the "From" address to the blackhole address' do
-     expect(ContactMailer.to_admin_message("test sender",
-                                     "test@example.com",
-                                     "test",
-                                     "test", nil, nil, nil)
-      .header['from'].to_s).to \
-      eq('test sender <do-not-reply-to-this-address@localhost>')
+      expect(ContactMailer.to_admin_message("test sender",
+                                      "test@example.com",
+                                      "test",
+                                      "test", nil, nil, nil).
+       header['from'].to_s).to \
+         eq('test sender <do-not-reply-to-this-address@localhost>')
     end
 
     it 'sets the "Reply-To" header header to the sender' do
       expect(ContactMailer.to_admin_message("test sender",
                                      "test@example.com",
                                      "test",
-                                     "test", nil, nil, nil)
-        .header['Reply-To'].to_s).to eq('test sender <test@example.com>')
+                                     "test", nil, nil, nil).
+        header['Reply-To'].to_s).to eq('test sender <test@example.com>')
     end
 
     it 'sets the "Return-Path" header to the blackhole address' do
       expect(ContactMailer.to_admin_message("test sender",
                                      "test@example.com",
                                      "test",
-                                     "test", nil, nil, nil)
-        .header['Return-Path'].to_s).to \
-        eq('do-not-reply-to-this-address@localhost')
+                                     "test", nil, nil, nil).
+        header['Return-Path'].to_s).to \
+          eq('do-not-reply-to-this-address@localhost')
     end
 
-    context "when the user is a pro user" do
+    # One contact address for every account.
+    context "when the account used to have the Pro role" do
       let(:pro_user) { FactoryBot.create(:pro_user) }
 
-      it "sends messages to the pro contact address" do
+      it "sends messages to the contact address" do
         with_feature_enabled(:alaveteli_pro) do
           message = ContactMailer.to_admin_message(pro_user.name,
                                                    pro_user.email,
@@ -48,7 +49,7 @@ RSpec.describe ContactMailer do
                                                    pro_user,
                                                    nil,
                                                    nil)
-          expect(message.to).to eq [AlaveteliConfiguration.pro_contact_email]
+          expect(message.to).to eq [AlaveteliConfiguration.contact_email]
         end
       end
     end
@@ -89,16 +90,16 @@ RSpec.describe ContactMailer do
   end
 
   describe "#from_admin_message" do
-    context "when the receiving user is a pro user" do
+    context "when the receiving user has the Pro role" do
       let(:pro_user) { FactoryBot.create(:pro_user) }
 
-      it "sends messages from the blackhole address" do
+      it "sends messages from the contact address" do
         with_feature_enabled(:alaveteli_pro) do
           message = ContactMailer.from_admin_message(pro_user.name,
                                                      pro_user.email,
                                                      "test subject",
                                                      "test message")
-          expect(message.from).to eq [AlaveteliConfiguration.pro_contact_email]
+          expect(message.from).to eq [AlaveteliConfiguration.contact_email]
         end
       end
     end

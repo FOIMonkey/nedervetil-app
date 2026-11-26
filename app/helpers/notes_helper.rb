@@ -1,8 +1,12 @@
+# Sanitises and renders sorted editorial Note records, with a narrower tag
+# allowlist for batch request views than for standard request views.
 module NotesHelper
+  include StyleBlockHelper
+
   def note_as_html(note, batch: false)
     allowed_tags = batch ? batch_notes_allowed_tags : notes_allowed_tags
     content = note.original_style? ? note.body : note.rich_body.to_trix_html
-    sanitize(content, tags: allowed_tags)
+    sanitize_without_style_blocks(content, tags: allowed_tags)
   end
 
   def render_notes(notes, batch: false, **options)

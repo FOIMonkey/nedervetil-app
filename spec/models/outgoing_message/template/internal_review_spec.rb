@@ -44,10 +44,6 @@ RSpec.describe OutgoingMessage::Template::InternalReview do
        [ GIVE DETAILS ABOUT YOUR COMPLAINT HERE ]
 
 
-
-      A full history of my FOI request and all correspondence is available on the Internet at this address: http://test.host/request/a_test_title
-
-
       Yours faithfully,
 
       EOF
@@ -88,10 +84,6 @@ RSpec.describe OutgoingMessage::Template::InternalReview do
 
 
        [ GIVE DETAILS ABOUT YOUR COMPLAINT HERE ]
-
-
-
-      A full history of my FOI request and all correspondence is available on the Internet at this address: http://test.host/request/a_test_title
       EOF
       expected.chomp!
 

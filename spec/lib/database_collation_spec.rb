@@ -5,8 +5,10 @@ RSpec.describe DatabaseCollation do
     it 'delegates to an instance of the class' do
       collation = double
       connection = mock_connection
-      allow(ActiveRecord::Base.connection_pool).to receive(:with_connection).and_yield(connection)
-      allow(DatabaseCollation).to receive(:new).with(connection).and_return(collation)
+      allow(ActiveRecord::Base.connection_pool).
+        to receive(:with_connection).and_yield(connection)
+      allow(DatabaseCollation).
+        to receive(:new).with(connection).and_return(collation)
       expect(collation).to receive(:supports?).with('en_GB')
       DatabaseCollation.supports?('en_GB')
     end

@@ -1,5 +1,0 @@
-The following request has been made public on Alaveteli.
-
-http://test.host/request/here_is_a_character_that_needs_q
-
--- the Alaveteli team

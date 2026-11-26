@@ -15,10 +15,12 @@ RSpec.describe RequestMailbox do
       expect(ir.info_request_events[-1].incoming_message_id).not_to be_nil
 
       deliveries = ActionMailer::Base.deliveries
-      expect(deliveries.size).to eq(1)
-      mail = deliveries[0]
-      # to the user who sent fancy_dog_request
-      expect(mail.to).to eq(['bob@localhost'])
+      expect(deliveries.size).to eq(0)
+      # to the user who sent fancy_dog_request, in their daily summary
+      notification = users(:bob_smith_user).notifications.last
+      expect(notification.info_request_event).
+        to eq(ir.incoming_messages.last.response_event)
+      expect(notification).to be_daily
       deliveries.clear
     end
 
@@ -34,10 +36,12 @@ RSpec.describe RequestMailbox do
       expect(ir.info_request_events[-2].params[:editor]).to eq("automatic")
 
       deliveries = ActionMailer::Base.deliveries
-      expect(deliveries.size).to eq(1)
-      mail = deliveries[0]
-      # to the user who sent fancy_dog_request
-      expect(mail.to).to eq(['bob@localhost'])
+      expect(deliveries.size).to eq(0)
+      # to the user who sent fancy_dog_request, in their daily summary
+      notification = users(:bob_smith_user).notifications.last
+      expect(notification.info_request_event).
+        to eq(ir.incoming_messages.last.response_event)
+      expect(notification).to be_daily
       deliveries.clear
     end
 
@@ -140,7 +144,7 @@ RSpec.describe RequestMailbox do
     end
 
     it "puts messages with a malformed To: in the holding pen" do
-      request = FactoryBot.create(:info_request)
+      FactoryBot.create(:info_request)
       receive_incoming_mail('incoming-request-plain.eml', to: 'asdfg')
       expect(InfoRequest.holding_pen_request.incoming_messages.count).to eq(1)
     end
@@ -163,10 +167,12 @@ RSpec.describe RequestMailbox do
       expect(ir.info_request_events[-1].incoming_message_id).not_to be_nil
 
       deliveries = ActionMailer::Base.deliveries
-      expect(deliveries.size).to eq(1)
-      mail = deliveries[0]
-      # to the user who sent fancy_dog_request
-      expect(mail.to).to eq(['bob@localhost'])
+      expect(deliveries.size).to eq(0)
+      # to the user who sent fancy_dog_request, in their daily summary
+      notification = users(:bob_smith_user).notifications.last
+      expect(notification.info_request_event).
+        to eq(ir.incoming_messages.last.response_event)
+      expect(notification).to be_daily
       deliveries.clear
     end
 
@@ -328,12 +334,14 @@ RSpec.describe RequestMailbox do
                             from: "Geraldine <geraldinequango@localhost>")
       expect(ir.incoming_messages.count).to eq(2) # one more arrives
 
-      # ... should get "responses arrived" message for original requester
+      # ... the original requester is told in their daily summary
       deliveries = ActionMailer::Base.deliveries
-      expect(deliveries.size).to eq(1)
-      mail = deliveries[0]
-      # to the user who sent fancy_dog_request
-      expect(mail.to).to eq(['bob@localhost'])
+      expect(deliveries.size).to eq(0)
+      # the user who sent fancy_dog_request
+      notification = users(:bob_smith_user).notifications.last
+      expect(notification.info_request_event).
+        to eq(ir.incoming_messages.last.response_event)
+      expect(notification).to be_daily
       deliveries.clear
 
       # Test what happens if something arrives from another domain
@@ -425,6 +433,368 @@ RSpec.describe RequestMailbox do
       raw_email = ir.reload.incoming_messages.last.raw_email
       expect(raw_email[:message_id]).to be_present
       expect(raw_email[:message_checksum]).to be_present
+    end
+  end
+
+  describe 'when a request turns mail away to the holding pen' do
+    let(:request) do
+      FactoryBot.create(:info_request,
+                        allow_new_responses_from: 'nobody',
+                        handle_rejected_responses: 'holding_pen')
+    end
+
+    let(:holding_pen) { InfoRequest.holding_pen_request }
+
+    def deliver(body)
+      receive_incoming_mail(<<~EML, to: request.incoming_email)
+        From: EMAIL_FROM
+        To: EMAIL_TO
+        Message-ID: <again@sender.example>
+        Subject: Basic Email
+
+        #{body}
+      EML
+    end
+
+    # The holding pen has the first copy, so it records nothing for the
+    # second. That must not read as the request accepting the mail.
+    it 'turns away a second mail with the same Message-ID too' do
+      deliver('Hello')
+      deliver('Hello again')
+
+      expect(request.incoming_messages.count).to eq(0)
+      expect(request.reload.rejected_incoming_count).to eq(2)
+      expect(holding_pen.incoming_messages.count).to eq(1)
+    end
+  end
+
+  describe 'when an earlier reply was erased with no message id stored' do
+    let(:request) { FactoryBot.create(:info_request) }
+
+    before do
+      earlier = FactoryBot.create(:incoming_message, info_request: request)
+      earlier.raw_email.file.purge
+      earlier.raw_email.update_columns(
+        message_id: nil, message_checksum: nil, erased_at: Time.zone.now
+      )
+    end
+
+    { 'with a Message-ID' => "Message-ID: <new@sender.example>\n",
+      'with no Message-ID' => '' }.each do |what, header|
+      it "receives new mail #{what}" do
+        mail = "From: EMAIL_FROM\nTo: EMAIL_TO\n#{header}" \
+               "Subject: New\n\nHello\n"
+
+        expect { receive_incoming_mail(mail, to: request.incoming_email) }.
+          to change { request.incoming_messages.count }.by(1)
+      end
+    end
+  end
+
+  describe 'when no mail can be read past its header lines' do
+    let(:request) { FactoryBot.create(:info_request) }
+    let(:holding_pen) { InfoRequest.holding_pen_request }
+    let(:inbound_email) { ActionMailbox::InboundEmail.order(:id).last }
+
+    before do
+      allow(MailHandler).to receive(:get_attachment_attributes).
+        and_raise(MailHandler::ReadRefused, 'refused')
+    end
+
+    def deliver(to:, from: 'records@authority.example')
+      receive_incoming_mail('incoming-request-plain.eml', to: to, from: from)
+    end
+
+    shared_examples 'mail dealt with on arrival' do
+      it 'reads no parts and leaves nothing waiting' do
+        expect { delivery }.
+          not_to have_enqueued_job(ActionMailbox::RoutingJob)
+        expect(MailHandler).not_to have_received(:get_attachment_attributes)
+        expect(inbound_email).to be_delivered
+      end
+    end
+
+    context 'with mail to a request whose requester is emailed at once' do
+      let(:request) do
+        FactoryBot.create(:info_request, use_notifications: false)
+      end
+
+      let(:delivery) { deliver(to: request.incoming_email) }
+
+      before do
+        allow(IncomingAttention::Effective).to receive(:active?).
+          and_return(false)
+      end
+
+      include_examples 'mail dealt with on arrival'
+
+      it 'records the reply and emails the requester' do
+        expect { delivery }.
+          to change { request.incoming_messages.count }.by(1).
+          and change { ActionMailer::Base.deliveries.size }.by(1)
+      end
+    end
+
+    context 'with mail to a request whose requester gets a notification' do
+      let(:request) { FactoryBot.create(:use_notifications_request) }
+      let(:delivery) { deliver(to: request.incoming_email) }
+
+      include_examples 'mail dealt with on arrival'
+
+      it 'records the reply and the notification' do
+        expect { delivery }.
+          to change { request.incoming_messages.count }.by(1).
+          and change { request.user.notifications.count }.by(1)
+      end
+    end
+
+    context 'with mail to an address one request is guessed from' do
+      let(:delivery) do
+        deliver(to: "request-#{request.id}-#{request.idhash}a@localhost")
+      end
+
+      include_examples 'mail dealt with on arrival'
+
+      it 'records the reply' do
+        expect { delivery }.to change { request.incoming_messages.count }.by(1)
+      end
+    end
+
+    context 'with mail to no request' do
+      let(:delivery) { deliver(to: 'nobody-here@localhost') }
+
+      include_examples 'mail dealt with on arrival'
+
+      it 'records it in the holding pen' do
+        expect { delivery }.
+          to change { holding_pen.incoming_messages.count }.by(1)
+      end
+    end
+
+    context 'with an earlier reply not yet parsed, to a request that ' \
+            'takes replies from the authority only' do
+      before do
+        deliver(to: request.incoming_email, from: 'first@replier.example')
+        request.update!(allow_new_responses_from: 'authority_only',
+                        handle_rejected_responses: 'holding_pen')
+      end
+
+      context 'when the sender shares the earlier reply\'s domain' do
+        let(:delivery) do
+          deliver(to: request.incoming_email, from: 'second@replier.example')
+        end
+
+        include_examples 'mail dealt with on arrival'
+
+        it 'records the reply, with the earlier one still unparsed' do
+          expect { delivery }.
+            to change { request.incoming_messages.count }.by(1)
+          expect(request.incoming_messages.pluck(:last_parsed)).
+            to eq([nil, nil])
+        end
+      end
+
+      context 'when the sender is from somewhere else' do
+        let(:delivery) do
+          deliver(to: request.incoming_email, from: 'someone@other.example')
+        end
+
+        include_examples 'mail dealt with on arrival'
+
+        it 'records it in the holding pen' do
+          expect { delivery }.
+            to change { holding_pen.incoming_messages.count }.by(1)
+          expect(request.incoming_messages.count).to eq(1)
+        end
+      end
+    end
+
+    context 'with an earlier reply that has no header values stored, to a ' \
+            'request that takes replies from the authority only' do
+      let(:delivery) do
+        deliver(to: request.incoming_email, from: 'second@replier.example')
+      end
+
+      before do
+        earlier = FactoryBot.create(:incoming_message, :unparsed,
+                                    info_request: request)
+        earlier.raw_email.data = +"From: first@replier.example\n\nHello\n"
+        earlier.raw_email.save!
+        request.update!(allow_new_responses_from: 'authority_only',
+                        handle_rejected_responses: 'holding_pen')
+      end
+
+      include_examples 'mail dealt with on arrival'
+
+      it 'records the reply' do
+        expect { delivery }.to change { request.incoming_messages.count }.by(1)
+      end
+    end
+
+    context 'with mail to a request that takes no replies' do
+      let(:delivery) { deliver(to: request.incoming_email) }
+
+      before do
+        request.update!(allow_new_responses_from: 'nobody',
+                        handle_rejected_responses: 'bounce')
+      end
+
+      it 'reads no parts, turns it away and leaves nothing waiting' do
+        expect { delivery }.
+          not_to have_enqueued_job(ActionMailbox::RoutingJob)
+        expect(MailHandler).not_to have_received(:get_attachment_attributes)
+        expect(request.incoming_messages.count).to eq(0)
+        expect(inbound_email).to be_delivered
+      end
+    end
+  end
+
+  describe 'when a read is refused while mail is routed' do
+    let(:first) { FactoryBot.create(:info_request) }
+    let(:second) { FactoryBot.create(:info_request) }
+    let(:refusing) { [second] }
+    let(:inbound_email) { ActionMailbox::InboundEmail.order(:id).last }
+
+    let(:delivery) do
+      receive_incoming_mail(
+        mail, to: [first, second].map(&:incoming_email).join(', ')
+      )
+    end
+
+    let(:mail) do
+      <<~EML
+        From: EMAIL_FROM
+        To: EMAIL_TO
+        Message-ID: <waiting@authority.example>
+        Subject: Basic Email
+
+        Hello, World
+      EML
+    end
+
+    before do
+      allow(InfoRequest::ResponseGatekeeper).
+        to receive(:for).and_wrap_original do |original, mode, request|
+          if refusing.include?(request)
+            raise MailHandler::ReadRefused, 'refused'
+          end
+
+          original.call(mode, request)
+        end
+    end
+
+    it 'puts the mail back to waiting and queues its routing again' do
+      expect { delivery }.
+        to have_enqueued_job(ActionMailbox::RoutingJob).
+        at(a_value_within(1.minute).of(10.minutes.from_now))
+      expect(inbound_email).to be_pending
+      expect(first.incoming_messages.count).to eq(1)
+      expect(second.incoming_messages.count).to eq(0)
+    end
+
+    it 'records the mail once for each request when it is routed again' do
+      delivery
+      refusing.clear
+      inbound_email.route
+
+      expect(inbound_email.reload).to be_delivered
+      expect(first.incoming_messages.count).to eq(1)
+      expect(second.incoming_messages.count).to eq(1)
+    end
+
+    context 'when the mail has no Message-ID header' do
+      let(:mail) do
+        <<~EML
+          From: EMAIL_FROM
+          To: EMAIL_TO
+          Subject: Basic Email
+
+          Hello, World
+        EML
+      end
+
+      it 'records the mail once for each request when it is routed again' do
+        delivery
+        refusing.clear
+        inbound_email.route
+
+        expect(first.incoming_messages.count).to eq(1)
+        expect(second.incoming_messages.count).to eq(1)
+      end
+    end
+
+    context 'when the mail has waited as long as it may' do
+      before do
+        allow(AlaveteliConfiguration).to receive_messages(
+          exception_notifications_from: 'errors@localhost',
+          exception_notifications_to: 'admin@localhost'
+        )
+        allow(ExceptionNotifier).to receive(:notify_exception)
+        delivery
+        inbound_email.update_columns(created_at: 13.hours.ago)
+      end
+
+      it 'leaves it as failed and sends one exception notification' do
+        expect { inbound_email.route }.
+          not_to have_enqueued_job(ActionMailbox::RoutingJob)
+        expect(inbound_email.reload).to be_failed
+        expect(ExceptionNotifier).to have_received(:notify_exception).once.
+          with(an_instance_of(MailHandler::ReadRefused),
+               data: { inbound_email_id: inbound_email.id })
+      end
+    end
+
+    context 'when the first request had turned the mail away' do
+      let(:holding_pen) { InfoRequest.holding_pen_request }
+
+      before do
+        first.update!(allow_new_responses_from: 'nobody',
+                      handle_rejected_responses: 'holding_pen')
+        delivery
+        refusing.clear
+        inbound_email.route
+      end
+
+      it 'still turns it away when it is routed again' do
+        expect(first.incoming_messages.count).to eq(0)
+        expect(second.incoming_messages.count).to eq(1)
+        expect(holding_pen.incoming_messages.count).to eq(1)
+      end
+
+      context 'when the mail has no Message-ID header' do
+        let(:mail) do
+          <<~EML
+            From: EMAIL_FROM
+            To: EMAIL_TO
+            Subject: Basic Email
+
+            Hello, World
+          EML
+        end
+
+        it 'still turns it away, and the holding pen keeps one copy' do
+          expect(first.incoming_messages.count).to eq(0)
+          expect(second.incoming_messages.count).to eq(1)
+          expect(holding_pen.incoming_messages.count).to eq(1)
+        end
+      end
+    end
+
+    it 'leaves the mail as failed when its routing cannot be queued' do
+      allow(ActionMailbox::RoutingJob).to receive(:set).and_return(
+        class_double(ActionMailbox::RoutingJob, perform_later: false)
+      )
+
+      expect { delivery }.to raise_error(MailHandler::ReadRefused)
+      expect(inbound_email).to be_failed
+    end
+
+    it 'leaves other errors to fail the mail' do
+      allow(InfoRequest::ResponseGatekeeper).
+        to receive(:for).and_raise(IOError, 'storage')
+
+      expect { delivery }.to raise_error(IOError)
+      expect(inbound_email).to be_failed
     end
   end
 end

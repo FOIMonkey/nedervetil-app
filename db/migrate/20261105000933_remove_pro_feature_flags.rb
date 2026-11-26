@@ -1,5 +1,9 @@
-# Pro-only Flipper flags (alaveteli_pro, notifications, pro_batch_category_ui)
-# are removed now that every account shares the unified inbox.
+# The flags only Pro used are gone (#93): alaveteli_pro, which the old
+# initializer copied from ENABLE_ALAVETELI_PRO, and notifications and
+# pro_batch_category_ui, which the Pro role switched on per account. This
+# deletes their rows. The down switches the batch category picker back on
+# for everyone, so a code rollback shows it as it does now; the old
+# initializer writes alaveteli_pro again when it boots.
 class RemoveProFeatureFlags < ActiveRecord::Migration[8.1]
   FLAGS = %w[alaveteli_pro notifications pro_batch_category_ui].freeze
 

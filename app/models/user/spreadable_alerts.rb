@@ -11,27 +11,6 @@ module User::SpreadableAlerts
     def random_time_in_last_day
       Time.zone.now - rand(24.hours).seconds
     end
-
-    # Alters last_daily_track_email for every user, so alerts will be sent
-    # spread out fairly evenly throughout the day, balancing load on the server.
-    # This is intended to be called by hand from the Ruby console. It will mean
-    # quite a few users may get more than one email alert the day you do it, so
-    # have a care and run it rarely.
-    #
-    # This SQL statement is useful for seeing how spread out users are at the
-    # moment:
-    #
-    # SELECT extract(hour from last_daily_track_email) AS h, COUNT(*)
-    # FROM users
-    # GROUP BY extract(hour from last_daily_track_email)
-    # ORDER BY h;
-    def spread_alert_times_across_day
-      find_each do |user|
-        user.update!(last_daily_track_email: random_time_in_last_day)
-      end
-
-      nil # so doesn't print all users on console
-    end
   end
 
   private

@@ -21,8 +21,9 @@ RSpec.describe InfoRequest::ResponseRejection::Bounce do
 
     it 'does nothing and returns true if the mail is from the ' \
        'request address' do
-      info_request = object_double(InfoRequest.new,
-                                   incoming_email: 'request-333-xxx@example.com')
+      info_request = object_double(
+        InfoRequest.new, incoming_email: 'request-333-xxx@example.com'
+      )
       inbound_email = <<-EOF.strip_heredoc
       To: Requester <request-333-xxx@example.com>
       From: Bad person <request-333-xxx@example.com>
@@ -37,28 +38,13 @@ RSpec.describe InfoRequest::ResponseRejection::Bounce do
 
     it 'does nothing and returns true if the mail is from the ' \
        'request address regardless of case' do
-      info_request = object_double(InfoRequest.new,
-                                   incoming_email: 'request-333-xxx@example.com')
+      info_request = object_double(
+        InfoRequest.new, incoming_email: 'request-333-xxx@example.com'
+      )
       inbound_email = <<-EOF.strip_heredoc
       To: Requester <Request-333-xxx@example.com>
       From: Bad person <Request-333-xxx@example.com>
       Subject: Spoofed from address
-      Hello, World
-      EOF
-      mail = Mail.from_source(inbound_email)
-      args = [info_request, mail]
-
-      expect(described_class.new(*args).reject).to eq(true)
-    end
-
-    it 'does nothing and returns true if the info_request is external' do
-      info_request = object_double(InfoRequest.new,
-                                   is_external?: true,
-                                   incoming_email: 'request-333-xxx@example.com')
-      inbound_email = <<-EOF.strip_heredoc
-      From: sender@example.com
-      To: Requester <request-333-xxx@example.com>
-      Subject: External
       Hello, World
       EOF
       mail = Mail.from_source(inbound_email)

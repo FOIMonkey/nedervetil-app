@@ -1,10 +1,8 @@
+# Convenience accessors for site_name, send_exception_notifications? and
+# blackhole_email backed by AlaveteliConfiguration.
 module ConfigHelper
   def site_name
     AlaveteliConfiguration.site_name
-  end
-
-  def pro_site_name
-    AlaveteliConfiguration.pro_site_name
   end
 
   def send_exception_notifications?
@@ -13,6 +11,7 @@ module ConfigHelper
   end
 
   def blackhole_email
-    AlaveteliConfiguration.blackhole_prefix+"@"+AlaveteliConfiguration.incoming_email_domain
+    AlaveteliConfiguration.blackhole_prefix + "@" +
+      AlaveteliConfiguration.incoming_email_domain
   end
 end

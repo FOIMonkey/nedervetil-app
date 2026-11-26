@@ -48,4 +48,46 @@ RSpec.describe InfoRequest::ExpireJob, type: :job do
       perform
     end
   end
+
+  describe 'storing the text of the replies again' do
+    include ActiveJob::TestHelper
+
+    let(:info_request) { FactoryBot.create(:info_request) }
+
+    it 'is queued for what was expired, once it has been expired' do
+      expired = false
+      allow(info_request).to receive(:expire) { expired = true }
+      allow(InfoRequest::StoreReplyTextJob).
+        to receive(:perform_later) { expect(expired).to be true }
+
+      described_class.new.perform(info_request)
+
+      expect(InfoRequest::StoreReplyTextJob).
+        to have_received(:perform_later).with(info_request)
+    end
+
+    it 'is queued once for a sweep of many requests' do
+      user = FactoryBot.create(:user)
+      FactoryBot.create_list(:info_request, 2, user: user)
+
+      expect { described_class.new.perform(user, :info_requests) }.
+        to have_enqueued_job(InfoRequest::StoreReplyTextJob).with(user).once
+    end
+
+    it 'is queued for every request after a sweep of them all' do
+      allow(InfoRequest).to receive_message_chain(:all, :find_each)
+
+      expect { described_class.new.perform(InfoRequest, :all) }.
+        to have_enqueued_job(InfoRequest::StoreReplyTextJob).
+        with(InfoRequest).once
+    end
+
+    it 'never stops the expiry when it cannot be queued' do
+      allow(InfoRequest::StoreReplyTextJob).to receive(:perform_later).
+        and_raise(RedisClient::CannotConnectError)
+      expect(info_request).to receive(:expire)
+
+      expect { described_class.new.perform(info_request) }.not_to raise_error
+    end
+  end
 end

@@ -1,4 +1,4 @@
-<% @title = _("Message has been removed") %>
+<% @title = _('This message is not published') %>
 
-<h1><%=@title%></h1>
+<%= page_band %>
 <%= render partial: 'request/prominence', locals: { prominenceable: @incoming_message } %>

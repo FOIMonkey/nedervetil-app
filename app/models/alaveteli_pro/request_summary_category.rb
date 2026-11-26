@@ -8,6 +8,8 @@
 #  updated_at :datetime         not null
 #
 
+# Phase or draft category tag (such as draft, awaiting_response or overdue)
+# linked to RequestSummary records for filtering and counting inbox lists.
 class AlaveteliPro::RequestSummaryCategory < ApplicationRecord
   has_and_belongs_to_many :request_summaries,
                           class_name: "AlaveteliPro::RequestSummary",
@@ -43,9 +45,5 @@ class AlaveteliPro::RequestSummaryCategory < ApplicationRecord
 
   def self.other
     find_by(slug: 'other')
-  end
-
-  def self.embargo_expiring
-    find_by(slug: 'embargo_expiring')
   end
 end

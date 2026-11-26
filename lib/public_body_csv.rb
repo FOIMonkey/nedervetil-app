@@ -1,21 +1,10 @@
 require 'csv'
 
-# Public: Generate a CSV representation of PublicBody instances
+# Exports public bodies with configurable fields and headers.
 #
-# Examples
-#
-#   bodies = PublicBody.search('useless')
-#
-#   csv = PublicBodyCSV.new(:fields => [:name, :calculated_home_page],
-#                           :headers => ['Name', 'Home Page'])
-#
+#   csv = PublicBodyCSV.new(fields: [:name], headers: ['Name'])
 #   bodies.each { |body| csv << body }
-#
-#   csv.generate
-#   # => Name,Home Page
-#        Department for Humpadinking,http://localhost
-#        Ministry of Silly Walks,http://www.localhost
-#        Department of Loneliness,http://localhost
+#   csv.generate # => CSV string
 class PublicBodyCSV
   def self.default_fields
     [:id,
@@ -69,7 +58,8 @@ class PublicBodyCSV
   end
 
   def <<(public_body)
-      rows << CSV.generate_line(collect_public_body_attributes(public_body), row_sep: '')
+    rows << CSV.generate_line(collect_public_body_attributes(public_body),
+                              row_sep: '')
   end
 
   # TODO: Just use CSV.generate

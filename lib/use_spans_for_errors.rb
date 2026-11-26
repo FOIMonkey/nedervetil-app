@@ -1,11 +1,5 @@
-# Monkeypatch! Use SPAN instead of DIV.
-#
-# Rails core refuse to fix this properly, by making it an official option.
-# Without it, you will get HTML validation errors in various places where an
-# error appears within a P.
-#
-# A monkeypatch will have to do.
-#
-# See http://dev.rubyonrails.org/ticket/2210
+# Use spans so field errors inside paragraphs remain valid HTML.
 
-ActionView::Base.field_error_proc = Proc.new { |html_tag, _instance| %(<span class="fieldWithErrors">#{html_tag}</span>).html_safe }
+ActionView::Base.field_error_proc = proc do |html_tag, _instance|
+  ActionController::Base.helpers.tag.span(html_tag, class: 'fieldWithErrors')
+end

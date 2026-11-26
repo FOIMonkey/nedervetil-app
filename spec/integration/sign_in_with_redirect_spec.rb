@@ -1,75 +1,50 @@
 require 'spec_helper'
-require 'integration/alaveteli_dsl'
 
-RSpec.describe 'Signing in with a redirect parameter', local_requests: false do
-  context 'when not logged in' do
-    let(:user) { FactoryBot.create(:user) }
+RSpec.describe 'Signing in with a bounded return', local_requests: false do
+  include_context 'with production error pages'
+  let(:user) { FactoryBot.create(:user) }
 
-    it 'redirects to an unprotected path' do
-      login!(user, r: help_about_path)
-      expect(response.status).to eq(200)
-    end
+  def submit_sign_in_form
+    destination = Nokogiri::HTML(response.body).
+      at_css('#signin_form input[name="r"]')['value']
+    post signin_path, params: {
+      r: destination,
+      user_signin: { email: user.email, password: 'jonespassword' }
+    }, headers: { 'Origin' => "http://#{host}" }
+  end
 
-    it 'redirects to an embargoed request that you own' do
-      embargoed_request = FactoryBot.create(:embargoed_request, user: user)
-      login!(user, r: show_request_path(embargoed_request.url_title))
-      expect(response.status).to eq(200)
-    end
+  it 'opens a private request belonging to the authenticated account' do
+    request = FactoryBot.create(:info_request, user: user)
+    get signin_path, params: { r: show_request_path(request.url_title) }
+    submit_sign_in_form
+    expect(response).to redirect_to(show_request_path(request.url_title))
+    follow_redirect!
+    expect(response).to have_http_status(:ok)
+  end
 
-    it 'renders a 404 when redirecting to an embargoed request that is not yours' do
-      embargoed_request = FactoryBot.create(:embargoed_request)
-      login!(user, r: show_request_path(embargoed_request.url_title))
-      expect(response.status).to eq(404)
-    end
+  it 'still enforces ownership at the returned page' do
+    request = FactoryBot.create(:info_request)
+    get signin_path, params: { r: show_request_path(request.url_title) }
+    submit_sign_in_form
+    follow_redirect!
+    expect(response).to have_http_status(:not_found)
+  end
 
-    it 'does not redirect to external URLs' do
-      login!(user, r: 'https://www.example.com/malicious')
-      expect(response.status).to eq(404)
+  it 'uses the safe default for an external or admin destination' do
+    ['https://example.invalid/malicious', '//example.invalid',
+     '/admin/users'].each do |path|
+      get signin_path, params: { r: path }
+      submit_sign_in_form
+      expect(response).to redirect_to(Authentication::ReturnPath::DEFAULT)
     end
   end
 
-  context 'when already logged in' do
-    let(:user) { FactoryBot.create(:user) }
-
-    before do
-      login!(user)
-    end
-
-    it 'redirects to an unprotected path' do
-      login!(user, r: help_about_path)
-      expect(response.status).to eq(200)
-    end
-
-    it 'redirects to an embargoed request that you own' do
-      embargoed_request = FactoryBot.create(:embargoed_request, user: user)
-      get signin_path, params: {
-                         r: show_request_path(embargoed_request.url_title)
-                       }
-      follow_redirect!
-      expect(response.status).to eq(200)
-    end
-
-    it 'renders a 404 when redirecting to an embargoed request that is not yours' do
-      embargoed_request = FactoryBot.create(:embargoed_request)
-      get signin_path, params: {
-                         r: show_request_path(embargoed_request.url_title)
-                       }
-      follow_redirect!
-      expect(response.status).to eq(404)
-    end
-
-    it 'does not redirect to external URLs' do
-      get signin_path, params: { r: 'https://www.example.com/malicious' }
-      follow_redirect!
-      expect(response.status).to eq(404)
-    end
+  it 'consumes the destination once after full authentication' do
+    get signin_path, params: { r: help_about_path }
+    submit_sign_in_form
+    expect(response).to redirect_to(help_about_path)
+    post signout_path
+    sign_in(user)
+    expect(response).to redirect_to(Authentication::ReturnPath::DEFAULT)
   end
-end
-
-def login!(user, params = {})
-  params =
-    { user_signin: { email: user.email, password: 'jonespassword' } }.
-    merge(params)
-  post signin_path, params: params
-  follow_redirect!
 end

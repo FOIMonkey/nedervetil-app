@@ -1,0 +1,59 @@
+---
+long_buttons:
+- 'app/views/attachment_management/attachments/edit_text.html.erb: Replace the selection
+  with [redacted]'
+- 'app/views/attachment_management/attachments/edit_text.html.erb: Save as a draft'
+- 'app/views/attachment_management/attachments/redact.html.erb: Make the redacted
+  image'
+- 'app/views/attachment_management/attachments/show.html.erb: Upload as a draft'
+- 'app/views/admin/disclosures/documents/_manager_panel.html.erb: Prepare file for review'
+- 'app/views/admin/disclosures/documents/_manager_panel.html.erb: Publish the new details'
+- 'app/views/disclosures/publishing/redact.html.erb: Leave my name showing'
+- 'app/views/disclosures/publishing/redact.html.erb: Remove all boxes on this page'
+- 'app/views/disclosures/versions/edit_text.html.erb: Make the redacted version'
+- 'app/views/disclosures/versions/edit_text.html.erb: Replace the selected text with
+  [redacted]'
+- 'app/views/admin/disclosures/versions/index.html.erb: Make from the thread as it is now'
+- 'app/views/admin/disclosures/versions/index.html.erb: Restore the original as received'
+- 'app/views/disclosures/versions/redact.html.erb: Make the redacted PDF'
+- 'app/views/disclosures/versions/redact.html.erb: Remove all boxes on this page'
+- 'app/views/admin/disclosures/versions/show.html.erb: Make a clean copy'
+- 'app/views/admin/disclosures/versions/show.html.erb: Make a new version from this one'
+- 'app/views/disclosures/versions/show.html.erb: Make a new version from this one'
+- 'app/views/admin/disclosures/versions/show.html.erb: Publish for the requester'
+- 'app/views/admin/disclosures/versions/show.html.erb: Replace in the thread'
+- 'app/views/request/_form.html.erb: Next step: preview your request'
+- 'app/views/request/_attention_choice.html.erb: This needs my attention'
+long_links:
+- 'app/views/alaveteli_pro/info_request_batches/_info_request_batch.html.erb: Show
+  {{count}} request in detail'
+- 'app/views/general/_log_in_bar.html.erb: Sign in or sign up'
+- 'app/views/alaveteli_pro/info_request_batches/_info_request_batch.html.erb: Show
+  {{count}} requests in detail'
+- 'app/views/attachment_management/attachments/show.html.erb: Download the original
+  from the email'
+- 'app/views/attachment_management/revisions/show.html.erb: Draw redaction boxes on
+  this PDF'
+- 'app/views/disclosures/_request_panel.html.erb: Delete the emails, keep the documents'
+- 'app/views/admin/disclosures/documents/_manager_panel.html.erb: Download the original
+  as received (admins only)'
+- 'app/views/admin/disclosures/documents/_manager_panel.html.erb: See version {{number}}
+  and its checks'
+- 'app/views/disclosures/documents/index.html.erb: more on their own sites'
+- 'app/views/disclosures/publishing/check.html.erb: Change the title or description'
+- 'app/views/admin/disclosures/versions/show.html.erb: Side by side with version {{number}}'
+- 'app/views/followups/_form_title.html.erb: Go back to refusal advice questions'
+- 'app/views/public_body/_list_sidebar_extra.html.erb: Are we missing a public authority?'
+- 'app/views/public_body/_list_sidebar_extra.html.erb: List of all authorities (CSV)'
+- 'app/views/request/_incoming_outcome.html.erb: Please tell us what you received'
+- 'app/views/request/_next_step.html.erb: Ask for an internal review'
+- 'app/views/request/_outgoing_correspondence.html.erb: Try opening the logs in a
+  new window.'
+- 'app/views/request/_requester_page.html.erb: Delete the emails, keep the documents'
+- 'app/views/request/_sidebar.html.erb: Are you the owner of any commercial copyright
+  on this page?'
+- 'app/views/request_limits/_body.html.erb: Contact us about your limit'
+placeholders:
+- 'app/views/alaveteli_pro/info_requests/index.html.erb: Search your requests'
+- 'app/views/disclosures/documents/index.html.erb: Search every page'
+- 'app/views/disclosures/documents/show.html.erb: Find in this document'

@@ -8,28 +8,27 @@ RSpec.describe 'outgoing_mailer/initial_request' do
   let(:request) { FactoryBot.create(:info_request, public_body: body) }
   let(:outgoing_message) { request.outgoing_messages.first }
 
-  it 'does not add HTMLEntities to the public body name' do
+  it 'renders the letter without a footer naming the public body' do
     assign(:info_request, request)
     assign(:outgoing_message, outgoing_message)
     render
-    expect(response).to match("requests to Apostrophe's")
+    expect(response).to eq("Some information please\n")
   end
 
-  it 'does not add HTMLEntities to the FOI law title' do
+  it 'renders the letter without a footer naming the FOI law' do
     allow(request).to receive(:legislation).and_return(
       FactoryBot.build(:legislation, full: "Test's Law")
     )
     assign(:info_request, request)
     assign(:outgoing_message, outgoing_message)
     render
-    expect(response).
-      to match("the wrong address for Test's Law requests")
+    expect(response).to eq("Some information please\n")
   end
 
-  it 'does not add HTMLEntities to the public body email address' do
+  it 'renders the letter without a footer giving the public body email' do
     assign(:info_request, request)
     assign(:outgoing_message, outgoing_message)
     render
-    expect(response).to match("Is a'b@example.com the wrong address")
+    expect(response).to eq("Some information please\n")
   end
 end

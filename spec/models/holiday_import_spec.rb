@@ -7,6 +7,24 @@ RSpec.describe HolidayImport do
     expect(holiday_import.errors[:ical_feed_url]).to eq(["can't be blank"])
   end
 
+  it 'validates that the feed is an HTTP or HTTPS URL' do
+    expected = [
+      'Please enter an iCal feed URL starting with http:// or https://'
+    ]
+
+    ['|id', '/etc/passwd', 'file:///etc/passwd', 'ftp://example.com/a.ics',
+     'http://', 'http://exa mple.com'].each do |url|
+      holiday_import = HolidayImport.new(source: 'feed', ical_feed_url: url)
+      expect(holiday_import.valid?).to be(false), url
+      expect(holiday_import.errors[:ical_feed_url]).to eq(expected)
+    end
+
+    %w[http://example.com/a.ics https://example.com/a.ics].each do |url|
+      holiday_import = HolidayImport.new(source: 'feed', ical_feed_url: url)
+      expect(holiday_import.valid?).to be(true), url
+    end
+  end
+
   it 'does not validate the presence of a feed if the source is suggestions' do
     holiday_import = HolidayImport.new(source: 'suggestions')
     expect(holiday_import.valid?).to be true
@@ -15,24 +33,29 @@ RSpec.describe HolidayImport do
   it 'validates that the source is either "feed" or "suggestions"' do
     holiday_import = HolidayImport.new(source: 'something')
     expect(holiday_import.valid?).to be false
-    expect(holiday_import.errors[:source]).to eq(["is not included in the list"])
+    expect(holiday_import.errors[:source]).
+      to eq(["is not included in the list"])
   end
 
   it 'validates that all holidays create from attributes are valid' do
-    holiday_import = HolidayImport.new(source: 'suggestions',
-                                       holidays_attributes: { "0" => { :description => '',
-                                                                        "day(1i)"=>"",
-                                                                        "day(2i)"=>"",
-                                                                        "day(3i)"=>"" } })
+    holiday_import = HolidayImport.new(
+      source: 'suggestions',
+      holidays_attributes: { "0" => { :description => '',
+                                      "day(1i)" => "",
+                                      "day(2i)" => "",
+                                      "day(3i)" => "" } }
+    )
     expect(holiday_import.valid?).to be false
-    expect(holiday_import.errors[:base]).to eq(["These holidays could not be imported"])
+    expect(holiday_import.errors[:base]).
+      to eq(["These holidays could not be imported"])
   end
 
   it 'validates that all holidays to import are valid' do
     holiday_import = HolidayImport.new
-    holiday_import.holidays = [ Holiday.new ]
+    holiday_import.holidays = [Holiday.new]
     expect(holiday_import.valid?).to be false
-    expect(holiday_import.errors[:base]).to eq(['These holidays could not be imported'])
+    expect(holiday_import.errors[:base]).
+      to eq(['These holidays could not be imported'])
   end
 
   it 'defaults to importing holidays for the current year' do
@@ -74,22 +97,39 @@ RSpec.describe HolidayImport do
   end
 
   it 'returns a readable description of the period for multiple years' do
-    expect(HolidayImport.new(start_year: 2011, end_year: 2012).period).to eq('2011-2012')
+    expect(HolidayImport.new(start_year: 2011, end_year: 2012).period).
+      to eq('2011-2012')
   end
 
   it 'returns a readable description of the period for a single year' do
-    expect(HolidayImport.new(start_year: 2011, end_year: 2011).period).to eq('2011')
+    expect(HolidayImport.new(start_year: 2011, end_year: 2011).period).
+      to eq('2011')
   end
 
-  it 'returns the country name for which suggestions are generated' do
-    expect(HolidayImport.new.suggestions_country_name).to eq('Germany')
+  describe '#suggestions_country_name' do
+    it 'returns the country name for which suggestions are generated' do
+      expect(HolidayImport.new.suggestions_country_name).to eq('Germany')
+    end
+
+    it 'returns the ISO short name of the country' do
+      allow(AlaveteliConfiguration).to receive(:iso_country_code).
+        and_return('GB')
+      expect(HolidayImport.new.suggestions_country_name).
+        to eq('United Kingdom of Great Britain and Northern Ireland')
+    end
+
+    it 'falls back to the configured code for an unknown country' do
+      allow(AlaveteliConfiguration).to receive(:iso_country_code).
+        and_return('zz')
+      expect(HolidayImport.new.suggestions_country_name).to eq('ZZ')
+    end
   end
 
   describe 'when populating a set of holidays to import from suggestions' do
     it 'should populate holidays from the suggestions' do
-      holidays = [ { date: Date.new(2014, 1, 1),
-                     name: "New Year's Day",
-                     regions: [:gb] } ]
+      holidays = [{ date: Date.new(2014, 1, 1),
+                    name: "New Year's Day",
+                    regions: [:gb] }]
       allow(Holidays).to receive(:between).and_return(holidays)
       @holiday_import = HolidayImport.new(source: 'suggestions')
       @holiday_import.populate
@@ -101,16 +141,17 @@ RSpec.describe HolidayImport do
     end
 
     it 'returns an empty array for an unknown country code' do
-      allow(AlaveteliConfiguration).to receive(:iso_country_code).and_return('UNKNOWN_COUNTRY_CODE')
+      allow(AlaveteliConfiguration).to receive(:iso_country_code).
+        and_return('UNKNOWN_COUNTRY_CODE')
       @holiday_import = HolidayImport.new(source: 'suggestions')
       @holiday_import.populate
       expect(@holiday_import.holidays).to be_empty
     end
 
     it 'should return a flag that it has been populated' do
-      holidays = [ { date: Date.new(2014, 1, 1),
-                     name: "New Year's Day",
-                     regions: [:gb] } ]
+      holidays = [{ date: Date.new(2014, 1, 1),
+                    name: "New Year's Day",
+                    regions: [:gb] }]
       allow(Holidays).to receive(:between).and_return(holidays)
       @holiday_import = HolidayImport.new(source: 'suggestions')
       @holiday_import.populate
@@ -151,9 +192,26 @@ RSpec.describe HolidayImport do
       expect(@holiday_import.errors[:ical_feed_url]).to eq(expected)
     end
 
+    it 'should add an error if the calendar is nested too deeply' do
+      body = "BEGIN:VCALENDAR\n" + ("BEGIN:VEVENT\n" * 6) +
+             ("END:VEVENT\n" * 6) + "END:VCALENDAR\n"
+      stub_request(:get, 'http://www.example.com/').to_return(body: body)
+
+      @holiday_import.populate
+      expected = ["Sorry, there's a problem with the format of that feed."]
+      expect(@holiday_import.errors[:ical_feed_url]).to eq(expected)
+    end
+
     it 'should add an error if the calendar cannot be found' do
-      allow(URI).to receive(:open).
-        and_raise(Errno::ENOENT.new('No such file or directory'))
+      stub_request(:get, 'http://www.example.com/').to_return(status: 404)
+
+      @holiday_import.populate
+      expected = ["Sorry we couldn't find that feed."]
+      expect(@holiday_import.errors[:ical_feed_url]).to eq(expected)
+    end
+
+    it 'should add an error if the feed is a local file' do
+      @holiday_import.ical_feed_url = Rails.root.join('Gemfile').to_s
 
       @holiday_import.populate
       expected = ["Sorry we couldn't find that feed."]
@@ -165,7 +223,7 @@ RSpec.describe HolidayImport do
     it 'saves all holidays' do
       holiday = Holiday.new
       holiday_import = HolidayImport.new
-      holiday_import.holidays = [ holiday ]
+      holiday_import.holidays = [holiday]
       expect(holiday).to receive(:save)
       holiday_import.save
     end
@@ -175,7 +233,7 @@ RSpec.describe HolidayImport do
     it 'saves all holidays' do
       holiday = Holiday.new
       holiday_import = HolidayImport.new
-      holiday_import.holidays = [ holiday ]
+      holiday_import.holidays = [holiday]
       expect(holiday).to receive(:save!)
       holiday_import.save!
     end

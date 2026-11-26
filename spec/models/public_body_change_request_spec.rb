@@ -61,7 +61,8 @@ RSpec.describe PublicBodyChangeRequest, 'when validating' do
   it 'should not be valid without a public body name' do
     change_request = PublicBodyChangeRequest.new
     expect(change_request.valid?).to be false
-    expect(change_request.errors[:public_body_name]).to eq(['Please enter the name of the authority'])
+    expect(change_request.errors[:public_body_name]).
+      to eq(['Please enter the name of the authority'])
   end
 
   it 'should not be valid without a user name if there is no user' do
@@ -73,7 +74,8 @@ RSpec.describe PublicBodyChangeRequest, 'when validating' do
   it 'should not be valid without a user email address if there is no user' do
     change_request = PublicBodyChangeRequest.new(public_body_name: 'New Body')
     expect(change_request.valid?).to be false
-    expect(change_request.errors[:user_email]).to eq(['Please enter your email address'])
+    expect(change_request.errors[:user_email]).
+      to eq(['Please enter your email address'])
   end
 
   it 'should be valid with a user and no name or email address' do
@@ -87,40 +89,88 @@ RSpec.describe PublicBodyChangeRequest, 'when validating' do
     change_request = PublicBodyChangeRequest.new(public_body_name: 'New Body',
                                                  user_email: '@example.com')
     expect(change_request.valid?).to be false
-    expect(change_request.errors[:user_email]).to eq(["Your email doesn't look like a valid address"])
+    expect(change_request.errors[:user_email]).
+      to eq(["Your email doesn't look like a valid address"])
+  end
+
+  # Anyone can send the form, and admins see the source as a link.
+  %w[javascript:alert(1) data:text/html,x /path not-a-web-address].
+    each do |source_url|
+    it "refuses a source that isn't an http(s) web address: #{source_url}" do
+      change_request = PublicBodyChangeRequest.new(
+        public_body_name: 'New Body', user_name: 'Someone',
+        user_email: 'someone@example.com', source_url: source_url
+      )
+      expect(change_request.valid?).to be false
+      expect(change_request.errors[:source_url]).
+        to eq(['Please enter a web address, such as ' \
+               'https://www.example.org, or leave it blank'])
+    end
+  end
+
+  ['https://www.example.org/foi', 'http://example.org', 'www.example.org',
+   '', nil].
+    each do |source_url|
+    it "accepts the source #{source_url.inspect}" do
+      change_request = PublicBodyChangeRequest.new(
+        public_body_name: 'New Body', user_name: 'Someone',
+        user_email: 'someone@example.com', source_url: source_url
+      )
+      expect(change_request.valid?).to be true
+    end
+  end
+
+  it 'gives no link for a source stored before it was checked' do
+    change_request = FactoryBot.create(:add_body_request)
+    change_request.update_column(:source_url, 'javascript:alert(1)')
+    expect(change_request.reload.source_link).to be_nil
+    change_request.update_column(:source_url, 'www.example.org')
+    expect(change_request.reload.source_link).to eq('https://www.example.org')
+  end
+
+  # Checked only when it changes: an older bad value doesn't stop an admin
+  # closing the request.
+  it 'still closes a request whose stored source is not a web address' do
+    change_request = FactoryBot.create(:add_body_request)
+    change_request.update_column(:source_url, 'javascript:alert(1)')
+    change_request.reload.close!
+    expect(change_request.reload.is_open).to be(false)
   end
 
   it 'should validate the format of a public body email address entered' do
-    change_request = PublicBodyChangeRequest.new(public_body_name: 'New Body',
-                                                 public_body_email: '@example.com')
+    change_request = PublicBodyChangeRequest.new(
+      public_body_name: 'New Body',
+      public_body_email: '@example.com'
+    )
     expect(change_request.valid?).to be false
-    expect(change_request.errors[:public_body_email]).to eq(["The authority email doesn't look like a valid address"])
+    expect(change_request.errors[:public_body_email]).
+      to eq(["The authority email doesn't look like a valid address"])
   end
 end
 
-RSpec.describe PublicBodyChangeRequest, 'get_user_name' do
+RSpec.describe PublicBodyChangeRequest, 'requester_name' do
   it 'should return the user_name field if there is no user association' do
     change_request = PublicBodyChangeRequest.new(user_name: 'Test User')
-    expect(change_request.get_user_name).to eq('Test User')
+    expect(change_request.requester_name).to eq('Test User')
   end
 
   it 'should return the name of the associated user if there is one' do
     user = FactoryBot.build(:user)
     change_request = PublicBodyChangeRequest.new(user: user)
-    expect(change_request.get_user_name).to eq(user.name)
+    expect(change_request.requester_name).to eq(user.name)
   end
 end
 
-RSpec.describe PublicBodyChangeRequest, 'get_user_email' do
+RSpec.describe PublicBodyChangeRequest, 'requester_email' do
   it 'should return the user_email field if there is no user association' do
     change_request = PublicBodyChangeRequest.new(user_email: 'user@example.com')
-    expect(change_request.get_user_email).to eq('user@example.com')
+    expect(change_request.requester_email).to eq('user@example.com')
   end
 
   it 'should return the email of the associated user if there is one' do
     user = FactoryBot.build(:user)
     change_request = PublicBodyChangeRequest.new(user: user)
-    expect(change_request.get_user_email).to eq(user.email)
+    expect(change_request.requester_email).to eq(user.email)
   end
 end
 
@@ -157,16 +207,17 @@ RSpec.describe PublicBodyChangeRequest, '.open' do
   end
 end
 
-RSpec.describe PublicBodyChangeRequest, 'get_public_body_name' do
+RSpec.describe PublicBodyChangeRequest, 'authority_name' do
   it 'should return the public_body_name field if there is no public body association' do
-    change_request = PublicBodyChangeRequest.new(public_body_name: 'Test Authority')
-    expect(change_request.get_public_body_name).to eq('Test Authority')
+    change_request =
+      PublicBodyChangeRequest.new(public_body_name: 'Test Authority')
+    expect(change_request.authority_name).to eq('Test Authority')
   end
 
   it 'should return the name of the associated public body if there is one' do
     public_body = FactoryBot.build(:public_body)
     change_request = PublicBodyChangeRequest.new(public_body: public_body)
-    expect(change_request.get_public_body_name).to eq(public_body.name)
+    expect(change_request.authority_name).to eq(public_body.name)
   end
 end
 
@@ -176,7 +227,9 @@ RSpec.describe PublicBodyChangeRequest, 'when creating a comment for the associa
                                                  user_email: 'test@example.com',
                                                  source_url: 'http://www.example.com',
                                                  notes: 'Some notes')
-    expected = "Requested by: Test User (test@example.com)\nSource URL: http://www.example.com\nNotes: Some notes"
+    expected = "Requested by: Test User (test@example.com)\n" \
+               "Source URL: http://www.example.com\n" \
+               "Notes: Some notes"
     expect(change_request.comment_for_public_body).to eq(expected)
   end
 end

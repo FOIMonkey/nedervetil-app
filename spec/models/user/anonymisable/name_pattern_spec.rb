@@ -181,11 +181,28 @@ RSpec.describe User::Anonymisable::NamePattern do
   describe '#to_censor_rule_text' do
     subject { described_class.new('Bob Smith').to_censor_rule_text }
 
-    it { is_expected.to eq("(?x:\n    \\b\n    (?:\n      (?:Mr|Mrs|Miss|Ms|Mx)\\.? \\s+ (?:Bob\\s+)? Smith\n      |\n      Bob (?: \\s+ Smith | \\s+ S\\.? )?\n      |\n      B\\.? \\s* Smith\n      |\n      Smith ,\\s+ (?: Bob | B\\.? )\n    )\n    (?!\\w)\n  )") }
+    it do
+      is_expected.to eq(
+        "(?x:\n" \
+        "    \\b\n" \
+        "    (?:\n" \
+        "      (?:Mr|Mrs|Miss|Ms|Mx)\\.? \\s+ (?:Bob\\s+)? Smith\n" \
+        "      |\n" \
+        "      Bob (?: \\s+ Smith | \\s+ S\\.? )?\n" \
+        "      |\n" \
+        "      B\\.? \\s* Smith\n" \
+        "      |\n" \
+        "      Smith ,\\s+ (?: Bob | B\\.? )\n" \
+        "    )\n" \
+        "    (?!\\w)\n" \
+        "  )"
+      )
+    end
 
     context 'with a custom pattern' do
       around do |example|
-        described_class.pattern = '%{firstname} %{first_initial} %{last_initial} %{surname}'
+        described_class.pattern =
+          '%{firstname} %{first_initial} %{last_initial} %{surname}'
         example.run
         described_class.pattern = described_class::DEFAULT_PATTERN
       end

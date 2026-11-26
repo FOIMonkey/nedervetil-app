@@ -1,6 +1,9 @@
 require 'spec_helper'
 
 RSpec.describe Admin::ChangelogController do
+  # Arrange a fully authenticated admin; production has no test-only bypass.
+  before { sign_in users(:admin_user) }
+
   describe 'GET index' do
     render_views
 

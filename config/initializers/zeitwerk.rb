@@ -1,8 +1,5 @@
 Rails.autoloaders.main.inflector.inflect(
-  "alaveteli_geoip" => "AlaveteliGeoIP",
   "alaveteli_gettext" => "AlaveteliGetText",
-  "ip_rate_limiter" => "IPRateLimiter",
-  "pstore_database" => "PStoreDatabase",
   "public_body_csv" => "PublicBodyCSV",
   "world_foi_websites" => "WorldFOIWebsites"
 )
@@ -14,7 +11,7 @@ Rails.autoloaders.main.ignore(
   "lib/mail_handler/mail_extensions.rb",
   "lib/no_constraint_disabling.rb",
   "lib/normalize_string.rb",
-  "lib/quiet_opener.rb",
+  "lib/fetch_url.rb",
   "lib/routing_filters.rb",
   "lib/theme.rb",
   "lib/use_spans_for_errors.rb"

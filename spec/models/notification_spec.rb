@@ -60,7 +60,7 @@ RSpec.describe Notification do
 
     context "when the notification has already been created" do
       let(:notification) { FactoryBot.create(:instant_notification) }
-      let(:new_time) { expected_time = Time.zone.now + 3.hours }
+      let(:new_time) { Time.zone.now + 3.hours }
 
       it "doesn't recalculate the send_after" do
         notification.send_after = new_time
@@ -70,7 +70,7 @@ RSpec.describe Notification do
     end
 
     context "when the send_after time is set manually during creating" do
-      let(:delayed_time) { expected_time = Time.zone.now + 3.hours }
+      let(:delayed_time) { Time.zone.now + 3.hours }
       let(:notification) do
         FactoryBot.create(:instant_notification, send_after: delayed_time)
       end
@@ -96,16 +96,12 @@ RSpec.describe Notification do
 
   describe ".reject_and_mark_expired" do
     let(:notification) { FactoryBot.create(:notification) }
-    let(:embargo_expiring_request) do
-      FactoryBot.create(:embargo_expiring_request)
-    end
-    let(:embargo_expiring_event) do
-      FactoryBot.create(:embargo_expiring_event,
-                        info_request: embargo_expiring_request)
+    let(:overdue_request) { FactoryBot.create(:overdue_request) }
+    let(:overdue_event) do
+      FactoryBot.create(:overdue_event, info_request: overdue_request)
     end
     let(:expired_notification) do
-      FactoryBot.create(:notification,
-                        info_request_event: embargo_expiring_event)
+      FactoryBot.create(:notification, info_request_event: overdue_event)
     end
     let(:notifications) { [notification, expired_notification] }
 
@@ -118,7 +114,8 @@ RSpec.describe Notification do
 
     context "when notifications are expired" do
       before do
-        embargo_expiring_request.embargo.destroy!
+        expired_notification
+        overdue_request.set_described_state('successful')
         expired_notification.reload
       end
 
@@ -144,79 +141,13 @@ RSpec.describe Notification do
       end
     end
 
-    context "when the notification is for an expiring embargo" do
-      let(:embargo_expiring_request) do
-        FactoryBot.create(:embargo_expiring_request)
-      end
-      let(:embargo_expiring_event) do
-        FactoryBot.create(:embargo_expiring_event,
-                          info_request: embargo_expiring_request)
-      end
-      let(:notification) do
-        FactoryBot.create(:notification,
-                          info_request_event: embargo_expiring_event)
-      end
-
-      context "and the embargo is still expiring" do
-        it "returns false" do
-          expect(notification.expired).to be false
-        end
-      end
-
-      context 'and the expiry of the embargo is pending' do
-        it 'returns false when the publication date has been reached' do
-          travel_to(embargo_expiring_request.embargo.publish_at) do
-            expect(notification.expired).to be false
-          end
-        end
-
-        it 'returns false when the publication date has passed' do
-          travel_to(embargo_expiring_request.embargo.publish_at + 1.day) do
-            expect(notification.expired).to be false
-          end
-        end
-      end
-
-      context "and the embargo has been removed" do
-        before do
-          embargo_expiring_request.embargo.destroy!
-          notification.reload
-        end
-
-        it "returns true" do
-          expect(notification.expired).to be true
-        end
-      end
-    end
-
-    context 'when the notification is for an expired embargo' do
-      let(:embargo_expired_request) do
-        FactoryBot.create(:embargo_expired_request)
-      end
-
-      let(:embargo_expired_event) do
-        FactoryBot.create(:expire_embargo_event,
-                          info_request: embargo_expired_request)
-      end
-
-      let(:notification) do
-        FactoryBot.create(:notification,
-                          info_request_event: embargo_expired_event)
-      end
-
-      context 'and a new embargo has not been created' do
-        it 'returns false' do
-          expect(notification.expired).to be false
-        end
-      end
-
-      context 'and a new embargo has been created' do
-        before do
-          FactoryBot.create(:embargo, info_request: embargo_expired_request)
-          notification.reload
-        end
-
-        it 'returns true' do
+    context 'when the notification is for a retired embargo event' do
+      %w[embargo_expiring expire_embargo].each do |event_type|
+        it "returns true for a '#{event_type}' event" do
+          event = FactoryBot.create(:info_request_event,
+                                    event_type: event_type)
+          notification =
+            FactoryBot.create(:notification, info_request_event: event)
           expect(notification.expired).to be true
         end
       end

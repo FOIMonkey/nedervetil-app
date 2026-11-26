@@ -2,15 +2,10 @@
 # unless you override their key in this optional file.
 #
 # Unfortunately at this time you can't override the regular expressions defined
-# for DEFAULT_SPAM_NAME_FORMAT or DEFAULT_SPAM_ABOUT_ME_FORMAT.
+# for DEFAULT_SPAM_NAME_FORMAT. currency_symbols and spam_about_me_formats
+# belonged to the removed profile text rules and are ignored.
 
 user_spam_scorer:
-  currency_symbols:
-    - £
-    - $
-    - €
-    - ¥
-    - ¢
   suspicious_domains:
     - mail.ru
     - temp-mail.de

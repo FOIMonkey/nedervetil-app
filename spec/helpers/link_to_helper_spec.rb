@@ -65,31 +65,24 @@ RSpec.describe LinkToHelper do
     end
   end
 
+  # Every request is private to its requester, so every link goes through
+  # sign-in, whatever the requester's role.
   describe 'when linking to new responses' do
-    context 'when the user is a pro' do
-      let(:user) { FactoryBot.create(:pro_user) }
-      let(:info_request) { FactoryBot.create(:info_request, user: user) }
-      let(:incoming_message) do
-        FactoryBot.create(:incoming_message, info_request: info_request)
-      end
+    let(:incoming_message) { FactoryBot.create(:incoming_message) }
+    let(:info_request) { incoming_message.info_request }
 
-      it 'creates a sign in url to the cachebusted incoming message url' do
-        msg_url = incoming_message_url(incoming_message, cachebust: true)
-        expected = signin_url(r: msg_url)
-        actual = new_response_url(info_request, incoming_message)
-        expect(actual).to eq(expected)
-      end
+    def expected_url
+      signin_url(r: incoming_message_url(incoming_message, cachebust: true))
     end
 
-    context 'when the user is a normal user' do
-      let(:incoming_message) { FactoryBot.create(:incoming_message) }
-      let(:info_request) { incoming_message.info_request }
+    it 'creates a sign in url to the cachebusted incoming message url' do
+      expect(new_response_url(info_request, incoming_message)).
+        to eq(expected_url)
+    end
 
-      it 'creates a cachbusted incoming message url' do
-        expected = incoming_message_url(incoming_message, cachebust: true)
-        actual = new_response_url(info_request, incoming_message)
-        expect(actual).to eq(expected)
-      end
+    it 'does the same for a requester without the Pro role' do
+      expect(new_response_url(info_request, incoming_message)).
+        to eq(expected_url)
     end
   end
 
@@ -169,30 +162,6 @@ RSpec.describe LinkToHelper do
   end
 
   describe 'when displaying a user link for a request' do
-    context "for external requests" do
-      let(:info_request) do
-        FactoryBot.create(:external_request, external_user_name: nil)
-      end
-
-      it 'should return the text "Anonymous user" with a link to the privacy
-          help pages when there is no external username' do
-        expected = '<a href="/help/privacy#anonymous">Anonymous user</a>'
-        expect(request_user_link(info_request)).to eq(expected)
-      end
-
-      it 'should return a link with an alternative text if requested' do
-        expected = '<a href="/help/privacy#anonymous">other text</a>'
-        actual = request_user_link(info_request, 'other text')
-        expect(actual).to eq(expected)
-      end
-
-      it 'should display an absolute link if requested' do
-        expected = '<a href="http://test.host/help/privacy#anonymous">' \
-                   'Anonymous user</a>'
-        expect(request_user_link_absolute(info_request)).to eq(expected)
-      end
-    end
-
     context "for normal requests" do
       let(:info_request) { FactoryBot.create(:info_request) }
       let(:user) { info_request.user }
@@ -210,21 +179,13 @@ RSpec.describe LinkToHelper do
     end
   end
 
-  describe 'when displaying a user admin link for a request' do
-    let(:info_request) do
-      FactoryBot.create(:external_request, external_user_name: nil)
-    end
-
-    it 'should return the text "An anonymous user (external)" in the case
-        where there is no external username' do
-      expected = 'Anonymous user (external)'
-      expect(user_admin_link_for_request(info_request)).to eq(expected)
-    end
-  end
-
   describe '#current_path_without_locale' do
     before do
       AlaveteliLocalization.set_locales('en cy', 'en')
+      allow(controller.request).to receive(:path_info).
+        and_return('/body/welsh_government')
+      allow(controller.request).to receive(:query_parameters).
+        and_return('locale' => 'cy')
     end
 
     it 'removes locale from current path' do
@@ -251,11 +212,36 @@ RSpec.describe LinkToHelper do
       expect(current_path_without_locale).
         to eq '/body/welsh_government'
     end
+
+    it 'does not copy submitted credentials into a redirect URL' do
+      allow(controller.request).to receive(:request_parameters).
+        and_return('password' => 'demo-password', 'otp_code' => '424242')
+      allow(controller).to receive(:params).and_return(
+        ActionController::Parameters.new(
+          controller: 'public_body', action: 'show',
+          url_name: 'welsh_government', view: 'all', locale: 'cy',
+          password: 'demo-password', otp_code: '424242'
+        )
+      )
+      expect(current_path_without_locale).
+        to eq '/body/welsh_government'
+    end
+
+    it 'keeps ordinary query parameters without accepting URL options' do
+      allow(controller.request).to receive(:query_parameters).
+        and_return('locale' => 'cy', 'q' => 'water', 'host' => 'evil.example')
+      expect(current_path_without_locale).
+        to eq '/body/welsh_government?host=evil.example&q=water'
+    end
   end
 
   describe '#current_path_with_locale' do
     before do
       AlaveteliLocalization.set_locales('en cy', 'en')
+      allow(controller.request).to receive(:path_info).
+        and_return('/body/welsh_government')
+      allow(controller.request).to receive(:query_parameters).
+        and_return({})
     end
 
     it 'adds locale parameter to current path' do
@@ -280,28 +266,33 @@ RSpec.describe LinkToHelper do
       expect(current_path_with_locale('cy')).
         to eq '/body/welsh_government?locale=cy'
     end
-  end
 
-  describe '#current_path_as_json' do
-    it 'appends current path with json format' do
-      allow(controller).to receive(:params).and_return(
-        ActionController::Parameters.new(
-          controller: 'public_body', action: 'show',
-          url_name: 'welsh_government', view: 'all'
-        )
-      )
-      expect(current_path_as_json).to eq '/body/welsh_government.json'
-    end
-
-    it 'ignores current protocol and host' do
+    it 'does not copy submitted credentials into a language link' do
+      allow(controller.request).to receive(:request_parameters).
+        and_return('password' => 'demo-password', 'otp_code' => '424242')
       allow(controller).to receive(:params).and_return(
         ActionController::Parameters.new(
           controller: 'public_body', action: 'show',
           url_name: 'welsh_government', view: 'all',
-          protocol: 'http', host: 'example.com'
+          password: 'demo-password', otp_code: '424242'
         )
       )
-      expect(current_path_as_json).to eq '/body/welsh_government.json'
+      expect(current_path_with_locale('cy')).
+        to eq '/body/welsh_government?locale=cy'
+    end
+
+    it 'uses the request path even if the proxy prefix looks like a URL' do
+      allow(controller.request).to receive(:script_name).
+        and_return('//evil.example')
+      expect(current_path_with_locale('cy')).
+        to eq '/body/welsh_government?locale=cy'
+    end
+
+    it 'keeps a path with extra leading slashes on this site' do
+      allow(controller.request).to receive(:path_info).
+        and_return('//evil.example/path')
+      expect(current_path_with_locale('cy')).
+        to eq '/evil.example/path?locale=cy'
     end
   end
 
@@ -319,62 +310,6 @@ RSpec.describe LinkToHelper do
     context 'incoming message without main body part' do
       before { allow(incoming_message).to receive(:get_main_body_text_part) }
       it { is_expected.to be_nil }
-    end
-  end
-
-  describe '#add_query_params_to_url' do
-    it 'adds new parameters to a URL without existing parameters' do
-      url = 'http://example.com/'
-      new_params = { foo: 1 }
-      expect(add_query_params_to_url(url, new_params)).
-        to eq 'http://example.com/?foo=1'
-    end
-
-    it 'adds ActiveModel object parameters to a URL by calling #to_param' do
-      url = 'http://example.com/'
-      new_params = { user: users(:bob_smith_user) }
-      expect(add_query_params_to_url(url, new_params)).
-        to eq 'http://example.com/?user=1'
-    end
-
-    it 'adds new parameters to a URL with existing parameters' do
-      url = 'http://example.com/?bar=2'
-      new_params = { foo: 1 }
-      expect(add_query_params_to_url(url, new_params)).
-        to eq 'http://example.com/?bar=2&foo=1'
-    end
-
-    it 'overwrites an existing parameter if a new value is provided' do
-      url = 'http://example.com/?foo=2'
-      new_params = { foo: 1 }
-      expect(add_query_params_to_url(url, new_params)).
-        to eq 'http://example.com/?foo=1'
-    end
-
-    it 'keeps existing url fragments' do
-      url = 'http://example.com/#bar'
-      new_params = { foo: 1 }
-      expect(add_query_params_to_url(url, new_params)).
-        to eq 'http://example.com/?foo=1#bar'
-    end
-
-    it 'handles special characters in parameter values' do
-      url = 'http://example.com/'
-      new_params = { special: 'chars like %&=' }
-      updated_url = add_query_params_to_url(url, new_params)
-      expect(URI.parse(updated_url).query).to eq 'special=chars+like+%25%26%3D'
-    end
-
-    it 'returns the original URL unchanged if no new parameters are provided' do
-      url = 'http://example.com/?foo=1'
-      new_params = {}
-      expect(add_query_params_to_url(url, new_params)).to eq url
-    end
-
-    it 'does not error when URL is not RFC2396 compliant' do
-      url = 'http://example.com/a url with spaces'
-      new_params = { foo: 1 }
-      expect { add_query_params_to_url(url, new_params) }.to_not raise_error
     end
   end
 end

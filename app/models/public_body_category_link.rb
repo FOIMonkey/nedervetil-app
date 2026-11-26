@@ -10,6 +10,7 @@
 #  updated_at              :datetime
 #
 
+# Ordered join record placing a PublicBodyCategory under a PublicBodyHeading.
 class PublicBodyCategoryLink < ApplicationRecord
   belongs_to :public_body_category,
              inverse_of: :public_body_category_links

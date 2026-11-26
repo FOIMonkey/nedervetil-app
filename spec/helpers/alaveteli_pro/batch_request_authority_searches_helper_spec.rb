@@ -17,7 +17,7 @@ RSpec.describe AlaveteliPro::BatchRequestAuthoritySearchesHelper do
 
     context 'zero authorities' do
       it 'returns a paragraph with the current count of authorities' do
-        is_expected.to include '0 of 500 authorities'
+        is_expected.to include '0 of 50 authorities'
       end
     end
 
@@ -25,7 +25,7 @@ RSpec.describe AlaveteliPro::BatchRequestAuthoritySearchesHelper do
       let(:count) { 1 }
 
       it 'returns a paragraph with the current count of authorities' do
-        is_expected.to include '1 of 500 authorities'
+        is_expected.to include '1 of 50 authorities'
       end
     end
 
@@ -33,25 +33,25 @@ RSpec.describe AlaveteliPro::BatchRequestAuthoritySearchesHelper do
       let(:count) { 2 }
 
       it 'returns a paragraph with the current count of authorities' do
-        is_expected.to include '2 of 500 authorities'
+        is_expected.to include '2 of 50 authorities'
       end
     end
 
     it 'includes message template for 0 authorities' do
       is_expected.to include(
-        'data-message-template-zero="{{count}} of 500 authorities"'
+        'data-message-template-zero="{{count}} of 50 authorities"'
       )
     end
 
     it 'includes message template for 1 authority' do
       is_expected.to include(
-        'data-message-template-one="{{count}} of 500 authorities"'
+        'data-message-template-one="{{count}} of 50 authorities"'
       )
     end
 
     it 'includes message template for many authorities' do
       is_expected.to include(
-        'data-message-template-many="{{count}} of 500 authorities"'
+        'data-message-template-many="{{count}} of 50 authorities"'
       )
     end
   end

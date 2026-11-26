@@ -1,6 +1,7 @@
-# replicate original file-based PublicBodyCategories functionality
 require 'forwardable'
 
+# Ordered list returned by PublicBodyCategory.get, mixing heading strings and
+# [tag, title, description] arrays, with helpers for tags, headings and lookups.
 class PublicBodyCategory::CategoryCollection
   include Enumerable
   extend Forwardable
@@ -10,38 +11,16 @@ class PublicBodyCategory::CategoryCollection
     @categories = []
   end
 
-  def with_headings
-    @categories
-  end
-
   def with_description
     @categories.select { |a| a.instance_of?(Array) }
   end
 
   def tags
-    tags = with_description.map { |a| a[0] }
+    with_description.map { |a| a[0] }
   end
 
   def by_tag
     Hash[*with_description.map { |a| a[0..1] }.flatten]
-  end
-
-  def singular_by_tag
-    Hash[*with_description.map { |a| [a[0],a[2]] }.flatten]
-  end
-
-  def by_heading
-    output = {}
-    heading = nil
-    @categories.each do |row|
-      if row.is_a?(Array)
-        output[heading] << row[0]
-      else
-        heading = row
-        output[heading] = []
-      end
-    end
-    output
   end
 
   def headings

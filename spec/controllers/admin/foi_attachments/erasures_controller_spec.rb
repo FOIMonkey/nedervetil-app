@@ -1,6 +1,9 @@
 require 'spec_helper'
 
 RSpec.describe Admin::FoiAttachments::ErasuresController do
+  # Arrange a fully authenticated admin; production has no test-only bypass.
+  before { sign_in users(:admin_user) }
+
   let(:admin_user) { FactoryBot.create(:admin_user) }
   let(:info_request) { FactoryBot.create(:info_request_with_incoming) }
   let(:incoming_message) { info_request.incoming_messages.first }
@@ -57,6 +60,7 @@ RSpec.describe Admin::FoiAttachments::ErasuresController do
       other_admin = FactoryBot.create(:admin_user)
       sign_in other_admin
 
+      allow_any_instance_of(Ability).to receive(:can?).and_call_original
       allow_any_instance_of(Ability).to receive(:can?).
         with(:admin, info_request).and_return(false)
 

@@ -50,7 +50,9 @@ class Category < ApplicationRecord
   validates :title, presence: true
   validate :check_tag_assignments, on: :update
 
+  # rubocop:disable Rails/WhereMissing -- where.missing breaks on self-referential has_many :through
   scope :roots, -> { left_joins(:parents).where(parents: { id: nil }) }
+  # rubocop:enable Rails/WhereMissing
   scope :with_parent, ->(parent) do
     joins(:parent_relationships).where(parent_relationships: { parent: parent })
   end
@@ -102,6 +104,7 @@ class Category < ApplicationRecord
   end
 
   class Translation # :nodoc:
-    has_rich_text :body
+    extend ActionText::WithoutAttachments
+    has_rich_text_without_attachments :body
   end
 end

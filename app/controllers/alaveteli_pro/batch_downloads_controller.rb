@@ -15,7 +15,9 @@ class AlaveteliPro::BatchDownloadsController < AlaveteliPro::BaseController
     respond_to do |format|
       format.zip { download_zip }
       format.csv do
-        metrics = InfoRequestBatchMetrics.new(info_request_batch)
+        metrics = InfoRequestBatchMetrics.new(
+          info_request_batch, ability: current_ability
+        )
         send_data metrics.to_csv, filename: metrics.name, type: 'text/csv'
       end
     end
@@ -24,12 +26,13 @@ class AlaveteliPro::BatchDownloadsController < AlaveteliPro::BaseController
   private
 
   def user_authenticated?
-    return if authenticated?
+    return true if authenticated?
 
     ask_to_login(
       web: _('To download batch requests'),
       email: _('Then you can download batch requests')
     )
+    false
   end
 
   def info_request_batch
@@ -44,8 +47,8 @@ class AlaveteliPro::BatchDownloadsController < AlaveteliPro::BaseController
       disposition: 'attachment',
       filename: zip.name
     )
-    response.headers['Last-Modified'] = Time.zone.now.httpdate.to_s
-    response.headers['X-Accel-Buffering'] = 'no'
+    response.headers['last-modified'] = Time.zone.now.httpdate.to_s
+    response.headers['x-accel-buffering'] = 'no'
 
     zip.stream do |chunk|
       response.stream.write(chunk)

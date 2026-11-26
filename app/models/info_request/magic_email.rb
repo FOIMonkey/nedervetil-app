@@ -28,10 +28,10 @@ module InfoRequest::MagicEmail
     # by copying an email, and that doesn't matter)
     def find_by_incoming_email(incoming_email)
       id, hash = InfoRequest._extract_id_hash_from_email(incoming_email)
-      if hash_from_id(id) == hash
-        # Not using find(id) because we don't exception raised if nothing found
-        find_by_id(id)
-      end
+      return unless hash_from_id(id) == hash
+
+      # Not using find(id) because we don't exception raised if nothing found
+      find_by_id(id)
     end
 
     # Public: Find by a list of incoming email addresses.
@@ -45,7 +45,7 @@ module InfoRequest::MagicEmail
     #
     # Returns an Array
     def matching_incoming_email(emails)
-      Array(emails).map { |email| find_by_incoming_email(email) }.compact
+      Array(emails).filter_map { |email| find_by_incoming_email(email) }
     end
 
     # Internal function used by find_by_incoming_email and
@@ -58,10 +58,12 @@ module InfoRequest::MagicEmail
       # The optional bounce- dates from when we used to have separate emails for
       # the envelope from.  (that was abandoned because councils would send hand
       # written responses to them, not just bounce messages)
-      incoming_email =~ /request-(?:bounce-)?([a-z0-9]+)-([a-z0-9]+)/
+      id_string, id_hash =
+        incoming_email.
+          match(/request-(?:bounce-)?([a-z0-9]+)-([a-z0-9]+)/)&.captures
 
-      id = _id_string_to_i($1)
-      hash = _clean_idhash($2)
+      id = _id_string_to_i(id_string)
+      hash = _clean_idhash(id_hash)
 
       [id, hash]
     end
@@ -83,7 +85,7 @@ module InfoRequest::MagicEmail
     def _clean_idhash(hash)
       return unless hash
 
-      hash.gsub(/l/, "1").gsub(/o/, "0")
+      hash.tr('lo', '10')
     end
   end
 

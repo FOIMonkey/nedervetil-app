@@ -9,6 +9,7 @@
 #  name          :text
 #
 
+# Translated section heading grouping ordered PublicBodyCategory records.
 class PublicBodyHeading < ApplicationRecord
   has_many :public_body_category_links,
            inverse_of: :public_body_heading,
@@ -36,12 +37,6 @@ class PublicBodyHeading < ApplicationRecord
   end
 
   include Translatable
-
-  def add_category(category)
-    unless public_body_categories.include?(category)
-      public_body_categories << category
-    end
-  end
 
   def self.next_display_order
     if (max = maximum(:display_order))

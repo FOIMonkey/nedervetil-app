@@ -1,3 +1,5 @@
+# Maps ISO language and locale codes to native language names for
+# ApplicationHelper#locale_name.
 class LanguageNames
   def self.get_language_name(locale)
     language_names = {

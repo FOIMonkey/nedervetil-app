@@ -1,3 +1,6 @@
+# Mixed into User to provide User.unused, selecting inactive accounts with no
+# requests, batches, classifications, change requests, admin role, recent
+# sign-ins or owned disclosure documents.
 module User::Unused
   extend ActiveSupport::Concern
 
@@ -5,24 +8,13 @@ module User::Unused
     # return an array of unused users i.e. users without any user generated
     # content, without granted an user role or recent sign ins
     def unused
-      citations = Citation.arel_table
-      citations_exists = citations.project(1).
-        where(citations[:user_id].eq(User.arel_table[:id])).
-        exists
-
-      # don't return admins, pro admins, pros
+      # don't return admins
       roles = Role.arel_table
       user_roles = Arel::Table.new(:users_roles)
       user_roles_exists = user_roles.project(1).
         join(roles).on(user_roles[:role_id].eq(roles[:id])).
         where(user_roles[:user_id].eq(User.arel_table[:id])).
-        where(roles[:name].in(%w[admin pro_admin pro])).
-        exists
-
-      # don't return users who have previous submissions to a project
-      submission = Project::Submission.arel_table
-      submission_exists = submission.project(1).
-        where(submission[:user_id].eq(User.arel_table[:id])).
+        where(roles[:name].eq('admin')).
         exists
 
       # don't return users who have signed in recently
@@ -31,19 +23,22 @@ module User::Unused
         where(sign_ins[:user_id].eq(User.arel_table[:id])).
         exists
 
+      # keep document owners so documents survive request deletion
+      documents = Disclosures::Document.arel_table
+      documents_exists = documents.project(1).
+        where(documents[:owner_id].eq(User.arel_table[:id])).
+        exists
+
       User.
         where.not(email: internal_admin_user.email).
         where(info_requests_count: 0).
         where(info_request_batches_count: 0).
         where(request_classifications_count: 0).
         where(status_update_count: 0).
-        where(track_things_count: 0).
-        where(comments_count: 0).
         where(public_body_change_requests_count: 0).
-        where.not(citations_exists).
         where.not(user_roles_exists).
-        where.not(submission_exists).
-        where.not(sign_ins_exists)
+        where.not(sign_ins_exists).
+        where.not(documents_exists)
     end
   end
 end

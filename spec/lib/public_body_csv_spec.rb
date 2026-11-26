@@ -1,10 +1,6 @@
 require 'spec_helper'
 
 RSpec.describe PublicBodyCSV do
-  around do |example|
-    disable_not_many_requests_auto_tagging { example.run }
-  end
-
   describe '.default_fields' do
     it 'has a default set of fields' do
       defaults = [:id,
@@ -121,7 +117,9 @@ RSpec.describe PublicBodyCSV do
       csv = PublicBodyCSV.new
       csv << body
 
-      expected = ["#{body.id},Exported to CSV,CSV,csv,exported,https://www.localhost,\"\",\"\",An exported authority,2007-10-25 10:51:01 UTC,2007-10-25 10:51:01 UTC,1"]
+      expected = ["#{body.id},Exported to CSV,CSV,csv,exported," \
+                  "https://www.localhost,\"\",\"\",An exported authority," \
+                  "2007-10-25 10:51:01 UTC,2007-10-25 10:51:01 UTC,1"]
       expect(csv.rows).to eq(expected)
     end
   end
@@ -154,8 +152,12 @@ RSpec.describe PublicBodyCSV do
 
       # Miss out the tags field because the specs keep changing the order
       # that the tags are returned in
-      fields = [:name, :short_name, :url_name, :calculated_home_page, :publication_scheme, :disclosure_log, :notes_as_string, :created_at, :updated_at, :version]
-      headers = ['Name', 'Short name', 'URL name', 'Home page', 'Publication scheme', 'Disclosure log', 'Notes', 'Created at', 'Updated at', 'Version']
+      fields = [:name, :short_name, :url_name, :calculated_home_page,
+                :publication_scheme, :disclosure_log, :notes_as_string,
+                :created_at, :updated_at, :version]
+      headers = ['Name', 'Short name', 'URL name', 'Home page',
+                 'Publication scheme', 'Disclosure log', 'Notes', 'Created at',
+                 'Updated at', 'Version']
 
       csv = PublicBodyCSV.new(fields: fields, headers: headers)
       csv << body1

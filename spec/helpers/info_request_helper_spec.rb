@@ -54,8 +54,8 @@ RSpec.describe InfoRequestHelper do
                         'title="2014-12-31 00:00:00 UTC">' \
                         'December 31, 2014</time>'
 
-        expected = "Currently <strong>waiting for a response</strong> from " \
-                   "#{ body_link }, they should respond promptly and " \
+        expected = "<strong>Waiting for a response</strong> from " \
+                   "#{ body_link }. They should respond promptly and " \
                    "normally no later than <strong>#{ response_date }" \
                    "</strong> (<a href=\"/help/requesting#" \
                    "quickly_response\">details</a>)."
@@ -99,7 +99,8 @@ RSpec.describe InfoRequestHelper do
                         'title="2014-12-31 00:00:00 UTC">' \
                         'December 31, 2014</time>'
 
-        expected = "Response to this request is <strong>delayed</strong>. " \
+        expected = "<strong>Waiting for a response</strong>, which is " \
+                   "<strong>overdue</strong>. " \
                    "By law, #{ body_link } should normally have responded " \
                    "<strong>promptly</strong> and by <strong>" \
                    "#{ response_date }</strong> " \
@@ -125,7 +126,8 @@ RSpec.describe InfoRequestHelper do
                           'title="2014-12-31 00:00:00 UTC">' \
                           'December 31, 2014</time>'
 
-          expected = "Response to this request is <strong>delayed</strong>. " \
+          expected = "<strong>Waiting for a response</strong>, which is " \
+                     "<strong>overdue</strong>. " \
                      "Although not legally required to do so, we would have " \
                      "expected #{ body_link } to have responded by " \
                      "<strong>#{ response_date }</strong> " \
@@ -154,19 +156,15 @@ RSpec.describe InfoRequestHelper do
           to receive(:date_response_required_by).
           and_return(Time.zone.now)
 
-        response_date = '<time datetime="2014-12-31T00:00:00Z" ' \
-                        'title="2014-12-31 00:00:00 UTC">' \
-                        'December 31, 2014</time>'
-
         path = new_request_followup_path(
           info_request.url_title, internal_review: 1
         )
-        expected = "Response to this request is <strong>long overdue" \
-                   "</strong>. By law, under all circumstances, " \
+        expected = "<strong>Waiting for a response</strong>, which is " \
+                   "<strong>long overdue</strong>. " \
                    "#{ body_link } should have responded by now " \
                    "(<a href=\"/help/requesting#quickly_response\">details" \
-                   "</a>). You can <strong>complain</strong> by " \
-                   "<a href=\"#{path}\">requesting an internal review</a>."
+                   "</a>). The next step is " \
+                   "<a href=\"#{path}\">an internal review</a>."
 
         expect(status_text(info_request)).to eq(expected)
 
@@ -186,55 +184,21 @@ RSpec.describe InfoRequestHelper do
           allow(info_request).
             to receive(:date_response_required_by).and_return(Time.zone.now)
 
-          response_date = '<time datetime="2014-12-31T00:00:00Z" ' \
-                          'title="2014-12-31 00:00:00 UTC">' \
-                          'December 31, 2014</time>'
-
           path = new_request_followup_path(
             info_request.url_title, internal_review: 1
           )
-          expected = "Response to this request is <strong>long overdue" \
-                     "</strong>. " \
+          expected = "<strong>Waiting for a response</strong>, which is " \
+                     "<strong>long overdue</strong>. " \
                      "Although not legally required to do so, we would have " \
                      "expected #{ body_link } to have responded by now " \
                      "(<a href=\"/help/requesting#authorities\">details" \
-                     "</a>). You can <strong>complain</strong> by " \
-                     "<a href=\"#{path}\">requesting an internal review</a>."
+                     "</a>). The next step is " \
+                     "<a href=\"#{path}\">an internal review</a>."
 
           expect(status_text(info_request)).to eq(expected)
 
           travel_back
         end
-      end
-
-      it 'does not add a followup link for external requests' do
-        travel_to(Time.zone.parse('2014-12-31'))
-
-        body_link = %Q(<a href="/body/#{ body.url_name }">#{ body.name }</a>)
-
-        allow(info_request).
-          to receive(:calculate_status).
-          and_return("waiting_response_very_overdue")
-        allow(info_request).
-          to receive(:date_response_required_by).
-          and_return(Time.zone.now)
-        allow(info_request).
-          to receive(:is_external?).
-          and_return(true)
-
-        response_date = '<time datetime="2014-12-31T00:00:00Z" ' \
-                        'title="2014-12-31 00:00:00 UTC">' \
-                        'December 31, 2014</time>'
-
-        expected = "Response to this request is <strong>long overdue" \
-                   "</strong>. By law, under all circumstances, " \
-                   "#{ body_link } should have responded by now " \
-                   "(<a href=\"/help/requesting#quickly_response\">details" \
-                   "</a>)."
-
-        expect(status_text(info_request)).to eq(expected)
-
-        travel_back
       end
     end
 
@@ -244,8 +208,8 @@ RSpec.describe InfoRequestHelper do
 
         allow(info_request).to receive(:calculate_status).and_return("not_held")
 
-        expected = "#{ body_link } <strong>did not have</strong> the " \
-                   "information requested."
+        expected = "<strong>No information</strong> was provided by " \
+                   "#{ body_link }."
 
         expect(status_text(info_request)).to eq(expected)
       end
@@ -257,7 +221,8 @@ RSpec.describe InfoRequestHelper do
 
         allow(info_request).to receive(:calculate_status).and_return("rejected")
 
-        expected = "The request was <strong>refused</strong> by #{ body_link }."
+        expected = "<strong>No information</strong> was provided by " \
+                   "#{ body_link }."
 
         expect(status_text(info_request)).to eq(expected)
       end
@@ -265,7 +230,8 @@ RSpec.describe InfoRequestHelper do
 
     context 'successful' do
       it 'returns a description' do
-        expected = 'The request was <strong>successful</strong>.'
+        expected = '<strong>All the information</strong> requested was ' \
+                   'provided.'
         allow(info_request).
           to receive(:calculate_status).
           and_return("successful")
@@ -275,7 +241,8 @@ RSpec.describe InfoRequestHelper do
 
     context 'partially_successful' do
       it 'returns a description' do
-        expected = 'The request was <strong>partially successful</strong>.'
+        expected = '<strong>Some of the information</strong> requested ' \
+                   'was provided.'
         allow(info_request).
           to receive(:calculate_status).
           and_return("partially_successful")
@@ -292,7 +259,7 @@ RSpec.describe InfoRequestHelper do
 
       it 'returns a description for the request owner' do
         allow(info_request).
-          to receive(:get_last_public_response).
+          to receive(:last_public_response).
           and_return(nil)
 
         path = new_request_followup_path(info_request.url_title)
@@ -320,13 +287,6 @@ RSpec.describe InfoRequestHelper do
                              is_owning_user: false,
                              redirect_to: '/request/example')
 
-        expect(actual).to eq(expected)
-      end
-
-      it 'does not add a followup link for external requests' do
-        allow(info_request).to receive(:is_external?).and_return(true)
-        expected = 'The request is <strong>waiting for clarification</strong>.'
-        actual = status_text(info_request, is_owning_user: false)
         expect(actual).to eq(expected)
       end
 
@@ -359,9 +319,9 @@ RSpec.describe InfoRequestHelper do
         allow(info_request).
           to receive(:calculate_status).
           and_return("internal_review")
-        expected = "Waiting for an <strong>internal review</strong> by " \
+        expected = "<strong>Internal review</strong>: waiting for " \
                    "<a href=\"/body/#{ body.url_name }\">#{ body.name }</a> " \
-                   "of their handling of this request."
+                   "to review how it handled this request."
         expect(status_text(info_request)).to eq(expected)
       end
     end
@@ -451,23 +411,25 @@ RSpec.describe InfoRequestHelper do
     context 'awaiting_description' do
       before do
         allow(info_request).to receive(:awaiting_description).and_return(true)
+        # With IncomingAttention on, the text is the request's routine status.
+        allow(IncomingAttention::Config).to receive(:enabled?).and_return(false)
       end
 
       shared_examples_for "when we can't ask the user to update the status" do
         context "when there's one new response" do
           it 'asks the user to answer the question' do
-            expected = "We're waiting for " \
-                       "#{user_link_for_request(info_request)} to read a " \
-                       "recent response and update the status."
+            expected = "<strong>Waiting classification.</strong> " \
+                       "#{user_link_for_request(info_request)} has not yet " \
+                       "read a recent response and set the status."
             expect(message).to eq(expected)
           end
         end
 
         context "when there's more than one new response" do
           it 'asks the user to answer the question' do
-            expected = "We're waiting for " \
-                       "#{user_link_for_request(info_request)} to read " \
-                       "recent responses and update the status."
+            expected = "<strong>Waiting classification.</strong> " \
+                       "#{user_link_for_request(info_request)} has not yet " \
+                       "read recent responses and set the status."
             expect(plural_message).to eq(expected)
           end
         end
@@ -476,10 +438,8 @@ RSpec.describe InfoRequestHelper do
       context 'owning user' do
         context "when there's one new response" do
           it 'asks the user to answer the question' do
-            expected = 'Please read the recent response and ' \
-                       '<strong>update the status</strong> ' \
-                       'so we know whether it contains useful ' \
-                       'information.'
+            expected = '<strong>Waiting classification.</strong> Read ' \
+                       'the recent response, then update the status.'
             actual = status_text(info_request,
                                  new_responses_count: 1,
                                  is_owning_user: true,
@@ -491,10 +451,8 @@ RSpec.describe InfoRequestHelper do
 
         context "when there's more than one new response" do
           it 'asks the user to answer the question' do
-            expected = 'Please read the recent responses and ' \
-                       '<strong>update the status</strong> ' \
-                       'so we know whether they contain useful ' \
-                       'information.'
+            expected = '<strong>Waiting classification.</strong> Read ' \
+                       'the recent responses, then update the status.'
             actual = status_text(info_request,
                                  new_responses_count: 3,
                                  is_owning_user: true,
@@ -539,31 +497,6 @@ RSpec.describe InfoRequestHelper do
         end
       end
 
-      context 'external request' do
-        it_behaves_like "when we can't ask the user to update the status" do
-          let(:info_request) do
-            FactoryBot.create(
-              :external_request,
-              awaiting_description: true
-            )
-          end
-          let(:message) do
-            status_text(info_request,
-                        new_responses_count: 1,
-                        is_owning_user: true,
-                        render_to_file: false,
-                        old_unclassified: false)
-          end
-          let(:plural_message) do
-            status_text(info_request,
-                        new_responses_count: 3,
-                        is_owning_user: true,
-                        render_to_file: false,
-                        old_unclassified: false)
-          end
-        end
-      end
-
       context 'rendering to a file' do
         it_behaves_like "when we can't ask the user to update the status" do
           let(:message) do
@@ -604,54 +537,15 @@ RSpec.describe InfoRequestHelper do
     end
   end
 
-  describe '#all_successful_requests?' do
-    subject { all_successful_requests?(events) }
-
-    def event_for(state)
-      FactoryBot.build(
-        :info_request_event,
-        info_request: FactoryBot.build(:info_request, described_state: state)
-      )
-    end
-
-    context 'when every request was successful' do
-      let(:events) do
-        [event_for('successful'), event_for('partially_successful')]
-      end
-
-      it { is_expected.to eq(true) }
-    end
-
-    context 'when a request was not successful' do
-      let(:events) { [event_for('successful'), event_for('rejected')] }
-      it { is_expected.to eq(false) }
-    end
-
-    context 'when there are no events' do
-      let(:events) { [] }
-      it { is_expected.to eq(false) }
-    end
-  end
-
-  describe '#js_correspondence_navigation' do
-    subject { js_correspondence_navigation }
-
-    it { is_expected.to eq(<<~HTML.squish) }
-    <div class="js-request-navigation request-navigation"
-      data-next-text="Next message"
-      data-prev-text="Previous message"
-      data-status-text="Message [[x]] of [[y]]"></div>
-    HTML
-  end
-
   describe '#attachment_link' do
     let(:incoming_message) { FactoryBot.create(:incoming_message) }
 
     context 'if an icon exists for the filetype' do
-      let(:jpeg_attachment) { FactoryBot.create(:jpeg_attachment,
-                              incoming_message: incoming_message,
-                              url_part_number: 1)
-                           }
+      let(:jpeg_attachment) do
+        FactoryBot.create(:jpeg_attachment,
+                          incoming_message: incoming_message,
+                          url_part_number: 1)
+      end
 
       it 'returns a link with a specific icon' do
         expect(attachment_link(jpeg_attachment.incoming_message,
@@ -661,10 +555,11 @@ RSpec.describe InfoRequestHelper do
     end
 
     context 'if no icon exists for the filetype' do
-      let(:unknown_attachment) { FactoryBot.create(:unknown_attachment,
-                                  incoming_message: incoming_message,
-                                  url_part_number: 1)
-                              }
+      let(:unknown_attachment) do
+        FactoryBot.create(:unknown_attachment,
+                          incoming_message: incoming_message,
+                          url_part_number: 1)
+      end
 
       it 'returns a link with the "unknown" icon' do
         expect(attachment_link(unknown_attachment.incoming_message,
@@ -682,35 +577,13 @@ RSpec.describe InfoRequestHelper do
     end
 
     context 'when given no format options' do
-      it 'returns the path to the attachment with a cookie cookie_passthrough param' do
+      it 'returns the path to the attachment' do
         expect(attachment_path(jpeg_attachment)).to eq(
           "/request/#{incoming_message.info_request.url_title}" \
           "/response/#{incoming_message.id}/" \
           "attach/#{jpeg_attachment.url_part_number}" \
-          "/interesting.jpg?cookie_passthrough=1"
+          "/interesting.jpg"
         )
-      end
-    end
-
-    context 'when given an html format option' do
-      it 'returns the path to the HTML version of the attachment' do
-        expect(attachment_path(jpeg_attachment, html: true)).to eq(
-          "/request/#{incoming_message.info_request.url_title}" \
-          "/response/#{incoming_message.id}" \
-          "/attach/html/#{jpeg_attachment.url_part_number}" \
-          "/interesting.jpg.html"
-        )
-      end
-    end
-
-    context 'when project is not nil' do
-      before { instance_variable_set(:@project, double(id: 1)) }
-
-      it 'returns the URL with project_id param' do
-        url = attachment_path(jpeg_attachment)
-        expect(URI(url).query).to include('project_id=1')
-        url = attachment_path(jpeg_attachment, html: true)
-        expect(URI(url).query).to include('project_id=1')
       end
     end
   end
@@ -723,37 +596,14 @@ RSpec.describe InfoRequestHelper do
     end
 
     context 'when given no format options' do
-      it 'returns the URL to the attachment with a cookie cookie_passthrough param' do
+      it 'returns the URL to the attachment' do
         expect(attachment_url(jpeg_attachment)).to eq(
           "http://test.host" \
           "/request/#{incoming_message.info_request.url_title}" \
           "/response/#{incoming_message.id}" \
           "/attach/#{jpeg_attachment.url_part_number}" \
-          "/interesting.jpg?cookie_passthrough=1"
+          "/interesting.jpg"
         )
-      end
-    end
-
-    context 'when given an html format option' do
-      it 'returns the URL to the HTML version of the attachment' do
-        expect(attachment_url(jpeg_attachment, html: true)).to eq(
-          "http://test.host" \
-          "/request/#{incoming_message.info_request.url_title}" \
-          "/response/#{incoming_message.id}" \
-          "/attach/html/#{jpeg_attachment.url_part_number}" \
-          "/interesting.jpg.html"
-        )
-      end
-    end
-
-    context 'when project is not nil' do
-      before { instance_variable_set(:@project, double(id: 1)) }
-
-      it 'returns the URL with project_id param' do
-        url = attachment_url(jpeg_attachment)
-        expect(URI(url).query).to include('project_id=1')
-        url = attachment_url(jpeg_attachment, html: true)
-        expect(URI(url).query).to include('project_id=1')
       end
     end
   end

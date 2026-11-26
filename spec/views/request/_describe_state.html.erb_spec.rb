@@ -2,7 +2,6 @@ require 'spec_helper'
 
 RSpec.describe 'when showing the form for describing the state of a request' do
   let(:info_request) { FactoryBot.create(:info_request) }
-  let(:user) { info_request.user }
 
   def expect_radio_button(value)
     do_render
@@ -11,7 +10,7 @@ RSpec.describe 'when showing the form for describing the state of a request' do
 
   def expect_no_radio_button(value)
     do_render
-    expect(response.body).not_to have_css("input[type=radio][value=#{value}]")
+    expect(response.body).to have_no_css("input[type=radio][value=#{value}]")
   end
 
   def do_render
@@ -20,21 +19,21 @@ RSpec.describe 'when showing the form for describing the state of a request' do
 
   before do
     assign :info_request, info_request
-    allow(view).to receive(:authenticated_user).and_return(user)
   end
 
-  describe 'if the user is a regular user (not the request owner)' do
+  describe 'if the user is an administrator viewing another request' do
     before do
       assign :is_owning_user, false
       assign :state_transitions, info_request.state.transitions(
         is_owning_user: false,
-        user_asked_to_update_status: false)
+        user_asked_to_update_status: false
+      )
     end
 
     describe 'if the request is not old and unclassified' do
       it 'should not show the form' do
         do_render
-        expect(response.body).not_to have_css(
+        expect(response.body).to have_no_css(
           'h2', text: 'What best describes the status of this request now?'
         )
       end
@@ -52,19 +51,20 @@ RSpec.describe 'when showing the form for describing the state of a request' do
 
       it 'should not show the form' do
         do_render
-        expect(response.body).not_to have_css(
+        expect(response.body).to have_no_css(
           'h2', text: 'What best describes the status of this request now?'
         )
       end
 
-      it 'should show the form for someone else to classify the request' do
+      it 'shows the status form without a classification prompt' do
         do_render
-        expect(response.body).to have_css('h2', text: 'We need your help')
+        expect(response.body).
+          to have_css('h2', text: 'Update the status of this request.')
       end
 
       it 'should not give a link to login' do
         do_render
-        expect(response.body).not_to have_css('a', text: 'sign in')
+        expect(response.body).to have_no_css('a', text: 'sign in')
       end
     end
   end
@@ -74,7 +74,8 @@ RSpec.describe 'when showing the form for describing the state of a request' do
       assign :is_owning_user, true
       assign :state_transitions, info_request.state.transitions(
         is_owning_user: true,
-        user_asked_to_update_status: false)
+        user_asked_to_update_status: false
+      )
     end
 
     describe 'when the request is not in internal review' do
@@ -82,7 +83,8 @@ RSpec.describe 'when showing the form for describing the state of a request' do
         info_request.set_described_state('waiting_response')
         assign :state_transitions, info_request.state.transitions(
           is_owning_user: true,
-          user_asked_to_update_status: false)
+          user_asked_to_update_status: false
+        )
       end
 
       it 'should show a radio button to set the status to "waiting response"' do
@@ -103,7 +105,8 @@ RSpec.describe 'when showing the form for describing the state of a request' do
         assign :update_status, true
         assign :state_transitions, info_request.state.transitions(
           is_owning_user: true,
-          user_asked_to_update_status: true)
+          user_asked_to_update_status: true
+        )
       end
 
       it 'should show a radio button to set the status to "internal_review"' do
@@ -124,7 +127,8 @@ RSpec.describe 'when showing the form for describing the state of a request' do
         info_request.set_described_state('internal_review')
         assign :state_transitions, info_request.state.transitions(
           is_owning_user: true,
-          user_asked_to_update_status: false)
+          user_asked_to_update_status: false
+        )
       end
 
       it 'should show a radio button to set the status to "internal review"' do
@@ -138,15 +142,12 @@ RSpec.describe 'when showing the form for describing the state of a request' do
       end
     end
 
-    describe 'when request is awaiting a description and the user has not asked to update the status' do
-    end
-
     it 'should show a radio button to set the status to "gone postal"' do
       expect_radio_button('gone_postal')
     end
 
-    it 'should show a radio button to set the status to "not held"' do
-      expect_radio_button('not_held')
+    it 'should not show a radio button to set the status to "not held"' do
+      expect_no_radio_button('not_held')
     end
 
     it 'should show a radio button to set the status to "partially successful"' do

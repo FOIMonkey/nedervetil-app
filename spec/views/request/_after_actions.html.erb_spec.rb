@@ -3,15 +3,10 @@ require 'spec_helper'
 RSpec.describe 'when displaying actions that can be taken with regard to a request' do
   let(:info_request) { FactoryBot.create(:info_request) }
   let(:user) { info_request.user }
-  let(:admin_user) { FactoryBot.create('admin_user') }
-
-  let(:track_thing) do
-    FactoryBot.create(:request_update_track, info_request: info_request)
-  end
+  let(:admin_user) { FactoryBot.create(:admin_user) }
 
   let(:locals) do
     { info_request: info_request,
-      track_thing: track_thing,
       last_response: nil,
       show_owner_update_status_action: nil,
       show_other_user_update_status_action: nil }
@@ -41,7 +36,7 @@ RSpec.describe 'when displaying actions that can be taken with regard to a reque
 
       expect(response.body).to have_css('ul.owner_actions') do |div|
         expect(div).
-          not_to have_css('a', text: 'Update the status of this request')
+          to have_no_css('a', text: 'Update the status of this request')
       end
     end
   end
@@ -66,7 +61,7 @@ RSpec.describe 'when displaying actions that can be taken with regard to a reque
 
       expect(response.body).to have_css('ul.anyone_actions') do |div|
         expect(div).
-          not_to have_css('a', text: 'Update the status of this request')
+          to have_no_css('a', text: 'Update the status of this request')
       end
     end
   end
@@ -88,36 +83,9 @@ RSpec.describe 'when displaying actions that can be taken with regard to a reque
     end
   end
 
-  it 'displays a link to annotate the request' do
-    with_feature_enabled(:annotations) do
-      render partial: 'request/after_actions', locals: locals
-
-      expect(response.body).to have_css('ul.anyone_actions') do |div|
-        expect(div).to have_css('a', text: 'Add an annotation')
-      end
-    end
-  end
-
-  it 'does not display a link to annotate the request if comments are disabled on it' do
-    with_feature_enabled(:annotations) do
-      info_request.comments_allowed = false
-
-      render partial: 'request/after_actions', locals: locals
-
-      expect(response.body).to have_css('ul.anyone_actions') do |div|
-        expect(div).not_to have_css('a', text: 'Add an annotation')
-      end
-    end
-  end
-
-  it 'does not display a link to annotate the request if comments are disabled globally' do
-    with_feature_disabled(:annotations) do
-      render partial: 'request/after_actions', locals: locals
-
-      expect(response.body).to have_css('ul.anyone_actions') do |div|
-        expect(div).not_to have_css('a', text: 'Add an annotation')
-      end
-    end
+  it 'does not offer to annotate the request' do
+    render partial: 'request/after_actions', locals: locals
+    expect(response.body).not_to include('annotation')
   end
 
   context 'when the request has not been reported' do
@@ -133,7 +101,7 @@ RSpec.describe 'when displaying actions that can be taken with regard to a reque
 
       render partial: 'request/after_actions', locals: locals
 
-      expect(response).not_to have_css('a', text: 'Report this request')
+      expect(response).to have_no_css('a', text: 'Report this request')
 
       expected_link = help_about_path(anchor: 'reporting_unavailable')
       expect(response).to have_link('Unavailable', href: expected_link)

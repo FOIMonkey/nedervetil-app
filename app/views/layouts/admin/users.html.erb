@@ -1,7 +1,7 @@
 <%= inside_layout 'admin' do %>
-  <div class="row">
-    <h1 class="span12"><%= @title %></h1>
-  </div>
+  <% unless content_for?(:admin_user_header) %>
+    <h1><%= @title %></h1>
+  <% end %>
 
   <%= yield %>
 <% end %>

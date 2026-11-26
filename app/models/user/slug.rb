@@ -26,9 +26,9 @@ module User::Slug
 
     def normalize_friendly_id(_value)
       value = read_attribute(:name)
-      return super('user') if value =~ /^[\d_\.]+$/
+      return super('user') if /^[\d_\.]+$/.match?(value)
 
-      super(value).gsub('-', '_')
+      super(value).tr('-', '_')
     end
 
     def to_param

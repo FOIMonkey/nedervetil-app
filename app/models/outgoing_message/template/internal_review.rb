@@ -1,5 +1,7 @@
 class OutgoingMessage
   module Template
+    # Default letter template for an internal review follow-up, pre-filled
+    # with standard review wording and a placeholder for complaint details.
     class InternalReview
       def self.details_placeholder
         _('GIVE DETAILS ABOUT YOUR COMPLAINT HERE')
@@ -28,14 +30,8 @@ class OutgoingMessage
           msg += "\n\n\n\n"
           msg += " [ #{ self.class.details_placeholder } ]"
 
-          unless replacements[:embargo]
-            msg += "\n\n\n\n"
-            msg += _("A full history of my FOI request and all " \
-                     "correspondence is available on the Internet at this " \
-                     "address: {{url}}",
-                     replacements)
-          end
-
+          # No link to the request's page: the authority can't open a private
+          # request, and already has the emails.
           ActiveSupport::SafeBuffer.new("\n\n") << msg
         end
       end
@@ -51,7 +47,7 @@ class OutgoingMessage
         msg += letter(replacements)
         msg += "\n\n\n"
         msg += signoff(replacements)
-        msg += "\n\n"
+        msg + "\n\n"
       end
 
       def assert_required_keys(hash, *required_keys)

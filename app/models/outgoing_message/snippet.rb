@@ -29,7 +29,9 @@ class OutgoingMessage::Snippet < ApplicationRecord
 end
 
 OutgoingMessage::Snippet::Translation.class_eval do
-  with_options if: ->(t) { !t.default_locale? && t.required_attribute_submitted? } do |required|
+  with_options(
+    if: ->(t) { !t.default_locale? && t.required_attribute_submitted? }
+  ) do |required|
     required.validates :name, :body, presence: true
   end
 
@@ -38,8 +40,7 @@ OutgoingMessage::Snippet::Translation.class_eval do
   end
 
   def required_attribute_submitted?
-    OutgoingMessage::Snippet.translated_attribute_names.compact.any? do |attribute|
-      !read_attribute(attribute).blank?
-    end
+    OutgoingMessage::Snippet.translated_attribute_names.compact.
+      any? { |attribute| !read_attribute(attribute).blank? }
   end
 end

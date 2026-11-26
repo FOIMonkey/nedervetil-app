@@ -16,6 +16,11 @@ RSpec.describe '_search_results' do
     let!(:authority_3) { FactoryBot.create(:public_body) }
 
     before do
+      # A view spec's controller is not the page's own, so the view lacks
+      # the helpers that one declares.
+      view.singleton_class.include(
+        AlaveteliPro::BatchRequestAuthoritySearchesController._helpers
+      )
       allow(view).to receive(:mode)
       allow(view).to receive(:category_tag)
     end

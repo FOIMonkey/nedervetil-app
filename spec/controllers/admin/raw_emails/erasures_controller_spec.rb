@@ -1,6 +1,9 @@
 require 'spec_helper'
 
 RSpec.describe Admin::RawEmails::ErasuresController do
+  # Arrange a fully authenticated admin; production has no test-only bypass.
+  before { sign_in users(:admin_user) }
+
   let(:admin_user) { FactoryBot.create(:admin_user) }
   let(:incoming_message) { FactoryBot.create(:incoming_message) }
   let(:raw_email) { incoming_message.raw_email }
@@ -76,7 +79,7 @@ RSpec.describe Admin::RawEmails::ErasuresController do
 
       it 'does not erase the raw_email data' do
         expect { post :create, params: params }.
-          not_to change { raw_email.reload.erased? }
+          not_to(change { raw_email.reload.erased? })
       end
     end
 
@@ -108,7 +111,7 @@ RSpec.describe Admin::RawEmails::ErasuresController do
         post :create, params: params
 
         expect(response).to redirect_to(admin_raw_email_path(raw_email))
-        expect(flash[:error]).to match(/Ensure all attachments are masked/)
+        expect(flash[:error]).to match(/not masked yet\. Mask them before/)
       end
     end
 

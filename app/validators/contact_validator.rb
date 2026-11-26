@@ -1,9 +1,8 @@
-# models/contact_validator.rb:
-# Validates contact form submissions.
-#
 # Copyright (c) 2008 UK Citizens Online Democracy. All rights reserved.
 # Email: hello@mysociety.org; WWW: http://www.mysociety.org/
 
+# ActiveModel form object validating contact-form submissions (name, email
+# format, subject and message) for HelpController#contact.
 class ContactValidator
   include ActiveModel::Validations
 
@@ -12,7 +11,8 @@ class ContactValidator
   validates_presence_of :name, message: N_("Please enter your name")
   validates_presence_of :email, message: N_("Please enter your email address")
   validates_presence_of :subject, message: N_("Please enter a subject")
-  validates_presence_of :message, message: N_("Please enter the message you want to send")
+  validates_presence_of :message,
+                        message: N_("Please enter the message you want to send")
   validate :email_format
 
   def initialize(attributes = {})
@@ -24,8 +24,8 @@ class ContactValidator
   private
 
   def email_format
-    unless MySociety::Validate.is_valid_email(email)
-      errors.add(:email, _("Email doesn't look like a valid address"))
-    end
+    return if MySociety::Validate.is_valid_email(email)
+
+    errors.add(:email, _("Email doesn't look like a valid address"))
   end
 end

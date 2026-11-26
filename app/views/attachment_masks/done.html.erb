@@ -1,5 +1,5 @@
 <% @title = _('Attachment available for download.') %>
-<h1><%= @title %></h1>
+<%= page_band %>
 
 <p>
   <%= _('The attachment has now been processed and is available for ' \
@@ -7,5 +7,5 @@
 </p>
 
 <p>
-  <%= link_to _('Download attachment'), @referer, class: 'button' %>
+  <%= link_to _('Download attachment'), @referer, class: 'button', data: { turbo: false } %>
 </p>

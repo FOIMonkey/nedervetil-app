@@ -12,19 +12,11 @@
 #
 # IMPORTANT! SEEDS MUST BE IDEMPOTENT. This generally means only creating seeds
 # when they don't exist.
-include AlaveteliFeatures::Helpers
-
 Role.create(name: 'admin') if Role.where(name: 'admin').empty?
-
-if feature_enabled?(:projects)
-  %w[project_owner project_contributor].each do |role_name|
-    Role.create(name: role_name) if Role.where(name: role_name).empty?
-  end
-end
 
 %w[
   draft complete clarification_needed awaiting_response
-  response_received overdue very_overdue other embargo_expiring
+  response_received overdue very_overdue other
 ].each do |category_slug|
   if AlaveteliPro::RequestSummaryCategory.where(slug: category_slug).empty?
     AlaveteliPro::RequestSummaryCategory.create(slug: category_slug)

@@ -12,11 +12,11 @@
 #  delivery_status         :string
 #
 
-# We load log file lines for requests in here, for display in the admin interface.
-#
 # Copyright (c) 2009 UK Citizens Online Democracy. All rights reserved.
 # Email: hello@mysociety.org; WWW: http://www.mysociety.org/
 
+# An Exim or Postfix log line linked to an InfoRequest and MailServerLogDone.
+# Loads log files, parses delivery status, redacts lines and indexes for admin.
 class MailServerLog < ApplicationRecord
   include Searchable
   # `serialize` needs to be called before all other ActiveRecord code.
@@ -32,13 +32,6 @@ class MailServerLog < ApplicationRecord
 
   before_create :calculate_delivery_status
 
-  scope :not_embargoed, -> {
-    joins('LEFT OUTER JOIN embargoes
-           ON embargoes.info_request_id = mail_server_logs.info_request_id').
-      where('embargoes.id IS NULL').
-      references(:embargoes)
-  }
-
   # regular users should never be able to search email logs
   searchable admin_index: {
                line: 'A'
@@ -48,13 +41,15 @@ class MailServerLog < ApplicationRecord
   # Load in exim or postfix log file from disk, or update if we already have it
   # Assumes files are named with date, rather than cyclically.
   # Doesn't do anything if file hasn't been modified since it was last loaded.
-  # Note: If you do use rotated log files (rather than files named by date), at some
-  # point old loaded log lines will get deleted in the database.
+  # Note: If you do use rotated log files (rather than files named by date), at
+  # some point old loaded log lines will get deleted in the database.
   def self.load_file(file_name)
     is_gz = file_name.include?(".gz")
     file_name_db = is_gz ? file_name.gsub(".gz", "") : file_name
 
-    modified = File.stat(file_name).mtime
+    # last_stat keeps the mtime only to the microsecond, so a finer mtime
+    # would never match it and an unchanged file would load again
+    modified = File.stat(file_name).mtime.floor(6)
     if modified.nil?
       raise "MailServerLog.load_file: file not found " + file_name
     end
@@ -63,12 +58,13 @@ class MailServerLog < ApplicationRecord
       # see if we already have it
       done = MailServerLogDone.find_by_filename(file_name_db)
       if done
-        if modified.utc == done.last_stat.utc
-          # already have that, nothing to do
-          return
-        else
-          MailServerLog.where("mail_server_log_done_id = ?", done.id).delete_all
-        end
+        # already have that, nothing to do
+        return if modified.utc == done.last_stat.utc
+
+        # delete_all skips the dependent search documents, so remove them
+        # first, in one statement, while the old lines still exist
+        SearchDocument.where(searchable: done.mail_server_logs).delete_all
+        MailServerLog.where(mail_server_log_done_id: done.id).delete_all
       else
         done = MailServerLogDone.new(filename: file_name_db)
       end
@@ -77,17 +73,22 @@ class MailServerLog < ApplicationRecord
       done.save!
 
       f = is_gz ? Zlib::GzipReader.open(file_name) : File.open(file_name, 'r')
-      case(AlaveteliConfiguration.mta_log_type.to_sym)
-      when :exim
-        load_exim_log_data(f, done)
-      when :postfix
-        load_postfix_log_data(f, done)
-      else
-        raise "Unexpected MTA type: #{type}"
-      end
+      load_log_data(f, done)
       f.close
     end
   end
+
+  def self.load_log_data(f, done)
+    case AlaveteliConfiguration.mta_log_type.to_sym
+    when :exim
+      load_exim_log_data(f, done)
+    when :postfix
+      load_postfix_log_data(f, done)
+    else
+      raise "Unexpected MTA type: #{AlaveteliConfiguration.mta_log_type}"
+    end
+  end
+  private_class_method :load_log_data
 
   # Scan the file
   def self.load_exim_log_data(f, done)
@@ -126,13 +127,26 @@ class MailServerLog < ApplicationRecord
 
   # Returns nil if there is no queue id
   def self.extract_postfix_queue_id_from_syslog_line(line)
-    # Assume the log file was written using syslog and parse accordingly
-    m = SyslogProtocol.parse("<13>" + line).content.match(/^\S+: (\S+):/)
+    m = syslog_content(line).match(/^\S+: (\S+):/)
     m[1] if m
   end
 
-  # We also check the email prefix so that we could, for instance, separately handle a staging and production
-  # instance running on the same server with different email prefixes.
+  SYSLOG_TIMESTAMP = %r{
+    (Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s(\s|[1-9])\d\s
+    \d\d:\d\d:\d\d\s
+  }x
+
+  # Strips syslog timestamp, hostname and optional bare-word tag prefix.
+  def self.syslog_content(line)
+    message = line.sub(SYSLOG_TIMESTAMP, '').sub(/^[\x21-\x7E]+\s/, '')
+    tagged = message.match(/^(\w+)(: | )(.*)$/)
+    tagged ? tagged[3] : message
+  end
+  private_class_method :syslog_content
+
+  # We also check the email prefix so that we could, for instance, separately
+  # handle a staging and production instance running on the same server with
+  # different email prefixes.
   def self.email_addresses_on_line(line)
     prefix = Regexp.quote(AlaveteliConfiguration.incoming_email_prefix)
     domain = Regexp.quote(AlaveteliConfiguration.incoming_email_domain)
@@ -140,13 +154,13 @@ class MailServerLog < ApplicationRecord
   end
 
   def self.request_sent?(ir)
-    case(AlaveteliConfiguration.mta_log_type.to_sym)
+    case AlaveteliConfiguration.mta_log_type.to_sym
     when :exim
       request_exim_sent?(ir)
     when :postfix
       request_postfix_sent?(ir)
     else
-      raise "Unexpected MTA type: #{type}"
+      raise "Unexpected MTA type: #{AlaveteliConfiguration.mta_log_type}"
     end
   end
 
@@ -161,7 +175,9 @@ class MailServerLog < ApplicationRecord
         # be sure we are parsing the exim line right)
         envelope_from = " from <" + ir.incoming_email + "> "
         if !mail_server_log.line.include?(envelope_from)
-          $stderr.puts("unexpected parsing of exim line: [#{mail_server_log.line.chomp}]")
+          $stderr.puts(
+            "unexpected parsing of exim line: [#{mail_server_log.line.chomp}]"
+          )
         else
           found = true
         end
@@ -176,8 +192,8 @@ class MailServerLog < ApplicationRecord
     ir.mail_server_logs.any? { |l| l.line.include?("dsn=2.0.0") }
   end
 
-  # Check that the last day of requests has been sent in Exim or Postfix and we got the
-  # lines. Writes any errors to STDERR. This check is really mainly to
+  # Check that the last day of requests has been sent in Exim or Postfix and we
+  # got the lines. Writes any errors to STDERR. This check is really mainly to
   # check the envelope from is the request address, as Ruby is quite
   # flaky with regard to that, and it is important for anti-spam reasons.
   # TODO: does this really check that, as the log just wouldn't pick
@@ -201,10 +217,11 @@ class MailServerLog < ApplicationRecord
     ok = true
     info_requests.each do |info_request|
       unless request_sent?(info_request)
-        # It's very important the envelope from is set for avoiding spam filter reasons - this
-        # effectively acts as a check for that.
+        # It's very important the envelope from is set for avoiding spam filter
+        # reasons - this effectively acts as a check for that.
 
-        # *** don't comment out this STDERR line, it is the point of the function!
+        # *** don't comment out this STDERR line, it is the point of the
+        # function!
         $stderr.puts("failed to find request sending in MTA logs for request " \
                      "id #{info_request.id} #{info_request.url_title} (check " \
                      "envelope from is being set to request address in Ruby, " \
@@ -221,10 +238,6 @@ class MailServerLog < ApplicationRecord
     create_mail_server_logs(emails, sanitised_line, order, done)
   end
 
-  def is_owning_user?(user)
-    info_request.is_owning_user?(user)
-  end
-
   # Public: Overrides the ActiveRecord attribute accessor
   #
   # opts = Hash of options (default: {})
@@ -233,17 +246,17 @@ class MailServerLog < ApplicationRecord
   #
   # Returns a String, EximLine or PostfixLine
   def line(opts = {})
-    _line = read_attribute(:line)
+    line = read_attribute(:line)
 
     if opts[:redact]
-      _line = strip_syslog_prefix(_line)
-      _line = redact_hostname(_line) if sent_to_smarthost?(_line)
-      _line =
-        redact_idhash(_line, info_request.idhash) if info_request.try(:idhash)
+      line = strip_syslog_prefix(line)
+      line = redact_hostname(line) if sent_to_smarthost?(line)
+      line =
+        redact_idhash(line, info_request.idhash) if info_request.try(:idhash)
     end
 
-    _line = line_decorator.new(_line) if opts[:decorate]
-    _line
+    line = line_decorator.new(line) if opts[:decorate]
+    line
   end
 
   def delivery_status
@@ -277,12 +290,12 @@ class MailServerLog < ApplicationRecord
   # attempt to parse the status from the log line and store if successful
   def set_delivery_status(force = false)
     decorated = line(decorate: true)
-    if decorated && decorated.delivery_status
-      if force
-        force_delivery_status(decorated.delivery_status)
-      else
-        self.delivery_status = decorated.delivery_status
-      end
+    return unless decorated && decorated.delivery_status
+
+    if force
+      force_delivery_status(decorated.delivery_status)
+    else
+      self.delivery_status = decorated.delivery_status
     end
   end
 
@@ -298,7 +311,6 @@ class MailServerLog < ApplicationRecord
 
   def calculate_delivery_status
     delivery_status
-    true
   end
 
   def self.create_mail_server_logs(emails, line, order, done)

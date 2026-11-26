@@ -14,11 +14,8 @@ else
 end
 
 SimpleCov.start('rails') do
-  skip 'commonlib'
-  skip 'vendor/plugins'
-  skip 'lib/attachment_to_html'
+  skip 'vendor/mysociety'
   skip 'lib/has_tag_string'
-  skip 'lib/acts_as_xapian'
   skip 'lib/themes'
   skip '.bundle'
 end

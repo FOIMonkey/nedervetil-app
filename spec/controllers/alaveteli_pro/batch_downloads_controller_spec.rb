@@ -8,14 +8,16 @@ RSpec.describe AlaveteliPro::BatchDownloadsController, type: :controller do
     end
 
     context 'without a signed-in user' do
-      it 'redirects to the login form' do
-        show
-        expect(response).
-          to redirect_to(signin_path(token: PostRedirect.last.token))
+      let(:batch) { FactoryBot.create(:info_request_batch) }
+
+      it 'raise 404' do
+        expect { show(id: batch.id) }.
+          to raise_error(ActiveRecord::RecordNotFound)
       end
     end
 
-    context 'with a signed-in non-pro user' do
+    # The requester may download their own batch, Pro role or not (#93).
+    context 'with a signed-in account without the Pro role' do
       let(:user) { FactoryBot.create(:user) }
       let(:batch) { FactoryBot.create(:info_request_batch, user: user) }
 
@@ -24,11 +26,7 @@ RSpec.describe AlaveteliPro::BatchDownloadsController, type: :controller do
         allow(controller).to receive(:current_user).and_return(user)
       end
 
-      it { is_expected.to_not be_able_to(:download, batch) }
-
-      it 'denies access to their own batch' do
-        expect { show(id: batch.id) }.to raise_error(CanCan::AccessDenied)
-      end
+      it { is_expected.to be_able_to(:download, batch) }
     end
 
     context 'with a signed-in pro user' do
@@ -54,7 +52,8 @@ RSpec.describe AlaveteliPro::BatchDownloadsController, type: :controller do
         it { is_expected.to_not be_able_to(:download, batch) }
 
         it 'denies access' do
-          expect { show(id: batch.id) }.to raise_error(CanCan::AccessDenied)
+          expect { show(id: batch.id) }.
+            to raise_error(ActiveRecord::RecordNotFound)
         end
       end
 
@@ -109,7 +108,8 @@ RSpec.describe AlaveteliPro::BatchDownloadsController, type: :controller do
         context 'when CSV format' do
           before do
             # stub service calls
-            allow(InfoRequestBatchMetrics).to receive(:new).with(batch).
+            allow(InfoRequestBatchMetrics).to receive(:new).
+              with(batch, ability: controller.current_ability).
               and_return(double(:metrics, to_csv: 'CSV_DATA', name: 'NAME'))
 
             show(format: 'csv')
@@ -172,7 +172,8 @@ RSpec.describe AlaveteliPro::BatchDownloadsController, type: :controller do
         context 'when CSV format' do
           before do
             # stub service calls
-            allow(InfoRequestBatchMetrics).to receive(:new).with(batch).
+            allow(InfoRequestBatchMetrics).to receive(:new).
+              with(batch, ability: controller.current_ability).
               and_return(double(:metrics, to_csv: 'CSV_DATA', name: 'NAME'))
 
             show(format: 'csv')
@@ -183,28 +184,18 @@ RSpec.describe AlaveteliPro::BatchDownloadsController, type: :controller do
           end
         end
       end
-
-      context 'when info_request_batch is embargoed' do
-        let(:batch) { FactoryBot.create(:info_request_batch, :embargoed) }
-
-        it { is_expected.to_not be_able_to(:download, batch) }
-
-        it 'denies access' do
-          expect { show(id: batch.id) }.to raise_error(CanCan::AccessDenied)
-        end
-      end
     end
 
-    context 'with a signed-in pro admin user' do
-      let(:pro_admin_user) { FactoryBot.create(:pro_admin_user) }
+    context 'with a signed-in admin user' do
+      let(:admin_user) { FactoryBot.create(:admin_user) }
 
       before do
-        sign_in pro_admin_user
-        allow(controller).to receive(:current_user).and_return(pro_admin_user)
+        sign_in admin_user
+        allow(controller).to receive(:current_user).and_return(admin_user)
       end
 
-      context 'when info_request_batch is embargoed' do
-        let(:batch) { FactoryBot.create(:info_request_batch, :embargoed) }
+      context 'when info_request_batch owned by someone else' do
+        let(:batch) { FactoryBot.create(:info_request_batch) }
 
         it { is_expected.to be_able_to(:download, batch) }
       end

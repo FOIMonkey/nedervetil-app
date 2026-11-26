@@ -22,4 +22,16 @@ RSpec.describe AlaveteliFileTypes do
       ).to eq('xlsm')
     end
   end
+
+  describe '.text_content?' do
+    it 'does not mutate caller string encoding and accepts frozen strings' do
+      binary = 'plain ascii'.b.freeze
+      expect(described_class.text_content?(binary)).to be(true)
+      expect(binary.encoding).to eq(Encoding::BINARY)
+
+      mutable = 'hello'.b
+      expect(described_class.text_content?(mutable)).to be(true)
+      expect(mutable.encoding).to eq(Encoding::BINARY)
+    end
+  end
 end

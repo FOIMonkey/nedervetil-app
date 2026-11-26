@@ -17,11 +17,11 @@ RSpec.describe 'request/incoming_correspondence' do
   end
 
   it 'renders prominence partial' do
+    stub_template 'request/_prominence.text.erb' => 'PROMINENCE NOTICE'
     render partial: self.class.top_level_description,
            locals: stub_locals
 
-    expected = 'request/_prominence'
-    expect(rendered).to render_template(partial: expected)
+    expect(rendered).to include('PROMINENCE NOTICE')
   end
 
   context 'the current_user can read the request' do

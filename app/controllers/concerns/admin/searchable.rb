@@ -1,17 +1,4 @@
-##
-# Lets an admin listing switch between the legacy database search and the
-# new search index, and reports what the search it ran cost.
-#
-# Usage:
-#   class AdminUserController < AdminController
-#     include Admin::Searchable
-#
-#     def index
-#       users = legacy_search? ? legacy_user_scope : indexed_user_scope
-#       @admin_users = measure_search(users.paginate(page: params[:page]))
-#     end
-#   end
-#
+# Selects legacy or indexed search and measures the paginated query.
 module Admin::Searchable
   extend ActiveSupport::Concern
 
@@ -29,13 +16,12 @@ module Admin::Searchable
     search_engine == 'legacy'
   end
 
-  # Whether this listing is running a search that ranks what it finds.
+  # Browsing without a query has no relevance ranking.
   def indexed_search?
     params[:query].present? && !legacy_search?
   end
 
-  # Run +relation+, timing it so the listing can show what the search cost.
-  # Returns the relation, now loaded.
+  # Returns the loaded relation and records its timings in search_stats.
   def measure_search(relation)
     @search_stats = Search::Stats.measure(relation)
     relation

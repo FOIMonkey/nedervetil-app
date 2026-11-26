@@ -23,12 +23,7 @@ RSpec.describe CensorRule::Redaction do
                                     redacted_attribute: 'body')
     end
 
-    it 'excludes redactions against locked attachments' do
-      redaction = create_redaction(FactoryBot.create(:body_text, locked: true))
-      is_expected.to_not include(redaction)
-    end
-
-    it 'includes redactions against unlocked attachments' do
+    it 'includes redactions against attachments' do
       redaction = create_redaction(FactoryBot.create(:body_text))
       is_expected.to include(redaction)
     end

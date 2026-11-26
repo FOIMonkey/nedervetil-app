@@ -1,6 +1,77 @@
 require 'spec_helper'
 
 RSpec.describe AttachmentToText do
+  describe 'caller contract' do
+    it 'extracts the supplied default body without reading the original body' do
+      attachment = instance_double(FoiAttachment, content_type: 'text/plain',
+                                                  default_body: '[redacted]')
+      expect(attachment).not_to receive(:unmasked_body)
+
+      expect(described_class.new(attachment).to_text).to eq("[redacted]\n\n")
+    end
+
+    it 'keeps the default MIME type and UTF-8 output of from_string' do
+      text = described_class.from_string('Räksmörgås').to_text
+
+      expect(text).to eq("Räksmörgås\n\n")
+      expect(text.encoding).to eq(Encoding::UTF_8)
+    end
+
+    it 'uses the text argument and MIME type supplied to from_part' do
+      part = Mail::Part.new(content_type: 'text/html', body: 'original secret')
+      text = described_class.from_part(part, '<p>Reviewed text</p>').to_text
+
+      expect(text).to include('Reviewed text')
+      expect(text).not_to include('original secret', '<p>')
+    end
+
+    %w[text/html application/pdf].each do |content_type|
+      it "raises a named retryable failure for #{content_type}" do
+        allow(AlaveteliSandbox).to receive(:job).
+          and_raise(AlaveteliSandbox::Refused, 'disabled')
+
+        # Retryable so MainBody does not permanently cache a transient failure.
+        expect {
+          described_class.from_string('private bytes',
+                                      content_type: content_type).to_text
+        }.to raise_error(AttachmentToText::ConversionFailed)
+      end
+    end
+
+    it 'raises the named failure for a PDF with the OCR threshold set' do
+      allow(AlaveteliSandbox).to receive(:job).
+        and_raise(AlaveteliSandbox::Refused, 'disabled')
+      original = described_class.pdf_ocr_threshold
+      described_class.pdf_ocr_threshold = 1000
+
+      # Must raise before the OCR threshold checks nil text length.
+      expect {
+        described_class.from_string('private bytes',
+                                    content_type: 'application/pdf').to_text
+      }.to raise_error(AttachmentToText::ConversionFailed)
+    ensure
+      described_class.pdf_ocr_threshold = original
+    end
+
+    %w[
+      application/vnd.openxmlformats-officedocument.wordprocessingml.document
+      application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+      application/vnd.openxmlformats-officedocument.presentationml.presentation
+    ].each do |content_type|
+      it "keeps permanent empty text for #{content_type} on failure" do
+        allow(AlaveteliSandbox).to receive(:job).
+          and_raise(AlaveteliSandbox::Refused, 'disabled')
+
+        # Zip-based Office text is display/search only; cache empty text on
+        # failure rather than retrying on every view.
+        expect(
+          described_class.from_string('private bytes',
+                                      content_type: content_type).to_text
+        ).to eq('')
+      end
+    end
+  end
+
   describe '#to_text' do
     subject { described_class.new(attachment).to_text }
 
@@ -153,7 +224,16 @@ RSpec.describe AttachmentToText do
 
       context 'when LibreOffice writes no output' do
         before do
-          allow(AlaveteliExternalCommand).to receive(:run).and_return(nil)
+          allow_any_instance_of(AlaveteliSandbox::Job).to receive(:run)
+        end
+
+        it { is_expected.to eq('') }
+      end
+
+      context 'when LibreOffice fails' do
+        before do
+          allow_any_instance_of(AlaveteliSandbox::Job).
+            to receive(:run).and_raise(AlaveteliSandbox::Failed, 'exit 1')
         end
 
         it { is_expected.to eq('') }
@@ -232,6 +312,21 @@ RSpec.describe AttachmentToText do
           is_expected.not_to match(/,,/)
         end
       end
+
+      it 'stops combining CSV sheets once cumulative MAX_TEXT is reached' do
+        stub_const('AttachmentToText::MAX_TEXT', 60)
+        extractor = described_class.new(attachment)
+        AlaveteliSandbox.job do |job|
+          File.write(job.scratch("#{AttachmentToText::INPUT_NAME}-S1.csv"),
+                     'a' * 30)
+          File.write(job.scratch("#{AttachmentToText::INPUT_NAME}-S2.csv"),
+                     'b' * 30)
+          combined = extractor.send(:combine_csv_files_with_sheet_names, job)
+          expect(combined).to include('=== S1 ===', 'a' * 30)
+          expect(combined).not_to include('=== S2 ===')
+          expect(combined.bytesize).to be <= 60
+        end
+      end
     end
 
     context 'csv' do
@@ -255,18 +350,88 @@ RSpec.describe AttachmentToText do
 
       it { is_expected.to match(/Contravention/) }
 
+      it 'stops extracting inside a third nested archive' do
+        innermost = OfficeFixtures.package({ 'secret.txt' => 'deep secret' })
+        middle = OfficeFixtures.package({ 'inner.zip' => innermost })
+        outer = OfficeFixtures.package({ 'middle.zip' => middle,
+                                         'visible.txt' => 'visible text' })
+        text = described_class.from_string(
+          outer, content_type: 'application/zip'
+        ).to_text
+        expect(text).to include('visible text')
+        expect(text).not_to include('deep secret')
+      end
+
+      it 'reads zip archives through OfficePackage::Isolated' do
+        archive = OfficeFixtures.package({ 'note.txt' => 'sandboxed text' })
+        expect(OfficePackage::Isolated).to receive(:read_zip).and_call_original
+
+        text = described_class.from_string(
+          archive, content_type: 'application/zip'
+        ).to_text
+        expect(text).to include('sandboxed text')
+      end
+
+      it 'propagates AlaveteliSandbox::Error when the Office cell is down' do
+        archive = OfficeFixtures.package({ 'note.txt' => 'sandboxed text' })
+        allow(OfficePackage::Isolated).to receive(:read_zip).
+          and_raise(AlaveteliSandbox::Refused, 'office cell unavailable')
+
+        expect {
+          described_class.from_string(
+            archive, content_type: 'application/zip'
+          ).to_text
+        }.to raise_error(AlaveteliSandbox::Refused)
+      end
+
+      it 'keeps extracting smaller later text files after a nested zip ' \
+         'leaves an intermediate entry over the remaining byte budget' do
+        inner = OfficeFixtures.package({ 'inside.txt' => 'a' * 200 })
+        stub_const('AttachmentToText::MAX_ZIP_TOTAL', inner.bytesize + 250)
+        outer = OfficeFixtures.package(
+          { '01-inner.zip' => inner,
+            '02-large.bin' => 'b' * 245,
+            '03-later.txt' => 'later text' }
+        )
+
+        text = described_class.from_string(
+          outer, content_type: 'application/zip'
+        ).to_text
+        expect(text).to include('later text')
+
+        problem = AlaveteliSandbox.volume_problem
+        next if problem
+
+        allow(AlaveteliConfiguration).to receive(:sandbox_converters).
+          and_return('required')
+        sandboxed = described_class.from_string(
+          outer, content_type: 'application/zip'
+        ).to_text
+        expect(sandboxed).to include('later text')
+      end
+
+      it 'does not inflate an entry larger than its limit' do
+        mock_entry = double('Zip::Entry',
+                            file?: true,
+                            size: described_class::MAX_ZIP_ENTRY + 1)
+        expect(mock_entry).not_to receive(:get_input_stream)
+        allow(Zip::File).to receive(:open) do |*_args, &block|
+          block.call([mock_entry])
+        end
+        is_expected.to be_empty
+      end
+
       context 'when the expansion of the zip raises an error' do
         before do
-          mock_entry = double('Zip::File entry', file?: true)
+          mock_entry = double('Zip::File entry', file?: true, size: 1)
 
           allow(mock_entry).
             to receive(:get_input_stream).
             and_raise('invalid distance too far back')
 
-          mock_entries = [mock_entry]
-          allow(mock_entries).to receive(:close)
-
-          allow(Zip::File).to receive(:open).and_return(mock_entries)
+          allow(Zip::File).to receive(:open) do |*_args, &block|
+            block.call([mock_entry])
+          end
         end
 
         it { is_expected.to be_empty }

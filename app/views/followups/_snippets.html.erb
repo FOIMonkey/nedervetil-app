@@ -6,11 +6,11 @@
            'that may help:') %></p>
 <% end %>
 
-<div class="snippet-library js-snippet-library">
+<div class="snippet-library js-snippet-library" data-controller="snippet-filter">
   <div class="snippet-library__filters">
     <!-- TODO: Non-JavaScript fallback? -->
     <label for="snippet-relation"><%= _('Snippets related to') %></label>
-    <select id="snippet-relation">
+    <select id="snippet-relation" data-snippet-filter-target="select" data-action="snippet-filter#filter">
       <% if @refusal_advice.suggested_actions %>
         <option value="<%= @refusal_advice.suggested_actions.join(' ') %>">my previous answers</option>
       <% end %>

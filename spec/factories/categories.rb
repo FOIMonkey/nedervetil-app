@@ -11,7 +11,7 @@
 #
 
 FactoryBot.define do
-  factory :category_root, class: Category do
+  factory :category_root, class: 'Category' do
     title { 'Root node' }
   end
 

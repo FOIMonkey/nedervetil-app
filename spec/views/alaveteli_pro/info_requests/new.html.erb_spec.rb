@@ -1,56 +1,43 @@
 require 'spec_helper'
 
 RSpec.describe "alaveteli_pro/info_requests/new" do
-  let!(:public_body) { FactoryBot.create(:public_body) }
   let(:draft_info_request) { FactoryBot.create(:draft_info_request) }
   let(:info_request) { InfoRequest.from_draft(draft_info_request) }
   let(:outgoing_message) { info_request.outgoing_messages.first }
-  let(:embargo) { info_request.embargo }
 
   def assign_variables
     assign :draft_info_request, draft_info_request
     assign :info_request, info_request
     assign :outgoing_message, outgoing_message
-    assign :embargo, embargo
+    view.extend(RequestJourney::NavigationHelper)
+    allow(view).to receive(:current_user).and_return(draft_info_request.user)
   end
 
-  it "sets a data-initial-authority attribute on the public body search" do
-    expected_data = {
-      id: public_body.id,
-      name: public_body.name,
-      short_name: public_body.short_name,
-      notes: public_body.notes_as_string,
-      info_requests_visible_count: public_body.info_requests_visible_count
-    }
-    expect(view).to receive(:public_body_search_attributes)
-      .and_return(expected_data)
-
+  it "starts with the request's authority, which can be changed" do
     assign_variables
     render
-
-    expected_html = html_escape(expected_data.to_json)
-    expect(rendered).to match(/data-initial-authority="#{expected_html}"/)
+    expect(rendered).to have_css('.request-sheet__to',
+                                 text: "To #{info_request.public_body.name}")
+    expect(rendered).to have_button('Change authority')
   end
 
-  it "sets a data-search-url attribute on the public body search" do
+  it "searches for an authority on the new request page" do
     assign_variables
+    assign :step, :who
     render
-    expect(rendered).
-      to match(/data-search-url="\/pro\/public_bodies"/)
+    expect(rendered).to have_css(
+      "form#authority_form[method=get]" \
+      "[action='#{new_alaveteli_pro_info_request_path}'] input[name=query]"
+    )
   end
 
   it "includes a hidden field for the body id" do
     assign_variables
     render
-    expected_input = "<input class=\"js-public-body-id\" " \
-                     "autocomplete=\"off\" " \
-                     "type=\"hidden\" " \
-                     "value=\"#{info_request.public_body.id}\" " \
-                     "name=\"info_request\\[public_body_id\\]\" " \
-                     "id=\"info_request_public_body_id\" \\/>"
-
-    # Capybara doesn't like matching hidden inputs because users don't see
-    # them, hence why we're using a more fragile regex
-    expect(rendered).to match(/#{expected_input}/)
+    expect(rendered).to have_css(
+      "input[type=hidden][name='info_request[public_body_id]']" \
+      "[value='#{info_request.public_body.id}']",
+      visible: :all
+    )
   end
 end

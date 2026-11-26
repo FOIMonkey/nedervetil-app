@@ -1,13 +1,13 @@
-# app/helpers/application_helper.rb:
-# Methods added to this helper will be available to all views (i.e. templates)
-# in the application.
-#
 # Copyright (c) 2007 UK Citizens Online Democracy. All rights reserved.
 # Email: hello@mysociety.org; WWW: http://www.mysociety.org/
 
 require 'languages'
 
+# Global view helpers mixed into all templates (page bands, flashes, Turnstile,
+# validation errors, locale names and shared helper modules).
 module ApplicationHelper
+  # Renders Turnstile and forces a full load so Turbo Drive does not re-run its
+  # script (doc/FORK.md). action matches TurnstileCheck#turnstile_refusal.
   def turnstile_box(action)
     return unless Turnstile.configured?
 
@@ -23,8 +23,8 @@ module ApplicationHelper
     @page_flashes ||= render('general/flashes')
   end
 
-  # Places flashes directly below a page's band so the layout omits its top
-  # notice (#band_notice_placed?) and avoids splitting band from masthead.
+  # Places flashes directly below a page's black band so the layout omits its
+  # top notice (#band_notice_placed?) and avoids splitting band from masthead.
   def band_notice
     return if band_notice_placed? || no_page_flashes?
 
@@ -68,6 +68,7 @@ module ApplicationHelper
   def back_to_account
     link_to _('Account'), show_user_path(url_name: current_user.url_name)
   end
+
   # URL generating functions are needed by all controllers (for redirects),
   # views (for links) and mailers (for use in emails), so include them into
   # all of all.
@@ -88,10 +89,27 @@ module ApplicationHelper
   # Copied from error_messages_for in active_record_helper.rb
   def foi_error_messages_for(*params)
     options = params.last.is_a?(Hash) ? params.pop.symbolize_keys : {}
-    objects = params.collect { |object_name| instance_variable_get("@#{object_name}") }.compact
+    objects = params.
+      filter_map { |object_name| instance_variable_get("@#{object_name}") }
     count   = objects.inject(0) { |sum, object| sum + object.errors.count }
     return if count.zero?
 
+    html = error_box_attributes(options)
+
+    error_messages = "".html_safe
+
+    objects.each do |object|
+      object.errors.each do |error|
+        error_message =
+          options[:full_message] ? error.full_message : error.message
+        error_messages << content_tag(:li, h(error_message))
+      end
+    end
+
+    content_tag(:div, content_tag(:ul, error_messages), html)
+  end
+
+  def error_box_attributes(options)
     html = {}
     [:id, :class].each do |key|
       if options.include?(key)
@@ -101,17 +119,7 @@ module ApplicationHelper
         html[key] = 'errorExplanation'
       end
     end
-
-    error_messages = "".html_safe
-
-    objects.each do |object|
-      object.errors.each do |error|
-        error_message = options[:full_message] ? error.full_message : error.message
-        error_messages << content_tag(:li, h(error_message))
-      end
-    end
-
-    content_tag(:div, content_tag(:ul, error_messages), html)
+    html
   end
 
   def locale_name(locale)
@@ -129,7 +137,8 @@ module ApplicationHelper
   end
 
   def admin_date(date, ago: true, ago_only: false)
-    ago_text = _('{{length_of_time}} ago', length_of_time: time_ago_in_words(date))
+    ago_text = _('{{length_of_time}} ago',
+                 length_of_time: time_ago_in_words(date))
     text = ago_text if ago_only
 
     exact_date = I18n.l(date, format: "%e %B %Y %H:%M:%S")
@@ -171,11 +180,10 @@ module ApplicationHelper
     File.exist?(file_path)
   end
 
-  # Note that if the admin interface is proxied via another server, we can't
-  # rely on a session being shared between the front end and admin interface,
-  # so need to check the status of the user.
+  # Checked against Ability on each call rather than cached in the session;
+  # used by admin links, theme layouts and the site add-on.
   def is_admin?
-    !session[:using_admin].nil? || (!@user.nil? && @user.is_admin?)
+    can?(:access, :admin)
   end
 
   def cache_if_caching_fragments(key, *args)
@@ -186,23 +194,19 @@ module ApplicationHelper
   end
 
   def inside_layout(layout = 'application', &block)
-    render inline: capture(&block), layout: "layouts/#{layout}"
+    previous_content = view_flow.get(:layout)
+    view_flow.set(:layout, capture(&block))
+    render template: "layouts/#{layout}"
+  ensure
+    view_flow.set(:layout, previous_content)
   end
 
   def render_flash(message)
-    message = { plain: message } if message.is_a?(String)
+    # Not render plain: it leaves the view's formats starting with text, so
+    # what the layout renders after the flash loses its translations' HTML.
+    return message.to_str if message.is_a?(String)
+
     render message.deep_symbolize_keys
-  end
-
-  # We only want to cache request lists that have a reasonable chance of not
-  # expiring before they're requested again. Don't cache lists returned from
-  # specific searches or anything except the first page of results, just the
-  # first page of the default views
-  def request_list_cache_key
-    cacheable_param_list = %w[controller action view]
-    return if params.empty? || (params.keys - cacheable_param_list).any?
-
-    ["request-list", params[:view]]
   end
 
   def event_description(event)
@@ -211,38 +215,37 @@ module ApplicationHelper
     date = simple_date(event.created_at)
     case event.event_type
     when 'sent'
-      _('Request sent to {{public_body_name}} by {{info_request_user}} on {{date}}.',
+      _('Request sent to {{public_body_name}} by {{info_request_user}} ' \
+        'on {{date}}.',
         public_body_name: body_link,
         info_request_user: user_link,
         date: date)
     when 'followup_sent'
       case event.calculated_state
       when 'internal_review'
-        _('Internal review request sent to {{public_body_name}} by {{info_request_user}} on {{date}}.',
+        _('Internal review request sent to {{public_body_name}} by ' \
+          '{{info_request_user}} on {{date}}.',
           public_body_name: body_link,
           info_request_user: user_link,
           date: date)
       when 'waiting_response'
-        _('Clarification sent to {{public_body_name}} by {{info_request_user}} on {{date}}.',
+        _('Clarification sent to {{public_body_name}} by ' \
+          '{{info_request_user}} on {{date}}.',
           public_body_name: body_link,
           info_request_user: user_link,
           date: date)
       else
-        _('Follow up sent to {{public_body_name}} by {{info_request_user}} on {{date}}.',
+        _('Follow up sent to {{public_body_name}} by ' \
+          '{{info_request_user}} on {{date}}.',
           public_body_name: body_link,
           info_request_user: user_link,
           date: date)
       end
     when 'response'
-      _('Response by {{public_body_name}} to {{info_request_user}} on {{date}}.',
+      _('Response by {{public_body_name}} to {{info_request_user}} ' \
+        'on {{date}}.',
         public_body_name: body_link,
         info_request_user: user_link,
-        date: date)
-    when 'comment'
-      _('Request to {{public_body_name}} by {{info_request_user}}. Annotated by {{event_comment_user}} on {{date}}.',
-        public_body_name: body_link,
-        info_request_user: user_link,
-        event_comment_user: user_link_absolute(event.comment.user),
         date: date)
     end
   end
@@ -264,10 +267,6 @@ module ApplicationHelper
       current_user,
       session[:announcement_dismissals]
     ).first
-  end
-
-  def show_pro_upsell?(_user)
-    false
   end
 
   # Omit file sizes below 1 MB to avoid noisy labels like "324 Bytes".

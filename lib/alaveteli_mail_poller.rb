@@ -1,22 +1,24 @@
 require 'net/pop'
 require 'config_helper'
 
+# Polls a configured POP3 mailbox for incoming email, passing each message to
+# RequestMailer.receive and recording failures in IncomingMessageError.
 class AlaveteliMailPoller
   include ConfigHelper
 
   attr_accessor :settings, :pop3
 
   def initialize(values = {})
-    _pop3 = values.delete(:pop3)
+    pop3 = values.delete(:pop3)
 
-    defaults = { address:      AlaveteliConfiguration.pop_mailer_address,
-                 port:         AlaveteliConfiguration.pop_mailer_port,
-                 user_name:    AlaveteliConfiguration.pop_mailer_user_name,
-                 password:     AlaveteliConfiguration.pop_mailer_password,
-                 enable_ssl:   AlaveteliConfiguration.pop_mailer_enable_ssl }
+    defaults = { address: AlaveteliConfiguration.pop_mailer_address,
+                 port: AlaveteliConfiguration.pop_mailer_port,
+                 user_name: AlaveteliConfiguration.pop_mailer_user_name,
+                 password: AlaveteliConfiguration.pop_mailer_password,
+                 enable_ssl: AlaveteliConfiguration.pop_mailer_enable_ssl }
 
     self.settings = defaults.merge(values)
-    self.pop3 = _pop3 || default_pop3
+    self.pop3 = pop3 || default_pop3
   end
 
   def poll_for_incoming
@@ -33,7 +35,7 @@ class AlaveteliMailPoller
   # Make a poller and run poll_for_incoming in an endless loop,
   # sleeping when there is nothing to do
   def self.poll_for_incoming_loop
-    if AlaveteliConfiguration.production_mailer_retriever_method == 'pop'
+    if AlaveteliConfiguration.production_mailer_retriever_method == 'pop' # rubocop:disable Style/GuardClause -- the guard would not fit on one line
       poller = new
       Rails.logger.info "Starting #{ poller } polling loop"
       loop do
@@ -78,13 +80,13 @@ class AlaveteliMailPoller
   end
 
   def record_error(unique_id, received, error)
-    if unique_id
-      retry_at = received ? nil : Time.zone.now + 30.minutes
-      ime = IncomingMessageError.find_or_create_by!(unique_id: unique_id)
-      ime.retry_at = retry_at
-      ime.backtrace = error.backtrace.join("\n")
-      ime.save!
-    end
+    return unless unique_id
+
+    retry_at = received ? nil : Time.zone.now + 30.minutes
+    ime = IncomingMessageError.find_or_create_by!(unique_id: unique_id)
+    ime.retry_at = retry_at
+    ime.backtrace = error.backtrace.join("\n")
+    ime.save!
   end
 
   def failed?(unique_id)
@@ -103,13 +105,13 @@ class AlaveteliMailPoller
     !failed?(unique_id) || retry?(unique_id)
   end
 
-  def start()
+  def start
     # Start a POP3 session and ensure that it will be closed in any case.
     unless block_given?
       raise ArgumentError, "AlaveteliMailPoller#start takes a block"
     end
 
-    pop3.enable_ssl(OpenSSL::SSL::VERIFY_NONE) if settings[:enable_ssl]
+    pop3.enable_ssl(OpenSSL::SSL::VERIFY_PEER) if settings[:enable_ssl]
     pop3.start(settings[:user_name], settings[:password])
 
     yield pop3

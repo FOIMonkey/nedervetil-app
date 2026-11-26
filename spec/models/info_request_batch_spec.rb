@@ -2,14 +2,13 @@
 #
 # Table name: info_request_batches
 #
-#  id               :integer          not null, primary key
-#  title            :text             not null
-#  user_id          :integer          not null
-#  created_at       :datetime         not null
-#  updated_at       :datetime         not null
-#  body             :text
-#  sent_at          :datetime
-#  embargo_duration :string
+#  id         :integer          not null, primary key
+#  title      :text             not null
+#  user_id    :integer          not null
+#  created_at :datetime         not null
+#  updated_at :datetime         not null
+#  body       :text
+#  sent_at    :datetime
 #
 
 require 'spec_helper'
@@ -17,8 +16,6 @@ require 'models/concerns/info_request/title_validation'
 
 RSpec.describe InfoRequestBatch do
   it_behaves_like 'concerns/info_request/title_validation', :info_request_batch
-
-  it { is_expected.to strip_attribute(:embargo_duration) }
 
   context "when validating" do
     let(:info_request_batch) { FactoryBot.build(:info_request_batch) }
@@ -32,7 +29,8 @@ RSpec.describe InfoRequestBatch do
     it 'should require a body' do
       info_request_batch.body = nil
       expect(info_request_batch.valid?).to be false
-      expect(info_request_batch.errors.full_messages).to eq(["Body can't be blank"])
+      expect(info_request_batch.errors.full_messages).
+        to eq(["Body can't be blank"])
     end
 
     context 'without ignore_existing_batch argument being set' do
@@ -61,16 +59,6 @@ RSpec.describe InfoRequestBatch do
         expect(info_request_batch.valid?).to eq true
       end
     end
-  end
-
-  describe '.not_embargoed' do
-    subject { described_class.not_embargoed }
-
-    let(:not_embargoed) { FactoryBot.create(:info_request_batch) }
-    let(:embargoed) { FactoryBot.create(:info_request_batch, :embargoed) }
-
-    it { is_expected.to include(not_embargoed) }
-    it { is_expected.not_to include(embargoed) }
   end
 
   context '.with_body' do
@@ -104,7 +92,7 @@ RSpec.describe InfoRequestBatch do
       FactoryBot.create(:info_request_batch, title: 'Matched title',
                                              body: 'Matched body',
                                              public_bodies: [first_body,
-                                                                second_body])
+                                                             second_body])
     end
 
     it 'should return a batch with the same user, title and body sent to one of the same public bodies' do
@@ -118,7 +106,8 @@ RSpec.describe InfoRequestBatch do
       expect(InfoRequestBatch.find_existing(info_request_batch.user,
                                             info_request_batch.title,
                                             info_request_batch.body,
-                                            [FactoryBot.create(:public_body)])).to be_nil
+                                            [FactoryBot.create(:public_body)])).
+        to be_nil
     end
 
     it 'should not return a batch sent to the same public bodies with a different title and body' do
@@ -128,7 +117,8 @@ RSpec.describe InfoRequestBatch do
                                             [first_body])).to be_nil
     end
 
-    it 'should not return a batch sent to one of the same public bodies with the same title and body by
+    it 'should not return a batch sent to one of the same public bodies ' \
+       'with the same title and body by
           a different user' do
       expect(InfoRequestBatch.find_existing(FactoryBot.create(:user),
                                             info_request_batch.title,
@@ -224,7 +214,8 @@ RSpec.describe InfoRequestBatch do
       FactoryBot.create(
         :info_request_batch,
         body: "Dear [Authority name],\nA message\nYours faithfully,\nRequester",
-        public_bodies: [first_public_body, second_public_body])
+        public_bodies: [first_public_body, second_public_body]
+      )
     end
 
     it 'should substitute authority name for the placeholder in each request' do
@@ -233,7 +224,8 @@ RSpec.describe InfoRequestBatch do
         request = info_request_batch.info_requests.detect do |info_request|
           info_request.public_body == public_body
         end
-        expected = "Dear #{public_body.name},\nA message\nYours faithfully,\nRequester"
+        expected =
+          "Dear #{public_body.name},\nA message\nYours faithfully,\nRequester"
         expect(request.outgoing_messages.first.body).to eq(expected)
       end
     end
@@ -263,10 +255,11 @@ RSpec.describe InfoRequestBatch do
       batch = FactoryBot.create(
         :info_request_batch,
         public_bodies: [first_public_body,
-                           third_public_body])
+                        third_public_body]
+      )
       batch.reload
       expect(batch.public_bodies).to eq([third_public_body,
-                                          first_public_body])
+                                         first_public_body])
     end
 
     it 'returns a distinct list of associated public bodies' do
@@ -284,20 +277,6 @@ RSpec.describe InfoRequestBatch do
       expect(batch.public_bodies.count).to eq(1)
       expect(batch.public_bodies).to match_array([public_body])
     end
-
-    context "when embargo_duration is set" do
-      it 'should set an embargo on each request' do
-        info_request_batch.embargo_duration = '3_months'
-        info_request_batch.create_batch!
-        [first_public_body, second_public_body].each do |public_body|
-          request = info_request_batch.info_requests.detect do |info_request|
-            info_request.public_body == public_body
-          end
-          expect(request.embargo).not_to be_nil
-          expect(request.embargo.embargo_duration).to eq "3_months"
-        end
-      end
-    end
   end
 
   context "when sending batches" do
@@ -307,13 +286,15 @@ RSpec.describe InfoRequestBatch do
       FactoryBot.create(
         :info_request_batch,
         title: 'Example title',
-        public_bodies: [first_public_body, second_public_body])
+        public_bodies: [first_public_body, second_public_body]
+      )
     end
     let!(:sent_batch) do
       FactoryBot.create(
         :info_request_batch,
         public_bodies: [first_public_body, second_public_body],
-        sent_at: Time.zone.now)
+        sent_at: Time.zone.now
+      )
     end
 
     it 'should send requests and notifications for only unsent batch requests' do
@@ -321,21 +302,64 @@ RSpec.describe InfoRequestBatch do
       expect(ActionMailer::Base.deliveries.size).to eq(3)
       first_email = ActionMailer::Base.deliveries.first
       expect(first_email.to).to eq([first_public_body.request_email])
-      expect(first_email.subject).to eq('Freedom of Information request - Example title')
+      expect(first_email.subject).
+        to eq('Freedom of Information request - Example title')
 
       second_email = ActionMailer::Base.deliveries.second
       expect(second_email.to).to eq([second_public_body.request_email])
-      expect(second_email.subject).to eq('Freedom of Information request - Example title')
+      expect(second_email.subject).
+        to eq('Freedom of Information request - Example title')
 
       third_email = ActionMailer::Base.deliveries.third
       expect(third_email.to).to eq([info_request_batch.user.email])
-      expect(third_email.subject).to eq('Your batch request "Example title" has been sent')
+      expect(third_email.subject).
+        to eq('Your batch request "Example title" has been sent')
     end
 
     it 'should set the sent_at value of the info request batch' do
       InfoRequestBatch.send_batches
       expect { info_request_batch.reload }.to(
         change(info_request_batch, :sent_at).from(nil).to(Time)
+      )
+    end
+
+    it 'keeps a batch queued while its account is suspended or closed' do
+      user = info_request_batch.user
+      user.update!(ban_text: 'Banned')
+      described_class.send_batches
+      expect(info_request_batch.reload.info_requests).to be_empty
+      expect(info_request_batch).not_to be_sent
+      expect(ActionMailer::Base.deliveries).to be_empty
+
+      user.update!(ban_text: '', closed_at: Time.zone.now)
+      described_class.send_batches
+      expect(info_request_batch.reload.info_requests).to be_empty
+
+      user.update!(closed_at: nil)
+      described_class.send_batches
+      expect(info_request_batch.reload.info_requests.size).to eq(2)
+      expect(info_request_batch).to be_sent
+    end
+
+    it 'stops a batch whose account is suspended part-way, and sends the rest later' do
+      allow(info_request_batch).to receive(:send_request).
+        and_wrap_original do |send_request, info_request|
+          send_request.call(info_request)
+          info_request_batch.user.update_columns(ban_text: 'Banned')
+        end
+      info_request_batch.create_batch!
+      expect(info_request_batch.info_requests.size).to eq(1)
+      expect(info_request_batch).not_to be_all_requests_created
+      expect(ActionMailer::Base.deliveries.size).to eq(1)
+
+      info_request_batch.user.update!(ban_text: '')
+      described_class.send_batches
+      expect(info_request_batch.reload.info_requests.size).to eq(2)
+      expect(info_request_batch).to be_sent
+      expect(ActionMailer::Base.deliveries.map(&:to)).to eq(
+        [[first_public_body.request_email],
+         [second_public_body.request_email],
+         [info_request_batch.user.email]]
       )
     end
 
@@ -369,7 +393,8 @@ RSpec.describe InfoRequestBatch do
     let(:draft) do
       FactoryBot.create(
         :draft_info_request_batch,
-        public_bodies: [first_public_body, second_public_body])
+        public_bodies: [first_public_body, second_public_body]
+      )
     end
 
     it "copies across all of the attributes from the draft" do
@@ -377,7 +402,6 @@ RSpec.describe InfoRequestBatch do
       expect(batch.title).to eq draft.title
       expect(batch.body).to eq draft.body
       expect(batch.public_bodies).to eq draft.public_bodies
-      expect(batch.embargo_duration).to eq draft.embargo_duration
     end
 
     it "doesn't save the batch" do
@@ -404,12 +428,12 @@ RSpec.describe InfoRequestBatch do
     let(:first_public_body) { FactoryBot.create(:public_body) }
     let(:second_public_body) { FactoryBot.create(:public_body) }
 
-    context "when the batch has an embargo duration" do
+    context "when the batch has bodies" do
       let(:info_request_batch) do
         FactoryBot.create(
           :info_request_batch,
-          public_bodies: [first_public_body, second_public_body],
-          embargo_duration: "3_months")
+          public_bodies: [first_public_body, second_public_body]
+        )
       end
       let(:example) { info_request_batch.example_request }
 
@@ -426,131 +450,18 @@ RSpec.describe InfoRequestBatch do
         info_request_batch.save!
         expected_body = info_request_batch.body.gsub(
           "[Authority name]",
-          info_request_batch.public_bodies.first.name)
+          info_request_batch.public_bodies.first.name
+        )
         expect(example.outgoing_messages.first.body).to eq expected_body
       end
 
       it "creates an example request for the first body in the batch" do
         expect(example.public_body).to eq info_request_batch.public_bodies.first
-      end
-
-      it "creates an example request with an embargo" do
-        expect(example.embargo.embargo_duration).to eq '3_months'
-        expect(example.embargo.persisted?).to be false
-      end
-    end
-
-    context "when the batch doesn't have an embargo duration" do
-      let(:info_request_batch) do
-        FactoryBot.create(
-          :info_request_batch,
-          public_bodies: [first_public_body, second_public_body])
-      end
-      let(:example) { info_request_batch.example_request }
-
-      it "builds, but doesn't save the request" do
-        expect(example.persisted?).to be false
-      end
-
-      it "copies the title from the batch into the request" do
-        expect(example.title).to eq info_request_batch.title
-      end
-
-      it "fills out the salutation in the body with the public body name" do
-        info_request_batch.body = "Dear [Authority name],\n\nSome request"
-        info_request_batch.save!
-        expected_body = info_request_batch.body.gsub(
-          "[Authority name]",
-          info_request_batch.public_bodies.first.name)
-        expect(example.outgoing_messages.first.body).to eq expected_body
-      end
-
-      it "creates an example request for the first body in the batch" do
-        expect(example.public_body).to eq info_request_batch.public_bodies.first
-      end
-
-      it "doesn't create an embargo for the example request" do
-        expect(example.embargo).to be_nil
       end
     end
   end
 
   it_behaves_like "RequestSummaries"
-
-  describe '#embargoed?' do
-    subject { batch.embargoed? }
-
-    let(:batch) { FactoryBot.build(:info_request_batch) }
-
-    context 'when the batch has an embargo_duration' do
-      before { batch.embargo_duration = '12_months' }
-      it { is_expected.to eq(true) }
-    end
-
-    context 'when the batch has no embargo_duration' do
-      before { batch.embargo_duration = nil }
-      it { is_expected.to eq(false) }
-    end
-  end
-
-  describe "#embargo_expiring?" do
-    let(:first_public_body) { FactoryBot.create(:public_body) }
-    let(:second_public_body) { FactoryBot.create(:public_body) }
-    let(:info_request_batch) do
-      FactoryBot.create(
-        :info_request_batch,
-        public_bodies: [first_public_body, second_public_body])
-    end
-
-    before do
-      # We need the batch to have requests to test them out
-      info_request_batch.create_batch!
-    end
-
-    context "when requests have an embargoes which are expiring" do
-      before do
-        info_request_batch.info_requests.each do |request|
-          FactoryBot.create(:expiring_embargo, info_request: request)
-        end
-      end
-
-      it "returns true" do
-        expect(info_request_batch.embargo_expiring?).to be true
-      end
-    end
-
-    context "when requests have embargoes but they're not expiring soon" do
-      before do
-        info_request_batch.info_requests.each do |request|
-          FactoryBot.create(:embargo, info_request: request)
-        end
-      end
-
-      it "returns false" do
-        expect(info_request_batch.embargo_expiring?).to be false
-      end
-    end
-
-    context "when no requests have embargoes" do
-      it "returns false" do
-        expect(info_request_batch.embargo_expiring?).to be false
-      end
-    end
-  end
-
-  describe '#can_change_embargo?' do
-    subject { batch.can_change_embargo? }
-
-    context 'the batch has been sent' do
-      let(:batch) { FactoryBot.create(:info_request_batch, :sent) }
-      it { is_expected.to eq true }
-    end
-
-    context 'the batch is unsent' do
-      let(:batch) { FactoryBot.create(:info_request_batch) }
-      it { is_expected.to eq false }
-    end
-  end
 
   describe "#request_phases" do
     let(:public_bodies) { FactoryBot.create_list(:public_body, 3) }
@@ -742,37 +653,10 @@ RSpec.describe InfoRequestBatch do
     end
 
     it 'calls `log_event` on all information requests in a batch' do
-      arguments = double(:args)
       info_request_batch.info_requests.each do |request|
-        expect(request).to receive(:log_event).with(arguments)
+        expect(request).to receive(:log_event).with('edit', {})
       end
-      info_request_batch.log_event(arguments)
-    end
-  end
-
-  describe '#is_owning_user?' do
-    subject { info_request_batch.is_owning_user?(user) }
-
-    let(:info_request_batch) { FactoryBot.create(:info_request_batch) }
-
-    context 'with no user' do
-      let(:user) { nil }
-      it { is_expected.to eq(false) }
-    end
-
-    context 'with the batch owner' do
-      let(:user) { info_request_batch.user }
-      it { is_expected.to eq(true) }
-    end
-
-    context 'with an admin' do
-      let(:user) { mock_model(User, owns_every_request?: true) }
-      it { is_expected.to eq(true) }
-    end
-
-    context 'with a non-owner user' do
-      let(:user) { mock_model(User, owns_every_request?: false) }
-      it { is_expected.to eq(false) }
+      info_request_batch.log_event('edit', {})
     end
   end
 

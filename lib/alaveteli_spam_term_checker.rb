@@ -1,3 +1,5 @@
+# Matches text against a configurable list of spam regular expressions; used by
+# NewRequestChecks to inspect new request subjects.
 class AlaveteliSpamTermChecker
   DEFAULT_SPAM_TERMS = [
     /Freedom of Information request - [\{\[\|]/i,
@@ -69,10 +71,10 @@ class AlaveteliSpamTermChecker
 
   def initialize(terms = nil)
     @spam_terms = if terms
-      build_terms(terms)
-    else
-      self.class.default_spam_terms
-    end
+                    build_terms(terms)
+                  else
+                    self.class.default_spam_terms
+                  end
   end
 
   def spam?(term)

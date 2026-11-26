@@ -110,14 +110,6 @@ Rails.application.configure do
     config.action_mailer.delivery_method = :sendmail
   end
 
-  # Allow any IP address in the range 10.10.10.x to access the web console
-  config.web_console.allowed_ips = '10.10.10.0/16'
-
-  # Writes useful log files to debug memory leaks, of the sort where have
-  # unintentionally kept references to objects, especially strings.
-  # require 'memory_profiler'
-  # MemoryProfiler.start :string_debug => true, :delay => 10
-
   if AlaveteliConfiguration.use_bullet_in_development
     config.after_initialize do
       Bullet.enable = true

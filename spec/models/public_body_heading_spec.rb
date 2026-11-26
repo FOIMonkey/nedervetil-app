@@ -34,7 +34,7 @@ RSpec.describe PublicBodyHeading do
 
     it 'validates the translations' do
       heading = FactoryBot.build(:public_body_heading)
-      translation = heading.translations.build
+      heading.translations.build
       expect(heading).to_not be_valid
     end
   end
@@ -47,7 +47,7 @@ RSpec.describe PublicBodyHeading do
 
     it 'should return one more than the highest display order if there are public body headings' do
       PublicBodyHeading.destroy_all
-      heading = FactoryBot.create(:public_body_heading)
+      FactoryBot.create(:public_body_heading)
       expect(PublicBodyHeading.next_display_order).to eq(1)
     end
   end
@@ -56,7 +56,7 @@ RSpec.describe PublicBodyHeading do
     it 'saves translations' do
       heading = FactoryBot.build(:public_body_heading)
       heading.translations_attributes = { es: { locale: 'es',
-                                                   name: 'El Heading' } }
+                                                name: 'El Heading' } }
 
       heading.save!
       expect(PublicBodyHeading.find(heading.id).translations.size).to eq(2)
@@ -68,7 +68,7 @@ RSpec.describe PublicBodyHeading do
       it 'does not persist translations' do
         heading = FactoryBot.create(:public_body_heading)
         heading.translations_attributes = { es: { locale: 'es',
-                                                     name: 'El Heading' } }
+                                                  name: 'El Heading' } }
 
         expect(PublicBodyHeading.find(heading.id).translations.size).to eq(1)
       end
@@ -76,7 +76,7 @@ RSpec.describe PublicBodyHeading do
       it 'creates a new translation' do
         heading = FactoryBot.create(:public_body_heading)
         heading.translations_attributes = { es: { locale: 'es',
-                                                     name: 'El Heading' } }
+                                                  name: 'El Heading' } }
         heading.save!
         heading.reload
         expect(heading.name(:es)).to eq('El Heading')
@@ -88,9 +88,11 @@ RSpec.describe PublicBodyHeading do
                                                       name: 'Name' } }
         heading.save!
 
-        heading.translations_attributes = { 'es' => { id: heading.translation_for(:es).id,
-                                                      locale: 'es',
-                                                      name: 'Renamed' } }
+        heading.translations_attributes = {
+          'es' => { id: heading.translation_for(:es).id,
+                    locale: 'es',
+                    name: 'Renamed' }
+        }
         heading.save!
         expect(heading.name(:es)).to eq('Renamed')
       end

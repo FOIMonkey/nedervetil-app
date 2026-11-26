@@ -1,5 +1,7 @@
 class OutgoingMessage
   module Template
+    # Default letter template for batch requests, using a placeholder
+    # salutation that OutgoingMessage.fill_in_salutation fills per authority.
     class BatchRequest
       def self.placeholder_salutation
         _('Dear [Authority name],')
@@ -32,7 +34,7 @@ class OutgoingMessage
         msg += letter(replacements)
         msg += "\n\n\n\n"
         msg += signoff(replacements)
-        msg += "\n\n"
+        msg + "\n\n"
       end
     end
   end

@@ -26,18 +26,21 @@ module InfoRequest::Guessable
       guesses.select(&:info_request).uniq(&:info_request)
     end
 
-    # Public: Attempt to find InfoRequests by matching against extracted `subject`
-    # element of an `incoming_email`.
+    # Public: Attempt to find InfoRequests by matching against extracted
+    # `subject` element of an `incoming_email`.
     #
     # subject_line - A String an email subject line
     # Returns an Array
     def guess_by_incoming_subject(subject_line)
       return [] unless subject_line
 
-      # try to find a match on InfoRequest#title
-      reply_format = InfoRequest.new(title: '').email_subject_followup
+      # try to find a match on InfoRequest#title. The site's subject is text,
+      # not a pattern: a law's name may hold brackets.
+      reply_format = InfoRequest.new(title: '').
+        email_subject_followup(html: false)
       requests_by_title = InfoRequest.left_joins(:incoming_messages).
-        where(title: subject_line.gsub(/#{reply_format}/i, '').strip)
+        where(title: subject_line.gsub(/#{Regexp.escape(reply_format)}/i, '').
+                       strip)
 
       # try to find a match on IncomingMessage#subject
       requests_by_subject = InfoRequest.left_joins(:incoming_messages).
@@ -61,14 +64,14 @@ module InfoRequest::Guessable
     # Internal function used by guess_by_incoming_email
     def _guess_idhash_from_email(incoming_email)
       incoming_email = incoming_email.downcase
-      incoming_email =~ /request\-?(\w+)-?(\w{8})@/
+      id_string, id_hash =
+        incoming_email.match(/request\-?(\w+)-?(\w{8})@/)&.captures
 
-      id = _id_string_to_i(_clean_idhash($1))
-      id_hash = $2
+      id = _id_string_to_i(_clean_idhash(id_string))
 
       if id_hash.nil? && incoming_email.include?('@')
         # try to grab the last 8 chars of the local part of the address instead
-        local_part = incoming_email[0..incoming_email.index('@') - 1]
+        local_part = incoming_email[0..(incoming_email.index('@') - 1)]
         id_hash =
           (_clean_idhash(local_part[-8..-1]) if local_part.length >= 8)
       end

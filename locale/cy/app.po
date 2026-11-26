@@ -429,9 +429,6 @@ msgstr "Gweithredoedd"
 msgid "Add a widget"
 msgstr "Ychwanegu teclyn"
 
-msgid "Add an annotation"
-msgstr "Ychwanegu anodiad"
-
 msgid "Add an annotation to &ldquo;{{request_title}}&rdquo;"
 msgstr "Ychwanegu anodiad at &ldquo;{{request_title}}&rdquo;"
 
@@ -1235,9 +1232,6 @@ msgstr "Dilynwch y ddolen hon i weld y ceisiadau:"
 
 msgid "Follow this person"
 msgstr "Dilynwch y person hwn"
-
-msgid "Follow this request"
-msgstr "Dilynwch y cais hwn"
 
 #. TRANSLATORS: "Follow up" in this context means a further
 #. message sent by the requester to the authority after
@@ -3211,9 +3205,6 @@ msgid "There is nothing to display yet."
 msgstr "Does dim i'w ddangos eto."
 
 msgid "There was a <strong>delivery error</strong> or similar, which needs fixing by the {{site_name}} team. Can you help by <a href=\"{{change_request_url}}\">finding updated contact details</a>?"
-msgstr ""
-
-msgid "There was an error with the reCAPTCHA. Please try again."
 msgstr ""
 
 msgid "There was no data calculated for this graph yet."

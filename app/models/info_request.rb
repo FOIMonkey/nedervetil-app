@@ -4,22 +4,19 @@
 #
 #  id                                    :integer          not null, primary key
 #  title                                 :text             not null
-#  user_id                               :integer
+#  user_id                               :integer          not null
 #  public_body_id                        :integer          not null
 #  created_at                            :datetime         not null
 #  updated_at                            :datetime         not null
 #  described_state                       :string           not null
 #  awaiting_description                  :boolean          default(FALSE), not null
-#  prominence                            :string           default("normal"), not null
+#  prominence                            :string           default("requester_only"), not null
 #  url_title                             :text             not null
 #  law_used                              :string           default("foi"), not null
 #  allow_new_responses_from              :string           default("anybody"), not null
 #  handle_rejected_responses             :string           default("bounce"), not null
 #  idhash                                :string           not null
-#  external_user_name                    :string
-#  external_url                          :string
 #  attention_requested                   :boolean          default(FALSE)
-#  comments_allowed                      :boolean          default(TRUE), not null
 #  info_request_batch_id                 :integer
 #  last_public_response_at               :datetime
 #  reject_incoming_at_mta                :boolean          default(FALSE), not null
@@ -31,16 +28,18 @@
 #  use_notifications                     :boolean
 #  last_event_time                       :datetime
 #  incoming_messages_count               :integer          default(0)
-#  public_token                          :string
 #  prominence_reason                     :text
+#  last_activity_at                      :datetime
 #
 
 require 'digest/sha1'
 require 'fileutils'
 
+# A private FOI request from a User to a PublicBody, coordinating messages,
+# events, deadlines, censor rules, gatekeeping, prominence and status.
 class InfoRequest < ApplicationRecord
-  REPORTED_STATES = %w[attention_requested requires_admin].freeze
   OLD_AGE_IN_DAYS = 21.days
+  REPORTED_STATES = %w[attention_requested requires_admin].freeze
 
   include Rails.application.routes.url_helpers
   include LinkToHelper
@@ -49,7 +48,6 @@ class InfoRequest < ApplicationRecord
   include Searchable
   include Taggable
   include Notable
-  include RateLimited
   include Redactable
 
   include AlaveteliPro::RequestSummaries
@@ -60,10 +58,16 @@ class InfoRequest < ApplicationRecord
   include InfoRequest::HoldingPen
   include InfoRequest::MagicEmail
   include InfoRequest::Masking
-  include InfoRequest::PublicToken
   include InfoRequest::Sluggable
   include InfoRequest::TitleValidation
 
+  # Why #revert_report! refuses; #report_reversion_blocker says which applies.
+  RevertReportError = Class.new(StandardError)
+  NotReportedError = Class.new(RevertReportError)
+  UnreadRepliesError = Class.new(RevertReportError)
+  NoClassificationBeforeReportError = Class.new(RevertReportError)
+  SentSinceReportError = Class.new(RevertReportError)
+  StaleReportError = Class.new(RevertReportError)
 
   admin_columns exclude: %i[title url_title],
                 include: %i[rejected_incoming_count]
@@ -72,22 +76,18 @@ class InfoRequest < ApplicationRecord
     'Request'
   end
 
-  rate_limited 1 => 1.minute, 2 => 8.minutes, 3 => 15.minutes, 5 => 1.hour
-
-  strip_attributes allow_empty: true
-  strip_attributes only: [:title],
-                   replace_newlines: true, collapse_spaces: true
+  normalizes :described_state, :prominence, :url_title, :law_used,
+             :allow_new_responses_from, :handle_rejected_responses, :idhash,
+             :prominence_reason, with: Whitespace::TRIM
+  normalizes :title, with: Whitespace::ONE_LINE
 
   belongs_to :user,
              inverse_of: :info_requests,
              counter_cache: true,
              optional: true
 
-  validate :must_be_internal_or_external
-
   belongs_to :public_body,
              inverse_of: :info_requests,
-             counter_cache: true,
              validate: false
   belongs_to :info_request_batch,
              inverse_of: :info_requests,
@@ -110,22 +110,6 @@ class InfoRequest < ApplicationRecord
   has_many :user_info_request_sent_alerts,
            inverse_of: :info_request,
            dependent: :destroy
-  has_many :track_things,
-           -> { order(created_at: :desc) },
-           inverse_of: :info_request,
-           dependent: :destroy
-  has_many :widget_votes,
-           inverse_of: :info_request,
-           dependent: :destroy
-  has_many :citations,
-           -> (info_request) { unscope(:where).for_request(info_request) },
-           as: :citable,
-           inverse_of: :citable,
-           dependent: :destroy
-  has_many :comments,
-           -> { order(:created_at) },
-           inverse_of: :info_request,
-           dependent: :destroy
   has_many :censor_rules,
            -> { order(created_at: :desc) },
            as: :censorable,
@@ -135,54 +119,14 @@ class InfoRequest < ApplicationRecord
            -> { order(:mail_server_log_done_id, :order) },
            inverse_of: :info_request,
            dependent: :destroy
-  has_one :embargo,
-          inverse_of: :info_request,
-          class_name: 'AlaveteliPro::Embargo',
-          dependent: :destroy
-  before_destroy :destroy_documents
-  after_update :invalidate_attention_predictions
-  has_many :deadline_adjustments, class_name: 'Deadlines::Adjustment',
-                                  inverse_of: :info_request,
-                                  dependent: :delete_all
-  has_many :deadline_closures, class_name: 'Deadlines::Closure',
-                               inverse_of: :info_request,
-                               dependent: :delete_all
-  after_create :request_limits_record
-
-  # Preloaded by Deadlines::Stage to avoid per-row queries on list views.
-  attr_accessor :thread_shared
-  attr_accessor :deadlines_auto_classified_ids, :deadlines_batch
-
   has_many :foi_attachments, through: :incoming_messages
-
-  has_many :project_submissions, class_name: 'Project::Submission'
-  has_many :classification_project_submissions,
-           -> { classification },
-           class_name: 'Project::Submission'
-  has_many :extraction_project_submissions,
-           -> { extraction },
-           class_name: 'Project::Submission'
-
-  has_many :insights, dependent: :destroy
 
   attr_reader :followup_bad_reason
 
   scope :via_batch, -> { where.not(info_request_batch_id: nil) }
 
-  scope :internal, -> { where.not(user_id: nil) }
-  scope :external, -> { where(user_id: nil) }
-
-  scope :pro, ProQuery.new
-  scope :is_public, Prominence::PublicQuery.new
-  scope :is_searchable, Prominence::SearchableQuery.new
-  scope :embargoed, Prominence::EmbargoedQuery.new
-  scope :not_embargoed, Prominence::NotEmbargoedQuery.new
-  scope :ever_embargoed, Prominence::EverEmbargoedQuery.new
-  scope :never_embargoed, Prominence::NeverEmbargoedQuery.new
-  scope :embargo_expiring, Prominence::EmbargoExpiringQuery.new
-  scope :embargo_expired_today, Prominence::EmbargoExpiredTodayQuery.new
+  # rubocop:disable Rails/ScopeArgs -- callable query objects implementing #call
   scope :visible_to_requester, Prominence::VisibleToRequesterQuery.new
-  scope :been_published, Prominence::BeenPublishedQuery.new
 
   scope :awaiting_response, State::AwaitingResponseQuery.new
   scope :response_received, State::ResponseReceivedQuery.new
@@ -192,21 +136,22 @@ class InfoRequest < ApplicationRecord
   scope :overdue, State::OverdueQuery.new
   scope :very_overdue, State::VeryOverdueQuery.new
 
-  scope :for_project, Project::InfoRequestQuery.new
-
-  scope :surveyable, Survey::InfoRequestQuery.new
-
   class << self
     alias in_progress awaiting_response
   end
   scope :action_needed, State::ActionNeededQuery.new
-  scope :updated_before, ->(ts) { where('"info_requests"."updated_at" < ?', ts) }
+  # rubocop:enable Rails/ScopeArgs
+  scope :updated_before,
+        ->(ts) { where('"info_requests"."updated_at" < ?', ts) }
 
-  # user described state (also update in info_request_event, admin_request/edit.rhtml)
+  # user described state (also update in info_request_event,
+  # admin/requests/edit)
   validate :must_be_valid_state
   validates_inclusion_of :prominence, in: Prominence::VALUES
 
   validates_inclusion_of :law_used, in: Legislation.keys
+
+  before_create { self.last_activity_at ||= Time.current }
 
   # who can send new responses
   validates_inclusion_of :allow_new_responses_from, in: [
@@ -224,11 +169,23 @@ class InfoRequest < ApplicationRecord
   after_initialize :set_defaults
   before_create :set_use_notifications
   before_validation :set_law_used, on: :create
-  after_create :notify_associations
-  after_save :update_counter_cache
-  after_update :reindex_request_events, if: :reindexable_attribute_changed?
   before_destroy :expire
-  after_destroy :notify_associations, :update_counter_cache
+
+  # Callback order matters: run after core validation/expire callbacks, and
+  # save deadline associations before request_limits_record runs.
+  after_update :invalidate_attention_predictions
+  before_destroy :destroy_documents
+  has_many :deadline_adjustments, class_name: 'Deadlines::Adjustment',
+                                  inverse_of: :info_request,
+                                  dependent: :delete_all
+  has_many :deadline_closures, class_name: 'Deadlines::Closure',
+                               inverse_of: :info_request,
+                               dependent: :delete_all
+  after_create :request_limits_record
+
+  # Preloaded by Deadlines::Stage to avoid per-row queries on list views.
+  attr_accessor :thread_shared
+  attr_accessor :deadlines_auto_classified_ids, :deadlines_batch
 
   searchable PrivateArchive::Policy.searchable_options(
     index: {
@@ -240,26 +197,20 @@ class InfoRequest < ApplicationRecord
     }
   )
 
-  # Subset of states accepted via the API
-  def self.allowed_incoming_states
-    %w[
-      waiting_response
-      rejected
-      successful
-      partially_successful
-    ]
-  end
-
   def self.custom_states_loaded
     @@custom_states_loaded
   end
 
-  # When constructing a new request, use this to check user hasn't double submitted.
-  # TODO: could have a date range here, so say only check last month's worth of new requests. If somebody is making
-  # repeated requests, say once a quarter for time information, then might need to do that.
+  # When constructing a new request, use this to check user hasn't double
+  # submitted.
+  # TODO: could have a date range here, so say only check last month's worth
+  # of new requests. If somebody is making repeated requests, say once a
+  # quarter for time information, then might need to do that.
   # TODO: this *should* also check outgoing message joined to is an initial
   # request (rather than follow up)
-  def self.find_existing(title, public_body_id, body, within: InfoRequest.all)
+  # `within:` is required so callers never search across other users' private
+  # requests by default.
+  def self.find_existing(title, public_body_id, body, within:)
     conditions = { title: title&.squish, public_body_id: public_body_id }
 
     within.
@@ -279,17 +230,17 @@ class InfoRequest < ApplicationRecord
   # Display version of status
   def self.get_status_description(status)
     descriptions = {
-      'waiting_classification' => _("Awaiting classification"),
-      'waiting_response' => _("Awaiting response"),
-      'waiting_response_overdue' => _("Delayed"),
-      'waiting_response_very_overdue' => _("Long overdue"),
-      'not_held' => _("Information not held"),
-      'rejected' => _("Refused"),
-      'partially_successful' => _("Partially successful"),
-      'successful' => _("Successful"),
+      'waiting_classification' => _('Waiting classification'),
+      'waiting_response' => _('Waiting response'),
+      'waiting_response_overdue' => _('Waiting response, overdue'),
+      'waiting_response_very_overdue' => _('Waiting response, long overdue'),
+      'not_held' => _('No information'),
+      'rejected' => _('No information'),
+      'partially_successful' => _('Some information provided'),
+      'successful' => _('All information provided'),
       'waiting_clarification' => _("Waiting clarification"),
       'gone_postal' => _("Handled by postal mail"),
-      'internal_review' => _("Awaiting internal review"),
+      'internal_review' => _('Internal review'),
       'under_appeal' => _('Under appeal'),
       'error_message' => _("Delivery error"),
       'requires_admin' => _("Unusual response"),
@@ -307,7 +258,7 @@ class InfoRequest < ApplicationRecord
     end
   end
 
-  def self.build_from_attributes(info_request_atts, outgoing_message_atts, user=nil)
+  def self.build_from_attributes(info_request_atts, outgoing_message_atts, user = nil)
     info_request = new(info_request_atts)
     default_message_params = {
       status: 'ready',
@@ -316,10 +267,6 @@ class InfoRequest < ApplicationRecord
     }
 
     attrs = outgoing_message_atts.merge(default_message_params)
-
-    if attrs.respond_to?(:permit)
-      attrs.permit(:body, :what_doing, :status, :message_type, :what_doing)
-    end
 
     outgoing_message = OutgoingMessage.new(attrs)
     info_request.outgoing_messages << outgoing_message
@@ -337,34 +284,10 @@ class InfoRequest < ApplicationRecord
                                        message_type: 'initial_request',
                                        what_doing: 'normal_sort',
                                        info_request: info_request)
-    if draft.embargo_duration
-      info_request.embargo = AlaveteliPro::Embargo.new(
-        embargo_duration: draft.embargo_duration,
-        info_request: info_request
-      )
-    end
     info_request
   end
 
-  # Used to find when event last changed
-  def self.last_event_time_clause(event_type=nil, join_table=nil, join_clause=nil)
-    event_type_clause = ''
-    if event_type
-      event_type_clause = " AND info_request_events.event_type = '#{event_type}'"
-    end
-    tables = ['info_request_events']
-    tables << join_table if join_table
-    join_clause = "AND #{join_clause}" if join_clause
-    "(SELECT info_request_events.created_at
-          FROM #{tables.join(', ')}
-          WHERE info_request_events.info_request_id = info_requests.id
-          #{event_type_clause}
-          #{join_clause}
-          ORDER BY created_at desc
-          LIMIT 1)"
-  end
-
-  def self.where_old_unclassified(age_in_days=nil)
+  def self.where_old_unclassified(age_in_days = nil)
     age_in_days =
       if age_in_days
         age_in_days.days
@@ -377,10 +300,6 @@ class InfoRequest < ApplicationRecord
           AND url_title != 'holding_pen'
           AND user_id IS NOT NULL",
           true, Time.zone.now - age_in_days)
-  end
-
-  def self.download_zip_dir
-    File.join(Rails.root, "cache", "zips", Rails.env)
   end
 
   def self.reject_incoming_at_mta(options)
@@ -413,7 +332,6 @@ class InfoRequest < ApplicationRecord
     # 'old' months since last change to request, only allow new incoming
     # messages from authority domains
     InfoRequest.
-      been_published.
       where(allow_new_responses_from: 'anybody').
       where.not(url_title: 'holding_pen').
       updated_before(requests_old_after_months.months.ago.to_date).
@@ -437,7 +355,6 @@ class InfoRequest < ApplicationRecord
     # 'very_old' months since last change to request, don't allow any new
     # incoming messages
     InfoRequest.
-      been_published.
       where(allow_new_responses_from: %w[anybody authority_only]).
       where.not(url_title: 'holding_pen').
       updated_before(requests_very_old_after_months.months.ago.to_date).
@@ -459,19 +376,6 @@ class InfoRequest < ApplicationRecord
       end
   end
 
-  def self.request_list(_filters, _page, _per_page, _max_results)
-    Search::Results.new(items: [], total_estimate: 0)
-  end
-
-  def self.recent_requests
-    []
-  end
-
-  def self.find_in_state(state)
-    where(described_state: state).
-      order(:last_event_time)
-  end
-
   def self.log_overdue_events
     log_overdue_event_type('overdue')
   end
@@ -482,13 +386,13 @@ class InfoRequest < ApplicationRecord
 
   def self.log_overdue_event_type(event_type)
     date_field = case event_type
-    when 'overdue'
-      'date_response_required_by'
-    when 'very_overdue'
-      'date_very_overdue_after'
-    else
-      raise ArgumentError("Event type #{event_type} not handled")
-    end
+                 when 'overdue'
+                   'date_response_required_by'
+                 when 'very_overdue'
+                   'date_very_overdue_after'
+                 else
+                   raise ArgumentError, "Event type #{event_type} not handled"
+                 end
 
     query =
       where(["awaiting_description = ?
@@ -520,7 +424,8 @@ class InfoRequest < ApplicationRecord
     %w(sent resent followup_sent followup_resent send_error)
   end
 
-  # Possible reasons that a request could be reported for administrator attention
+  # Possible reasons that a request could be reported for administrator
+  # attention
   def report_reasons
     [_("Contains defamatory material"),
      _("Not a valid request"),
@@ -552,113 +457,42 @@ class InfoRequest < ApplicationRecord
     State::Calculator.new(self)
   end
 
-  def indexed_by_search?
-    prominence(decorate: true).is_searchable?
-  end
-
-  # The request must either be internal, in which case it has
-  # a foreign key reference to a User object and no external_url or external_user_name,
-  # or else be external in which case it has no user_id but does have an external_url,
-  # and may optionally also have an external_user_name.
-  #
-  # External requests are requests that have been added using the API, whereas internal
-  # requests are requests made using the site.
-  def must_be_internal_or_external
-    # We must permit user_id and external_user_name both to be nil, because the system
-    # allows a request to be created by a non-logged-in user.
-    if user_id
-      unless external_user_name.nil?
-        errors.add(:external_user_name, "must be null for an internal request")
-      end
-      unless external_url.nil?
-        errors.add(:external_url, "must be null for an internal request")
-      end
-    end
-  end
-
   def internal_review_requested?
     outgoing_messages.where(what_doing: 'internal_review').any?
   end
 
-  def is_external?
-    external_url.nil? ? false : true
-  end
-
   def user_name
-    return external_user_name if is_external?
-
     user&.name
   end
 
   def from_name
-    return external_user_name if is_external?
-
     outgoing_messages.first&.from_name || user_name
   end
 
   def safe_from_name
-    return external_user_name if is_external?
-
     apply_all_masks(from_name, 'text/plain',
                     redactable: self, redacted_attribute: :from_name)
   end
 
-  def user_name_slug
-    if is_external?
-      if external_user_name.nil?
-        fake_slug = "anonymous"
-      else
-        fake_slug = MySociety::Format.simplify_url_part(external_user_name, 'external_user', 32)
-      end
-      (public_body.url_name || "") + "_" + fake_slug
-    else
-      user.url_name
-    end
-  end
-
-  def user_json_for_api
-    is_external? ? { name: user_name || _("Anonymous user") } : user.json_for_api
-  end
-
+  # Classifiable keeps the controllers' copy of this flag the same way.
+  # rubocop:disable Style/ClassVars -- set once at load; specs switch it on
   @@custom_states_loaded = false
   begin
     require 'customstates'
     include InfoRequestCustomStates
     @@custom_states_loaded = true
   rescue LoadError, NameError
+    # No theme provides custom states; use the base ones.
   end
+  # rubocop:enable Style/ClassVars
 
-  def reindex_request_events
-    info_request_events.find_each(&:reindex)
-  end
-
-  # Force reindex when tag string changes
-  alias orig_tag_string= tag_string=
-  def tag_string=(tag_string)
-    ret = self.orig_tag_string=(tag_string)
-    reindex_request_events
-    ret
-  end
-
-  def expire(options={})
-    # Clear any attachment masked_at timestamp, forcing attachments to be
-    # reparsed
+  def expire(options = {})
     clear_attachment_masks! unless options[:preserve_attachment_masks]
 
-    # Clear out cached entries, by removing files from disk (the built in
-    # Rails fragment cache made doing this and other things too hard)
     foi_fragment_cache_directories.each { |dir| FileUtils.rm_rf(dir) }
-
-    # Remove any download zips
-    FileUtils.rm_rf(download_zip_dir)
     RegulatorPack.purge_for_request!(id)
 
-    # Remove the database caches of body / attachment text (the attachment text
-    # one is after privacy rules are applied)
     clear_in_database_caches! unless options[:preserve_database_cache]
-
-    # also force a search reindexing (so changed text reflected in search)
-    reindex_request_events
   end
 
   def clear_attachment_masks!
@@ -682,7 +516,7 @@ class InfoRequest < ApplicationRecord
   end
 
   def update_last_public_response_at
-    last_public_event = get_last_public_response_event
+    last_public_event = last_public_response_event
     if last_public_event
       self.last_public_response_at = last_public_event.created_at
     else
@@ -692,11 +526,11 @@ class InfoRequest < ApplicationRecord
   end
 
   # Remove spaces from ends (for when used in emails etc.)
-  # Needed for legacy reasons, even though we call strip_attributes now
+  # Needed for titles stored before they were normalised
   def title
-    _title = read_attribute(:title)
-    _title.strip! if _title
-    _title
+    title = read_attribute(:title)
+    title.strip! if title
+    title
   end
 
   def incoming_name_and_email
@@ -705,18 +539,23 @@ class InfoRequest < ApplicationRecord
 
   # Subject lines for emails about the request
   def email_subject_request(opts = {})
-    html = opts.fetch(:html, true)
-    _('{{law_used_full}} request - {{title}}',
-      law_used_full: legislation.to_s(:full),
-      title: (html ? title : title.html_safe))
+    values = { law_used_full: legislation.to_s(:full), title: title }
+    if opts.fetch(:html, true)
+      _('{{law_used_full}} request - {{title}}', values)
+    else
+      PlainTextTranslation._('{{law_used_full}} request - {{title}}', values)
+    end
   end
 
   def email_subject_followup(opts = {})
     incoming_message = opts.fetch(:incoming_message, nil)
     html = opts.fetch(:html, true)
-    if incoming_message.nil? || !incoming_message.valid_to_reply_to? || !incoming_message.subject
-      'Re: ' + email_subject_request(html: html)
-    elsif incoming_message.subject.match(/^Re:/i)
+    if incoming_message.nil? || !incoming_message.followup_to_sender? ||
+       !incoming_message.subject
+      # Text to text, and HTML to HTML: a page escapes a plain String again.
+      subject = email_subject_request(html: html)
+      html ? ERB::Util.html_escape('Re: ') + subject : "Re: #{subject}"
+    elsif /^Re:/i.match?(incoming_message.subject)
       incoming_message.subject
     else
       'Re: ' + incoming_message.subject
@@ -733,29 +572,30 @@ class InfoRequest < ApplicationRecord
     outgoing_messages.with_body(body).first
   end
 
-  # Has this email already been received here? Based just on message id.
-  def already_received?(mail)
-    return false unless mail.message_id
+  # Deduplicates by inbound message_id (or checksum-derived ID when absent)
+  # so re-routed mail is not recorded twice.
+  def already_received?(mail, message_id = nil)
+    message_id ||= mail.message_id
+    return false unless message_id
 
-    incoming_messages.any? { mail.message_id == _1.message_id }
+    incoming_messages.any? { message_id == _1.message_id }
   end
 
   def receive(mail, override_stop_new_responses: false, rejected_reason: nil,
               message_id: nil, message_checksum: nil)
-    return if already_received?(mail)
+    return if already_received?(mail, message_id)
 
-    accepted = override_stop_new_responses || accept_incoming?(mail)
+    accepted = override_stop_new_responses || accept_incoming?(
+      mail, message_id: message_id, message_checksum: message_checksum
+    )
     return unless accepted
 
     incoming_message = create_response!(
       mail, rejected_reason: rejected_reason, message_id: message_id,
-      message_checksum: message_checksum
+            message_checksum: message_checksum
     )
 
-    # Notify the user that a new response has been received, unless the
-    # request is external
-    return if is_external?
-
+    # Notify the user that a new response has been received
     if use_notifications?
       info_request_event = info_request_events.find_by(
         event_type: 'response',
@@ -787,16 +627,6 @@ class InfoRequest < ApplicationRecord
     update(allow_new_responses_from: 'anybody', reject_incoming_at_mta: false)
   end
 
-  # An annotation (comment) is made
-  def add_comment(comment)
-    ActiveRecord::Base.transaction do
-      comments << comment
-      log_event('comment', comment_id: comment.id)
-      save!
-    end
-    comment
-  end
-
   def requires_admin?
     self.class.requires_admin_states.include?(described_state)
   end
@@ -818,15 +648,36 @@ class InfoRequest < ApplicationRecord
         attention_requested: true
       )
 
-      set_described_state('attention_requested', user, "Reason: #{reason}\n\n#{message}")
-      self.attention_requested = true # tells us if attention has ever been requested
+      set_described_state('attention_requested', user,
+                          "Reason: #{reason}\n\n#{message}")
+      # tells us if attention has ever been requested
+      self.attention_requested = true
       save!
     end
   end
 
+  delegate :last_report_event,
+           :last_classification_event_before_report,
+           :classification_before_report,
+           :replies_classified_by_report,
+           to: :report_reversion
+
+  def report_reversion
+    InfoRequest::ReportReversion.new(self)
+  end
+
+  def revert_report!(editor:, report_event_id: nil)
+    report_reversion.revert!(editor: editor, report_event_id: report_event_id)
+  end
+
+  def report_reversion_blocker
+    report_reversion.blocker
+  end
+
   # change status, including for last event for later historical purposes
-  # described_state should always indicate the current state of the request, as described
-  # by the request owner (or, in some other cases an admin or other user)
+  # described_state should always indicate the current state of the request, as
+  # described by the request owner (or, in some other cases an admin or other
+  # user)
   def set_described_state(new_state, set_by = nil, message = "")
     if IncomingAttention::Classification.automatic?
       return change_described_state(new_state, set_by, message)
@@ -845,7 +696,9 @@ class InfoRequest < ApplicationRecord
     end
   end
 
+  # Normalizes not_held to rejected so lists, filters and search use one state.
   private def change_described_state(new_state, set_by, message)
+    new_state = 'rejected' if new_state == 'not_held'
     old_described_state = described_state
     ActiveRecord::Base.transaction do
       self.awaiting_description = false
@@ -859,38 +712,47 @@ class InfoRequest < ApplicationRecord
 
     calculate_event_states
 
-    if old_described_state != described_state && requires_admin?
-      # Check there is someone to send the message "from"
-      if set_by && user
-        RequestMailer.requires_admin(self, set_by, message).deliver_now
-      end
-    end
+    return unless old_described_state != described_state && requires_admin?
+
+    # Check there is someone to send the message "from"
+    return unless set_by && user
+
+    RequestMailer.requires_admin(self, set_by, message).deliver_now
   end
 
-  # Work out what state to display for the request on the site. In addition to values of
-  # self.described_state, can take these values:
+  # Work out what state to display for the request on the site. In addition to
+  # values of self.described_state, can take these values:
   #   waiting_classification
   #   waiting_response_overdue
   #   waiting_response_very_overdue
-  # (this method adds an assessment of overdueness with respect to the current time to 'waiting_response'
-  # states, and will return 'waiting_classification' instead of the described_state if the
-  # awaiting_description flag is set on the request).
-  def calculate_status(cached_value_ok=false)
+  # (this method adds an assessment of overdueness with respect to the current
+  # time to 'waiting_response' states, and will return 'waiting_classification'
+  # instead of the described_state if the awaiting_description flag is set on
+  # the request).
+  def calculate_status(cached_value_ok = false)
     if cached_value_ok && @cached_calculated_status
       return @cached_calculated_status
     end
 
-    @cached_calculated_status = @@custom_states_loaded ? theme_calculate_status : base_calculate_status
+    @cached_calculated_status = if @@custom_states_loaded
+                                  theme_calculate_status
+                                else
+                                  base_calculate_status
+                                end
   end
 
   def base_calculate_status
     return 'waiting_classification' if awaiting_description
     return described_state unless described_state == "waiting_response"
     # Compare by date, so only overdue on next day, not if 1 second late
-    return 'waiting_response_very_overdue' if
-    Time.zone.now.strftime("%Y-%m-%d") > date_very_overdue_after.strftime("%Y-%m-%d")
-    return 'waiting_response_overdue' if
-    Time.zone.now.strftime("%Y-%m-%d") > date_response_required_by.strftime("%Y-%m-%d")
+    if Time.zone.now.strftime("%Y-%m-%d") >
+       date_very_overdue_after.strftime("%Y-%m-%d")
+      return 'waiting_response_very_overdue'
+    end
+    if Time.zone.now.strftime("%Y-%m-%d") >
+       date_response_required_by.strftime("%Y-%m-%d")
+      return 'waiting_response_overdue'
+    end
 
     'waiting_response'
   end
@@ -906,14 +768,18 @@ class InfoRequest < ApplicationRecord
   # (inclusive of earlier), and set it as calculated value for the earlier
   # response. Also set the calculated state for any initial outgoing message,
   # follow up, edit or status_update to the described state of that event.
+  #
+  # A report (REPORTED_STATES) only labels a response when no other state
+  # intervened, so reporting never erases a prior classification.
 
-  # Note that the calculated state of the latest info_request_event will
-  # be used in latest_status based searches and should match the described_state
-  # of the info_request.
+  # The calculated state of the latest info_request_event is the request's
+  # status, so it should match the described_state of the info_request.
   def calculate_event_states
     curr_state = nil
-    info_request_events.reverse.each do |event|
-      if curr_state.nil?
+    info_request_events.reverse_each do |event|
+      if curr_state.nil? || (REPORTED_STATES.include?(curr_state) &&
+                             event.described_state &&
+                             !REPORTED_STATES.include?(event.described_state))
         curr_state = event.described_state if event.described_state
       end
 
@@ -925,12 +791,16 @@ class InfoRequest < ApplicationRecord
           event.save!
         end
         curr_state = nil
-      elsif curr_state && (event.event_type == 'followup_sent' || event.event_type == 'sent') && event.described_state && (event.described_state == 'waiting_response' || event.described_state == 'internal_review')
+      elsif curr_state &&
+            (event.event_type == 'followup_sent' ||
+             event.event_type == 'sent') &&
+            event.described_state &&
+            (event.described_state == 'waiting_response' ||
+             event.described_state == 'internal_review')
         # Followups can set the status to waiting response / internal
         # review. Initial requests ('sent') set the status to waiting response.
 
-        # We want to store that in calculated_state state so it gets
-        # indexed.
+        # We want to store that in calculated_state.
         event.set_calculated_state!(event.described_state)
 
         # And we don't want to propagate it to the response itself,
@@ -938,12 +808,12 @@ class InfoRequest < ApplicationRecord
         # success status, which we want to know about.
         curr_state = nil
       elsif curr_state && (%w[edit status_update].include? event.event_type)
-        # A status update or edit event should get the same calculated state as described state
-        # so that the described state is always indexed (and will be the latest_status
-        # for the request immediately after it has been described, regardless of what
-        # other request events precede it). This means that request should be correctly included
-        # in status searches for that status. These events allow the described state to propagate in
-        # case there is a preceding response that the described state should be applied to.
+        # A status update or edit event should get the same calculated state
+        # as described state, so that the described state is the latest
+        # calculated state immediately after the request has been described,
+        # regardless of what other request events precede it. These events
+        # allow the described state to propagate in case there is a preceding
+        # response that the described state should be applied to.
         event.set_calculated_state!(event.described_state)
       end
     end
@@ -954,12 +824,13 @@ class InfoRequest < ApplicationRecord
   # -- OR the same message was resent
   # -- OR the public body requested clarification, and a follow up was sent
   def last_event_forming_initial_request
-    info_request_event_id = read_attribute(:last_event_forming_initial_request_id)
+    info_request_event_id =
+      read_attribute(:last_event_forming_initial_request_id)
     last_sent = if info_request_event_id
-      InfoRequestEvent.find_by_id(info_request_event_id)
-    else
-      calculate_last_event_forming_initial_request
-    end
+                  InfoRequestEvent.find_by_id(info_request_event_id)
+                else
+                  calculate_last_event_forming_initial_request
+                end
 
     if last_sent.nil?
       raise "internal error, last_event_forming_initial_request gets nil for " \
@@ -983,11 +854,10 @@ class InfoRequest < ApplicationRecord
       end
 
       if self.class.request_sent_types.include?(event.event_type)
-        if last_sent.nil?
-          last_sent = event
-        elsif event.event_type == 'resent' ||
-              (event.event_type == 'send_error' &&
-               event.outgoing_message.message_type == 'initial_request')
+        if last_sent.nil? ||
+           event.event_type == 'resent' ||
+           (event.event_type == 'send_error' &&
+            event.outgoing_message.message_type == 'initial_request')
           last_sent = event
         elsif expecting_clarification && event.event_type == 'followup_sent'
           # TODO: this needs to cope with followup_resent, which it doesn't.
@@ -1001,10 +871,11 @@ class InfoRequest < ApplicationRecord
     last_sent
   end
 
-  # Log an event to the history of some things that have happened to this request
+  # Log an event to the history of some things that have happened to this
+  # request
   def log_event(type, params, options = {})
     event = info_request_events.create!(event_type: type, params: params)
-    set_due_dates(event) if event.resets_due_dates?
+    update_due_dates(event) if event.resets_due_dates?
     if options[:created_at]
       event.update_column(:created_at, options[:created_at])
     end
@@ -1014,7 +885,7 @@ class InfoRequest < ApplicationRecord
     event
   end
 
-  def set_due_dates(sent_event)
+  def update_due_dates(sent_event)
     self.last_event_forming_initial_request_id = sent_event.id
     self.date_initial_request_last_sent_at = sent_event.created_at.to_date
     self.date_response_required_by = calculate_date_response_required_by
@@ -1041,14 +912,6 @@ class InfoRequest < ApplicationRecord
 
   def late_calculator
     @late_calculator ||= DefaultLateCalculator.new
-  end
-
-  def update_due_dates(sent_event)
-    self.last_event_forming_initial_request_id = sent_event.id
-    self.date_initial_request_last_sent_at = sent_event.created_at.to_date
-    self.date_response_required_by = calculate_date_response_required_by
-    self.date_very_overdue_after = calculate_date_very_overdue_after
-    save!
   end
 
   # TODO: once date_response_required_by is populated for all
@@ -1085,20 +948,6 @@ class InfoRequest < ApplicationRecord
     )
   end
 
-  def last_embargo_set_event
-    info_request_events.
-      where(event_type: 'set_embargo').
-        reorder(created_at: :desc).
-          first
-  end
-
-  def last_embargo_expire_event
-    info_request_events.
-      where(event_type: 'expire_embargo').
-        reorder(created_at: :desc).
-          first
-  end
-
   # Where the initial request is sent to
   def recipient_email
     public_body.request_email
@@ -1122,50 +971,21 @@ class InfoRequest < ApplicationRecord
     end
   end
 
+  # Responses visible to the requester (upstream method name kept for themes).
   def public_response_events
-    condition = <<-SQL
-        info_request_events.event_type = ?
-        AND incoming_messages.prominence = ?
-    SQL
-
     info_request_events.
       joins(:incoming_message).
-      where(condition, 'response', 'normal')
+      where(event_type: 'response').
+      where(Ability::RequesterVisible.sql(message: 'incoming_messages'))
   end
 
   # The last public response is the default one people might want to reply to
-  def get_last_public_response_event_id
-    get_last_public_response_event.id if get_last_public_response_event
-  end
-
-  def get_last_public_response_event
+  def last_public_response_event
     public_response_events.last
   end
-  alias last_public_response_event get_last_public_response_event
 
-  def get_last_public_response
-    if get_last_public_response_event
-      get_last_public_response_event.incoming_message
-    end
-  end
-  alias last_public_response get_last_public_response
-
-  def public_outgoing_events
-    info_request_events.select { |e| e.outgoing? && e.outgoing_message.is_public? }
-  end
-
-  # The last public outgoing message
-  def get_last_public_outgoing_event
-    public_outgoing_events.last
-  end
-
-  # Text from the the initial request, for use in summary display
-  def initial_request_text
-    return '' if outgoing_messages.empty?
-
-    body_opts = { censor_rules: applicable_censor_rules }
-    first_message = outgoing_messages.first
-    first_message.is_public? ? first_message.get_text_for_indexing(true, body_opts) : ''
+  def last_public_response
+    last_public_response_event&.incoming_message
   end
 
   def last_event_id_needing_description
@@ -1173,7 +993,8 @@ class InfoRequest < ApplicationRecord
     last_event.nil? ? 0 : last_event.id
   end
 
-  # Returns all the events which the user hasn't described yet - an empty array if all described.
+  # Returns all the events which the user hasn't described yet - an empty array
+  # if all described.
   def events_needing_description
     events = info_request_events
     i = index_of_last_described_event
@@ -1191,15 +1012,13 @@ class InfoRequest < ApplicationRecord
     info_request_events.last
   end
 
-  def last_update_hash
-    Digest::SHA1.hexdigest(info_request_events.last.created_at.to_i.to_s + updated_at.to_i.to_s)
-  end
-
   # Get previous email sent to
   def get_previous_email_sent_to(info_request_event)
     last_email = nil
     info_request_events.each do |e|
-      if ((info_request_event.is_sent_sort? && e.is_sent_sort?) || (info_request_event.is_followup_sort? && e.is_followup_sort?)) && e.outgoing_message_id == info_request_event.outgoing_message_id
+      if ((info_request_event.is_sent_sort? && e.is_sent_sort?) ||
+          (info_request_event.is_followup_sort? && e.is_followup_sort?)) &&
+         e.outgoing_message_id == info_request_event.outgoing_message_id
         break if e.id == info_request_event.id
 
         last_email = e.params[:email]
@@ -1208,7 +1027,7 @@ class InfoRequest < ApplicationRecord
     last_email
   end
 
-  def display_status(cached_value_ok=false)
+  def display_status(cached_value_ok = false)
     InfoRequest.get_status_description(calculate_status(cached_value_ok))
   end
 
@@ -1226,19 +1045,16 @@ class InfoRequest < ApplicationRecord
   end
 
   def is_followupable?(incoming_message)
-    if is_external?
-      @followup_bad_reason = "external"
-      false
-    elsif !OutgoingMailer.is_followupable?(self, incoming_message)
-      @followup_bad_reason = if public_body.is_requestable?
-        "unexpected followupable inconsistency"
-      else
-        public_body.not_requestable_reason
-      end
-      false
-    else
+    if OutgoingMailer.is_followupable?(self, incoming_message)
       @followup_bad_reason = nil
       true
+    else
+      @followup_bad_reason = if public_body.is_requestable?
+                               "unexpected followupable inconsistency"
+                             else
+                               public_body.not_requestable_reason
+                             end
+      false
     end
   end
 
@@ -1263,41 +1079,6 @@ class InfoRequest < ApplicationRecord
     File.join(first_three_digits.to_s, id.to_s)
   end
 
-  def download_zip_dir
-    File.join(InfoRequest.download_zip_dir, "download", request_dirs)
-  end
-
-  def make_zip_cache_path(user)
-    # The zip file varies depending on user because it can include different
-    # messages depending on whether the user can access hidden or
-    # requester_only messages. We name it appropriately, so that every user
-    # with the right permissions gets a file with only the right things in.
-    cache_file_dir = File.join(InfoRequest.download_zip_dir,
-                               "download",
-                               request_dirs,
-                               last_update_hash)
-    cache_file_suffix = zip_cache_file_suffix(user)
-    File.join(cache_file_dir, "#{url_title}#{cache_file_suffix}.zip")
-  end
-
-  def zip_cache_file_suffix(user)
-    # Simple short circuit for requests where everything is public
-    if all_correspondence_is_public?
-      ""
-    # If the user can view hidden things, they can view anything, so no need
-    # to go any further
-    elsif user&.view_hidden?
-      "_hidden"
-    # If the user can't view hidden things, but owns the request, they can
-    # see more than the public, so they get requester_only
-    elsif is_owning_user?(user)
-      "_requester_only"
-    # Everyone else can only see public stuff, which is the default case
-    else
-      ""
-    end
-  end
-
   def reason_to_be_unhappy?
     classified? && State.unhappy.include?(calculate_status)
   end
@@ -1307,8 +1088,10 @@ class InfoRequest < ApplicationRecord
   end
 
   def is_old_unclassified?
-    !is_external? && awaiting_description && url_title != 'holding_pen' && get_last_public_response_event &&
-      Time.zone.now > get_last_public_response_event.created_at + OLD_AGE_IN_DAYS
+    awaiting_description && url_title != 'holding_pen' &&
+      last_public_response_event &&
+      Time.zone.now >
+        last_public_response_event.created_at + OLD_AGE_IN_DAYS
   end
 
   # List of incoming messages to followup, by unique email
@@ -1320,12 +1103,12 @@ class InfoRequest < ApplicationRecord
         done[email.downcase] = 1
       end
     end
-    incoming_messages.reverse.each do |incoming_message|
+    incoming_messages.reverse_each do |incoming_message|
       next if incoming_message == skip_message
 
       incoming_message.safe_from_name
 
-      next unless incoming_message.is_public?
+      next unless Ability::RequesterVisible.own(incoming_message) == :requester
 
       email = OutgoingMailer.email_for_followup(self, incoming_message)
       name = OutgoingMailer.name_for_followup(self, incoming_message)
@@ -1344,65 +1127,10 @@ class InfoRequest < ApplicationRecord
     ret.reverse
   end
 
-  def is_owning_user?(user)
-    return false unless user
-
-    user.id == user_id || user.owns_every_request?
-  end
-
   def is_actual_owning_user?(user)
     return false unless user
 
     user.id == user_id
-  end
-
-  def all_correspondence_is_public?
-    prominence(decorate: true).is_public? &&
-      incoming_messages.all?(&:is_public?) &&
-      outgoing_messages.all?(&:is_public?)
-  end
-
-  def json_for_api(deep)
-    ret = {
-      id: id,
-      url_title: url_title,
-      title: title,
-      created_at: created_at,
-      updated_at: updated_at,
-      described_state: described_state,
-      display_status: display_status,
-      awaiting_description: awaiting_description,
-      prominence: prominence,
-      law_used: law_used,
-      tags: tag_array
-
-      # not sure we need to make these, mainly anti-spam, admin params public
-      # allow_new_responses_from
-      # handle_rejected_responses
-    }
-
-    if deep
-      if user
-        ret[:user] = user.json_for_api
-      else
-        ret[:user_name] = user_name
-      end
-      ret[:public_body] = public_body.json_for_api
-      ret[:info_request_events] = info_request_events.map { |e| e.json_for_api(false) }
-    end
-    ret
-  end
-
-  # This method updates the count columns of the PublicBody that
-  # store the number of "not held", "to some extent successful" and
-  # "both visible and classified" requests when saving or destroying
-  # an InfoRequest associated with the body:
-  def update_counter_cache(body = public_body)
-    body.update_counter_cache
-  end
-
-  def similar_requests
-    Search::Results.new(items: [], total_estimate: 0)
   end
 
   def move_to_public_body(destination_public_body, opts = {})
@@ -1425,17 +1153,9 @@ class InfoRequest < ApplicationRecord
                      old_public_body_url_name: old_body.url_name
                    )
 
-                   reindex_request_events
-
                    public_body
                  end
 
-    # HACK: Manually reset counter caches
-    # https://github.com/rails/rails/issues/10865
-    old_body.class.reset_counters(old_body.id, :info_requests)
-    update_counter_cache(old_body)
-    public_body.class.reset_counters(public_body.id, :info_requests)
-    update_counter_cache
     return_val
   end
 
@@ -1453,8 +1173,6 @@ class InfoRequest < ApplicationRecord
                      old_user_url_name: old_user.url_name
                    )
 
-                   reindex_request_events
-
                    user
                  end
 
@@ -1463,38 +1181,6 @@ class InfoRequest < ApplicationRecord
     old_user.class.reset_counters(old_user.id, :info_requests)
     user.class.reset_counters(user.id, :info_requests)
     return_val
-  end
-
-  # Is the request currently embargoed?
-  #
-  # Returns Boolean
-  def embargoed?
-    embargo.present?
-  end
-
-  # Is the attached embargo expiring soon?
-  #
-  # Returns boolean
-  def embargo_expiring?
-    embargo ? embargo.expiring_soon? : false
-  end
-
-  # Has a previously attached embargo expired?
-  #
-  # Returns boolean
-  def embargo_expired?
-    if !embargo && last_embargo_expire_event
-      true
-    else
-      false
-    end
-  end
-
-  # Is the attached embargo still present but has reached its publication date
-  #
-  # Returns boolean
-  def embargo_pending_expiry?
-    embargo ? embargo.expired? : false
   end
 
   # @see RequestSummaries#should_summarise?
@@ -1532,9 +1218,6 @@ class InfoRequest < ApplicationRecord
   # @see RequestSummaries#request_summary_categories
   def request_summary_categories
     categories = []
-    if embargo_expiring?
-      categories << AlaveteliPro::RequestSummaryCategory.embargo_expiring
-    end
     # A request with no events is in the process of being sent (probably
     # having been created within our tests rather than in real code) and will
     # error if we try to get the phase, skip it for now because it'll be saved
@@ -1548,35 +1231,7 @@ class InfoRequest < ApplicationRecord
   end
 
   def latest_refusals
-    incoming_messages.select(&:refusals?).last&.refusals || []
-  end
-
-  def cached_urls
-    feed_request = TrackThing.new(
-      info_request: self,
-      track_type: 'request_updates'
-    )
-    feed_body = TrackThing.new(
-      public_body: public_body,
-      track_type: 'public_body_updates'
-    )
-    feed_user = TrackThing.new(
-      tracked_user: user,
-      track_type: 'user_updates'
-    )
-    [
-      '/',
-      public_body_path(public_body),
-      request_path(self),
-      request_details_path(self),
-      '^/list',
-      do_track_path(feed_request, feed = 'feed'),
-      '^/feed/list/',
-      do_track_path(feed_body, feed = 'feed'),
-      do_track_path(feed_user, feed = 'feed'),
-      user_path(user),
-      show_user_wall_path(url_name: user.url_name)
-    ]
+    incoming_messages.reverse_each.find(&:refusals?)&.refusals || []
   end
 
   # Return only this request in a chainable relation. This is mainly for
@@ -1589,21 +1244,20 @@ class InfoRequest < ApplicationRecord
   # duck-typing with other censorable relationships.
   def expire_requests
     InfoRequest::ExpireJob.perform_later(self)
-    NotifyCacheJob.perform_later(self)
   end
 
   private
 
   def self.add_conditions_from_extra_params(params, extra_params)
-    if extra_params[:conditions]
-      condition_string = extra_params[:conditions].shift
-      params[:conditions][0] += " AND #{condition_string}"
-      params[:conditions] += extra_params[:conditions]
-    end
+    return unless extra_params[:conditions]
+
+    condition_string = extra_params[:conditions].shift
+    params[:conditions][0] += " AND #{condition_string}"
+    params[:conditions] += extra_params[:conditions]
   end
   private_class_method :add_conditions_from_extra_params
 
-  def accept_incoming?(mail)
+  def accept_incoming?(mail, **inbound_ids)
     # See if new responses are prevented
     gatekeeper = ResponseGatekeeper.for(allow_new_responses_from, self)
     # Take action if the message looks like spam
@@ -1624,14 +1278,16 @@ class InfoRequest < ApplicationRecord
     # Figure out how to reject the mail if it was rejected
     response_rejection =
       if response_rejector
-        ResponseRejection.for(response_rejector.rejection_action, self, mail)
+        ResponseRejection.for(response_rejector.rejection_action, self, mail,
+                              **inbound_ids)
       end
 
     will_be_rejected = (response_rejector && response_rejection) ? true : false
     if will_be_rejected && response_rejection.reject(response_rejector.reason)
       # update without changing the updated_at field
       update_column(:rejected_incoming_count, rejected_incoming_count.next)
-      logger.info "Rejected incoming mail: #{ response_rejector.reason } request: #{ id }"
+      logger.info "Rejected incoming mail: #{ response_rejector.reason } " \
+                  "request: #{ id }"
       false
     else
       true
@@ -1666,9 +1322,6 @@ class InfoRequest < ApplicationRecord
 
       save!
     end
-
-    # for the "waiting_classification" index
-    reindex_request_events
 
     incoming_message
   end
@@ -1706,22 +1359,9 @@ class InfoRequest < ApplicationRecord
   end
 
   def must_be_valid_state
-    unless State.all.include?(described_state)
-      errors.add(:described_state, "is not a valid state")
-    end
-  end
+    return if State.all.include?(described_state)
 
-  # If the URL name has changed, then all request: queries will break unless
-  # we update index for every event. Also reindex if prominence changes.
-  def reindexable_attribute_changed?
-    %i[url_title prominence user_id].any? do |attr|
-      saved_change_to_attribute?(attr)
-    end
-  end
-
-  def notify_associations
-    public_body.info_request_count_changed
-    user&.info_request_count_changed
+    errors.add(:described_state, "is not a valid state")
   end
 
   def destroy_documents

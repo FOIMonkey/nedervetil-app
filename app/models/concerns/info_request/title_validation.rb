@@ -33,7 +33,7 @@ module InfoRequest::TitleValidation
     errors.add(:title, generic_foi_title_msg) if generic_foi_title?
   end
 
-  def title_is_acronym(max_length)
+  def title_is_acronym?(max_length)
     title.upcase == title && title.length <= max_length && !title.include?(' ')
   end
 
@@ -48,7 +48,7 @@ module InfoRequest::TitleValidation
   def well_formed_title?
     MySociety::Validate.uses_mixed_capitals(title, 1) ||
       title_starts_with_number ||
-      title_is_acronym(6)
+      title_is_acronym?(6)
   end
 
   def poorly_formed_title_msg

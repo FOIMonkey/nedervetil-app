@@ -1,27 +1,24 @@
+# Scores accounts for spam at sign-up, sign-in and email change using
+# thresholds and lists configurable via config/user_spam_scorer.yml.
 class UserSpamScorer
   def self.for_accounts
     new
   end
+
   DEFAULT_SCORE_MAPPINGS = {
     name_is_all_lowercase?: 1,
     name_is_one_word?: 1,
-    name_includes_non_alpha_characters?: 3,
-    name_is_garbled?: 5,
-    email_from_suspicious_domain?: 5,
-    email_from_spam_domain?: 8,
-    email_from_spam_tld?: 3,
+    name_includes_non_alpha_characters?: 1,
+    name_is_garbled?: 1,
+    email_from_suspicious_domain?: 10,
+    email_from_spam_domain?: 13,
+    email_from_spam_tld?: 1,
     email_is_spam_format?: 3,
-    name_is_spam_format?: 5,
-    about_me_includes_currency_symbol?: 2,
-    about_me_is_link_only?: 3,
-    about_me_is_spam_format?: 1,
-    about_me_includes_anchor_tag?: 1,
-    about_me_already_exists?: 4,
-    user_agent_is_suspicious?: 5,
-    ip_range_is_suspicious?: 5
+    name_is_spam_format?: 10,
+    user_agent_is_suspicious?: 3,
+    ip_range_is_suspicious?: 12
   }.freeze
 
-  DEFAULT_CURRENCY_SYMBOLS = %w(£ $ € ¥ ¢).freeze
   DEFAULT_SUSPICIOUS_DOMAINS =
     %w(mail.ru
        temp-mail.de
@@ -89,27 +86,23 @@ class UserSpamScorer
     /\A.*malware.*\z/i,
     /\A.*CRM.*\z/
   ].freeze
-  DEFAULT_SPAM_ABOUT_ME_FORMATS = [
-    /\A.+\n{2,}https?:\/\/[^\s]+\z/,
-    /\Ahttps?:\/\/[^\s]+\n{2,}.+$/,
-    /\A.*\n{2,}.*\n{2,}https?:\/\/[^\s]+$/
-  ].freeze
-  DEFAULT_SPAM_SCORE_THRESHOLD = 4
+  DEFAULT_SPAM_SCORE_THRESHOLD = 12
   DEFAULT_SPAM_TLDS = %w(ru pl).freeze
   DEFAULT_SUSPICIOUS_USER_AGENTS = [].freeze
   DEFAULT_SUSPICIOUS_IP_RANGES = [].freeze
 
-  CLASS_ATTRIBUTES = [:currency_symbols,
-                      :score_mappings,
+  CLASS_ATTRIBUTES = [:score_mappings,
                       :suspicious_domains,
                       :spam_domains,
                       :spam_email_formats,
                       :spam_name_formats,
-                      :spam_about_me_formats,
                       :spam_score_threshold,
                       :spam_tlds,
                       :suspicious_user_agents,
                       :suspicious_ip_ranges].freeze
+
+  # Legacy config keys ignored for compatibility.
+  RETIRED_SETTINGS = %w[currency_symbols spam_about_me_formats].freeze
 
   # Custom scoring methods registry
   @custom_scoring_methods = {}
@@ -128,6 +121,12 @@ class UserSpamScorer
       value = instance_variable_get("@#{ key }") ||
               const_get("DEFAULT_#{ key }".upcase)
       instance_variable_set("@#{ key }", value)
+    end
+  end
+
+  def self.configure(settings)
+    settings.except(*RETIRED_SETTINGS).each do |key, value|
+      public_send("#{key}=", value)
     end
   end
 
@@ -201,8 +200,9 @@ class UserSpamScorer
     !(user.name.strip =~ /\A[a-zA-Z\s]+\z/i)
   end
 
+  # Five letters in a row with no a, e, i, o or u among them.
   def name_is_garbled?(user)
-    user.name.strip =~ /[^aeiou]{5,}/i ? true : false
+    /[[:alpha:]&&[^aeiouAEIOU]]{5,}/.match?(user.name)
   end
 
   def email_from_suspicious_domain?(user)
@@ -214,7 +214,10 @@ class UserSpamScorer
   end
 
   def email_from_spam_tld?(user)
-    spam_tlds.any? { |tld| user.email_domain.split('.').last == tld }
+    domain = user.email_domain
+    return false if domain.blank?
+
+    spam_tlds.any?(domain.split('.').last)
   end
 
   def email_is_spam_format?(user)
@@ -223,28 +226,6 @@ class UserSpamScorer
 
   def name_is_spam_format?(user)
     spam_name_formats.any? { |regexp| user.name.strip =~ regexp }
-  end
-
-  def about_me_includes_currency_symbol?(user)
-    currency_symbols.any? { |symbol| user.about_me.include?(symbol) }
-  end
-
-  def about_me_is_link_only?(user)
-    user.about_me.strip =~ /\Ahttps?:\/\/[^\s]+\z/i ? true : false
-  end
-
-  def about_me_is_spam_format?(user)
-    spam_about_me_formats.any? do |regexp|
-      user.about_me.gsub("\r\n", "\n").strip =~ regexp
-    end
-  end
-
-  def about_me_includes_anchor_tag?(user)
-    user.about_me =~ /<a.*href=('|")/ ? true : false
-  end
-
-  def about_me_already_exists?(user)
-    user.about_me_already_exists?
   end
 
   def user_agent_is_suspicious?(user)
@@ -260,8 +241,5 @@ class UserSpamScorer
   end
 
   # TODO: Akismet thinks user is spam
-  # TODO: About me includes spam words/phrases
-  # TODO: About me includes URLs that do not resolve
   # TODO: User has no transactions
-  # TODO: About me includes non-english characters
 end

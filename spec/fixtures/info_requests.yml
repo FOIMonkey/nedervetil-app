@@ -4,22 +4,19 @@
 #
 #  id                                    :integer          not null, primary key
 #  title                                 :text             not null
-#  user_id                               :integer
+#  user_id                               :integer          not null
 #  public_body_id                        :integer          not null
 #  created_at                            :datetime         not null
 #  updated_at                            :datetime         not null
 #  described_state                       :string           not null
 #  awaiting_description                  :boolean          default(FALSE), not null
-#  prominence                            :string           default("normal"), not null
+#  prominence                            :string           default("requester_only"), not null
 #  url_title                             :text             not null
 #  law_used                              :string           default("foi"), not null
 #  allow_new_responses_from              :string           default("anybody"), not null
 #  handle_rejected_responses             :string           default("bounce"), not null
 #  idhash                                :string           not null
-#  external_user_name                    :string
-#  external_url                          :string
 #  attention_requested                   :boolean          default(FALSE)
-#  comments_allowed                      :boolean          default(TRUE), not null
 #  info_request_batch_id                 :integer
 #  last_public_response_at               :datetime
 #  reject_incoming_at_mta                :boolean          default(FALSE), not null
@@ -31,8 +28,8 @@
 #  use_notifications                     :boolean
 #  last_event_time                       :datetime
 #  incoming_messages_count               :integer          default(0)
-#  public_token                          :string
 #  prominence_reason                     :text
+#  last_activity_at                      :datetime
 #
 
 fancy_dog_request:
@@ -45,7 +42,6 @@ fancy_dog_request:
     user_id: 1
     described_state: waiting_response
     awaiting_description: true
-    comments_allowed: true
     last_public_response_at: 2007-11-13 18:09:20.042061
     idhash: 50929748
     use_notifications: false
@@ -60,7 +56,6 @@ naughty_chicken_request:
     user_id: 1
     described_state: waiting_response
     awaiting_description: false
-    comments_allowed: true
     idhash: e8d18c84
     use_notifications: false
 badger_request:
@@ -73,7 +68,6 @@ badger_request:
     user_id: 1
     described_state: waiting_response
     awaiting_description: false
-    comments_allowed: true
     idhash: e8d18c85
     use_notifications: false
 boring_request:
@@ -86,7 +80,6 @@ boring_request:
     user_id: 1
     described_state: successful
     awaiting_description: false
-    comments_allowed: true
     last_public_response_at: 2007-11-13 18:00:20
     idhash: 173fd003
     use_notifications: false
@@ -101,7 +94,6 @@ another_boring_request:
     user_id: 1
     described_state: successful
     awaiting_description: false
-    comments_allowed: true
     last_public_response_at: 2007-11-13 18:09:20.042061
     idhash: 173fd004
     use_notifications: false
@@ -119,7 +111,6 @@ spam_1_request:
     user_id: 5
     described_state: successful
     awaiting_description: false
-    comments_allowed: false
     last_public_response_at: 2001-01-03 01:23:45.6789100
     idhash: 173fd005
     use_notifications: false
@@ -134,39 +125,9 @@ spam_2_request:
     user_id: 5
     described_state: successful
     awaiting_description: false
-    comments_allowed: true
     idhash: 173fd006
     use_notifications: false
     incoming_messages_count: 1
-external_request:
-    id: 109
-    title: Balalas
-    url_title: balalas
-    external_user_name: Bob Smith
-    external_url: http://www.example.org/request/balala
-    public_body_id: 2
-    described_state: waiting_response
-    awaiting_description: false
-    comments_allowed: true
-    created_at: 2001-01-02 02:23:45.6789100
-    updated_at: 2001-01-02 02:23:45.6789100
-    last_public_response_at: 2001-01-03 02:23:45.6789100
-    idhash: a1234567
-    use_notifications: false
-anonymous_external_request:
-    id: 110
-    title: Anonymous request
-    url_title: anonymous_request
-    external_user_name:
-    external_url: http://www.example.org/request/anonymous_requesr
-    public_body_id: 2
-    described_state: waiting_response
-    awaiting_description: false
-    comments_allowed: true
-    idhash: 7654321a
-    created_at: 2010-01-01 01:23:45.6789100
-    updated_at: 2010-01-01 01:23:45.6789100
-    use_notifications: false
 other_request:
     id: 111
     title: Another request
@@ -177,6 +138,5 @@ other_request:
     user_id: 6
     described_state: waiting_response
     awaiting_description: false
-    comments_allowed: true
     idhash: b234567a
     use_notifications: false

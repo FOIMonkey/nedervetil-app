@@ -5,8 +5,7 @@ RSpec.describe "request/show" do
 
   let(:mock_user) do
     FactoryBot.create(:user, name: "test user",
-                             url_name: "test_user",
-                             profile_photo: nil)
+                             url_name: "test_user")
   end
 
   let(:admin_user) { FactoryBot.create(:admin_user) }
@@ -17,19 +16,10 @@ RSpec.describe "request/show" do
                                      user: mock_user)
   end
 
-  let(:mock_track) do
-    mock_model(TrackThing, track_type: 'request_updates',
-                           info_request: mock_request)
-  end
-
   def request_page
     assign :info_request, mock_request
     assign :info_request_events, []
     assign :status, mock_request.calculate_status
-    assign :track_thing, mock_track
-    assign :similar_requests, double.as_null_object
-    assign :similar_more, double.as_null_object
-    assign :citations, double.as_null_object
 
     allow(controller).
       to receive(:current_ability).and_return(double.as_null_object)
@@ -40,7 +30,7 @@ RSpec.describe "request/show" do
 
   it "should show the request" do
     request_page
-    expect(rendered).to have_css("h1",text: "Test request")
+    expect(rendered).to have_css("h1", text: "Test request")
   end
 
   describe "when told to show the top describe state form" do
@@ -84,7 +74,7 @@ RSpec.describe "request/show" do
 
         it "should show a link to follow up the last response with clarification" do
           allow(mock_request).
-            to receive(:get_last_public_response).
+            to receive(:last_public_response).
             and_return(mock_response)
           request_page
           expected_url = new_request_incoming_followup_path(
@@ -94,14 +84,15 @@ RSpec.describe "request/show" do
           expect(response.body).
             to have_css(
               "a[href='#{expected_url}']",
-              text: "send a follow up message")
+              text: "send a follow up message"
+            )
         end
       end
 
       context "and there is no last response" do
         before do
           allow(mock_request).
-            to receive(:get_last_public_response).
+            to receive(:last_public_response).
             and_return(nil)
         end
 
@@ -111,7 +102,8 @@ RSpec.describe "request/show" do
           expect(response.body).
             to have_css(
               "a[href='#{expected_url}']",
-              text: "send a follow up message")
+              text: "send a follow up message"
+            )
         end
       end
     end
@@ -135,7 +127,8 @@ RSpec.describe "request/show" do
       it "should give a link to requesting an internal review" do
         expect(response.body).to have_css(
           "div#request_status",
-          text: "requesting an internal review")
+          text: "The next step is an internal review"
+        )
       end
     end
 
@@ -149,62 +142,8 @@ RSpec.describe "request/show" do
       it "should give a link to make a followup" do
         expect(response.body).to have_css(
           "div#request_status a",
-          text: "send a follow up message")
-      end
-    end
-  end
-
-  describe "when showing an external request" do
-    before :each do
-      allow(mock_request).to receive(:is_external?).and_return("true")
-      allow(mock_request).to receive(:awaiting_description?).and_return("true")
-    end
-
-    context 'when viewing anonymously' do
-      it 'should not display actions the request owner can take' do
-        request_page
-        expect(response.body).not_to have_css('div#owner_actions')
-      end
-    end
-
-    context 'when the request is being viewed by an admin' do
-      before :each do
-        assign :user, admin_user
-      end
-
-      context 'and the request is waiting for a response and very overdue' do
-        before do
-          allow(mock_request).
-            to receive(:calculate_status).
-            and_return('waiting_response_very_overdue')
-          request_page
-        end
-
-        it 'should not give a link to requesting an internal review' do
-          expect(rendered).not_to have_css(
-            'p#request_status',
-            text: "requesting an internal review")
-        end
-      end
-
-      context 'and the request is waiting clarification' do
-        before do
-          allow(mock_request).
-            to receive(:calculate_status).and_return('waiting_clarification')
-          request_page
-        end
-
-        it 'should not give a link to make a followup' do
-          expect(rendered).not_to have_css(
-            'p#request_status a',
-            text: "send a follow up message")
-        end
-
-        it 'should not give a link to sign in (in the request status <p>)' do
-          expect(rendered).not_to have_css(
-            'p#request_status a',
-            text: "sign in")
-        end
+          text: "send a follow up message"
+        )
       end
     end
   end
@@ -246,10 +185,10 @@ RSpec.describe "request/show" do
                         'response is expected or if you are having trouble ' \
                         'responding.')
     end
-    it 'displays a link for the authority to respond to the request' do
+    it 'does not offer the authority a way to upload a response' do
       assign :show_action_menu, true
       request_page
-      expect(rendered).to have_content('Respond to request')
+      expect(rendered).to have_no_content('Respond to request')
     end
   end
 
@@ -261,12 +200,6 @@ RSpec.describe "request/show" do
         to have_content('This request has been closed to new correspondence. ' \
                         'Contact us if you think it should be reopened.')
     end
-    it 'does not display a link for the authority to respond to the request' do
-      mock_request.update_attribute(:allow_new_responses_from, 'nobody')
-      assign :show_action_menu, true
-      request_page
-      expect(rendered).to_not have_content('Respond to request')
-    end
   end
 
   describe "censoring attachment names" do
@@ -274,9 +207,12 @@ RSpec.describe "request/show" do
       FactoryBot.create(:info_request_with_html_attachment)
     end
 
+    let(:requester) { request_with_attachment.user }
+
     before do
-      allow(view).to receive(:current_user).and_return(nil)
-      allow(controller).to receive(:current_user).and_return(nil)
+      assign :user, requester
+      allow(view).to receive(:current_user).and_return(requester)
+      allow(controller).to receive(:current_user).and_return(requester)
     end
 
     context "when there isn't a censor rule" do
@@ -284,11 +220,9 @@ RSpec.describe "request/show" do
         assign :info_request, request_with_attachment
         assign :info_request_events, request_with_attachment.info_request_events
         assign :status, request_with_attachment.calculate_status
-        assign :track_thing, TrackThing.create_track_for_request(
-          request_with_attachment
-        )
         render
-        expect(rendered).to have_css(".attachment .attachment__name") do |s|
+        expect(rendered).
+          to have_css(".attachment .attachment__name", visible: :all) do |s|
           expect(s).to have_text(/interesting.html/m)
         end
       end
@@ -300,20 +234,19 @@ RSpec.describe "request/show" do
           text: "interesting.html",
           replacement: "Mouse.html",
           last_edit_editor: "unknown",
-          last_edit_comment: "none")
+          last_edit_comment: "none"
+        )
         assign :info_request, request_with_attachment
         assign :info_request_events, request_with_attachment.info_request_events
         assign :status, request_with_attachment.calculate_status
-        assign :track_thing, TrackThing.create_track_for_request(
-          request_with_attachment
-        )
         # For cancancan
-        allow(view).to receive(:current_user).and_return(nil)
-        allow(controller).to receive(:current_user).and_return(nil)
+        allow(view).to receive(:current_user).and_return(requester)
+        allow(controller).to receive(:current_user).and_return(requester)
         render
         # Note that the censor rule applies to the original filename,
         # not the display_filename:
-        expect(rendered).to have_css(".attachment .attachment__name") do |s|
+        expect(rendered).
+          to have_css(".attachment .attachment__name", visible: :all) do |s|
           expect(s).to have_text(/Mouse.html/m)
         end
       end
@@ -321,27 +254,10 @@ RSpec.describe "request/show" do
   end
 
   describe "follow links" do
-    context "when the request being shown by public token" do
-      it "should not show a follow link" do
-        request_page
-        expect(rendered).to_not have_css("a", text: "Follow")
-      end
-    end
-
-    context "when the request is a normal request" do
-      it "should show a follow link in action menu" do
-        assign :show_action_menu, true
-        request_page
-        expect(rendered).to have_css("a", text: "Follow")
-      end
-    end
-
-    context "when the request is a pro request" do
-      it "should not show a follow link" do
-        assign :in_pro_area, true
-        request_page
-        expect(rendered).not_to have_css("a", text: "Follow")
-      end
+    it "shows none, as requests can't be followed" do
+      assign :show_action_menu, true
+      request_page
+      expect(rendered).to have_no_css("a", text: "Follow")
     end
   end
 
@@ -349,11 +265,12 @@ RSpec.describe "request/show" do
     before do
       assign :sidebar, true
       assign :sidebar_template, 'sidebar'
+      stub_template 'request/_sidebar.html.erb' => 'SIDEBAR'
     end
 
     it 'renders the sidebar' do
       request_page
-      expect(rendered).to render_template(partial: '_sidebar')
+      expect(rendered).to include('SIDEBAR')
     end
   end
 
@@ -361,11 +278,12 @@ RSpec.describe "request/show" do
     before do
       assign :sidebar, false
       assign :sidebar_template, 'sidebar'
+      stub_template 'request/_sidebar.html.erb' => 'SIDEBAR'
     end
 
     it 'does not render the sidebar' do
       request_page
-      expect(rendered).not_to render_template(partial: '_sidebar')
+      expect(rendered).not_to include('SIDEBAR')
     end
   end
 end

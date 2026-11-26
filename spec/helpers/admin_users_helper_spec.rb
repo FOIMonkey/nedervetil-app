@@ -26,6 +26,15 @@ RSpec.describe AdminUsersHelper do
       expect(user_labels(user)).to eq(html)
     end
 
+    it 'escapes a role name and marks the labels safe' do
+      user = User.new
+      allow(user).
+        to receive(:roles).and_return([Role.new(name: "<b>&'")])
+      expect(user_labels(user)).
+        to eq('<span class="label">&lt;b&gt;&amp;&#39;</span>')
+      expect(user_labels(user)).to be_html_safe
+    end
+
     it 'adds labels for all noteworthy attributes' do
       user = FactoryBot.create(:admin_user,
                                ban_text: 'Banned',

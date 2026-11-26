@@ -7,14 +7,12 @@
 #  ip         :inet
 #  created_at :datetime         not null
 #  updated_at :datetime         not null
-#  country    :string
 #  user_agent :text
 #
 FactoryBot.define do
   factory :user_sign_in, class: 'User::SignIn' do
     user
     ip { '0.0.0.0' }
-    country { 'XX' }
     user_agent { 'Foobar/1.0.0' }
 
     trait :ipv4 do

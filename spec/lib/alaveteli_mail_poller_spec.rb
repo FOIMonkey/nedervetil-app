@@ -19,6 +19,22 @@ RSpec.describe AlaveteliMailPoller do
   end
 
   describe '#poll_for_incoming' do
+    context 'when SSL is enabled' do
+      it 'verifies the server certificate before authenticating' do
+        poller = AlaveteliMailPoller.new(
+          pop3: mockpop3,
+          user_name: 'user',
+          password: 'password'
+        )
+        expect(mockpop3).to receive(:enable_ssl).
+          with(OpenSSL::SSL::VERIFY_PEER).ordered
+        expect(mockpop3).to receive(:start).
+          with('user', 'password').ordered.and_call_original
+
+        poller.poll_for_incoming
+      end
+    end
+
     it 'starts and ends a session with the POP server' do
       expect(mockpop3).not_to be_started
       expect(mockpop3).to receive(:start).and_call_original

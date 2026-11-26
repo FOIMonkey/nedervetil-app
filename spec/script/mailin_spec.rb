@@ -14,10 +14,19 @@ def mailin_test(email_filename)
 end
 
 RSpec.describe "When importing mail into the application" do
-  # Turn off transactional fixtures for this suite - incoming message is imported
-  # outside the transaction via ExternalCommand, so needs to be destroyed outside the
-  # transaction
+  # script/mailin stores the mail from a process of its own, so no transaction
+  # here can roll it back. The examples run without one, and what the script
+  # stored is destroyed afterwards, with its file.
   self.use_transactional_tests = false
+
+  around do |example|
+    already_stored = ActionMailbox::InboundEmail.ids
+    example.run
+  ensure
+    perform_enqueued_jobs(only: ActiveStorage::PurgeJob) do
+      ActionMailbox::InboundEmail.where.not(id: already_stored).destroy_all
+    end
+  end
 
   around do |example|
     ENV['DISABLE_DEPRECATION_WARNINGS'] = 'true'

@@ -12,6 +12,11 @@
 #  body         :text
 #
 
+##
+# An admin-written note shown on a record, or on every record with a given
+# tag. Notes are plain text in the original style, or rich text in a coloured
+# style.
+#
 class Note < ApplicationRecord
   include AdminColumn
 
@@ -31,7 +36,7 @@ class Note < ApplicationRecord
                    '🟡 Yellow': 'yellow',
                    '🟢 Green': 'green',
                    '🔵 Blue': 'blue',
-                   'Original': 'original'
+                   Original: 'original'
                  }
 
   enum :style, Note.style_labels.values.index_by(&:itself),
@@ -61,6 +66,7 @@ class Note < ApplicationRecord
   end
 
   class Translation # :nodoc:
-    has_rich_text :rich_body
+    extend ActionText::WithoutAttachments
+    has_rich_text_without_attachments :rich_body
   end
 end

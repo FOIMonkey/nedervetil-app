@@ -47,7 +47,7 @@ RSpec.describe User::EmailAlerts do
 
     it 'is idempotent' do
       subject
-      expect { subject }.not_to change { user.receive_email_alerts }
+      expect { subject }.not_to(change { user.receive_email_alerts })
     end
   end
 end

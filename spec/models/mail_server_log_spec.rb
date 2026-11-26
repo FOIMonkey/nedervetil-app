@@ -17,9 +17,12 @@ require 'spec_helper'
 RSpec.describe MailServerLog do
   describe ".load_file" do
     before :each do
-      allow(AlaveteliConfiguration).to receive(:incoming_email_domain).and_return("example.com")
-      allow(AlaveteliConfiguration).to receive(:incoming_email_prefix).and_return('foi+')
-      allow(File).to receive_message_chain(:stat, :mtime).and_return(DateTime.new(2012, 10, 10))
+      allow(AlaveteliConfiguration).to receive(:incoming_email_domain).
+        and_return("example.com")
+      allow(AlaveteliConfiguration).to receive(:incoming_email_prefix).
+        and_return('foi+')
+      allow(File).to receive_message_chain(:stat, :mtime).
+        and_return(Time.utc(2012, 10, 10))
     end
 
     let(:text_log_path) { file_fixture_name('exim-mainlog-2012-10-10') }
@@ -27,54 +30,77 @@ RSpec.describe MailServerLog do
     let(:ir) { info_requests(:fancy_dog_request) }
 
     it "loads relevant lines of an uncompressed exim log file" do
-      expect(InfoRequest).to receive(:find_by_incoming_email).with("foi+request-1234@example.com").twice.and_return(ir)
+      expect(InfoRequest).to receive(:find_by_incoming_email).
+        with("foi+request-1234@example.com").twice.and_return(ir)
       MailServerLog.load_file(text_log_path)
 
       expect(ir.mail_server_logs.count).to eq(2)
       log = ir.mail_server_logs[0]
       expect(log.order).to eq(1)
-      expect(log.line).to eq("This is a line of a logfile relevant to foi+request-1234@example.com\n")
+      expect(log.line).
+        to eq("This is a line of a logfile relevant to " \
+              "foi+request-1234@example.com\n")
 
       log = ir.mail_server_logs[1]
       expect(log.order).to eq(2)
-      expect(log.line).to eq("This is the second line for the same foi+request-1234@example.com email address\n")
+      expect(log.line).
+        to eq("This is the second line for the same " \
+              "foi+request-1234@example.com email address\n")
     end
 
     it "doesn't load the log file twice if it's unchanged" do
       File.open(text_log_path, 'r') do |file|
-        expect(File).to receive(:open).with(text_log_path, 'r').once.and_return(file)
-        expect(InfoRequest).to receive(:find_by_incoming_email).with("foi+request-1234@example.com").twice.and_return(ir)
+        expect(File).to receive(:open).
+          with(text_log_path, 'r').once.and_return(file)
+        expect(InfoRequest).to receive(:find_by_incoming_email).
+          with("foi+request-1234@example.com").twice.and_return(ir)
         MailServerLog.load_file(text_log_path)
         MailServerLog.load_file(text_log_path)
       end
     end
 
     it "loads the log file again if it's changed" do
-      expect(File).to receive(:open).with(text_log_path, 'r').twice.and_call_original
-      expect(InfoRequest).to receive(:find_by_incoming_email).with("foi+request-1234@example.com").exactly(4).times.and_return(ir)
+      expect(File).to receive(:open).
+        with(text_log_path, 'r').twice.and_call_original
+      expect(InfoRequest).to receive(:find_by_incoming_email).
+        with("foi+request-1234@example.com").exactly(4).times.and_return(ir)
       MailServerLog.load_file(text_log_path)
-      allow(File).to receive_message_chain(:stat, :mtime).and_return(DateTime.new(2012, 10, 11))
+      allow(File).to receive_message_chain(:stat, :mtime).
+        and_return(Time.utc(2012, 10, 11))
       MailServerLog.load_file(text_log_path)
     end
 
     it "doesn't end up with two copies of each line when the same file is actually loaded twice" do
-      allow(InfoRequest).to receive(:find_by_incoming_email).with("foi+request-1234@example.com").and_return(ir)
+      allow(InfoRequest).to receive(:find_by_incoming_email).
+        with("foi+request-1234@example.com").and_return(ir)
 
       MailServerLog.load_file(text_log_path)
       expect(ir.mail_server_logs.count).to eq(2)
 
-      allow(File).to receive_message_chain(:stat, :mtime).and_return(DateTime.new(2012, 10, 11))
+      allow(File).to receive_message_chain(:stat, :mtime).
+        and_return(Time.utc(2012, 10, 11))
       MailServerLog.load_file(text_log_path)
       expect(ir.mail_server_logs.count).to eq(2)
     end
 
     it "easily handles gzip compress log files" do
-      allow(InfoRequest).to receive(:find_by_incoming_email).with("foi+request-1234@example.com").and_return(ir)
+      allow(InfoRequest).to receive(:find_by_incoming_email).
+        with("foi+request-1234@example.com").and_return(ir)
 
       MailServerLog.load_file(gzip_log_path)
 
       log = ir.mail_server_logs.first
-      expect(log.line).to eq("This is a line of a logfile relevant to foi+request-1234@example.com\n")
+      expect(log.line).
+        to eq("This is a line of a logfile relevant to " \
+              "foi+request-1234@example.com\n")
+    end
+
+    it 'names the configured MTA when it is neither exim nor postfix' do
+      allow(AlaveteliConfiguration).to receive(:mta_log_type).
+        and_return('sendmail')
+
+      expect { MailServerLog.load_file(text_log_path) }.
+        to raise_error(RuntimeError, 'Unexpected MTA type: sendmail')
     end
 
     context "there is a delivery status" do
@@ -96,47 +122,140 @@ RSpec.describe MailServerLog do
           to_not include(['delivery_status'])
       end
     end
+
+    context "when the file mtime has sub-microsecond precision" do
+      let(:mtime) { Time.at(1_349_827_200, 123_456_789, :nsec) }
+
+      before do
+        allow(File).to receive_message_chain(:stat, :mtime).and_return(mtime)
+        allow(InfoRequest).to receive(:find_by_incoming_email).
+          with("foi+request-1234@example.com").and_return(ir)
+      end
+
+      it "doesn't load the file again if it's unchanged" do
+        MailServerLog.load_file(text_log_path)
+
+        expect { MailServerLog.load_file(text_log_path) }.
+          not_to(change { ir.mail_server_logs.pluck(:id) })
+      end
+    end
+
+    context "when a changed file is loaded again" do
+      let(:log_documents) do
+        SearchDocument.where(searchable_type: 'MailServerLog')
+      end
+
+      let!(:other_file_log) { FactoryBot.create(:mail_server_log) }
+
+      before do
+        allow(InfoRequest).to receive(:find_by_incoming_email).
+          with("foi+request-1234@example.com").and_return(ir)
+      end
+
+      def reload_changed_file
+        allow(File).to receive_message_chain(:stat, :mtime).
+          and_return(Time.utc(2012, 10, 11))
+        MailServerLog.load_file(text_log_path)
+      end
+
+      it "keeps one search document for each log line" do
+        MailServerLog.load_file(text_log_path)
+        replaced_ids = ir.mail_server_logs.pluck(:id)
+        expect(log_documents.where(searchable_id: replaced_ids).count).to eq(2)
+
+        reload_changed_file
+
+        expect(log_documents.pluck(:searchable_id)).to match_array(
+          ir.mail_server_logs.pluck(:id) + [other_file_log.id]
+        )
+      end
+
+      it "keeps the search documents of other records" do
+        MailServerLog.load_file(text_log_path)
+        replaced_id = ir.mail_server_logs.first.id
+        # another type's document with the same id as a replaced line
+        other_type = SearchDocument.new(
+          searchable_type: 'PublicBody', searchable_id: replaced_id,
+          section_ref: '1', language: 'english', raw_content: 'unrelated'
+        )
+        other_type.save!(validate: false)
+        other_file = log_documents.find_by!(searchable_id: other_file_log.id)
+
+        reload_changed_file
+
+        expect(SearchDocument.where(searchable_type: 'PublicBody',
+                                    sd_id: other_type.sd_id)).to exist
+        expect(log_documents.where(sd_id: other_file.sd_id)).to exist
+      end
+    end
   end
 
   describe ".email_addresses_on_line" do
     before :each do
-      allow(AlaveteliConfiguration).to receive(:incoming_email_domain).and_return("example.com")
-      allow(AlaveteliConfiguration).to receive(:incoming_email_prefix).and_return("foi+")
+      allow(AlaveteliConfiguration).to receive(:incoming_email_domain).
+        and_return("example.com")
+      allow(AlaveteliConfiguration).to receive(:incoming_email_prefix).
+        and_return("foi+")
     end
 
     it "recognises a single incoming email" do
-      expect(MailServerLog.email_addresses_on_line("a random log line foi+request-14-e0e09f97@example.com has an email")).to eq(
+      expect(
+        MailServerLog.email_addresses_on_line(
+          "a random log line foi+request-14-e0e09f97@example.com has an email"
+        )
+      ).to eq(
         ["foi+request-14-e0e09f97@example.com"]
       )
     end
 
     it "recognises two email addresses on the same line" do
-      expect(MailServerLog.email_addresses_on_line("two email addresses here foi+request-10-1234@example.com and foi+request-14-e0e09f97@example.com")).to eq(
-        ["foi+request-10-1234@example.com", "foi+request-14-e0e09f97@example.com"]
+      expect(
+        MailServerLog.email_addresses_on_line(
+          "two email addresses here foi+request-10-1234@example.com and " \
+          "foi+request-14-e0e09f97@example.com"
+        )
+      ).to eq(
+        ["foi+request-10-1234@example.com",
+         "foi+request-14-e0e09f97@example.com"]
       )
     end
 
     it "returns an empty array when there is an email address from a different domain" do
-      expect(MailServerLog.email_addresses_on_line("other foi+request-10-1234@foo.com")).to be_empty
+      expect(
+        MailServerLog.email_addresses_on_line(
+          "other foi+request-10-1234@foo.com"
+        )
+      ).to be_empty
     end
 
     it "ignores an email with a different prefix" do
-      expect(MailServerLog.email_addresses_on_line("unknown+request-14-e0e09f97@example.com")).to be_empty
+      expect(
+        MailServerLog.email_addresses_on_line(
+          "unknown+request-14-e0e09f97@example.com"
+        )
+      ).to be_empty
     end
 
     it "ignores an email where the . is substituted for something else" do
-      expect(MailServerLog.email_addresses_on_line("foi+request-14-e0e09f97@exampledcom")).to be_empty
+      expect(
+        MailServerLog.email_addresses_on_line(
+          "foi+request-14-e0e09f97@exampledcom"
+        )
+      ).to be_empty
     end
   end
 
   context "Exim" do
     describe ".load_exim_log_data" do
       it "sanitizes each line in the log file" do
-        allow(AlaveteliConfiguration).to receive(:incoming_email_domain).and_return("example.com")
-        allow(AlaveteliConfiguration).to receive(:incoming_email_prefix).and_return("foi+")
+        allow(AlaveteliConfiguration).to receive(:incoming_email_domain).
+          and_return("example.com")
+        allow(AlaveteliConfiguration).to receive(:incoming_email_prefix).
+          and_return("foi+")
 
         ir = info_requests(:fancy_dog_request)
-        allow(InfoRequest).to receive(:find_by_incoming_email).with("foi+request-1234@example.com").and_return(ir)
+        allow(InfoRequest).to receive(:find_by_incoming_email).
+          with("foi+request-1234@example.com").and_return(ir)
 
         # Log files can contain stuff which isn't valid UTF-8 sometimes when
         # things go wrong.
@@ -205,74 +324,164 @@ RSpec.describe MailServerLog do
   end
 
   context "Postfix" do
-    let(:log) { [
-      "Oct  3 16:39:35 host postfix/pickup[2257]: CB55836EE58C: uid=1003 from=<foi+request-14-e0e09f97@example.com>",
-      "Oct  3 16:39:35 host postfix/cleanup[7674]: CB55836EE58C: message-id=<ogm-15+506bdda7a4551-20ee@example.com>",
-      "Oct  3 16:39:35 host postfix/qmgr[1673]: 9634B16F7F7: from=<foi+request-10-1234@example.com>, size=368, nrcpt=1 (queue active)",
-      "Oct  3 16:39:35 host postfix/qmgr[15615]: CB55836EE58C: from=<foi+request-14-e0e09f97@example.com>, size=1695, nrcpt=1 (queue active)",
-      "Oct  3 16:39:38 host postfix/smtp[7676]: CB55836EE58C: to=<foi@some.gov.au>, relay=aspmx.l.google.com[74.125.25.27]:25, delay=2.5, delays=0.13/0.02/1.7/0.59, dsn=2.0.0, status=sent (250 2.0.0 OK 1349246383 j9si1676296paw.328)",
-      "Oct  3 16:39:38 host postfix/smtp[1681]: 9634B16F7F7: to=<kdent@example.com>, relay=none, delay=46, status=deferred (connect to 216.150.150.131[216.150.150.131]: No route to host)",
-      "Oct  3 16:39:38 host postfix/qmgr[15615]: CB55836EE58C: removed"
-    ]}
+    let(:log) {
+  [
+    "Oct  3 16:39:35 host postfix/pickup[2257]: CB55836EE58C: " \
+    "uid=1003 from=<foi+request-14-e0e09f97@example.com>",
+    "Oct  3 16:39:35 host postfix/cleanup[7674]: CB55836EE58C: " \
+    "message-id=<ogm-15+506bdda7a4551-20ee@example.com>",
+    "Oct  3 16:39:35 host postfix/qmgr[1673]: 9634B16F7F7: " \
+    "from=<foi+request-10-1234@example.com>, size=368, " \
+    "nrcpt=1 (queue active)",
+    "Oct  3 16:39:35 host postfix/qmgr[15615]: CB55836EE58C: " \
+    "from=<foi+request-14-e0e09f97@example.com>, size=1695, " \
+    "nrcpt=1 (queue active)",
+    "Oct  3 16:39:38 host postfix/smtp[7676]: CB55836EE58C: " \
+    "to=<foi@some.gov.au>, " \
+    "relay=aspmx.l.google.com[74.125.25.27]:25, delay=2.5, " \
+    "delays=0.13/0.02/1.7/0.59, dsn=2.0.0, " \
+    "status=sent (250 2.0.0 OK 1349246383 j9si1676296paw.328)",
+    "Oct  3 16:39:38 host postfix/smtp[1681]: 9634B16F7F7: " \
+    "to=<kdent@example.com>, relay=none, delay=46, " \
+    "status=deferred (connect to " \
+    "216.150.150.131[216.150.150.131]: No route to host)",
+    "Oct  3 16:39:38 host postfix/qmgr[15615]: CB55836EE58C: removed"
+  ]
+}
 
     describe ".load_postfix_log_data" do
-      # Postfix logs for a single email go over multiple lines. They are all tied together with the Queue ID.
+      # Postfix logs for a single email go over multiple lines. They are all
+      # tied together with the Queue ID.
       # See http://onlamp.com/onlamp/2004/01/22/postfix.html
       it "loads the postfix log and untangles separate email transactions using the queue ID" do
-        allow(AlaveteliConfiguration).to receive(:incoming_email_domain).and_return("example.com")
-        allow(AlaveteliConfiguration).to receive(:incoming_email_prefix).and_return("foi+")
-        allow(log).to receive(:rewind)
+        allow(AlaveteliConfiguration).to receive(:incoming_email_domain).
+          and_return("example.com")
+        allow(AlaveteliConfiguration).to receive(:incoming_email_prefix).
+          and_return("foi+")
+        file = StringIO.new(log.map { |line| "#{line}\n" }.join)
         ir1 = info_requests(:fancy_dog_request)
         ir2 = info_requests(:naughty_chicken_request)
-        allow(InfoRequest).to receive(:find_by_incoming_email).with("foi+request-14-e0e09f97@example.com").and_return(ir1)
-        allow(InfoRequest).to receive(:find_by_incoming_email).with("foi+request-10-1234@example.com").and_return(ir2)
-        MailServerLog.load_postfix_log_data(log, MailServerLogDone.new(filename: "foo", last_stat: Time.zone.now))
+        allow(InfoRequest).to receive(:find_by_incoming_email).
+          with("foi+request-14-e0e09f97@example.com").and_return(ir1)
+        allow(InfoRequest).to receive(:find_by_incoming_email).
+          with("foi+request-10-1234@example.com").and_return(ir2)
+        MailServerLog.load_postfix_log_data(
+          file, MailServerLogDone.new(filename: "foo", last_stat: Time.zone.now)
+        )
         # TODO: Check that each log line is attached to the correct request
         expect(ir1.mail_server_logs.count).to eq(5)
         expect(ir1.mail_server_logs[0].order).to eq(1)
-        expect(ir1.mail_server_logs[0].line).to eq("Oct  3 16:39:35 host postfix/pickup[2257]: CB55836EE58C: uid=1003 from=<foi+request-14-e0e09f97@example.com>")
+        expect(ir1.mail_server_logs[0].line).
+          to eq("Oct  3 16:39:35 host postfix/pickup[2257]: CB55836EE58C: " \
+                "uid=1003 from=<foi+request-14-e0e09f97@example.com>\n")
         expect(ir1.mail_server_logs[1].order).to eq(2)
-        expect(ir1.mail_server_logs[1].line).to eq("Oct  3 16:39:35 host postfix/cleanup[7674]: CB55836EE58C: message-id=<ogm-15+506bdda7a4551-20ee@example.com>")
+        expect(ir1.mail_server_logs[1].line).
+          to eq("Oct  3 16:39:35 host postfix/cleanup[7674]: CB55836EE58C: " \
+                "message-id=<ogm-15+506bdda7a4551-20ee@example.com>\n")
         expect(ir1.mail_server_logs[2].order).to eq(4)
-        expect(ir1.mail_server_logs[2].line).to eq("Oct  3 16:39:35 host postfix/qmgr[15615]: CB55836EE58C: from=<foi+request-14-e0e09f97@example.com>, size=1695, nrcpt=1 (queue active)")
+        expect(ir1.mail_server_logs[2].line).
+          to eq("Oct  3 16:39:35 host postfix/qmgr[15615]: CB55836EE58C: " \
+                "from=<foi+request-14-e0e09f97@example.com>, size=1695, " \
+                "nrcpt=1 (queue active)\n")
         expect(ir1.mail_server_logs[3].order).to eq(5)
-        expect(ir1.mail_server_logs[3].line).to eq("Oct  3 16:39:38 host postfix/smtp[7676]: CB55836EE58C: to=<foi@some.gov.au>, relay=aspmx.l.google.com[74.125.25.27]:25, delay=2.5, delays=0.13/0.02/1.7/0.59, dsn=2.0.0, status=sent (250 2.0.0 OK 1349246383 j9si1676296paw.328)")
+        expect(ir1.mail_server_logs[3].line).
+          to eq("Oct  3 16:39:38 host postfix/smtp[7676]: CB55836EE58C: " \
+                "to=<foi@some.gov.au>, " \
+                "relay=aspmx.l.google.com[74.125.25.27]:25, delay=2.5, " \
+                "delays=0.13/0.02/1.7/0.59, dsn=2.0.0, " \
+                "status=sent (250 2.0.0 OK 1349246383 j9si1676296paw.328)\n")
         expect(ir1.mail_server_logs[4].order).to eq(7)
-        expect(ir1.mail_server_logs[4].line).to eq("Oct  3 16:39:38 host postfix/qmgr[15615]: CB55836EE58C: removed")
+        expect(ir1.mail_server_logs[4].line).to eq(
+          "Oct  3 16:39:38 host postfix/qmgr[15615]: CB55836EE58C: removed\n"
+        )
         expect(ir2.mail_server_logs.count).to eq(2)
         expect(ir2.mail_server_logs[0].order).to eq(3)
-        expect(ir2.mail_server_logs[0].line).to eq("Oct  3 16:39:35 host postfix/qmgr[1673]: 9634B16F7F7: from=<foi+request-10-1234@example.com>, size=368, nrcpt=1 (queue active)")
+        expect(ir2.mail_server_logs[0].line).
+          to eq("Oct  3 16:39:35 host postfix/qmgr[1673]: 9634B16F7F7: " \
+                "from=<foi+request-10-1234@example.com>, size=368, " \
+                "nrcpt=1 (queue active)\n")
         expect(ir2.mail_server_logs[1].order).to eq(6)
-        expect(ir2.mail_server_logs[1].line).to eq("Oct  3 16:39:38 host postfix/smtp[1681]: 9634B16F7F7: to=<kdent@example.com>, relay=none, delay=46, status=deferred (connect to 216.150.150.131[216.150.150.131]: No route to host)")
+        expect(ir2.mail_server_logs[1].line).
+          to eq("Oct  3 16:39:38 host postfix/smtp[1681]: 9634B16F7F7: " \
+                "to=<kdent@example.com>, relay=none, delay=46, " \
+                "status=deferred (connect to " \
+                "216.150.150.131[216.150.150.131]: No route to host)\n")
       end
     end
 
     describe ".scan_for_postfix_queue_ids" do
       it "returns the queue ids of interest with the connected email addresses" do
-        allow(AlaveteliConfiguration).to receive(:incoming_email_domain).and_return("example.com")
-        expect(MailServerLog.scan_for_postfix_queue_ids(log)).to eq({
-          "CB55836EE58C" => ["request-14-e0e09f97@example.com"],
-          "9634B16F7F7" => ["request-10-1234@example.com"]
-        })
+        allow(AlaveteliConfiguration).to receive(:incoming_email_domain).
+          and_return("example.com")
+        expect(MailServerLog.scan_for_postfix_queue_ids(log)).to eq(
+          {
+            "CB55836EE58C" => ["request-14-e0e09f97@example.com"],
+            "9634B16F7F7" => ["request-10-1234@example.com"]
+          }
+        )
       end
     end
 
     describe ".extract_postfix_queue_id_from_syslog_line" do
       it "returns nil if there is no queue id" do
-        expect(MailServerLog.extract_postfix_queue_id_from_syslog_line("Oct  7 07:16:48 kedumba postfix/smtp[14294]: connect to mail.neilcopp.com.au[110.142.151.66]:25: Connection refused")).to be_nil
+        expect(
+          MailServerLog.extract_postfix_queue_id_from_syslog_line(
+            "Oct  7 07:16:48 kedumba postfix/smtp[14294]: connect to " \
+            "mail.neilcopp.com.au[110.142.151.66]:25: Connection refused"
+          )
+        ).to be_nil
+      end
+
+      it 'returns the queue id from a postfix line' do
+        line = "Oct  7 07:16:48 kedumba postfix/smtp[14294]: 3F2A41C2B: " \
+               "to=<foi@example.org>, status=sent\n"
+
+        expect(MailServerLog.extract_postfix_queue_id_from_syslog_line(line)).
+          to eq('3F2A41C2B')
+      end
+
+      it 'skips a bare-word tag before reading the queue id' do
+        line = "Oct  7 07:16:48 kedumba postfix: smtp: 3F2A41C2B: " \
+               "to=<foi@example.org>\n"
+
+        expect(MailServerLog.extract_postfix_queue_id_from_syslog_line(line)).
+          to eq('3F2A41C2B')
+      end
+
+      it 'returns nil for a blank line' do
+        expect(MailServerLog.extract_postfix_queue_id_from_syslog_line("\n")).
+          to be_nil
       end
     end
 
     describe ".request_postfix_sent?" do
       it "returns true when the logs say the message was sent" do
         ir = info_requests(:fancy_dog_request)
-        ir.mail_server_logs.create!(line: "Oct 10 16:58:38 kedumba postfix/smtp[26358]: A664436F218D: to=<contact@openaustraliafoundation.org.au>, relay=aspmx.l.google.com[74.125.25.26]:25, delay=2.7, delays=0.16/0.02/1.8/0.67, dsn=2.0.0, status=sent (250 2.0.0 OK 1349848723 e6si653316paw.346)", order: 1)
+        ir.mail_server_logs.create!(
+          line: "Oct 10 16:58:38 kedumba postfix/smtp[26358]: A664436F218D: " \
+                "to=<contact@openaustraliafoundation.org.au>, " \
+                "relay=aspmx.l.google.com[74.125.25.26]:25, delay=2.7, " \
+                "delays=0.16/0.02/1.8/0.67, dsn=2.0.0, " \
+                "status=sent (250 2.0.0 OK 1349848723 e6si653316paw.346)",
+          order: 1
+        )
         expect(MailServerLog.request_postfix_sent?(ir)).to be true
       end
 
       it "returns false when the logs say the message hasn't been sent" do
         ir = info_requests(:fancy_dog_request)
-        ir.mail_server_logs.create!(line: "Oct 10 13:22:49 kedumba postfix/smtp[11876]: 6FB9036F1307: to=<foo@example.com>, relay=mta7.am0.yahoodns.net[74.6.136.244]:25, delay=1.5, delays=0.03/0/0.48/1, dsn=5.0.0, status=bounced (host mta7.am0.yahoodns.net[74.6.136.244] said: 554 delivery error: dd Sorry your message to foo@example.com cannot be delivered. This account has been disabled or discontinued [#102]. - mta1272.mail.sk1.yahoo.com (in reply to end of DATA command))", order: 1)
+        ir.mail_server_logs.create!(
+          line: "Oct 10 13:22:49 kedumba postfix/smtp[11876]: 6FB9036F1307: " \
+                "to=<foo@example.com>, " \
+                "relay=mta7.am0.yahoodns.net[74.6.136.244]:25, delay=1.5, " \
+                "delays=0.03/0/0.48/1, dsn=5.0.0, status=bounced (host " \
+                "mta7.am0.yahoodns.net[74.6.136.244] said: 554 delivery " \
+                "error: dd Sorry your message to foo@example.com cannot be " \
+                "delivered. This account has been disabled or discontinued " \
+                "[#102]. - mta1272.mail.sk1.yahoo.com (in reply to end " \
+                "of DATA command))",
+          order: 1
+        )
         expect(MailServerLog.request_postfix_sent?(ir)).to be false
       end
     end
@@ -295,7 +504,8 @@ RSpec.describe MailServerLog do
 
       context 'using the :postfix MTA' do
         before do
-          allow(AlaveteliConfiguration).to receive(:mta_log_type).and_return('postfix')
+          allow(AlaveteliConfiguration).to receive(:mta_log_type).
+            and_return('postfix')
         end
 
         it 'returns a PostfixLine containing the line attribute' do
@@ -437,7 +647,7 @@ RSpec.describe MailServerLog do
         db_value =
           log.
           reload.
-          instance_variable_get('@attributes')['delivery_status'].
+          instance_variable_get(:@attributes)['delivery_status'].
           value.to_s
         expect(db_value).to eq('sent')
       end
@@ -470,7 +680,8 @@ RSpec.describe MailServerLog do
 
       context 'using the :postfix MTA' do
         before do
-          allow(AlaveteliConfiguration).to receive(:mta_log_type).and_return('postfix')
+          allow(AlaveteliConfiguration).to receive(:mta_log_type).
+            and_return('postfix')
         end
 
         let(:line) do
@@ -490,19 +701,13 @@ RSpec.describe MailServerLog do
     end
   end
 
-  describe '#is_owning_user?' do
-    it 'returns true if the user is the owning user of the info request' do
-      log = FactoryBot.build(:mail_server_log)
-      request = mock_model(InfoRequest, is_owning_user?: true)
-      allow(log).to receive(:info_request).and_return(request)
-      expect(log.is_owning_user?(double(:user))).to eq(true)
-    end
+  describe '.request_sent?' do
+    it 'names the configured MTA when it is neither exim nor postfix' do
+      allow(AlaveteliConfiguration).to receive(:mta_log_type).
+        and_return('sendmail')
 
-    it 'returns false if the user is not the owning user of the info request' do
-      log = FactoryBot.build(:mail_server_log)
-      request = mock_model(InfoRequest, is_owning_user?: false)
-      allow(log).to receive(:info_request).and_return(request)
-      expect(log.is_owning_user?(double(:user))).to eq(false)
+      expect { MailServerLog.request_sent?(InfoRequest.new) }.
+        to raise_error(RuntimeError, 'Unexpected MTA type: sendmail')
     end
   end
 
@@ -532,10 +737,11 @@ RSpec.describe MailServerLog do
                                          created_at: Time.zone.now - 5.days)
         allow(MailServerLog).to receive(:request_sent?).with(info_request).
           and_return(false)
-        expected_message = "failed to find request sending in MTA logs for request " \
-                           "id #{info_request.id} #{info_request.url_title} (check " \
-                           "envelope from is being set to request address in Ruby, " \
-                           "and load-mail-server-logs crontab is working)"
+        expected_message =
+          "failed to find request sending in MTA logs for request " \
+          "id #{info_request.id} #{info_request.url_title} (check " \
+          "envelope from is being set to request address in Ruby, " \
+          "and load-mail-server-logs crontab is working)"
         expect($stderr).to receive(:puts).with(expected_message)
         MailServerLog.check_recent_requests_have_been_sent
       end
@@ -544,31 +750,21 @@ RSpec.describe MailServerLog do
 
   describe 'search indexing' do
     it 'indexes logs and finds PII' do
-      log = FactoryBot.create(:mail_server_log, line: "Nov  2 20:13:47 servername postfix/smtp[28805]: 12345ABCDE: to=<admin@someplace.fr>, relay=mx1.example.com[1.2.3.4]:25, delay=12, delays=0.05/0.02/0.83/11, dsn=2.0.0, status=sent (250 OK id=1iQidI-000L38-SB)")
+      log = FactoryBot.create(
+        :mail_server_log,
+        line: "Nov  2 20:13:47 servername postfix/smtp[28805]: 12345ABCDE: " \
+              "to=<admin@someplace.fr>, relay=mx1.example.com[1.2.3.4]:25, " \
+              "delay=12, delays=0.05/0.02/0.83/11, dsn=2.0.0, " \
+              "status=sent (250 OK id=1iQidI-000L38-SB)"
+      )
       expect(log.search_documents.count).to eq(1)
       puts(log.search_documents.first.inspect)
       expect(
-        MailServerLog.search_scope('admin@someplace.fr', backend: :postgresql)
+        MailServerLog.search_scope('admin@someplace.fr')
       ).to eq([])
       expect(
-        MailServerLog.search_scope('admin@someplace.fr', admin_mode: true, backend: :postgresql)
+        MailServerLog.search_scope('admin@someplace.fr', admin_mode: true)
       ).to eq([log])
-    end
-
-    it 'excludes logs for embargoed requests' do
-      info_request = FactoryBot.create(:embargoed_request)
-      log = FactoryBot.create(:mail_server_log, info_request: info_request, line: "Nov  2 20:13:47 servername postfix/smtp[28805]: 12345ABCDE: to=<admin@someplace.fr>, relay=mx1.example.com[1.2.3.4]:25, delay=12, delays=0.05/0.02/0.83/11, dsn=2.0.0, status=sent (250 OK id=1iQidI-000L38-SB)")
-      expect(log.search_documents.count).to eq(1)
-      puts(log.search_documents.first.inspect)
-      expect(
-        MailServerLog.
-          search_scope('admin@someplace.fr', admin_mode: true, backend: :postgresql)
-      ).to eq([log])
-      expect(
-        MailServerLog.
-          search_scope('admin@someplace.fr', admin_mode: true, backend: :postgresql).
-          not_embargoed
-      ).to eq([])
     end
   end
 end

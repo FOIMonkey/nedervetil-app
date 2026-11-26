@@ -14,16 +14,16 @@ shared_examples_for 'NetworkSendErrors' do
     end
 
     it 'sets the described_state of the request to "error_message"' do
-      expect(request.reload.described_state).to eq('error_message')
+      expect(info_request.reload.described_state).to eq('error_message')
     end
 
     it 'logs a "send_error" event' do
-      event = request.reload.info_request_events.last
+      event = info_request.reload.info_request_events.last
       expect(event.event_type).to eq 'send_error'
     end
 
     it 'stores the reason for the failure' do
-      event = request.reload.info_request_events.last
+      event = info_request.reload.info_request_events.last
       expect(event.params[:reason]).to match(/timed out/)
     end
 

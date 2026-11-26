@@ -13,10 +13,6 @@ RSpec.shared_examples 'user/spreadable_alerts' do
     end
   end
 
-  describe '.spread_alert_times_across_day' do
-    # TODO
-  end
-
   describe '#daily_summary_time' do
     let(:user) do
       FactoryBot.create(:user, daily_summary_hour: 7,

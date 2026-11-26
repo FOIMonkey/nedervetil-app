@@ -2,18 +2,16 @@ require 'spec_helper'
 require 'integration/alaveteli_dsl'
 
 RSpec.describe "receiving responses to requests in alaveteli_pro" do
-  context "when an embargoed request gets a new response" do
+  context "when a request gets a new response" do
     let!(:pro_user) { FactoryBot.create(:pro_user) }
     let!(:pro_user_session) { login(pro_user) }
-    let!(:info_request) do
-      FactoryBot.create(:embargo_expiring_request,
-                        user: pro_user)
-    end
+    let!(:info_request) { FactoryBot.create(:info_request, user: pro_user) }
 
     it "appears in the request list as having received a response" do
       receive_incoming_mail('incoming-request-plain.eml',
                             to: info_request.incoming_email,
                             from: "Frob <frob@bonce.com>")
+      complete_reply_checks(info_request)
 
       using_pro_session(pro_user_session) do
         visit("#{alaveteli_pro_info_requests_path}" \

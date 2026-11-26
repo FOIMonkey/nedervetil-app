@@ -10,7 +10,7 @@ RSpec.describe 'classifying a request' do
       info_request.public_body.add_tag_if_not_already_present('foi_no')
       using_session(login(user)) do
         classify_request(info_request, classification)
-        expect(page).not_to have_content('By law')
+        expect(page).to have_no_content('By law')
       end
     end
   end
@@ -113,23 +113,21 @@ RSpec.describe 'classifying a request' do
         expect(page).to have_content(message)
         expect(page).to have_link('details',
                                   href: unhappy_url(
-                                          info_request,
-                                          anchor: 'internal_review'))
+                                    info_request,
+                                          anchor: 'internal_review'
+                                  ))
       end
     end
   end
 
   context 'marking request as not_held' do
-    let(:classification) { 'not_held1' }
-
-    it 'displays a thank you message post redirect' do
+    it 'is not a separate choice: the requester marks it as no information' do
       using_session(login(user)) do
-        classify_request(info_request, classification)
-        message = 'Thank you! Here are some ideas on what to do next'
-        # redirect and receive thank you message
-        expect(page).to have_content(message)
-        expect(page).to have_link('how to complain',
-                                  href: unhappy_url(info_request))
+        visit show_request_path(info_request.url_title, update_status: 1)
+        expect(page).to have_field('rejected1')
+        expect(page).to have_no_field('not_held1')
+        classify_request(info_request, 'rejected1')
+        expect(info_request.reload.described_state).to eq('rejected')
       end
     end
   end
@@ -143,7 +141,7 @@ RSpec.describe 'classifying a request' do
         message = "We're glad you got some of the information that you wanted"
         # redirect and receive thank you message
         expect(page).to have_content(message)
-        expect(page).to_not have_link('make a donation')
+        expect(page).to have_no_link('make a donation')
       end
     end
 
@@ -156,7 +154,7 @@ RSpec.describe 'classifying a request' do
     it 'displays a thank you message post redirect' do
       using_session(login(user)) do
         classify_request(info_request, classification)
-        message = 'Oh no! Sorry to hear that your request was refused'
+        message = 'This request is now marked as no information'
         # redirect and receive thank you message
         expect(page).to have_content(message)
       end
@@ -209,41 +207,15 @@ RSpec.describe 'classifying a request' do
       using_session(login(user)) do
         classify_request(info_request, classification)
 
-        message = "We're glad you got all the information that you wanted. " \
-                  "If you write about or make use of the information, " \
-                  "please come back and add an annotation below saying " \
-                  "what you did."
+        message = "We're glad you got all the information that you wanted."
         # redirect and receive thank you message
         expect(page).to have_content(message)
-        expect(page).to_not have_link('make a donation')
+        expect(page).to have_no_content('annotation')
+        expect(page).to have_no_link('make a donation')
       end
     end
 
     include_examples 'the donation link is configured'
-
-    context 'when annotations are disabled' do
-      before do
-        allow_any_instance_of(ApplicationController).
-          to receive(:feature_enabled?).
-            and_call_original
-
-        allow_any_instance_of(ApplicationController).
-          to receive(:feature_enabled?).
-            with(:annotations).
-              and_return(false)
-      end
-
-      it 'does not display the annotations part of the message' do
-        using_session(login(user)) do
-          classify_request(info_request, classification)
-          message = "We're glad you got all the information that you wanted."
-          unexpected = "please come back and add an annotation"
-          # redirect and receive thank you message
-          expect(page).to have_content(message)
-          expect(page).to_not have_content(unexpected)
-        end
-      end
-    end
   end
 
   context 'marking request as user_withdrawn' do

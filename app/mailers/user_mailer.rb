@@ -1,9 +1,8 @@
-# models/user_mailer.rb:
-# Emails relating to user accounts. e.g. Confirming a new account
-#
 # Copyright (c) 2007 UK Citizens Online Democracy. All rights reserved.
 # Email: hello@mysociety.org; WWW: http://www.mysociety.org/
 
+# Sends user-account emails for sign-in confirmation, duplicate registration
+# notices and email-address change confirmation and warnings.
 class UserMailer < ApplicationMailer
   def confirm_login(user, reasons, url)
     @reasons = reasons
@@ -33,10 +32,22 @@ class UserMailer < ApplicationMailer
     @old_email = user.email
     @new_email = new_email
 
-    # Cannot send the user to mail_user - that would send to old_email.
-    # No problem if the current locale is the user's.
+    # Sent to new_email so clicking proves ownership before switching sign-in
+    # and recovery; using the current user's locale is fine.
     subject = _(
       "Confirm your new email address on {{site_name}}",
+      site_name: site_name
+    )
+    mail_user(new_email, subject: -> { subject })
+  end
+
+  # Notifies the current address so the owner sees unauthorised change attempts.
+  def changeemail_requested(user, new_email)
+    @name = user.name
+    @new_email = new_email
+
+    subject = _(
+      "Someone asked to change your email address on {{site_name}}",
       site_name: site_name
     )
     mail_user(user, subject: -> { subject })
@@ -45,7 +56,6 @@ class UserMailer < ApplicationMailer
   def changeemail_already_used(old_email, new_email)
     @old_email = old_email
     @new_email = new_email
-    user = User.find_by_email(@old_email)
 
     # Cannot send the user to mail_user - that would send to old_email.
     # No problem if the current locale is the user's.

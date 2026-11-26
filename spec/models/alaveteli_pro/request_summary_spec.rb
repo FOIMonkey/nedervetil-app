@@ -20,7 +20,7 @@ require 'spec_helper'
 RSpec.describe AlaveteliPro::RequestSummary, type: :model do
   let(:public_bodies) { FactoryBot.create_list(:public_body, 3) }
   let(:public_body_names) do
-    public_bodies.sort { |x,y| x.name <=> y.name }.map(&:name).join(" ")
+    public_bodies.sort_by(&:name).map(&:name).join(" ")
   end
 
   it "requires a summarisable" do
@@ -236,50 +236,6 @@ RSpec.describe AlaveteliPro::RequestSummary, type: :model do
         end
       end
 
-      context "when the request has an expiring embargo" do
-        let(:request) { FactoryBot.create(:embargo_expiring_request) }
-        let(:summary) do
-          summary = AlaveteliPro::RequestSummary.
-            create_or_update_from(request)
-        end
-
-        it "adds the embargo_expiring category" do
-          expected_categories = [
-            AlaveteliPro::RequestSummaryCategory.embargo_expiring,
-            AlaveteliPro::RequestSummaryCategory.awaiting_response
-          ]
-          expect(summary.request_summary_categories).
-            to match_array expected_categories
-        end
-      end
-
-      context "when the request is a batch with expiring embargoes" do
-        let(:batch) do
-          FactoryBot.create(:info_request_batch,
-                            public_bodies: public_bodies)
-        end
-        let(:summary) do
-          AlaveteliPro::RequestSummary.create_or_update_from(batch)
-        end
-
-        before do
-          batch.create_batch!
-          batch.info_requests.each do |request|
-            FactoryBot.create(:expiring_embargo, info_request: request)
-          end
-          batch.reload
-        end
-
-        it "adds the embargo_expiring category" do
-          expected_categories = [
-            AlaveteliPro::RequestSummaryCategory.embargo_expiring,
-            AlaveteliPro::RequestSummaryCategory.awaiting_response
-          ]
-          expect(summary.request_summary_categories).
-            to match_array expected_categories
-        end
-      end
-
       context "when the request is an InfoRequest" do
         let(:request) { FactoryBot.create(:info_request) }
         let(:summary) do
@@ -314,7 +270,8 @@ RSpec.describe AlaveteliPro::RequestSummary, type: :model do
           first_request = batch.info_requests.first
           incoming_message = FactoryBot.create(
             :incoming_message,
-            info_request: first_request)
+            info_request: first_request
+          )
           first_request.log_event(
             'response',
             incoming_message_id: incoming_message.id
@@ -323,9 +280,10 @@ RSpec.describe AlaveteliPro::RequestSummary, type: :model do
           first_request.save!
 
           second_request = batch.info_requests.second
-          incoming_message = FactoryBot.create(
+          FactoryBot.create(
             :incoming_message,
-            info_request: second_request)
+            info_request: second_request
+          )
           second_request.set_described_state('successful')
 
           batch.reload
@@ -376,8 +334,7 @@ RSpec.describe AlaveteliPro::RequestSummary, type: :model do
       awaiting_response = AlaveteliPro::RequestSummaryCategory.
         awaiting_response
       complete = AlaveteliPro::RequestSummaryCategory.complete
-      embargo_expiring = AlaveteliPro::RequestSummaryCategory.
-        embargo_expiring
+      other = AlaveteliPro::RequestSummaryCategory.other
       draft_summary = FactoryBot.create(
         :request_summary,
         request_summary_categories: [draft]
@@ -390,14 +347,14 @@ RSpec.describe AlaveteliPro::RequestSummary, type: :model do
         :request_summary,
         request_summary_categories: [complete]
       )
-      expiring_summary = FactoryBot.create(
+      multi_summary = FactoryBot.create(
         :request_summary,
-        request_summary_categories: [complete, embargo_expiring]
+        request_summary_categories: [complete, other]
       )
       expect(AlaveteliPro::RequestSummary.not_category(:draft)).
         to match_array [awaiting_summary,
                         complete_summary,
-                        expiring_summary]
+                        multi_summary]
       expect(AlaveteliPro::RequestSummary.not_category(:complete)).
         to match_array [awaiting_summary, draft_summary]
     end

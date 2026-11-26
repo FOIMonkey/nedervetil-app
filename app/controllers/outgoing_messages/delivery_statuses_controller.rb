@@ -1,3 +1,5 @@
+# Displays an OutgoingMessage's delivery status and associated mail server log
+# lines (redacted for non-admins) to readers permitted to view the request.
 class OutgoingMessages::DeliveryStatusesController < ApplicationController
   before_action :set_outgoing_message, :check_prominence
 
@@ -7,12 +9,13 @@ class OutgoingMessages::DeliveryStatusesController < ApplicationController
 
     @delivery_status = @outgoing_message.delivery_status
 
-    @show_mail_server_logs = @outgoing_message.is_owning_user?(@user)
+    request = @outgoing_message.info_request
+    @show_mail_server_logs = can?(:read, request)
 
-    if @show_mail_server_logs
-      @mail_server_logs = @outgoing_message.mail_server_logs.map do |log|
-        log.line(redact: !@user.is_admin?)
-      end
+    return unless @show_mail_server_logs
+
+    @mail_server_logs = @outgoing_message.mail_server_logs.map do |log|
+      log.line(redact: cannot?(:admin, request))
     end
   end
 

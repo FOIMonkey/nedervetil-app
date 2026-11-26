@@ -1,0 +1,794 @@
+{
+  "a CSV file": {
+    "format": "csv",
+    "change": "initial",
+    "engine": "copy",
+    "page_count": 1,
+    "notes": {
+      "ocr": "off",
+      "always_removed_pages": []
+    },
+    "findings": [],
+    "thumbnail": false,
+    "pages": [
+      {
+        "number": 1,
+        "label": "Table",
+        "kind": "sheet",
+        "width": null,
+        "height": null,
+        "rows": 3,
+        "columns": 3,
+        "truncated": false,
+        "text_source": "csv",
+        "text": "Depot\tVans\tContact\nNorth\t12\t[email address]\nSouth\t9\t[mobile number]"
+      }
+    ]
+  },
+  "a PDF whose XMP names its requester": {
+    "format": "pdf",
+    "change": "initial",
+    "engine": "copy",
+    "page_count": 1,
+    "notes": {
+      "ocr": "off",
+      "rules_read": [],
+      "always_removed_pages": []
+    },
+    "findings": [
+      "An XMP metadata stream (it may name people)"
+    ],
+    "thumbnail": true,
+    "pages": [
+      {
+        "number": 1,
+        "label": "Page 1",
+        "kind": "image",
+        "width": 827,
+        "height": 1170,
+        "rows": null,
+        "columns": null,
+        "truncated": false,
+        "text_source": "pdftotext",
+        "text": "The depot opens at eight each weekday."
+      }
+    ]
+  },
+  "a PDF whose XMP names someone else": {
+    "format": "pdf",
+    "change": "initial",
+    "engine": "copy",
+    "page_count": 1,
+    "notes": {
+      "ocr": "off",
+      "rules_read": [],
+      "always_removed_pages": []
+    },
+    "findings": [],
+    "thumbnail": true,
+    "pages": [
+      {
+        "number": 1,
+        "label": "Page 1",
+        "kind": "image",
+        "width": 827,
+        "height": 1170,
+        "rows": null,
+        "columns": null,
+        "truncated": false,
+        "text_source": "pdftotext",
+        "text": "The depot opens at eight each weekday."
+      }
+    ]
+  },
+  "a Word file with hidden text": {
+    "format": "document",
+    "change": "initial",
+    "engine": "copy",
+    "page_count": 1,
+    "notes": {
+      "ocr": "off",
+      "rules_read": [],
+      "risky_hidden": [
+        "Hidden text in the Word file (1 passage)"
+      ],
+      "always_removed_pages": []
+    },
+    "findings": [
+      "Hidden text in the Word file (1 passage)"
+    ],
+    "thumbnail": true,
+    "pages": [
+      {
+        "number": 1,
+        "label": "Page 1",
+        "kind": "image",
+        "width": 850,
+        "height": 1100,
+        "rows": null,
+        "columns": null,
+        "truncated": false,
+        "text_source": "pdftotext",
+        "text": "Fleet vehicles by depot.\nNorth has 12 vans and South has 9."
+      }
+    ]
+  },
+  "a boxed redaction of a two-page scan, read by OCR": {
+    "format": "pdf",
+    "change": "redaction",
+    "engine": "raster-v1",
+    "page_count": 2,
+    "notes": {
+      "ocr": "on",
+      "ocr_pages": 1,
+      "always_removed_pages": []
+    },
+    "findings": [],
+    "thumbnail": true,
+    "pages": [
+      {
+        "number": 1,
+        "label": "Page 1",
+        "kind": "image",
+        "width": 827,
+        "height": 1170,
+        "rows": null,
+        "columns": null,
+        "truncated": false,
+        "text_source": "ocr",
+        "text": "Gritshire Council\nThe fleet has 42 vehicles.\n\n"
+      },
+      {
+        "number": 2,
+        "label": "Page 2",
+        "kind": "image",
+        "width": 827,
+        "height": 1170,
+        "rows": null,
+        "columns": null,
+        "truncated": false,
+        "text_source": "ocr",
+        "text": "Depot rota\nNorth has 12 vans and South has 9.\n"
+      }
+    ]
+  },
+  "a clean copy of a Word file, which keeps its words": {
+    "format": "pdf",
+    "change": "clean",
+    "engine": "text-v1",
+    "page_count": 1,
+    "notes": {
+      "ocr": "off",
+      "always_removed_pages": []
+    },
+    "findings": [],
+    "thumbnail": true,
+    "pages": [
+      {
+        "number": 1,
+        "label": "Page 1",
+        "kind": "image",
+        "width": 850,
+        "height": 1100,
+        "rows": null,
+        "columns": null,
+        "truncated": false,
+        "text_source": "pdftotext",
+        "text": "Fleet vehicles by depot.\nNorth has 12 vans and South has 9."
+      }
+    ]
+  },
+  "a clean copy of a letter": {
+    "format": "pdf",
+    "change": "clean",
+    "engine": "raster-v1",
+    "page_count": 2,
+    "notes": {
+      "ocr": "off",
+      "unread_pages": [
+        1,
+        2
+      ],
+      "always_removed_pages": []
+    },
+    "findings": [],
+    "thumbnail": true,
+    "pages": [
+      {
+        "number": 1,
+        "label": "Page 1",
+        "kind": "image",
+        "width": 827,
+        "height": 1170,
+        "rows": null,
+        "columns": null,
+        "truncated": false,
+        "text_source": "none",
+        "text": ""
+      },
+      {
+        "number": 2,
+        "label": "Page 2",
+        "kind": "image",
+        "width": 827,
+        "height": 1170,
+        "rows": null,
+        "columns": null,
+        "truncated": false,
+        "text_source": "none",
+        "text": ""
+      }
+    ]
+  },
+  "a clean copy of a letter, read by OCR": {
+    "format": "pdf",
+    "change": "clean",
+    "engine": "raster-v1",
+    "page_count": 2,
+    "notes": {
+      "ocr": "on",
+      "ocr_pages": 2,
+      "always_removed_pages": []
+    },
+    "findings": [],
+    "thumbnail": true,
+    "pages": [
+      {
+        "number": 1,
+        "label": "Page 1",
+        "kind": "image",
+        "width": 827,
+        "height": 1170,
+        "rows": null,
+        "columns": null,
+        "truncated": false,
+        "text_source": "ocr",
+        "text": "Gritshire Council\n\nInformation Governance\n\nOur ref: FOI-2025-0142\nDate: 4 March 2025\n\nDear Rowan Requester,\n\nFreedom of Information request FOI-2025-0142\n\nThank you for your request for information. We have dealt with your request\nunder the Freedom of Information Act 2000.\n\nThe fleet has 42 vehicles across three depots. Ask the fleet team at\n\nif you need the list again.\nOur out of hours line is Ne2eee aaa\n\nSome of the information you asked for is withheld under section 43(2) of the Act\n(commercial interests): releasing it would be likely to prejudice the commercial\ninterests of the authority and its contractors. We have considered the public\ninterest and concluded that it favours withholding this information.\n\nCase officer: Alex Placeholder, telephone 01632 960123\n"
+      },
+      {
+        "number": 2,
+        "label": "Page 2",
+        "kind": "image",
+        "width": 827,
+        "height": 1170,
+        "rows": null,
+        "columns": null,
+        "truncated": false,
+        "text_source": "ocr",
+        "text": "If you are unhappy with the way your request has been handled, you can ask for\nan internal review. Please write to us within 40 working days of the date of\n\nthis letter. If you are still dissatisfied after the review, you can complain to\n\nthe Information Commissioner.\n\nYours sincerely,\n\nInformation Governance Team\nGritshire Council\n"
+      }
+    ]
+  },
+  "a clean copy of a workbook": {
+    "format": "spreadsheet",
+    "change": "clean",
+    "engine": "visible-cells",
+    "page_count": 1,
+    "notes": {
+      "ocr": "off",
+      "always_removed_pages": []
+    },
+    "findings": [],
+    "thumbnail": false,
+    "pages": [
+      {
+        "number": 1,
+        "label": "Depots",
+        "kind": "sheet",
+        "width": null,
+        "height": null,
+        "rows": 3,
+        "columns": 3,
+        "truncated": false,
+        "text_source": "sheet",
+        "text": "Depot\tVans\tContact\nNorth\t12\t[email address]\nSouth\t9\tMarmalade Lane yard"
+      }
+    ]
+  },
+  "a letter of two pages": {
+    "format": "pdf",
+    "change": "initial",
+    "engine": "copy",
+    "page_count": 2,
+    "notes": {
+      "ocr": "off",
+      "rules_read": [],
+      "always_removed_pages": []
+    },
+    "findings": [],
+    "thumbnail": true,
+    "pages": [
+      {
+        "number": 1,
+        "label": "Page 1",
+        "kind": "image",
+        "width": 827,
+        "height": 1170,
+        "rows": null,
+        "columns": null,
+        "truncated": false,
+        "text_source": "pdftotext",
+        "text": "Gritshire Council\nInformation Governance\nOur ref: FOI-2025-0142\nDate: 4 March 2025\nDear Rowan Requester,\nFreedom of Information request FOI-2025-0142\nThank you for your request for information. We have dealt with your request\nunder the Freedom of Information Act 2000.\nThe fleet has 42 vehicles across three depots. Ask the fleet team at\n[redacted] if you need the list again.\nOur out of hours line is [redacted].\nSome of the information you asked for is withheld under section 43(2) of the Act\n(commercial interests): releasing it would be likely to prejudice the commercial\ninterests of the authority and its contractors. We have considered the public\ninterest and concluded that it favours withholding this information.\nCase officer: Alex Placeholder, telephone 01632 960123"
+      },
+      {
+        "number": 2,
+        "label": "Page 2",
+        "kind": "image",
+        "width": 827,
+        "height": 1170,
+        "rows": null,
+        "columns": null,
+        "truncated": false,
+        "text_source": "pdftotext",
+        "text": "If you are unhappy with the way your request has been handled, you can ask for\nan internal review. Please write to us within 40 working days of the date of\nthis letter. If you are still dissatisfied after the review, you can complain to\nthe Information Commissioner.\nYours sincerely,\nInformation Governance Team\nGritshire Council"
+      }
+    ]
+  },
+  "a letter whose properties name its requester": {
+    "format": "pdf",
+    "change": "initial",
+    "engine": "copy",
+    "page_count": 2,
+    "notes": {
+      "ocr": "off",
+      "rules_read": [],
+      "always_removed_pages": []
+    },
+    "findings": [
+      "PDF properties: Author “Rowan Requester”",
+      "PDF properties: Title “Reply to Rowan Requester”"
+    ],
+    "thumbnail": true,
+    "pages": [
+      {
+        "number": 1,
+        "label": "Page 1",
+        "kind": "image",
+        "width": 827,
+        "height": 1170,
+        "rows": null,
+        "columns": null,
+        "truncated": false,
+        "text_source": "pdftotext",
+        "text": "Gritshire Council\nInformation Governance\nOur ref: FOI-2025-0143\nDate: 5 March 2025\nDear Rowan Requester,\nFreedom of Information request FOI-2025-0143\nThank you for your request for information. We have dealt with your request\nunder the Freedom of Information Act 2000.\nThe fleet has 42 vehicles.\nSome of the information you asked for is withheld under section 43(2) of the Act\n(commercial interests): releasing it would be likely to prejudice the commercial\ninterests of the authority and its contractors. We have considered the public\ninterest and concluded that it favours withholding this information.\nCase officer: Alex Placeholder, telephone 01632 960123"
+      },
+      {
+        "number": 2,
+        "label": "Page 2",
+        "kind": "image",
+        "width": 827,
+        "height": 1170,
+        "rows": null,
+        "columns": null,
+        "truncated": false,
+        "text_source": "pdftotext",
+        "text": "If you are unhappy with the way your request has been handled, you can ask for\nan internal review. Please write to us within 40 working days of the date of\nthis letter. If you are still dissatisfied after the review, you can complain to\nthe Information Commissioner.\nYours sincerely,\nInformation Governance Team\nGritshire Council"
+      }
+    ]
+  },
+  "a letter with a picture, read by OCR as well": {
+    "format": "pdf",
+    "change": "initial",
+    "engine": "copy",
+    "page_count": 1,
+    "notes": {
+      "ocr": "on",
+      "ocr_pages": 1,
+      "rules_read": [],
+      "ocr_flagged": {
+        "1": [
+          "pictures"
+        ]
+      },
+      "masked_pages": [
+        1
+      ],
+      "always_removed_pages": []
+    },
+    "findings": [],
+    "thumbnail": true,
+    "pages": [
+      {
+        "number": 1,
+        "label": "Page 1",
+        "kind": "image",
+        "width": 827,
+        "height": 1170,
+        "rows": null,
+        "columns": null,
+        "truncated": false,
+        "text_source": "pdftotext",
+        "text": "The council replied about the road contracts, with its letterhead below."
+      }
+    ]
+  },
+  "a letter with a picture, with OCR off": {
+    "format": "pdf",
+    "change": "initial",
+    "engine": "copy",
+    "page_count": 1,
+    "notes": {
+      "ocr": "off",
+      "rules_read": [],
+      "unread_flagged": [
+        {
+          "page": 1,
+          "reasons": [
+            "pictures"
+          ]
+        }
+      ],
+      "always_removed_pages": []
+    },
+    "findings": [],
+    "thumbnail": true,
+    "pages": [
+      {
+        "number": 1,
+        "label": "Page 1",
+        "kind": "image",
+        "width": 827,
+        "height": 1170,
+        "rows": null,
+        "columns": null,
+        "truncated": false,
+        "text_source": "pdftotext",
+        "text": "The council replied about the road contracts, with its letterhead below."
+      }
+    ]
+  },
+  "a longer file than is shown": {
+    "format": "pdf",
+    "change": "initial",
+    "engine": "copy",
+    "page_count": 5,
+    "notes": {
+      "ocr": "off",
+      "rules_read": [],
+      "pages_not_shown": 3,
+      "always_removed_pages": []
+    },
+    "findings": [
+      "Only the first 2 of 5 pages are shown and checked here."
+    ],
+    "thumbnail": true,
+    "pages": [
+      {
+        "number": 1,
+        "label": "Page 1",
+        "kind": "image",
+        "width": 827,
+        "height": 1170,
+        "rows": null,
+        "columns": null,
+        "truncated": false,
+        "text_source": "pdftotext",
+        "text": {
+          "length": 2092,
+          "sha256": "885c9ea7ecc50e56715365c036d679b555c8911dd17a955019d5ed36d37817aa",
+          "starts": "Depot minutes\nItem 1. The depot managers met and agreed the vehicle rota for the",
+          "ends": " agreed the vehicle rota for the month, with\nno changes to the spring timetable."
+        }
+      },
+      {
+        "number": 2,
+        "label": "Page 2",
+        "kind": "image",
+        "width": 827,
+        "height": 1170,
+        "rows": null,
+        "columns": null,
+        "truncated": false,
+        "text_source": "pdftotext",
+        "text": {
+          "length": 2167,
+          "sha256": "aa9239a9acbd16162afca8750e0596a8fcf3c3824cf609ded37ecf33fb435762",
+          "starts": "Item 19. The depot managers met and agreed the vehicle rota for the month, with\n",
+          "ends": "\nItem 37. The depot managers met and agreed the vehicle rota for the month, with"
+        }
+      }
+    ]
+  },
+  "a scan, read by OCR": {
+    "format": "pdf",
+    "change": "initial",
+    "engine": "copy",
+    "page_count": 1,
+    "notes": {
+      "ocr": "on",
+      "ocr_pages": 1,
+      "rules_read": [],
+      "always_removed_pages": []
+    },
+    "findings": [],
+    "thumbnail": true,
+    "pages": [
+      {
+        "number": 1,
+        "label": "Page 1",
+        "kind": "image",
+        "width": 827,
+        "height": 1170,
+        "rows": null,
+        "columns": null,
+        "truncated": false,
+        "text_source": "ocr",
+        "text": "Gritshire Council\nThe fleet has 42 vehicles.\n"
+      }
+    ]
+  },
+  "a scan, with OCR off": {
+    "format": "pdf",
+    "change": "initial",
+    "engine": "copy",
+    "page_count": 1,
+    "notes": {
+      "ocr": "off",
+      "rules_read": [],
+      "always_removed_pages": []
+    },
+    "findings": [],
+    "thumbnail": true,
+    "pages": [
+      {
+        "number": 1,
+        "label": "Page 1",
+        "kind": "image",
+        "width": 827,
+        "height": 1170,
+        "rows": null,
+        "columns": null,
+        "truncated": false,
+        "text_source": "none",
+        "text": ""
+      }
+    ]
+  },
+  "a slide deck": {
+    "format": "presentation",
+    "change": "initial",
+    "engine": "copy",
+    "page_count": 2,
+    "notes": {
+      "ocr": "off",
+      "rules_read": [],
+      "always_removed_pages": []
+    },
+    "findings": [],
+    "thumbnail": true,
+    "pages": [
+      {
+        "number": 1,
+        "label": "Page 1",
+        "kind": "image",
+        "width": 1000,
+        "height": 563,
+        "rows": null,
+        "columns": null,
+        "truncated": false,
+        "text_source": "pdftotext",
+        "text": "Interesting"
+      },
+      {
+        "number": 2,
+        "label": "Page 2",
+        "kind": "image",
+        "width": 1000,
+        "height": 563,
+        "rows": null,
+        "columns": null,
+        "truncated": false,
+        "text_source": "pdftotext",
+        "text": "Lorem ipsum dolor sit amet\nAliquam erat volutpat. Curabitur ut elit nec dolor euismod auctor. Duis imperdiet\nmetus turpis, sed consectetur ipsum vulputate in. Nam dapibus nunc nec purus\neuismod, quis tristique turpis vulputate. Vestibulum mauris ante, viverra nec nulla\nsed, euismod bibendum turpis. Nullam venenatis condimentum suscipit. Proin\neleifend eros ornare, semper dolor ac, efficitur elit. Nullam at sodales mauris, ut\ntempus magna. Praesent bibendum cursus nulla tincidunt accumsan. Mauris eget\ntellus a ipsum bibendum venenatis eu ac massa. Fusce non metus a mauris\npretium lobortis sed id mi. Nulla mauris ligula, vulputate a purus at, tristique finibus\nmassa. Sed eros tortor, lacinia ut tortor non, placerat ullamcorper ligula. Praesent\nac aliquam quam. Praesent porta lacinia dolor."
+      }
+    ]
+  },
+  "a table": {
+    "format": "pdf",
+    "change": "initial",
+    "engine": "copy",
+    "page_count": 1,
+    "notes": {
+      "ocr": "off",
+      "rules_read": [],
+      "always_removed_pages": []
+    },
+    "findings": [],
+    "thumbnail": true,
+    "pages": [
+      {
+        "number": 1,
+        "label": "Page 1",
+        "kind": "image",
+        "width": 827,
+        "height": 1170,
+        "rows": null,
+        "columns": null,
+        "truncated": false,
+        "text_source": "pdftotext",
+        "text": "Vehicles by depot\nFigures at 1 March 2025.\nDepot    Vans    Cars\nNorth     12      4\nSouth     9       7\nWest     3       2"
+      }
+    ]
+  },
+  "a text file in two parts": {
+    "format": "text",
+    "change": "initial",
+    "engine": "copy",
+    "page_count": 2,
+    "notes": {
+      "ocr": "off",
+      "always_removed_pages": []
+    },
+    "findings": [],
+    "thumbnail": false,
+    "pages": [
+      {
+        "number": 1,
+        "label": "Part 1",
+        "kind": "text",
+        "width": null,
+        "height": null,
+        "rows": null,
+        "columns": null,
+        "truncated": false,
+        "text_source": "plain",
+        "text": {
+          "length": 100000,
+          "sha256": "7f7c6501005f6b64f351263d2f19d5e26914b0af35219f52773d01875cb22470",
+          "starts": "The depot managers met and agreed the vehicle rota.\nThe depot managers met and a",
+          "ends": "greed the vehicle rota.\nThe depot managers met and agreed the vehicle rota.\nThe "
+        }
+      },
+      {
+        "number": 2,
+        "label": "Part 2",
+        "kind": "text",
+        "width": null,
+        "height": null,
+        "rows": null,
+        "columns": null,
+        "truncated": false,
+        "text_source": "plain",
+        "text": {
+          "length": 4557,
+          "sha256": "1f39841ba3a5702548a480f7abfeb6129a7932807d831cd7c5f8a24b28c7e248",
+          "starts": "depot managers met and agreed the vehicle rota.\nThe depot managers met and agree",
+          "ends": "nd agreed the vehicle rota.\nThe depot managers met and agreed the vehicle rota.\n"
+        }
+      }
+    ]
+  },
+  "a text redaction of a text file": {
+    "format": "text",
+    "change": "text_redaction",
+    "engine": "text-redaction",
+    "page_count": 1,
+    "notes": {
+      "ocr": "off",
+      "always_removed_pages": []
+    },
+    "findings": [],
+    "thumbnail": false,
+    "pages": [
+      {
+        "number": 1,
+        "label": "Text",
+        "kind": "text",
+        "width": null,
+        "height": null,
+        "rows": null,
+        "columns": null,
+        "truncated": false,
+        "text_source": "plain",
+        "text": "The fleet has 42 vehicles.\nAsk [name].\n"
+      }
+    ]
+  },
+  "a two-page scan when OCR may read one page": {
+    "format": "pdf",
+    "change": "initial",
+    "engine": "copy",
+    "page_count": 2,
+    "notes": {
+      "ocr": "on",
+      "ocr_pages": 1,
+      "rules_read": [],
+      "ocr_skipped": [
+        2
+      ],
+      "always_removed_pages": []
+    },
+    "findings": [],
+    "thumbnail": true,
+    "pages": [
+      {
+        "number": 1,
+        "label": "Page 1",
+        "kind": "image",
+        "width": 827,
+        "height": 1170,
+        "rows": null,
+        "columns": null,
+        "truncated": false,
+        "text_source": "ocr",
+        "text": "Gritshire Council\nThe fleet has 42 vehicles.\n"
+      },
+      {
+        "number": 2,
+        "label": "Page 2",
+        "kind": "image",
+        "width": 827,
+        "height": 1170,
+        "rows": null,
+        "columns": null,
+        "truncated": false,
+        "text_source": "none",
+        "text": ""
+      }
+    ]
+  },
+  "a web page with hiding styles": {
+    "format": "text",
+    "change": "initial",
+    "engine": "copy",
+    "page_count": 1,
+    "notes": {
+      "ocr": "off",
+      "always_removed_pages": []
+    },
+    "findings": [],
+    "thumbnail": false,
+    "pages": [
+      {
+        "number": 1,
+        "label": "Text",
+        "kind": "text",
+        "width": null,
+        "height": null,
+        "rows": null,
+        "columns": null,
+        "truncated": false,
+        "text_source": "plain",
+        "text": "Fleet vehicles\n\nNorth has 12 vans.\n\nDraft: do not send to Rowan Requester.\n\nSouth\t9"
+      }
+    ]
+  },
+  "a workbook with a hidden sheet and a word a censor rule matches": {
+    "format": "spreadsheet",
+    "change": "initial",
+    "engine": "copy",
+    "page_count": 1,
+    "notes": {
+      "ocr": "off",
+      "rules_read": [
+        "Marmalade"
+      ],
+      "masked_pages": [
+        1
+      ],
+      "risky_hidden": [
+        "Hidden sheet: Working"
+      ],
+      "rule_matches": true,
+      "always_removed_pages": []
+    },
+    "findings": [
+      "Hidden sheet: Working"
+    ],
+    "thumbnail": false,
+    "pages": [
+      {
+        "number": 1,
+        "label": "Depots",
+        "kind": "sheet",
+        "width": null,
+        "height": null,
+        "rows": 3,
+        "columns": 3,
+        "truncated": false,
+        "text_source": "sheet",
+        "text": "Depot\tVans\tContact\nNorth\t12\t[email address]\nSouth\t9\t[street] Lane yard"
+      }
+    ]
+  }
+}

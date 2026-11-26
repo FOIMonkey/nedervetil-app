@@ -17,12 +17,12 @@ RSpec.describe "pro request list" do
   end
 
   let!(:batch_requests) do
-    requests = []
-    requests = FactoryBot.create_list(
+    FactoryBot.create_list(
       :info_request_batch,
       5,
       user: pro_user,
-      public_bodies: public_bodies)
+      public_bodies: public_bodies
+    )
   end
 
   before do
@@ -38,13 +38,14 @@ RSpec.describe "pro request list" do
     using_pro_session(pro_user_session) do
       visit(alaveteli_pro_info_requests_path)
       request = info_requests.last
-      expect(page).to have_css("#info-request-#{request.id}")
+      row = ".pile__row[data-request-id='#{request.id}']"
+      expect(page).to have_css(row)
 
-      within("#info-request-#{request.id}") do
+      within(row) do
         request_path = show_request_path(request.url_title)
+        due = Deadlines::Overview.format_date(request.date_response_required_by)
         expect(page).to have_link(request.title, href: request_path)
-        expect(page).to have_content(request.created_at.strftime('%d-%m-%Y'))
-        expect(page).to have_content(request.updated_at.strftime('%d-%m-%Y'))
+        expect(page).to have_content("Response due #{due}")
         expect(page).to have_content(request.public_body.name)
       end
     end
@@ -58,102 +59,48 @@ RSpec.describe "pro request list" do
       expect(batch.info_requests.first.state.phase).to eq(:awaiting_response)
       expect(batch.request_summary.request_summary_categories).
         to eq([AlaveteliPro::RequestSummaryCategory.awaiting_response])
-      expect(page).to have_css("#info-request-batch-#{batch.id}")
 
-      within("#info-request-batch-#{batch.id}") do
-        expect(page).to have_field(batch.title)
-
-        expected_public_bodies = "#{batch.public_bodies.first.name} " \
-                                 "and #{batch.public_bodies.second.name}"
-        expected_description = "2 recipients, including " \
-                               "#{expected_public_bodies}"
-        expect(page).to have_content(expected_description)
-
-        expect(page).to have_content(batch.created_at.strftime('%d-%m-%Y'))
-        expect(page).to have_content(batch.updated_at.strftime('%d-%m-%Y'))
-
-        expected_sent_at = I18n.l(batch.sent_at, format: '%d-%m-%Y - %H:%M %p')
-        expect(page).to have_content(expected_sent_at)
-
-        expect(page).to have_content("2 In progress")
-
-        # Should not show individual requests until we click the link to
-        # expand them
-        batch.info_requests.each do |request|
-          expect(page).not_to have_css("info-request-#{request.id}")
-        end
-
-        # The batch title is the label for the houdini checkbox that shows the
-        # bodies
-        check batch.title
+      within("#pile-waiting") do
+        expect(page).
+          to have_css(".pile__row[data-request-id='#{info_requests.last.id}']")
 
         batch.info_requests.each do |request|
-          expect(page).to have_css("#info-request-#{request.id}")
-          within("#info-request-#{request.id}") do
+          within(".pile__row[data-request-id='#{request.id}']") do
             request_path = show_request_path(request.url_title)
-            expect(page).to have_link(request.public_body.name, href: request_path)
-            expect(page).to have_content("Awaiting response")
+            expect(page).to have_link(batch.title, href: request_path)
+            expect(page).to have_content(request.public_body.name)
+            expect(page).to have_content("Response due")
           end
         end
       end
     end
   end
 
-  it "shows batch requests that haven't been sent yet" do
+  it "lists the requests in a batch only once the batch has been sent" do
     using_pro_session(pro_user_session) do
       visit(alaveteli_pro_info_requests_path)
       batch = batch_requests.last
-      expect(page).to have_css("#info-request-batch-#{batch.id}")
+      sent = info_requests + batch_requests[0..3].flat_map(&:info_requests)
 
-      within("#info-request-batch-#{batch.id}") do
-        expect(page).to have_field(batch.title)
-
-        expected_public_bodies = "#{batch.public_bodies.first.name} " \
-                                 "and #{batch.public_bodies.second.name}"
-        expected_description = "2 recipients, " \
-                               "including #{expected_public_bodies}"
-        expect(page).to have_content(expected_description)
-
-        expect(page).to have_content(batch.created_at.strftime('%d-%m-%Y'))
-        expect(page).to have_content(batch.updated_at.strftime('%d-%m-%Y'))
-        expect(page).to have_content("Pending")
-        expect(page).to have_content("2 Pending")
-
-        # Should not show bodies until we click the link
-        batch.info_requests.each do |request|
-          expect(page).not_to have_css("info-request-#{request.id}")
-        end
-
-        # The batch title is the label for the houdini checkbox that shows the
-        # bodies
-        check batch.title
-
-        batch.info_requests.each do |request|
-          expect(page).to have_css("info-request-#{request.id}")
-          within("info-request-#{request.id}") do
-            request_path = show_request_path(request.url_title)
-            expect(page).to have_content(request.public_body.name)
-            expect(page).to have_content("Awaiting response")
-          end
-        end
+      expect(batch.info_requests).to be_empty
+      expect(page).to have_css(".pile__row", count: sent.size)
+      sent.each do |request|
+        expect(page).to have_css(".pile__row[data-request-id='#{request.id}']")
       end
     end
   end
 
   describe "showing draft requests" do
     let!(:draft_request) do
-      draft = nil
-      draft = FactoryBot.create(:draft_info_request, user: pro_user)
-      draft
+      FactoryBot.create(:draft_info_request, user: pro_user,
+                                             title: 'Grit bin sites')
     end
     let!(:draft_batch_request) do
-      draft = nil
-      draft = FactoryBot.create(
+      FactoryBot.create(
         :draft_info_request_batch,
         user: pro_user,
         public_bodies: public_bodies
       )
-      draft
     end
 
     it "shows draft requests" do
@@ -161,16 +108,50 @@ RSpec.describe "pro request list" do
         visit(alaveteli_pro_info_requests_path)
         click_link "Drafts"
 
-        expect(page).to have_css("#draft-info-request-#{draft_request.id}")
+        draft_path = new_alaveteli_pro_info_request_path(
+          draft_id: draft_request.id
+        )
+        expect(page).to have_link(draft_request.title, href: draft_path)
       end
     end
 
-    it "shows draft batch requests" do
+    it "deletes a draft from its row" do
       using_pro_session(pro_user_session) do
         visit(alaveteli_pro_info_requests_path)
         click_link "Drafts"
 
-        expect(page).to have_css("#draft-info-request-batch-#{draft_batch_request.id}")
+        # rack_test cannot open a <details>, so the button is pressed closed.
+        within(".pile__row", text: draft_request.title) do
+          expect(page).to have_css("summary", text: "Delete")
+          click_button "Delete this draft", visible: :all
+        end
+
+        expect(page).to have_content("Draft deleted.")
+        expect(page).to have_no_link(draft_request.title)
+      end
+    end
+
+    it "says there are no drafts once the only one is deleted" do
+      using_pro_session(pro_user_session) do
+        visit(alaveteli_pro_info_requests_path)
+        click_link "Drafts"
+        click_button "Delete this draft", visible: :all
+
+        expect(page).to have_content("No drafts.")
+        expect(page).to have_link("See all requests",
+                                  href: alaveteli_pro_info_requests_path)
+        expect(page).to have_no_link("Drafts")
+      end
+    end
+
+    it "lists draft requests only, as batches are never offered" do
+      using_pro_session(pro_user_session) do
+        visit(alaveteli_pro_info_requests_path)
+        click_link "Drafts"
+
+        expect(page).to have_link(draft_request.title)
+        expect(page).
+          to have_no_css("#draft-info-request-batch-#{draft_batch_request.id}")
       end
     end
   end

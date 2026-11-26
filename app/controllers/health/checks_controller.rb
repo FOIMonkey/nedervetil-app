@@ -12,7 +12,7 @@ module Health
       if HealthChecks.ok?
         render action: :index, layout: false
       else
-        render action: :index, layout: false , status: 500
+        render action: :index, layout: false, status: 500
       end
     end
   end

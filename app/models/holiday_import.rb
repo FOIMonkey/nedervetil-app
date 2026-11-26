@@ -1,8 +1,11 @@
+# ActiveModel form object for the admin holiday importer. Populates candidate
+# Holiday records for a year range from the holidays gem or an iCal feed URL
+# and validates and saves them together.
 class HolidayImport
   include ActiveModel::Validations
 
-  attr_accessor :holidays,
-    :ical_feed_url,
+  attr_writer :holidays
+  attr_accessor :ical_feed_url,
     :start_year,
     :end_year,
     :start_date,
@@ -11,9 +14,16 @@ class HolidayImport
     :populated
 
   validate :all_holidays_valid
-  validates_inclusion_of :source, in: %w( suggestions feed )
+  validates_inclusion_of :source, in: %w(suggestions feed)
+
   validates_presence_of :ical_feed_url,
-    if: proc { |holiday_import| holiday_import.source == 'feed' }
+    if: ->(import) { import.source == 'feed' }
+
+  validates_format_of :ical_feed_url,
+    with: %r{\Ahttps?://\S+\z},
+    allow_blank: true,
+    message: 'Please enter an iCal feed URL starting with http:// or https://',
+    if: ->(import) { import.source == 'feed' }
 
   def initialize(opts = {})
     @populated = false
@@ -28,12 +38,16 @@ class HolidayImport
   end
 
   def populate
-    source == 'suggestions' ? populate_from_suggestions : populate_from_ical_feed
+    if source == 'suggestions'
+      populate_from_suggestions
+    else
+      populate_from_ical_feed
+    end
     @populated = true
   end
 
   def suggestions_country_name
-    IsoCountryCodes.find(@country_code).name if @country_code
+    ISO3166::Country[@country_code]&.iso_short_name || @country_code.upcase
   end
 
   def period
@@ -59,30 +73,28 @@ class HolidayImport
   private
 
   def all_holidays_valid
-    unless holidays.all?(&:valid?)
-      errors.add(:base, 'These holidays could not be imported')
-    end
+    return if holidays.all?(&:valid?)
+
+    errors.add(:base, 'These holidays could not be imported')
   end
 
   def populate_from_ical_feed
-    cal_file = URI.open(ical_feed_url)
+    cal_file = fetch_url!(ical_feed_url)
     cal_parser = Icalendar::Parser.new(cal_file)
     cals = cal_parser.parse
     cal = cals.first
     unless cal
-      errors.add(:ical_feed_url, "Sorry, there's a problem with the format of that feed.")
+      errors.add(:ical_feed_url,
+                 "Sorry, there's a problem with the format of that feed.")
       return
     end
     cal.events.each { |cal_event| populate_from_ical_event(cal_event) }
 
-  rescue Errno::ENOENT, Exception => e
-    if e.message == 'Invalid line in calendar string!'
-      errors.add(:ical_feed_url, "Sorry, there's a problem with the format of that feed.")
-    elsif e.message =~ /^No such file or directory/
-      errors.add(:ical_feed_url, "Sorry we couldn't find that feed.")
-    else
-      raise e
-    end
+  rescue FetchURLError
+    errors.add(:ical_feed_url, "Sorry we couldn't find that feed.")
+  rescue Icalendar::Parser::ParseError
+    errors.add(:ical_feed_url,
+               "Sorry, there's a problem with the format of that feed.")
   end
 
   def populate_from_ical_event(cal_event)
@@ -93,7 +105,8 @@ class HolidayImport
   end
 
   def populate_from_suggestions
-    holiday_info = Holidays.between(start_date, end_date, @country_code.to_sym, :observed)
+    holiday_info = Holidays.between(start_date, end_date,
+                                    @country_code.to_sym, :observed)
     holiday_info.each do |holiday_info_hash|
       holidays << Holiday.new(description: holiday_info_hash[:name],
                               day: holiday_info_hash[:date])

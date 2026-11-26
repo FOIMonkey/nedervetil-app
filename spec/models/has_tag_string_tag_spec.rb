@@ -18,7 +18,8 @@ RSpec.describe HasTagString::HasTagStringTag do
   end
 end
 
-RSpec.describe HasTagString::HasTagStringTag, 'taggable model' do
+# Named models for the tag specs, kept off the top level.
+module TagSpecModels
   class ModelWithTag < ApplicationRecord
     has_tag_string
     after_initialize { self.name ||= 'test' }
@@ -71,44 +72,56 @@ RSpec.describe HasTagString::HasTagStringTag, 'taggable model' do
       drop_table :another_model_with_tags, force: true
     end
   end
+end
 
+RSpec.describe HasTagString::HasTagStringTag, 'taggable model' do
   before(:all) do
-    CreateModelsWithTags.up
+    TagSpecModels::CreateModelsWithTags.up
   end
 
   after(:all) do
-    CreateModelsWithTags.down
+    TagSpecModels::CreateModelsWithTags.down
   end
 
   describe '.find_by_tag' do
-    subject { ModelWithTag.find_by_tag('test') }
+    subject { TagSpecModels::ModelWithTag.find_by_tag('test') }
 
     context 'when a record with the tag does not exist' do
-      let!(:model_1) { ModelWithTag.create(tag_string: 'foo') }
+      let!(:model_1) { TagSpecModels::ModelWithTag.create(tag_string: 'foo') }
       it { is_expected.to be_empty }
     end
 
     context 'when a record with the tag exists' do
-      let!(:model_1) { ModelWithTag.create(tag_string: 'test') }
+      let!(:model_1) { TagSpecModels::ModelWithTag.create(tag_string: 'test') }
       it { is_expected.to match_array([model_1]) }
     end
 
     context 'when a record with several tags exists' do
-      let!(:model_1) { ModelWithTag.create(tag_string: 'foo test') }
+      let!(:model_1) do
+        TagSpecModels::ModelWithTag.create(tag_string: 'foo test')
+      end
       it { is_expected.to match_array([model_1]) }
     end
 
     context 'when several records with the tag exist' do
-      let!(:model_1) { ModelWithTag.create(tag_string: 'test') }
-      let!(:model_2) { ModelWithTag.create(tag_string: 'test') }
-      let!(:model_3) { ModelWithTag.create(tag_string: 'foo test') }
+      let!(:model_1) { TagSpecModels::ModelWithTag.create(tag_string: 'test') }
+      let!(:model_2) { TagSpecModels::ModelWithTag.create(tag_string: 'test') }
+      let!(:model_3) do
+        TagSpecModels::ModelWithTag.create(tag_string: 'foo test')
+      end
       it { is_expected.to match_array([model_1, model_2, model_3]) }
     end
 
     context 'sorting the results' do
-      let!(:model_1) { ModelWithTag.create(name: 'b', tag_string: 'test') }
-      let!(:model_2) { ModelWithTag.create(name: 'c', tag_string: 'test') }
-      let!(:model_3) { ModelWithTag.create(name: 'a', tag_string: 'foo test') }
+      let!(:model_1) do
+        TagSpecModels::ModelWithTag.create(name: 'b', tag_string: 'test')
+      end
+      let!(:model_2) do
+        TagSpecModels::ModelWithTag.create(name: 'c', tag_string: 'test')
+      end
+      let!(:model_3) do
+        TagSpecModels::ModelWithTag.create(name: 'a', tag_string: 'foo test')
+      end
 
       it 'sorts by name ASC' do
         expect(subject).to match([model_3, model_1, model_2])
@@ -116,7 +129,9 @@ RSpec.describe HasTagString::HasTagStringTag, 'taggable model' do
     end
 
     context 'when a model gets tagged twice with the same tag' do
-      let!(:model_1) { ModelWithTag.create(tag_string: 'test test') }
+      let!(:model_1) do
+        TagSpecModels::ModelWithTag.create(tag_string: 'test test')
+      end
 
       it 'does not return two instances' do
         expect(subject).to match_array([model_1])
@@ -124,30 +139,49 @@ RSpec.describe HasTagString::HasTagStringTag, 'taggable model' do
     end
 
     context 'when a different model with the tag exists' do
-      let!(:model_1) { AnotherModelWithTag.create(tag_string: 'test') }
+      let!(:model_1) do
+        TagSpecModels::AnotherModelWithTag.create(tag_string: 'test')
+      end
       it { is_expected.to be_empty }
     end
 
     context 'when a different model with a different tag exists' do
-      let!(:model_1) { AnotherModelWithTag.create(tag_string: 'foo') }
+      let!(:model_1) do
+        TagSpecModels::AnotherModelWithTag.create(tag_string: 'foo')
+      end
       it { is_expected.to be_empty }
     end
 
     context 'when several records with the tag exist' do
-      let!(:model_1) { ModelWithTag.create(tag_string: 'test') }
-      let!(:model_2) { ModelWithTag.create(tag_string: 'foo test') }
-      let!(:model_3) { AnotherModelWithTag.create(tag_string: 'test') }
-      let!(:model_4) { AnotherModelWithTag.create(tag_string: 'foo test') }
+      let!(:model_1) { TagSpecModels::ModelWithTag.create(tag_string: 'test') }
+      let!(:model_2) do
+        TagSpecModels::ModelWithTag.create(tag_string: 'foo test')
+      end
+      let!(:model_3) do
+        TagSpecModels::AnotherModelWithTag.create(tag_string: 'test')
+      end
+      let!(:model_4) do
+        TagSpecModels::AnotherModelWithTag.create(tag_string: 'foo test')
+      end
       it { is_expected.to match_array([model_1, model_2]) }
     end
 
     context 'when several translated records with the tag exist' do
-      let!(:model_1) { GlobalizeModelWithTag.create(name: 'b', tag_string: 'test') }
-      let!(:model_2) { GlobalizeModelWithTag.create(name: 'c', tag_string: 'test') }
-      let!(:model_3) { GlobalizeModelWithTag.create(name: 'a', tag_string: 'foo test') }
+      let!(:model_1) do
+        TagSpecModels::GlobalizeModelWithTag.
+          create(name: 'b', tag_string: 'test')
+      end
+      let!(:model_2) do
+        TagSpecModels::GlobalizeModelWithTag.
+          create(name: 'c', tag_string: 'test')
+      end
+      let!(:model_3) do
+        TagSpecModels::GlobalizeModelWithTag.
+          create(name: 'a', tag_string: 'foo test')
+      end
 
       it 'sorts by name ASC' do
-        subject = GlobalizeModelWithTag.find_by_tag('test')
+        subject = TagSpecModels::GlobalizeModelWithTag.find_by_tag('test')
         expect(subject).to match([model_3, model_1, model_2])
       end
     end
@@ -156,7 +190,9 @@ RSpec.describe HasTagString::HasTagStringTag, 'taggable model' do
   describe '#add_tag_if_not_already_present' do
     subject { model.add_tag_if_not_already_present(tag) }
 
-    let!(:model) { ModelWithTag.create(tag_string: 'foo testing') }
+    let!(:model) do
+      TagSpecModels::ModelWithTag.create(tag_string: 'foo testing')
+    end
 
     context 'when the tag is already present' do
       let(:tag) { 'foo' }

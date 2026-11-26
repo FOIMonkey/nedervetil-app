@@ -13,6 +13,15 @@ RSpec.describe NotesHelper do
       it { expect(note_as_html(note)).to eq('<h1>title</h1>') }
     end
 
+    it 'does not show the contents of removed style blocks' do
+      note = FactoryBot.build(
+        :note,
+        :original,
+        body: '<style>body{display:none}</style><p>Text</p>'
+      )
+      expect(note_as_html(note)).to eq('<p>Text</p>')
+    end
+
     context 'when not a batch' do
       subject { note_as_html(note, batch: false) }
 

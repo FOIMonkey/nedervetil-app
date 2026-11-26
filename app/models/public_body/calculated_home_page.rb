@@ -18,16 +18,13 @@ module PublicBody::CalculatedHomePage
 
   private
 
-  # Ensure known home page has a full URL or guess if not known.
+  # The known home page as a web address, or a guess if none is known. A
+  # stored home page that isn't a web address (HttpUrl), from before it was
+  # checked, gives nil: no link, and no guess either.
   def calculated_home_page!
-    ensure_home_page_protocol || guess_home_page
-  end
+    return HttpUrl.with_default_scheme(home_page) if home_page.present?
 
-  # Ensure the home page has the HTTP protocol at the start of the URL
-  def ensure_home_page_protocol
-    return unless home_page.present?
-
-    home_page[URI.regexp(%w(http https))] ? home_page : "https://#{home_page}"
+    guess_home_page
   end
 
   # Guess the home page from the request address email domain.

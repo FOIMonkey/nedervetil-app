@@ -4,49 +4,48 @@ RSpec.describe 'general/_responsive_topnav' do
   let(:user) { FactoryBot.create(:user) }
   let(:pro_user) { FactoryBot.create(:pro_user) }
 
+  before { view.extend(RequestJourney::NavigationHelper) }
+
   def render_view
     render partial: 'general/responsive_topnav'
   end
 
-  describe 'showing the Dashboard link', feature: :alaveteli_pro do
-    context 'when a pro user is logged in' do
-      before do
-        assign :user, pro_user
-        allow(controller).to receive(:current_user).and_return(pro_user)
-      end
+  def sign_in_as(account)
+    assign :user, account
+    allow(controller).to receive(:current_user).and_return(account)
+    allow(view).to receive(:current_user).and_return(account)
+  end
 
-      it 'shows a Dashboard link' do
-        render_view
-        expect(rendered).to have_link('Dashboard')
-      end
+  # Every signed-in account has the inbox, whatever its role or the flag says.
+  shared_examples 'the inbox navigation' do
+    it 'shows a Home link to the inbox in place of Dashboard and Requests' do
+      render_view
+      expect(rendered).to have_css('#dashboard-link', text: 'Home')
+      expect(rendered).to have_no_link('Dashboard')
+      expect(rendered).to have_no_link('Requests')
+    end
+  end
 
-      context 'and pro features are not enabled' do
-        it 'shows "pro" next to the user name' do
-          with_feature_disabled(:alaveteli_pro) do
-            render_view
-            expect(rendered).to_not have_css('.pro-pill')
-          end
-        end
+  context 'when a Pro account is signed in', feature: :alaveteli_pro do
+    before { sign_in_as(pro_user) }
 
-        it 'does not show a Dashboard link' do
-          with_feature_disabled(:alaveteli_pro) do
-            render_view
-            expect(rendered).to_not have_link('Dashboard')
-          end
-        end
-      end
+    include_examples 'the inbox navigation'
+  end
+
+  context 'when an account without the Pro role is signed in' do
+    before do
+      sign_in_as(user)
     end
 
-    context 'when a normal user is logged in' do
-      before do
-        assign :user, user
-        allow(controller).to receive(:current_user).and_return(user)
-      end
+    include_examples 'the inbox navigation'
+  end
 
-      it 'does not show a Dashboard link' do
-        render_view
-        expect(rendered).to_not have_link('Dashboard')
-      end
+  context 'when nobody is signed in' do
+    before { allow(view).to receive(:current_user).and_return(nil) }
+
+    it 'does not show the Home link' do
+      render_view
+      expect(rendered).to have_no_css('#dashboard-link')
     end
   end
 end

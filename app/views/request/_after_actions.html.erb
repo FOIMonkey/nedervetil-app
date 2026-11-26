@@ -1,10 +1,9 @@
 <div id="after_actions" class="after-actions">
-  <ul class="action-menu after-actions__action-menu">
+  <ul class="action-menu after-actions__action-menu" data-controller="action-menu" data-action="click@document->action-menu#outside keydown@document->action-menu#escape">
     <li>
-      <a href="#" class="action-menu__button"><%= _('Actions') %></a>
+      <a href="#" class="action-menu__button" data-action-menu-target="button" data-action="action-menu#toggle keydown->action-menu#key"><%= _('Actions') %></a>
 
-      <ul class="action-menu__menu">
-        <% unless info_request.is_external? %>
+      <ul class="action-menu__menu" data-action-menu-target="menu">
           <li class="action-menu__menu__item">
             <span class="action-menu__menu__heading">
               <%= _('{{info_request_user_name}}',
@@ -31,22 +30,6 @@
               </li>
             </ul>
           </li>
-        <% end %>
-
-        <% if info_request.allow_new_responses_from != 'nobody' %>
-        <li class="action-menu__menu__item">
-          <span class="action-menu__menu__heading">
-            <%= _('{{public_body_name}}',
-                  :public_body_name => h(info_request.public_body.name)) %>
-          </span>
-
-          <ul class="action-menu__menu__submenu public_body_actions">
-            <li>
-              <%= link_to _("Respond to request"), upload_response_path(:url_title => info_request.url_title), rel: 'nofollow' %>
-            </li>
-          </ul>
-        </li>
-        <% end %>
 
         <li class="action-menu__menu__item">
           <ul class="action-menu__menu__submenu anyone_actions">
@@ -67,12 +50,6 @@
               </li>
             <% end %>
 
-            <% if can? :create_comment, info_request %>
-              <li>
-                <%= link_to _('Add an annotation'), new_comment_path(:url_title => info_request.url_title), rel: 'nofollow' %>
-              </li>
-            <% end %>
-
             <% if show_other_user_update_status_action %>
               <li>
                 <%= link_to _('Update the status of this request'), '#describe_state_form_1' %>
@@ -80,7 +57,7 @@
             <% end %>
 
             <li>
-              <%= link_to _("Download a zip file of all correspondence"), download_entire_request_path(:url_title => info_request.url_title), rel: 'nofollow' %>
+              <%= link_to _("Download a zip file of all correspondence"), download_entire_request_path(:url_title => info_request.url_title), rel: 'nofollow', data: { turbo: false } %>
             </li>
 
             <li>
@@ -88,7 +65,7 @@
             </li>
 
             <li>
-              <a tabindex="0" class="js-collapsible-trigger-all" data-text-expanded="<%= _('Collapse all correspondence') %>" data-text-collapsed="<%= _('Expand all correspondence') %>"><%= _('Collapse all correspondence') %></a>
+              <a href="#" role="button" class="js-collapsible-trigger-all" data-controller="collapse-all" data-collapse-all-expanded-value="<%= _('Collapse all correspondence') %>" data-collapse-all-collapsed-value="<%= _('Expand all correspondence') %>" data-action="collapse-all#toggle keydown->collapse-all#key"><%= _('Collapse all correspondence') %></a>
             </li>
           </ul>
         </li>

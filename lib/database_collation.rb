@@ -1,14 +1,7 @@
-#
-# Public: Class to check whether the current database supports collation for
-# a given language. Prefer the class method .supports? rather than creating a
-# new instance.
+# Checks locale collation support. Prefer .supports? to use the connection pool.
 class DatabaseCollation
   attr_reader :connection
 
-  # Public: Does the connected database support collation in the given locale?
-  # Delegates to an instance configured with a connection from the
-  # ActiveRecord::Base connection pool. See DatabaseCollation#supports? for
-  # more documentation.
   def self.supports?(locale)
     ActiveRecord::Base.connection_pool.with_connection do |connection|
       i = new(connection)
@@ -20,18 +13,7 @@ class DatabaseCollation
     @connection = connection
   end
 
-  # Public: Does the connected database support collation in the given locale?
-  #
-  # locale - String locale name
-  #
-  # Examples
-  #
-  #   database.supports? 'en_GB'
-  #   # => true
-  #   database.supports? 'es'
-  #   # => false
-  #
-  # Returns a Boolean
+  # Accepts a locale name such as 'en_GB'; false for non-PostgreSQL adapters.
   def supports?(locale)
     postgresql? && supported_collations.include?(locale)
   end

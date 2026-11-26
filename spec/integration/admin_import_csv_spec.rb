@@ -17,7 +17,7 @@ RSpec.describe 'Importing a CSV' do
                   Rails.root + 'spec/fixtures/files/fake-authority-type.csv')
       click_button 'Dry run'
 
-      expected = <<-EOF.strip_heredoc.gsub("\n", '')
+      expected = <<-EOF.strip_heredoc.delete("\n")
 'North West Fake Authority' (locale: en): {
 "name":"North West Fake Authority","request_email":"north_west_foi@localhost"}
       EOF

@@ -9,11 +9,14 @@ RSpec.describe InfoRequestBatchMailer do
       )
       @public_body = FactoryBot.create(:public_body)
       @unrequestable = [@public_body]
-      @mail = InfoRequestBatchMailer.batch_sent(@info_request_batch, @unrequestable, @user)
+      @mail = InfoRequestBatchMailer.batch_sent(
+        @info_request_batch, @unrequestable, @user
+      )
     end
 
     it 'renders the subject' do
-      expect(@mail.subject).to eq('Your batch request "Example title" has been sent')
+      expect(@mail.subject).
+        to eq('Your batch request "Example title" has been sent')
     end
 
     it "does not add HTMLEntities to the subject line" do
@@ -52,8 +55,7 @@ RSpec.describe InfoRequestBatchMailer do
     end
 
     it 'assigns @url' do
-      @mail.body.to_s =~ /(http:\/\/.*)/
-      mail_url = $1
+      mail_url = @mail.body.to_s[/(http:\/\/.*)/, 1]
       expect(mail_url).to eq(info_request_batch_url(@info_request_batch))
     end
   end

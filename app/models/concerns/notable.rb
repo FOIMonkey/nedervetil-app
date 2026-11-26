@@ -1,3 +1,6 @@
+# Mixed into PublicBody, InfoRequest and Category, which carry editorial Note
+# records directly. The two that are also Taggable (PublicBody and InfoRequest)
+# also pick up notes whose notable_tag matches one of their tags.
 module Notable
   extend ActiveSupport::Concern
 

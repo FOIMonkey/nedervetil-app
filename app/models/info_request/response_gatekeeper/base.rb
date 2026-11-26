@@ -1,5 +1,8 @@
 class InfoRequest
   module ResponseGatekeeper
+    # Default response gatekeeper for anybody requests and base class for
+    # stricter gatekeepers. Allows all mail and delegates rejection_action to
+    # the request's handle_rejected_responses setting.
     class Base
       attr_reader :info_request, :allow, :reason
 
@@ -9,7 +12,7 @@ class InfoRequest
         @reason = nil
       end
 
-      def allow?(mail)
+      def allow?(_mail)
         allow
       end
 

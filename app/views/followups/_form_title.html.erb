@@ -7,12 +7,12 @@
 <% if @internal_review %>
   <h1><%= _('Request an internal review from {{person_or_body}}',
             :person_or_body => name_for_followup) %></h1>
-<% elsif incoming_message.nil? || !incoming_message.valid_to_reply_to? %>
-  <h2><%= _('Send a public follow up message to {{person_or_body}}',
+<% elsif incoming_message.nil? || !incoming_message.followup_to_sender? %>
+  <h2><%= _('Send a follow up message to {{person_or_body}}',
             :person_or_body => name_for_followup) %>
   </h2>
 <% else %>
-  <h2><%= _('Send a public reply to {{person_or_body}}',
+  <h2><%= _('Send a reply to {{person_or_body}}',
           :person_or_body => name_for_followup) %>
   </h2>
 <% end %>

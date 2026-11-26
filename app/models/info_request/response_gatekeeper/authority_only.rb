@@ -1,5 +1,7 @@
 class InfoRequest
   module ResponseGatekeeper
+    # Gatekeeper for authority_only requests. Accepts an incoming email only
+    # when its From domain matches an address the request can follow up to.
     class AuthorityOnly < Base
       def allow?(mail)
         @allow, @reason = calculate_allow_reason(info_request, mail)
@@ -12,10 +14,13 @@ class InfoRequest
         sender_email = MailHandler.get_from_address(mail)
         if sender_email.nil?
           allow = false
-          reason = _('Only the authority can reply to this request, but there is no "From" address to check against')
+          reason = _('Only the authority can reply to this request, but ' \
+                     'there is no "From" address to check against')
         else
           sender_domain = PublicBody.extract_domain_from_email(sender_email)
-          reason = _("Only the authority can reply to this request, and I don't recognise the address this reply was sent from")
+          reason = _("Only the authority can reply to this request, and " \
+                     "I don't recognise the address this reply was sent " \
+                     "from")
           allow = false
           # Allow any domain that has already sent reply
           info_request.who_can_followup_to.each do |_, email_address, _|

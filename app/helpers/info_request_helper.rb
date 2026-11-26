@@ -1,3 +1,5 @@
+# Builds localised HTML status descriptions, follow-up links and attachment
+# download links and icons for InfoRequest views.
 module InfoRequestHelper
   include ConfigHelper
   include DateTimeHelper
@@ -21,28 +23,6 @@ module InfoRequestHelper
     end
   end
 
-  def all_successful_requests?(events)
-    events.any? && events.all? do |event|
-      %w[successful partially_successful].include?(
-        event.info_request.calculate_status
-      )
-    end
-  end
-
-  def js_correspondence_navigation
-    css_class = 'js-request-navigation request-navigation'
-
-    data_attrs = {
-      next_text: _('Next message'),
-      prev_text: _('Previous message'),
-      status_text: _('Message {{current_message}} of {{total_messages}}',
-                     current_message: '[[x]]',
-                     total_messages: '[[y]]')
-    }
-
-    tag.div class: css_class, data: data_attrs
-  end
-
   private
 
   def status_text_awaiting_description(info_request, opts = {})
@@ -51,12 +31,14 @@ module InfoRequestHelper
     render_to_file = opts.fetch(:render_to_file, false)
     old_unclassified = opts.fetch(:old_unclassified, false)
 
-    if is_owning_user && !info_request.is_external? && !render_to_file
+    if is_owning_user && !render_to_file
       status_text_awaiting_description_owner_please_answer(
-        new_responses_count)
+        new_responses_count
+      )
     elsif old_unclassified
       status_text_awaiting_description_old_unclassified(
-        new_responses_count)
+        new_responses_count
+      )
     else
       status_text_awaiting_description_other(info_request,
                                                     new_responses_count)
@@ -64,8 +46,8 @@ module InfoRequestHelper
   end
 
   def status_text_waiting_response(info_request, _opts = {})
-    str = _('Currently <strong>waiting for a response</strong> from ' \
-            '{{public_body_link}}, they should respond promptly and',
+    str = _('<strong>Waiting for a response</strong> from ' \
+            '{{public_body_link}}. They should respond promptly and',
             public_body_link: public_body_link(info_request.public_body))
     str += ' '
     str += _('normally')
@@ -77,11 +59,12 @@ module InfoRequestHelper
     str += ' '
     str += "("
     str += details_help_link(info_request.public_body)
-    str += ")."
+    str + ")."
   end
 
   def status_text_waiting_response_overdue(info_request, _opts = {})
-    str = _('Response to this request is <strong>delayed</strong>.')
+    str = _('<strong>Waiting for a response</strong>, which is ' \
+            '<strong>overdue</strong>.')
     str += ' '
     if info_request.public_body.not_subject_to_law?
       str += _('Although not legally required to do so, we would have ' \
@@ -100,19 +83,19 @@ module InfoRequestHelper
     str += ' '
     str += "("
     str += details_help_link(info_request.public_body)
-    str += ")"
+    str + ")"
   end
 
   def status_text_waiting_response_very_overdue(info_request, _opts = {})
-    str = _('Response to this request is <strong>long overdue</strong>.')
+    str = _('<strong>Waiting for a response</strong>, which is ' \
+            '<strong>long overdue</strong>.')
     str += ' '
     if info_request.public_body.not_subject_to_law?
       str += _('Although not legally required to do so, we would have ' \
                'expected {{public_body_link}} to have responded by now',
                public_body_link: public_body_link(info_request.public_body))
     else
-      str += _('By law, under all circumstances, {{public_body_link}} should ' \
-               'have responded by now',
+      str += _('{{public_body_link}} should have responded by now',
                public_body_link: public_body_link(info_request.public_body))
     end
     str += ' '
@@ -120,39 +103,37 @@ module InfoRequestHelper
     str += details_help_link(info_request.public_body)
     str += ")."
 
-    unless info_request.is_external?
-      str += ' '
-      str += _('You can <strong>complain</strong> by')
-      str += ' '
-      str += link_to(
-        _('requesting an internal review'),
-        new_request_followup_path(
-          info_request.url_title, internal_review: 1
-        )
+    str += ' '
+    str += _('The next step is')
+    str += ' '
+    str += link_to(
+      _('an internal review'),
+      new_request_followup_path(
+        info_request.url_title, internal_review: 1
       )
-      str += '.'
-    end
+    )
+    str += '.'
 
     str
   end
 
   def status_text_not_held(info_request, _opts = {})
-    _('{{authority_name}} <strong>did not have</strong> the information ' \
-      'requested.',
+    _('<strong>No information</strong> was provided by ' \
+      '{{authority_name}}.',
       authority_name: public_body_link(info_request.public_body))
   end
 
   def status_text_rejected(info_request, _opts = {})
-    _('The request was <strong>refused</strong> by {{authority_name}}.',
+    _('<strong>No information</strong> was provided by {{authority_name}}.',
       authority_name: public_body_link(info_request.public_body))
   end
 
   def status_text_successful(_info_request, _opts = {})
-    _('The request was <strong>successful</strong>.')
+    _('<strong>All the information</strong> requested was provided.')
   end
 
   def status_text_partially_successful(_info_request, _opts = {})
-    _('The request was <strong>partially successful</strong>.')
+    _('<strong>Some of the information</strong> requested was provided.')
   end
 
   def status_text_waiting_clarification(info_request, opts = {})
@@ -160,7 +141,7 @@ module InfoRequestHelper
 
     str = ''.html_safe
 
-    if is_owning_user && !info_request.is_external?
+    if is_owning_user
       str += _('{{authority_name}} is <strong>waiting for your clarification' \
                '</strong>.',
                authority_name: info_request.public_body.name)
@@ -173,17 +154,15 @@ module InfoRequestHelper
     else
       str += _('The request is <strong>waiting for clarification</strong>.')
 
-      unless info_request.is_external?
-        redirect_to = opts.fetch(:redirect_to)
+      redirect_to = opts.fetch(:redirect_to)
 
-        str += ' '
-        str += _('If you are {{user_link}}, please',
-                 user_link: user_link_for_request(info_request))
-        str += ' '
-        str += link_to _("sign in"), signin_path(r: redirect_to)
-        str += ' '
-        str += _('to send a follow up message.')
-      end
+      str += ' '
+      str += _('If you are {{user_link}}, please',
+               user_link: user_link_for_request(info_request))
+      str += ' '
+      str += link_to _("sign in"), signin_path(r: redirect_to)
+      str += ' '
+      str += _('to send a follow up message.')
     end
 
     str
@@ -195,8 +174,9 @@ module InfoRequestHelper
   end
 
   def status_text_internal_review(info_request, _opts = {})
-    _('Waiting for an <strong>internal review</strong> by ' \
-      '{{public_body_link}} of their handling of this request.',
+    _('<strong>Internal review</strong>: waiting for ' \
+      '{{public_body_link}} to review how it handled this ' \
+      'request.',
       public_body_link: public_body_link(info_request.public_body))
   end
 
@@ -247,10 +227,10 @@ module InfoRequestHelper
   end
 
   def status_text_awaiting_description_owner_please_answer(new_responses_count)
-    n_('Please read the recent response and <strong>update the status</strong> ' \
-          'so we know whether it contains useful information.',
-       'Please read the recent responses and <strong>update the status</strong> ' \
-          'so we know whether they contain useful information.',
+    n_('<strong>Waiting classification.</strong> Read the recent response, ' \
+          'then update the status.',
+       '<strong>Waiting classification.</strong> Read the recent responses, ' \
+          'then update the status.',
         new_responses_count)
   end
 
@@ -262,7 +242,7 @@ module InfoRequestHelper
     str = ''.html_safe
     str += status_text_awaiting_description_unknown
     str += ' '
-    str += n_('We\'re waiting for someone to read a recent response and ' \
+    str + n_('We\'re waiting for someone to read a recent response and ' \
                 'update the status accordingly. Perhaps ' \
                 '<strong>you</strong> might like to help out by doing that?',
               'We\'re waiting for someone to read recent responses and ' \
@@ -272,10 +252,10 @@ module InfoRequestHelper
   end
 
   def status_text_awaiting_description_other(info_request, new_responses_count)
-    n_('We\'re waiting for {{user}} to read a recent response and update ' \
-         'the status.',
-       'We\'re waiting for {{user}} to read recent responses and update ' \
-         'the status.',
+    n_('<strong>Waiting classification.</strong> {{user}} has not yet ' \
+         'read a recent response and set the status.',
+       '<strong>Waiting classification.</strong> {{user}} has not yet ' \
+         'read recent responses and set the status.',
        new_responses_count,
        user: user_link_for_request(info_request))
   end
@@ -307,17 +287,7 @@ module InfoRequestHelper
   end
 
   def attachment_url(attachment, options = {})
-    attach_params = attachment_params(attachment, options)
-
-    if options[:html] && public_token?
-      share_attachment_as_html_url(*attach_params)
-    elsif options[:html]
-      get_attachment_as_html_url(*attach_params)
-    elsif public_token?
-      share_attachment_url(*attach_params)
-    else
-      get_attachment_url(*attach_params)
-    end
+    get_attachment_url(*attachment_params(attachment, options))
   end
 
   def details_help_link(public_body)
@@ -331,29 +301,10 @@ module InfoRequestHelper
       incoming_message_id: attachment.incoming_message_id,
       part: attachment.url_part_number,
       file_name: attachment.display_filename,
-      only_path: options.fetch(:only_path, false)
+      only_path: options.fetch(:only_path, false),
+      request_url_title: attachment.incoming_message.info_request.url_title
     }
-    if public_token?
-      attach_params[:public_token] = public_token
-    else
-      attach_params[:request_url_title] = attachment.incoming_message.
-        info_request.url_title
-    end
-    if options[:html]
-      attach_params[:file_name] = "#{attachment.display_filename}.html"
-    else
-      attach_params[:file_name] = attachment.display_filename
-      # This could be a filetype we normally strip cookies for
-      # in varnish, so add a param to skip that
-      attach_params[:cookie_passthrough] = 1
-    end
-
-    attach_params[:project_id] = @project.id if @project
 
     [attach_params.delete(:id), attach_params]
-  end
-
-  def public_token?
-    defined?(public_token) && public_token.present?
   end
 end

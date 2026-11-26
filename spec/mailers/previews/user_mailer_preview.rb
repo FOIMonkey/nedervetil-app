@@ -23,8 +23,8 @@ class UserMailerPreview < ActionMailer::Preview
 
   def reasons
     {
-      email: _('Then your FOI request to {{public_body_name}} will be sent ' \
-               'and published.',
+      email: _('Then you can check your FOI request to {{public_body_name}} ' \
+               'and send it.',
                public_body_name: public_body.name),
       email_subject: _('Confirm your FOI request to {{public_body_name}}',
                        public_body_name: public_body.name)

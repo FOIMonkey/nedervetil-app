@@ -11,7 +11,10 @@
 require 'spec_helper'
 
 RSpec.describe SpamAddress do
-  it { is_expected.to strip_attribute(:email) }
+  it 'strips whitespace from the email address' do
+    expect(described_class.new(email: " spam@example.org\n").email).
+      to eq('spam@example.org')
+  end
 
   describe '.new' do
     it 'requires an email address' do

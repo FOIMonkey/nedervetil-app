@@ -5,7 +5,9 @@ RSpec.describe InfoRequestBatchMetrics do
     let(:batch) { FactoryBot.create(:info_request_batch, :sent) }
     let(:request) { batch.info_requests.first }
 
-    subject(:metrics) { described_class.new(batch).metrics }
+    subject(:metrics) do
+      described_class.new(batch, ability: Ability.new(batch.user)).metrics
+    end
 
     it 'generates info request batch metrics' do
       request_url = 'http://test.host/request/' + request.url_title
@@ -14,7 +16,7 @@ RSpec.describe InfoRequestBatchMetrics do
       is_expected.to match_array(
         [
           { request_url: request_url, authority_name: authority_name,
-            number_of_replies: 0, request_status: 'Awaiting response' }
+            number_of_replies: 0, request_status: 'Waiting response' }
         ]
       )
     end
@@ -35,14 +37,16 @@ RSpec.describe InfoRequestBatchMetrics do
       end
 
       it 'generates info request batch metrics' do
-        expect(metrics.first[:request_status]).to eq 'Awaiting clarification'
+        expect(metrics.first[:request_status]).to eq 'Waiting clarification'
       end
     end
   end
 
   describe '#name' do
     let(:batch) { double(:info_request_batch, id: 1, title: 'Batch Request') }
-    subject(:name) { described_class.new(batch).name }
+    subject(:name) do
+      described_class.new(batch, ability: Ability.new(nil)).name
+    end
 
     it 'returns a useful filename' do
       travel_to Time.utc(2019, 11, 18, 10, 30)
@@ -55,7 +59,7 @@ RSpec.describe InfoRequestBatchMetrics do
 
   describe '#to_csv' do
     let(:batch) { double(:info_request_batch) }
-    let(:instance) { described_class.new(batch) }
+    let(:instance) { described_class.new(batch, ability: Ability.new(nil)) }
     subject { instance.to_csv }
 
     it 'returns CSV string from metrics' do

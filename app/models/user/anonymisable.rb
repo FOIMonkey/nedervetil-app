@@ -1,8 +1,10 @@
+# Mixed into User to add user-scoped CensorRules that redact the account's
+# current and previous names across its requests.
 module User::Anonymisable
   extend ActiveSupport::Concern
 
   def anonymise!
-    return if info_requests.none? && comments.none?
+    return if info_requests.none?
 
     current_name = read_attribute(:name)
     [current_name, *previous_names].each do |name|

@@ -1,6 +1,9 @@
 require 'spec_helper'
 
 RSpec.describe Admin::Searchable do
+  # Arrange a fully authenticated admin; production has no test-only bypass.
+  before { sign_in users(:admin_user) }
+
   let(:controller_class) do
     Class.new(ActionController::Base) do
       include Admin::Searchable

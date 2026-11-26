@@ -10,6 +10,8 @@
 #  description  :text
 #
 
+# A translated authority category identified by a category_tag, grouped under
+# PublicBodyHeading records and matched to tagged PublicBody records.
 class PublicBodyCategory < ApplicationRecord
   has_many :public_body_category_links,
            inverse_of: :public_body_category,
@@ -53,16 +55,6 @@ class PublicBodyCategory < ApplicationRecord
       end
     end
     categories
-  end
-
-  def self.without_headings
-    PublicBodyCategory.find_by_sql(<<~SQL)
-      SELECT * FROM public_body_categories pbc
-      WHERE pbc.id NOT IN (
-        SELECT public_body_category_id AS id
-        FROM public_body_category_links
-      )
-    SQL
   end
 end
 

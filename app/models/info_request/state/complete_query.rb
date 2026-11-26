@@ -1,5 +1,8 @@
 class InfoRequest
   module State
+    # Query for InfoRequest.complete: selects classified requests in finished
+    # states (not_held, rejected, successful, partially_successful or
+    # user_withdrawn).
     class CompleteQuery
       def initialize(relation = InfoRequest)
         @relation = relation

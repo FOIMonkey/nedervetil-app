@@ -1,3 +1,5 @@
+# Mixed into PublicBody and PublicBody::Translation to keep url_name and
+# first_letter derived from name and short_name.
 module PublicBodyDerivedFields
   extend ActiveSupport::Concern
 
@@ -16,28 +18,43 @@ module PublicBodyDerivedFields
     end
   end
 
-  # Return the short name if present, or else long name
+  # Normalise short_name before checking presence because Globalize stashes
+  # unsaved writes outside ActiveRecord's `normalizes`.
   def short_or_long_name
-    if short_name.nil? || short_name.empty?
-      name.nil? ? "" : name
-    else
-      short_name
-    end
+    tidied = PublicBody::Translation.normalize_value_for(:short_name,
+                                                         short_name)
+    tidied ? short_name : name.to_s
   end
 
   # Set the first letter, which is used for faster queries
   def set_first_letter
-    unless name.blank?
-      # we use a regex to ensure it works with utf-8/multi-byte
-      new_first_letter = name.scan(/^./mu)[0]&.upcase
-      self.first_letter = new_first_letter if new_first_letter != first_letter
-    end
+    return if name.blank?
+
+    # we use a regex to ensure it works with utf-8/multi-byte
+    new_first_letter = name.scan(/^./mu)[0]&.upcase
+    self.first_letter = new_first_letter if new_first_letter != first_letter
   end
 
+  # Appends _2, _3, ... if another body already uses the slug in any locale,
+  # ignoring this body's own translations.
   def update_url_name
-    if changed.include?('name') || changed.include?('short_name')
-      self.url_name = MySociety::Format.
-                        simplify_url_part(short_or_long_name, 'body')
-    end
+    return unless changed.include?('name') || changed.include?('short_name')
+
+    url_name = MySociety::Format.simplify_url_part(short_or_long_name, 'body')
+    taken = other_bodies_url_name_numbers(url_name)
+    self.url_name = taken.empty? ? url_name : "#{url_name}_#{taken.max + 1}"
+  end
+
+  private
+
+  # "x" counts as 1 and "x_3" as 3.
+  def other_bodies_url_name_numbers(url_name)
+    own_body_id = is_a?(PublicBody::Translation) ? public_body_id : id
+    scope = PublicBody::Translation.all
+    scope = scope.where.not(public_body_id: own_body_id) if own_body_id
+
+    scope.where('url_name ~ ?', "^#{url_name}(_\\d+)?$").
+      pluck(:url_name).
+      map { |taken| (taken[/_(\d+)$/, 1] || 1).to_i }
   end
 end

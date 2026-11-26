@@ -7,7 +7,6 @@
 #  ip         :inet
 #  created_at :datetime         not null
 #  updated_at :datetime         not null
-#  country    :string
 #  user_agent :text
 #
 
@@ -51,7 +50,7 @@ RSpec.describe User::SignIn, type: :model do
 
     it 'retains records inside the retention period' do
       records = described_class.where(id: inside_retention_period.id)
-      expect { subject }.not_to change { records.any? }
+      expect { subject }.not_to(change { records.any? })
     end
   end
 
@@ -70,13 +69,13 @@ RSpec.describe User::SignIn, type: :model do
 
     let(:sign_in_2) do
       user = FactoryBot.create(:user, name: 'James', email: 'james@example.com')
-      FactoryBot.create(:user_sign_in, ip: '2.2.2.2', country: 'XY', user: user)
+      FactoryBot.create(:user_sign_in, ip: '2.2.2.2', user: user)
     end
 
     let(:sign_in_3) do
       user = FactoryBot.create(:user, name: 'Betty', email: 'betty@example.org')
       ip = '7754:76d4:c7aa:7646:ea68:1abb:4055:4343'
-      FactoryBot.create(:user_sign_in, ip: ip, country: 'XX', user: user)
+      FactoryBot.create(:user_sign_in, ip: ip, user: user)
     end
 
     context 'when given an ip' do
@@ -112,11 +111,6 @@ RSpec.describe User::SignIn, type: :model do
     context 'when given an email domain' do
       let(:query) { 'example.com' }
       it { is_expected.to match_array([sign_in_2, sign_in_1]) }
-    end
-
-    context 'when given a country' do
-      let(:query) { 'XY' }
-      it { is_expected.to match_array([sign_in_2]) }
     end
   end
 

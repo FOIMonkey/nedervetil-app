@@ -2,16 +2,17 @@
 #
 # Table name: info_request_batches
 #
-#  id               :integer          not null, primary key
-#  title            :text             not null
-#  user_id          :integer          not null
-#  created_at       :datetime         not null
-#  updated_at       :datetime         not null
-#  body             :text
-#  sent_at          :datetime
-#  embargo_duration :string
+#  id         :integer          not null, primary key
+#  title      :text             not null
+#  user_id    :integer          not null
+#  created_at :datetime         not null
+#  updated_at :datetime         not null
+#  body       :text
+#  sent_at    :datetime
 #
 
+# Queues and sends one InfoRequest per requestable authority in a batch,
+# enforcing batch limits and summarising child request phases for the inbox.
 class InfoRequestBatch < ApplicationRecord
   include AlaveteliPro::RequestSummaries
   include AlaveteliFeatures::Helpers
@@ -22,11 +23,6 @@ class InfoRequestBatch < ApplicationRecord
   belongs_to :user,
              inverse_of: :info_request_batches,
              counter_cache: true
-  has_many :citations,
-           -> (batch) { unscope(:where).for_batch(batch) },
-           as: :citable,
-           inverse_of: :citable,
-           dependent: :destroy
 
   has_and_belongs_to_many :public_bodies, -> {
     AlaveteliLocalization.with_locale(AlaveteliLocalization.locale) do
@@ -41,10 +37,6 @@ class InfoRequestBatch < ApplicationRecord
   validates_absence_of :existing_batch,
                        unless: -> { ignore_existing_batch },
                        on: :create
-
-  strip_attributes only: %i[embargo_duration]
-
-  scope :not_embargoed, -> { where(embargo_duration: nil) }
 
   def self.send_batches
     where(sent_at: nil).find_each do |info_request_batch|
@@ -95,10 +87,9 @@ class InfoRequestBatch < ApplicationRecord
   # Create a new batch from the supplied draft version
   def self.from_draft(draft)
     new(user: draft.user,
-             public_bodies: draft.public_bodies,
-             title: draft.title,
-             body: draft.body,
-             embargo_duration: draft.embargo_duration)
+        public_bodies: draft.public_bodies,
+        title: draft.title,
+        body: draft.body)
   end
 
   # Read permission for a batch does not confer permission to read every
@@ -132,6 +123,12 @@ class InfoRequestBatch < ApplicationRecord
     reload
   end
 
+  # Reloads user so suspension, closure or untrust takes effect mid-batch.
+  def user_may_send?
+    user.reload
+    Ability.new(user).can?(:create, InfoRequestBatch)
+  end
+
   # Create a FOI request for a public body
   def create_request!(public_body)
     filled_body = OutgoingMessage.fill_in_salutation(body, public_body)
@@ -140,13 +137,6 @@ class InfoRequestBatch < ApplicationRecord
                                                      user)
     info_request.public_body = public_body
     info_request.info_request_batch = self
-
-    unless embargo_duration.blank?
-      info_request.embargo = AlaveteliPro::Embargo.create(
-        info_request: info_request,
-        embargo_duration: embargo_duration
-      )
-    end
 
     info_request.save!
     info_request
@@ -189,35 +179,7 @@ class InfoRequestBatch < ApplicationRecord
       { body: body },
       user
     )
-    unless embargo_duration.blank?
-      info_request.embargo = AlaveteliPro::Embargo.new(
-        info_request: info_request,
-        embargo_duration: embargo_duration
-      )
-    end
     info_request
-  end
-
-  # Is the batch currently embargoed?
-  #
-  # Returns Boolean
-  def embargoed?
-    embargo_duration.present?
-  end
-
-  # Do any of the requests in this batch have an embargo which is expiring
-  # soon?
-  #
-  # Returns boolean
-  def embargo_expiring?
-    info_requests.embargo_expiring.any?
-  end
-
-  # Can the Embargo be safely changed?
-  #
-  # Returns a Boolean
-  def can_change_embargo?
-    sent?
   end
 
   # What phases are the requests in this batch in
@@ -239,23 +201,23 @@ class InfoRequestBatch < ApplicationRecord
   # requests in each group.
   #
   # Returns hash of string group names mapped to an integer
-  def request_phases_summary
+  def request_phases_summary(requests = info_requests)
     {
       in_progress: {
         label: _('In progress'),
-        count: info_requests.in_progress.count
+        count: requests.in_progress.count
       },
       action_needed: {
         label: _('Action needed'),
-        count: info_requests.action_needed.count
+        count: requests.action_needed.count
       },
       complete: {
         label: _('Complete'),
-        count: info_requests.complete.count
+        count: requests.complete.count
       },
       other: {
         label: _('Other'),
-        count: info_requests.other.count
+        count: requests.other.count
       }
     }
   end
@@ -273,9 +235,6 @@ class InfoRequestBatch < ApplicationRecord
   # @see RequestSummaries#request_summary_categories
   def request_summary_categories
     categories = []
-    if embargo_expiring?
-      categories << AlaveteliPro::RequestSummaryCategory.embargo_expiring
-    end
     if sent_at
       phase_slugs = request_phases.map(&:to_s).uniq
       phases = AlaveteliPro::RequestSummaryCategory.where(slug: phase_slugs)
@@ -329,18 +288,6 @@ class InfoRequestBatch < ApplicationRecord
   # Returns an array of InfoRequestEvent objects
   def log_event(*args)
     info_requests.map { |request| request.log_event(*args) }
-  end
-
-  def is_owning_user?(user)
-    return false unless user
-
-    user.id == user_id || user.owns_every_request?
-  end
-
-  # Reloads user so suspension, closure or untrust takes effect mid-batch.
-  def user_may_send?
-    user.reload
-    Ability.new(user).can?(:create, InfoRequestBatch)
   end
 
   def prominence

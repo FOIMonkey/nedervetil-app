@@ -9,11 +9,13 @@ RSpec.describe ProminenceHelper do
 
   let(:requester) { FactoryBot.build(:user) }
 
+  # A request is requester_only or hidden, so one whose reply or file is
+  # normal is requester_only.
   let(:info_request) do
     FactoryBot.build(
       :info_request,
       user: requester,
-      prominence: prominence,
+      prominence: prominence == 'normal' ? 'requester_only' : prominence,
       prominence_reason: prominence_reason
     )
   end
@@ -29,12 +31,17 @@ RSpec.describe ProminenceHelper do
 
   let(:object) { incoming_message }
 
+  # As in a view: the viewer's Ability.
+  def can?(*args)
+    Ability.new(current_user).can?(*args)
+  end
+
   describe '#concealed_prominence?' do
     subject { concealed_prominence?(prominenceable) }
 
     context 'object with normal prominence' do
       let(:prominence) { 'normal' }
-      let(:prominenceable) { info_request }
+      let(:prominenceable) { incoming_message }
       it { is_expected.to eq false }
     end
 
@@ -62,8 +69,7 @@ RSpec.describe ProminenceHelper do
     let(:request) { OpenStruct.new(fullpath: '/') }
 
     let(:reason) do
-      "There are various reasons why we might have done this, sorry we can't " \
-      "be more specific here."
+      'Requests on this site are private until they are published.'
     end
 
     let(:sign_in_message) do
@@ -94,19 +100,13 @@ RSpec.describe ProminenceHelper do
       end
     end
 
-    context 'request with normal prominence' do
-      let(:object) { info_request }
-      let(:prominence) { 'normal' }
-      it { is_expected.to be_nil }
-    end
-
     context 'request with hidden prominence' do
       let(:object) { info_request }
       let(:prominence) { 'hidden' }
       let(:current_user) { nil }
 
       it 'returns expected message' do
-        is_expected.to include "This request has been hidden."
+        is_expected.to include 'This request has not been published.'
         is_expected.to include reason
         is_expected.to_not include sign_in_request
         is_expected.to include contact_us
@@ -119,7 +119,7 @@ RSpec.describe ProminenceHelper do
       let(:current_user) { requester }
 
       it 'returns expected message' do
-        is_expected.to include "This request has been hidden."
+        is_expected.to include 'This request has not been published.'
         is_expected.to include reason
         is_expected.to_not include sign_in_request
         is_expected.to include contact_us
@@ -161,7 +161,7 @@ RSpec.describe ProminenceHelper do
       let(:current_user) { nil }
 
       it 'returns expected message' do
-        is_expected.to include 'This request has been hidden.'
+        is_expected.to include 'This request has not been published.'
         is_expected.to include reason
         is_expected.to include sign_in_request
         is_expected.to include contact_us
@@ -175,7 +175,7 @@ RSpec.describe ProminenceHelper do
 
       it 'returns expected message' do
         is_expected.to include <<~TXT.squish
-          This request is hidden, so that only you, the requester, can see it.
+          Private: only you and the site’s admins can see it.
         TXT
         is_expected.to include reason
         is_expected.to_not include sign_in_request
@@ -209,7 +209,7 @@ RSpec.describe ProminenceHelper do
       let(:current_user) { nil }
 
       it 'returns expected message' do
-        is_expected.to include 'This message has been hidden.'
+        is_expected.to include 'This message has not been published.'
         is_expected.to include reason
         is_expected.to_not include sign_in_message
         is_expected.to include contact_us
@@ -222,7 +222,7 @@ RSpec.describe ProminenceHelper do
       let(:current_user) { requester }
 
       it 'returns expected message' do
-        is_expected.to include 'This message has been hidden.'
+        is_expected.to include 'This message has not been published.'
         is_expected.to include reason
         is_expected.to_not include sign_in_message
         is_expected.to include contact_us
@@ -237,63 +237,6 @@ RSpec.describe ProminenceHelper do
       it 'returns expected message' do
         is_expected.to eq <<~TXT.squish
           This message has prominence "hidden".
-
-          You can only see it because you are logged in as a super user.
-        TXT
-      end
-    end
-
-    context 'message with requester_only prominence' do
-      let(:object) { incoming_message }
-      let(:prominence) { 'requester_only' }
-      let(:current_user) { nil }
-
-      it 'returns expected message' do
-        is_expected.to include 'This message has been hidden.'
-        is_expected.to include reason
-        is_expected.to include sign_in_message
-        is_expected.to include contact_us
-      end
-    end
-
-    context 'message with requester_only prominence as requester' do
-      let(:object) { incoming_message }
-      let(:prominence) { 'requester_only' }
-      let(:current_user) { requester }
-
-      it 'returns expected message' do
-        is_expected.to include <<~TXT.squish
-          This message is hidden, so that only you, the requester, can see it.
-        TXT
-        is_expected.to include reason
-        is_expected.to_not include sign_in_message
-        is_expected.to include contact_us
-      end
-    end
-
-    context 'message with requester_only prominence as admin' do
-      let(:object) { incoming_message }
-      let(:prominence) { 'requester_only' }
-      let(:current_user) { FactoryBot.create(:admin_user) }
-
-      it 'returns expected message' do
-        is_expected.to eq <<~TXT.squish
-          This message has prominence "requester_only".
-
-          You can only see it because you are logged in as a super user.
-        TXT
-      end
-    end
-
-    context 'message with requester_only prominence and reason as admin' do
-      let(:object) { incoming_message }
-      let(:prominence) { 'requester_only' }
-      let(:prominence_reason) { 'Spam.' }
-      let(:current_user) { FactoryBot.create(:admin_user) }
-
-      it 'returns expected message' do
-        is_expected.to eq <<~TXT.squish
-          This message has prominence "requester_only". Spam.
 
           You can only see it because you are logged in as a super user.
         TXT

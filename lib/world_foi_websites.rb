@@ -1,3 +1,5 @@
+# Lookup table of international FOI websites and EU country codes, used to
+# decide whether to promote AskTheEU.org for a country code.
 class WorldFOIWebsites
   EU_COUNTRIES = { 'BE' => 'Belgium',
                    'BG' => 'Bulgaria',
@@ -145,7 +147,9 @@ class WorldFOIWebsites
   end
 
   def self.by_code(code)
-    result = world_foi_websites.find { |x| x[:country_iso_code].downcase == code.downcase }
+    result = world_foi_websites.find do |x|
+      x[:country_iso_code].downcase == code.downcase
+    end
     result
   end
 

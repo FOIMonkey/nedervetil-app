@@ -33,7 +33,8 @@ module PublicBody::CsvImport
         f.write csv
         tmp_csv = f
       end
-      PublicBody.import_csv_from_file(tmp_csv.path, tag, tag_behaviour, dry_run, editor, available_locales)
+      PublicBody.import_csv_from_file(tmp_csv.path, tag, tag_behaviour,
+                                      dry_run, editor, available_locales)
     end
 
     # Import from a CSV file.
@@ -46,14 +47,18 @@ module PublicBody::CsvImport
       begin
         ActiveRecord::Base.transaction do
           # Use the default locale when retrieving existing bodies; otherwise
-          # matching names won't work afterwards, and we'll create new bodies instead
-          # of updating them
+          # matching names won't work afterwards, and we'll create new bodies
+          # instead of updating them
           bodies_by_name = {}
           set_of_existing = Set.new
           internal_admin_body_id = PublicBody.internal_admin_body.id
           AlaveteliLocalization.
             with_locale(AlaveteliLocalization.default_locale) do
-            bodies = (tag.nil? || tag.empty?) ? PublicBody.includes(:translations) : PublicBody.find_by_tag(tag)
+            bodies = if tag.nil? || tag.empty?
+                       PublicBody.includes(:translations)
+                     else
+                       PublicBody.find_by_tag(tag)
+                     end
             bodies.each do |existing_body|
               # Hide InternalAdminBody from import notes
               next if existing_body.id == internal_admin_body_id
@@ -69,18 +74,18 @@ module PublicBody::CsvImport
           line = 0
 
           import_options = { field_names: field_names,
-                            available_locales: available_locales,
-                            tag: tag,
-                            tag_behaviour: tag_behaviour,
-                            editor: editor,
-                            notes: notes,
-                            errors: errors }
+                             available_locales: available_locales,
+                             tag: tag,
+                             tag_behaviour: tag_behaviour,
+                             editor: editor,
+                             notes: notes,
+                             errors: errors }
 
           CSV.foreach(csv_filename) do |row|
             line += 1
 
             # Parse the first line as a field list if it starts with '#'
-            if (line==1) && row.first.to_s =~(/^#(.*)$/)
+            if (line == 1) && row.first.to_s =~ /^#(.*)$/
               row[0] = row[0][1..-1] # Remove the # sign on first field
               row.each_with_index { |field, i| field_names[field] = i }
               next
@@ -99,26 +104,32 @@ module PublicBody::CsvImport
             email.strip! unless email.nil?
 
             if !email.nil? && !email.empty? && !MySociety::Validate.is_valid_email(email)
-              errors.push "error: line #{line}: invalid email '#{email}' for authority '#{name}'"
+              errors.push "error: line #{line}: invalid email '#{email}' " \
+                          "for authority '#{name}'"
               next
             end
 
-            public_body = bodies_by_name[name] || PublicBody.new(name: "",
-                                                                 short_name: "",
-                                                                 request_email: "")
+            public_body =
+              bodies_by_name[name] ||
+              PublicBody.new(name: "", short_name: "", request_email: "")
 
-            public_body.import_values_from_csv_row(row, line, name, import_options)
+            public_body.import_values_from_csv_row(
+              row, line, name, import_options
+            )
             set_of_importing.add(name)
           end
 
           # Give an error listing ones that are to be deleted
           deleted_ones = set_of_existing - set_of_importing
-          if !deleted_ones.empty?
-            notes.push "Notes: Some " + tag + " bodies are in database, but not in CSV file:\n    " + Array(deleted_ones).sort.join("\n    ") + "\nYou may want to delete them manually.\n"
+          unless deleted_ones.empty?
+            notes.push "Notes: Some " + tag +
+                       " bodies are in database, but not in CSV file:\n    " +
+                       Array(deleted_ones).sort.join("\n    ") +
+                       "\nYou may want to delete them manually.\n"
           end
 
           # Rollback if a dry run, or we had errors
-          raise ImportCSVDryRun if dry_run || (!errors.empty?)
+          raise ImportCSVDryRun if dry_run || !errors.empty?
         end
       rescue ImportCSVDryRun
         # Ignore
@@ -140,32 +151,26 @@ module PublicBody::CsvImport
   def import_values_from_csv_row(row, line, name, options)
     is_new = new_record?
     edit_info = if is_new
-      { action: "creating new authority",
-        comment: 'Created from spreadsheet' }
-    else
-      { action: "updating authority",
-        comment: 'Updated from spreadsheet' }
-    end
+                  { action: "creating new authority",
+                    comment: 'Created from spreadsheet' }
+                else
+                  { action: "updating authority",
+                    comment: 'Updated from spreadsheet' }
+                end
     locales = options[:available_locales]
     locales = [AlaveteliLocalization.default_locale] if locales.empty?
     locales.each do |locale|
       AlaveteliLocalization.with_locale(locale) do
         changed = set_locale_fields_from_csv_row(is_new, locale, row, options)
         unless changed.empty?
-          options[:notes].push "line #{ line }: #{ edit_info[:action] } '#{ name }' (locale: #{ locale }):\n\t#{ changed.to_json }"
+          options[:notes].push "line #{ line }: #{ edit_info[:action] } " \
+                               "'#{ name }' (locale: #{ locale }):\n\t" \
+                               "#{ changed.to_json }"
           self.last_edit_comment = edit_info[:comment]
           self.publication_scheme = publication_scheme || ""
           self.last_edit_editor = options[:editor]
 
-          begin
-            save!
-          rescue ActiveRecord::RecordInvalid
-            errors.each do |error|
-              options[:errors].push "error: line #{ line }: " \
-                "#{ error.full_message } for authority '#{ name }'"
-            end
-            next
-          end
+          save_from_csv(line, name, options)
         end
       end
     end
@@ -176,20 +181,13 @@ module PublicBody::CsvImport
     changed = ActiveSupport::OrderedHash.new
     csv_field_names = options[:field_names]
     csv_import_fields.each do |field_name, _field_notes|
-      localized_field_name = self.class.localized_csv_field_name(locale, field_name)
+      localized_field_name =
+        self.class.localized_csv_field_name(locale, field_name)
       column = csv_field_names[localized_field_name]
       value = column && row[column]
       # Tags are a special case, as we support adding to the field,
       # not just setting a new value
-      if field_name == 'tag_string'
-        new_tags = [value, options[:tag]].select { |new_tag| !new_tag.blank? }
-        if new_tags.empty?
-          value = nil
-        else
-          value = new_tags.join(" ")
-          value = "#{value} #{tag_string}"if options[:tag_behaviour] == 'add'
-        end
-      end
+      value = csv_tag_value(value, options) if field_name == 'tag_string'
 
       if value && read_attribute_value(field_name, locale) != value
         if is_new
@@ -202,5 +200,27 @@ module PublicBody::CsvImport
       end
     end
     changed
+  end
+
+  private
+
+  def save_from_csv(line, name, options)
+    save!
+  rescue ActiveRecord::RecordInvalid
+    errors.each do |error|
+      options[:errors].push "error: line #{ line }: " \
+        "#{ error.full_message } for authority '#{ name }'"
+    end
+  end
+
+  def csv_tag_value(value, options)
+    new_tags = [value, options[:tag]].select { |new_tag| !new_tag.blank? }
+    if new_tags.empty?
+      value = nil
+    else
+      value = new_tags.join(" ")
+      value = "#{value} #{tag_string}" if options[:tag_behaviour] == 'add'
+    end
+    value
   end
 end

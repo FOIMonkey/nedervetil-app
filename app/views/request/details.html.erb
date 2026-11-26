@@ -1,10 +1,8 @@
 <% @title = _("Details of request &ldquo;{{request_title}}&rdquo;",
               :request_title => h(@info_request.title)) %>
 
-<h1>
-  <%= _("Details of request &ldquo;{{request_title}}&rdquo;",
-        :request_title => request_link(@info_request)) %>
-</h1>
+<%= page_band _("Details of request &ldquo;{{request_title}}&rdquo;",
+                :request_title => request_link(@info_request)) %>
 
 <h2><%= _('Event history') %></h2>
 
@@ -70,15 +68,6 @@
       'for the request, and the most recent event had its status updated to ' \
       'that value. <strong>calculated</strong> is then inferred by ' \
       '{{site_name}} for intermediate events, which weren\'t given an ' \
-      'explicit description by a user. See the <a href="{{search_path}}">' \
-      'search tips</a> for description of the states.',
-      :site_name => site_name, :search_path => advanced_search_path) %>
-</p>
-
-<p>
-<%= _('You can get this page in computer-readable format as part of the ' \
-      '<a href="{{json_path}}">main JSON page</a> for the request. See the ' \
-      '<a href="{{api_path}}">API documentation</a>.',
-      json_path: request_path(@info_request, format: :json),
-      api_path: help_api_path) %>
+      'explicit description by a user.',
+      :site_name => site_name) %>
 </p>

@@ -42,8 +42,8 @@ RSpec.describe AlaveteliPro::RequestFilter do
       expect_label('Drafts', 'draft')
     end
 
-    it 'is "Awaiting response" when the filter is "awaiting_response"' do
-      expect_label('Awaiting response', 'awaiting_response')
+    it 'is "Waiting response" when the filter is "awaiting_response"' do
+      expect_label('Waiting response', 'awaiting_response')
     end
 
     it 'is "Complete" when the filter is "complete"' do
@@ -60,11 +60,6 @@ RSpec.describe AlaveteliPro::RequestFilter do
 
     it 'is "Response received" when the filter is "response_received"' do
       expect_label('Response received', 'response_received')
-    end
-
-    it 'is "Requests that will be made public soon" when the filter is
-        "embargoes_expiring"' do
-      expect_label('Requests that will be made public soon', 'embargoes_expiring')
     end
   end
 
@@ -102,18 +97,14 @@ RSpec.describe AlaveteliPro::RequestFilter do
     it 'is "response received" when the filter is "response_received"' do
       expect_label('response received', 'response_received')
     end
-
-    it 'is "requests that will be made public soon" when the filter
-        is "embargoes_expiring"' do
-      expect_label('requests that will be made public soon', 'embargoes_expiring')
-    end
   end
 
   describe '#order_options' do
     it 'returns a list of sort order options in label, parameter form' do
       expected = [['Last updated', 'updated_at_desc'],
                   ['First created', 'created_at_asc'],
-                  ['Title (A-Z)', 'title_asc']]
+                  ['Title (A-Z)', 'title_asc'],
+                  ['Next deadline', 'next_deadline']]
       expect(described_class.new.order_options).to eq expected
     end
   end
@@ -153,8 +144,7 @@ RSpec.describe AlaveteliPro::RequestFilter do
     it 'applies a filter' do
       complete_request = FactoryBot.create(:successful_request,
                                            user: user)
-      incomplete_request = FactoryBot.create(:info_request,
-                                             user: user)
+      FactoryBot.create(:info_request, user: user)
       request_filter = described_class.new
       request_filter.update(filter: 'complete')
       expect(request_filter.results(user)).
@@ -162,9 +152,9 @@ RSpec.describe AlaveteliPro::RequestFilter do
     end
 
     it 'applies a search to the request titles' do
-      dog_request = FactoryBot.create(:info_request,
-                                      title: 'Where is my dog?',
-                                      user: user)
+      FactoryBot.create(:info_request,
+                        title: 'Where is my dog?',
+                        user: user)
       cat_request = FactoryBot.create(:info_request,
                                       title: 'Where is my cat?',
                                       user: user)
@@ -185,9 +175,9 @@ RSpec.describe AlaveteliPro::RequestFilter do
       end
 
       it 'applies a search to the request titles' do
-        dog_request = FactoryBot.create(:draft_info_request,
-                                        title: 'Where is my dog?',
-                                        user: user)
+        FactoryBot.create(:draft_info_request,
+                          title: 'Where is my dog?',
+                          user: user)
         cat_request = FactoryBot.create(:draft_info_request,
                                         title: 'Where is my cat?',
                                         user: user)

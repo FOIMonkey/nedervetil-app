@@ -1,3 +1,5 @@
+# Delegates to a User while exposing the current HTTP request's IP address and
+# user agent for UserSpamCheck scoring.
 class User::WithRequest < SimpleDelegator
   attr_reader :request
 

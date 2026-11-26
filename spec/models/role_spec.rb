@@ -19,12 +19,18 @@ RSpec.describe Role do
     expect(role.errors[:name]).to eq(["is not included in the list"])
   end
 
-  it 'validates the role is unique within the context of a resource_type' do
-    with_feature_enabled(:alaveteli_pro) do
-      role = Role.new(name: 'pro')
-      role.valid?
-      expect(role.errors[:name]).to eq(["has already been taken"])
-    end
+  it 'validates the role name is unique' do
+    role = Role.new(name: 'admin')
+    role.valid?
+    expect(role.errors[:name]).to eq(["has already been taken"])
+  end
+
+  it 'validates the role has no resource' do
+    role = Role.new(name: 'admin', resource_type: 'InfoRequest',
+                    resource_id: 1)
+    role.valid?
+    expect(role.errors[:resource_type]).to eq(["must be blank"])
+    expect(role.errors[:resource_id]).to eq(["must be blank"])
   end
 
   describe '.admin_role' do
@@ -33,54 +39,26 @@ RSpec.describe Role do
     end
   end
 
-  describe '.pro_role' do
-    it 'returns role with name pro' do
-      expect(Role.pro_role.name).to eq 'pro'
-    end
-  end
-
+  # One admin level (#93), whatever the flag says.
   describe '.grantable_roles' do
-    context 'when alaveteli_pro feature is disabled' do
-      it 'returns an array [:admin]' do
-        expect(Role.grantable_roles).to match_array %i[admin]
-      end
+    it 'returns an array [:admin]' do
+      expect(Role.grantable_roles).to match_array %i[admin]
     end
 
-    context 'when alaveteli_pro feature is enabled', feature: :alaveteli_pro do
-      it 'returns an array [:admin, :pro, :pro_admin]' do
-        expect(Role.grantable_roles).to match_array %i[pro admin pro_admin]
-      end
+    it 'returns the same with the alaveteli_pro flag on',
+       feature: :alaveteli_pro do
+      expect(Role.grantable_roles).to match_array %i[admin]
     end
   end
 
   describe '.grants_and_revokes' do
     it 'returns an array [:admin] when passed :admin' do
-      expect(Role.grants_and_revokes(:admin))
-        .to eq([:admin])
+      expect(Role.grants_and_revokes(:admin)).
+        to eq([:admin])
     end
 
-    it 'returns an array [:pro, :admin, :pro_admin]
-        when passed :pro_admin' do
-      expect(Role.grants_and_revokes(:pro_admin))
-        .to eq([:pro, :admin, :pro_admin])
-    end
-
-    it 'returns an empty array when passed :pro' do
-      expect(Role.grants_and_revokes(:pro)).to eq([])
-    end
-  end
-
-  describe '.requires' do
-    it 'returns an empty array when passed :admin' do
-      expect(Role.requires(:admin)).to eq([])
-    end
-
-    it 'returns an array [:admin] when passed :pro_admin' do
-      expect(Role.requires(:pro_admin)).to eq([:admin])
-    end
-
-    it 'returns an empty array when passed :pro' do
-      expect(Role.requires(:pro)).to eq([])
+    it 'returns an empty array when passed a role that is gone' do
+      expect(Role.grants_and_revokes(:pro_admin)).to eq([])
     end
   end
 end

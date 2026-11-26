@@ -1,0 +1,709 @@
+{
+  "PDF: masked before, with a rule that changes it": {
+    "result": {
+      "pdf_text": "Response to your request\n\nMeeting with\n\n[redacted]\n\nInformation Rights Team\n\nabout ref-20451\n\n\fResponse to your request\n\nWrite to clerk@gritshire.example or foi@gritshire.example\n\nInformation Rights Team\n\n\f"
+    },
+    "changed": true,
+    "input_left_alone": true,
+    "went_out_as_it_came": [],
+    "rules_told": [
+      {
+        "rule": "Jane Doelittle",
+        "call": "record_match",
+        "given_what_is_masked": true,
+        "attribute": "body",
+        "matched": true
+      }
+    ],
+    "redactor_asked": [
+      {
+        "rules": 1,
+        "options": {
+          "ocr": false
+        }
+      }
+    ],
+    "logged": []
+  },
+  "PDF: masked before, with nothing for a rule to change": {
+    "result": {
+      "pdf": "as it came"
+    },
+    "changed": false,
+    "input_left_alone": true,
+    "went_out_as_it_came": [],
+    "rules_told": [
+      {
+        "rule": "Zebracorn",
+        "call": "record_match",
+        "given_what_is_masked": true,
+        "attribute": "body",
+        "matched": false
+      }
+    ],
+    "redactor_asked": [
+      {
+        "rules": 1,
+        "options": {
+          "ocr": false
+        }
+      }
+    ],
+    "logged": []
+  },
+  "PDF: that is not a PDF": {
+    "raises": "AlaveteliTextMasker::PDFMaskingError",
+    "input_left_alone": true,
+    "went_out_as_it_came": [],
+    "rules_told": [],
+    "redactor_asked": [
+      {
+        "rules": 4,
+        "options": {
+          "ocr": false
+        }
+      }
+    ],
+    "logged": [
+      "warn: [masking] PDF not masked: AlaveteliSandbox::Failed:"
+    ]
+  },
+  "PDF: that needs a password": {
+    "result": {
+      "pdf": "as it came"
+    },
+    "changed": false,
+    "input_left_alone": true,
+    "went_out_as_it_came": [
+      "the PDF needs a password, so masking could not open it"
+    ],
+    "rules_told": [
+      {
+        "rule": "Jane Doelittle",
+        "call": "record_match",
+        "given_what_is_masked": true,
+        "attribute": "body",
+        "matched": false
+      }
+    ],
+    "redactor_asked": [
+      {
+        "rules": 4,
+        "options": {
+          "ocr": false
+        }
+      }
+    ],
+    "logged": [
+      "info: [masking] PDF needs a password; served as it is"
+    ]
+  },
+  "PDF: with a mask that is blank": {
+    "result": {
+      "pdf_text": "Response to your request\n\nMeeting with Jane Doelittle about ref-20451\n\nInformation Rights Team\n\n\fResponse to your request\n\nWrite to\n\n[redacted]\n\nInformation Rights Team\n\nor\n\n[redacted]\n\n\f"
+    },
+    "changed": true,
+    "input_left_alone": true,
+    "went_out_as_it_came": [],
+    "rules_told": [],
+    "redactor_asked": [
+      {
+        "rules": 3,
+        "options": {
+          "ocr": false
+        }
+      }
+    ],
+    "logged": []
+  },
+  "PDF: with a rule on the request": {
+    "result": {
+      "pdf_text": "Response to your request\n\nMeeting with\n\n[redacted]\n\nInformation Rights Team\n\nabout ref-20451\n\n\fResponse to your request\n\nWrite to\n\n[redacted]\n\nInformation Rights Team\n\nor\n\n[redacted]\n\n\f"
+    },
+    "changed": true,
+    "input_left_alone": true,
+    "went_out_as_it_came": [],
+    "rules_told": [
+      {
+        "rule": "Jane Doelittle",
+        "call": "record_match",
+        "given_what_is_masked": true,
+        "attribute": "body",
+        "matched": true
+      }
+    ],
+    "redactor_asked": [
+      {
+        "rules": 4,
+        "options": {
+          "ocr": true
+        }
+      }
+    ],
+    "logged": []
+  },
+  "PDF: with a rule on the user": {
+    "result": {
+      "pdf_text": "Response to your request\n\nMeeting with\n\n[redacted]\n\nInformation Rights Team\n\nabout ref-20451\n\n\fResponse to your request\n\nWrite to\n\n[redacted]\n\nInformation Rights Team\n\nor\n\n[redacted]\n\n\f"
+    },
+    "changed": true,
+    "input_left_alone": true,
+    "went_out_as_it_came": [],
+    "rules_told": [
+      {
+        "rule": "Jane Doelittle",
+        "call": "record_match",
+        "given_what_is_masked": true,
+        "attribute": "body",
+        "matched": true
+      }
+    ],
+    "redactor_asked": [
+      {
+        "rules": 4,
+        "options": {
+          "ocr": true
+        }
+      }
+    ],
+    "logged": []
+  },
+  "PDF: with censor rules and no default masks": {
+    "result": {
+      "pdf_text": "Response to your request\n\nMeeting with\n\n[redacted]\n\nInformation Rights Team\n\nabout ref-20451\n\n\fResponse to your request\n\nWrite to clerk@gritshire.example or foi@gritshire.example\n\nInformation Rights Team\n\n\f"
+    },
+    "changed": true,
+    "input_left_alone": true,
+    "went_out_as_it_came": [],
+    "rules_told": [
+      {
+        "rule": "Jane Doelittle",
+        "call": "record_match",
+        "given_what_is_masked": true,
+        "attribute": "body",
+        "matched": true
+      }
+    ],
+    "redactor_asked": [
+      {
+        "rules": 1,
+        "options": {
+          "ocr": false
+        }
+      }
+    ],
+    "logged": []
+  },
+  "PDF: with censor rules and the request masks": {
+    "result": {
+      "pdf_text": "Response to your request\n\nMeeting with\n\n[redacted]\n\nInformation Rights Team\n\nabout\n\n[redacted]\n\n\fResponse to your request\n\nWrite to\n\n[redacted]\n\nInformation Rights Team\n\nor\n\n[redacted]\n\n\f"
+    },
+    "changed": true,
+    "input_left_alone": true,
+    "went_out_as_it_came": [],
+    "rules_told": [
+      {
+        "rule": "Jane Doelittle",
+        "call": "record_match",
+        "given_what_is_masked": true,
+        "attribute": "body",
+        "matched": true
+      },
+      {
+        "rule": "ref-\\d+",
+        "call": "record_match",
+        "given_what_is_masked": true,
+        "attribute": "body",
+        "matched": true
+      }
+    ],
+    "redactor_asked": [
+      {
+        "rules": 6,
+        "options": {
+          "ocr": false
+        }
+      }
+    ],
+    "logged": []
+  },
+  "PDF: with the default masks": {
+    "result": {
+      "pdf_text": "Response to your request\n\nMeeting with Jane Doelittle about ref-20451\n\nInformation Rights Team\n\n\fResponse to your request\n\nWrite to\n\n[redacted]\n\nInformation Rights Team\n\nor\n\n[redacted]\n\n\f"
+    },
+    "changed": true,
+    "input_left_alone": true,
+    "went_out_as_it_came": [],
+    "rules_told": [],
+    "redactor_asked": [
+      {
+        "rules": 3,
+        "options": {
+          "ocr": false
+        }
+      }
+    ],
+    "logged": []
+  },
+  "bytes: a Word 97 file, with censor rules": {
+    "result": {
+      "bytes": 72,
+      "sha256": "8bffc4832c9efca8480c3574b381ed831c8e9aaf2d85fea46beb762a7a93caad"
+    },
+    "changed": true,
+    "input_left_alone": true,
+    "went_out_as_it_came": [],
+    "rules_told": [
+      {
+        "rule": "Jane Doelittle",
+        "call": "apply_to_binary",
+        "given_what_is_masked": true,
+        "attribute": "body"
+      },
+      {
+        "rule": "ref-\\d+",
+        "call": "apply_to_binary",
+        "given_what_is_masked": true,
+        "attribute": "body"
+      }
+    ],
+    "redactor_asked": [],
+    "logged": []
+  },
+  "bytes: a Word 97 file, with rules and no default masks": {
+    "result": {
+      "bytes": 72,
+      "sha256": "f6b7fc93e30d68370ba9b6d10c0f2d01bb0b77076576388f5f4c129e4074c614"
+    },
+    "changed": true,
+    "input_left_alone": true,
+    "went_out_as_it_came": [],
+    "rules_told": [
+      {
+        "rule": "Jane Doelittle",
+        "call": "apply_to_binary",
+        "given_what_is_masked": true,
+        "attribute": "body"
+      }
+    ],
+    "redactor_asked": [],
+    "logged": []
+  },
+  "bytes: a Word 97 file, with the default masks": {
+    "result": {
+      "bytes": 72,
+      "sha256": "dba8fcf945068edb2747abd8fa9b5dedf86092167239a10c82d1d73f9d51345f"
+    },
+    "changed": true,
+    "input_left_alone": true,
+    "went_out_as_it_came": [],
+    "rules_told": [],
+    "redactor_asked": [],
+    "logged": []
+  },
+  "bytes: a kind of file nothing knows": {
+    "result": {
+      "text": "\u0001\u0002 xxxx@xxxxxxxxx.xxxxxxx \u0003"
+    },
+    "changed": true,
+    "input_left_alone": true,
+    "went_out_as_it_came": [],
+    "rules_told": [
+      {
+        "rule": "Jane Doelittle",
+        "call": "apply_to_binary",
+        "given_what_is_masked": true,
+        "attribute": "body"
+      }
+    ],
+    "redactor_asked": [],
+    "logged": []
+  },
+  "bytes: a large file of two-byte text": {
+    "result": {
+      "bytes": 2560074,
+      "sha256": "8bb8efae0b639567c1c86f94c598dc34f8ed0a7a755ae23f7fdfeb35ed4d2eba"
+    },
+    "changed": true,
+    "input_left_alone": true,
+    "went_out_as_it_came": [],
+    "rules_told": [],
+    "redactor_asked": [],
+    "logged": []
+  },
+  "bytes: a rule that only works on text": {
+    "result": {
+      "bytes": 72,
+      "sha256": "3c0682e6c3412d53652e60afbb4e27c765b653bcaeefc399d5302d5ae468cc2c"
+    },
+    "changed": true,
+    "input_left_alone": true,
+    "went_out_as_it_came": [
+      "anything censor rule 41 matches: its pattern only works on text, and this kind of file is masked as bytes"
+    ],
+    "rules_told": [
+      {
+        "rule": "\\p{Lu}ane",
+        "call": "apply_to_binary",
+        "given_what_is_masked": true,
+        "attribute": "body"
+      },
+      {
+        "rule": "Jane Doelittle",
+        "call": "apply_to_binary",
+        "given_what_is_masked": true,
+        "attribute": "body"
+      }
+    ],
+    "redactor_asked": [],
+    "logged": []
+  },
+  "bytes: an OpenDocument file saved as flat XML": {
+    "result": {
+      "text": "<office:text>xxxx@xxxxxxxxx.xxxxxxx</office:text>"
+    },
+    "changed": true,
+    "input_left_alone": true,
+    "went_out_as_it_came": [],
+    "rules_told": [],
+    "redactor_asked": [],
+    "logged": []
+  },
+  "bytes: an address in two-byte text": {
+    "result": {
+      "bytes": 78,
+      "sha256": "0a7bebd9ad70b93d4945646c4b157a1daea642ddb7b4454dbf3d7f2ab8e31e3b"
+    },
+    "changed": true,
+    "input_left_alone": true,
+    "went_out_as_it_came": [],
+    "rules_told": [],
+    "redactor_asked": [],
+    "logged": []
+  },
+  "never masked: a Word file stored as a zip": {
+    "result": {
+      "text": "PK\u0003\u0004 jane@gritshire.example"
+    },
+    "changed": false,
+    "input_left_alone": true,
+    "went_out_as_it_came": [
+      "the file is an archive (zip, 7-Zip, RAR, gzip), or a document stored as a zip (Office, ODF), which masking cannot open yet"
+    ],
+    "rules_told": [],
+    "redactor_asked": [],
+    "logged": []
+  },
+  "never masked: a picture": {
+    "result": {
+      "bytes": 31,
+      "sha256": "ca683db84d115881e5a80350c87cf73f868bdc261e38a97a9645c2abc3753502"
+    },
+    "changed": false,
+    "input_left_alone": true,
+    "went_out_as_it_came": [],
+    "rules_told": [],
+    "redactor_asked": [],
+    "logged": []
+  },
+  "never masked: a zip file": {
+    "result": {
+      "text": "PK\u0003\u0004 jane@gritshire.example"
+    },
+    "changed": false,
+    "input_left_alone": true,
+    "went_out_as_it_came": [
+      "the file is an archive (zip, 7-Zip, RAR, gzip), or a document stored as a zip (Office, ODF), which masking cannot open yet"
+    ],
+    "rules_told": [],
+    "redactor_asked": [],
+    "logged": [
+      "info: [masking] application/zip is an archive the byte pass cannot mask; served as it is"
+    ]
+  },
+  "never masked: a zip file sent as something else": {
+    "result": {
+      "text": "PK\u0003\u0004 jane@gritshire.example"
+    },
+    "changed": false,
+    "input_left_alone": true,
+    "went_out_as_it_came": [
+      "the file is an archive (zip, 7-Zip, RAR, gzip), or a document stored as a zip (Office, ODF), which masking cannot open yet"
+    ],
+    "rules_told": [],
+    "redactor_asked": [],
+    "logged": [
+      "info: [masking] application/octet-stream is an archive the byte pass cannot mask; served as it is"
+    ]
+  },
+  "never masked: a zip file, with no censor rules": {
+    "result": {
+      "text": "PK\u0003\u0004 jane@gritshire.example"
+    },
+    "changed": false,
+    "input_left_alone": true,
+    "went_out_as_it_came": [
+      "the file is an archive (zip, 7-Zip, RAR, gzip), or a document stored as a zip (Office, ODF), which masking cannot open yet"
+    ],
+    "rules_told": [],
+    "redactor_asked": [],
+    "logged": []
+  },
+  "never masked: an OpenDocument file": {
+    "result": {
+      "text": "jane@gritshire.example"
+    },
+    "changed": false,
+    "input_left_alone": true,
+    "went_out_as_it_came": [
+      "the file is an archive (zip, 7-Zip, RAR, gzip), or a document stored as a zip (Office, ODF), which masking cannot open yet"
+    ],
+    "rules_told": [],
+    "redactor_asked": [],
+    "logged": []
+  },
+  "own masks: for a PDF": {
+    "result": {
+      "pdf_text": "Response to your request\n\nDepot at\n\n[redacted]\n\nInformation Rights Team\n\n,\n\n[redacted]\n\n\f"
+    },
+    "changed": true,
+    "input_left_alone": true,
+    "went_out_as_it_came": [],
+    "rules_told": [],
+    "redactor_asked": [
+      {
+        "rules": 3,
+        "options": {
+          "ocr": false
+        }
+      }
+    ],
+    "logged": []
+  },
+  "own masks: for text": {
+    "result": {
+      "text": "Dear Jane Doelittle,\nYour request ref-20451 was passed to [email address].\nReply to [email address] or call [mobile].\nSign in at http://test.host/c/abcdef123456 to follow it.\nDepot at [postcode].\n"
+    },
+    "changed": true,
+    "input_left_alone": true,
+    "went_out_as_it_came": [],
+    "rules_told": [],
+    "redactor_asked": [],
+    "logged": []
+  },
+  "own masks: not used by the masker itself": {
+    "result": {
+      "text": "Dear Jane Doelittle,\nYour request ref-20451 was passed to [email address].\nReply to [email address] or call [mobile number].\nSign in at [Alaveteli login link] to follow it.\nDepot at GR1 4AB.\n"
+    },
+    "changed": true,
+    "input_left_alone": true,
+    "went_out_as_it_came": [],
+    "rules_told": [],
+    "redactor_asked": [],
+    "logged": []
+  },
+  "text: a CSV file": {
+    "result": {
+      "text": "Name,Contact\n[name],[email address]\n"
+    },
+    "changed": true,
+    "input_left_alone": true,
+    "went_out_as_it_came": [],
+    "rules_told": [
+      {
+        "rule": "Jane Doelittle",
+        "call": "record_match",
+        "given_what_is_masked": true,
+        "attribute": "body",
+        "matched": true
+      }
+    ],
+    "redactor_asked": [],
+    "logged": []
+  },
+  "text: a letter, with censor rules and no default masks": {
+    "result": {
+      "text": "Dear [name],\nYour request [ref] was passed to clerk@gritshire.example.\nReply to foi@gritshire.example or call Mobile: 07700 900123.\nSign in at http://test.host/c/abcdef123456 to follow it.\n"
+    },
+    "changed": true,
+    "input_left_alone": true,
+    "went_out_as_it_came": [],
+    "rules_told": [
+      {
+        "rule": "Jane Doelittle",
+        "call": "record_match",
+        "given_what_is_masked": true,
+        "attribute": "body",
+        "matched": true
+      },
+      {
+        "rule": "ref-\\d+",
+        "call": "record_match",
+        "given_what_is_masked": true,
+        "attribute": "body",
+        "matched": true
+      }
+    ],
+    "redactor_asked": [],
+    "logged": []
+  },
+  "text: a letter, with every mask and rule": {
+    "result": {
+      "text": "Dear [name],\nYour request [ref] was passed to [email address].\nReply to [Gritshire Council request email] or call [mobile number].\nSign in at [Alaveteli login link] to follow it.\n"
+    },
+    "changed": true,
+    "input_left_alone": true,
+    "went_out_as_it_came": [],
+    "rules_told": [
+      {
+        "rule": "Jane Doelittle",
+        "call": "record_match",
+        "given_what_is_masked": true,
+        "attribute": "body",
+        "matched": true
+      },
+      {
+        "rule": "ref-\\d+",
+        "call": "record_match",
+        "given_what_is_masked": true,
+        "attribute": "body",
+        "matched": true
+      }
+    ],
+    "redactor_asked": [],
+    "logged": []
+  },
+  "text: a letter, with the default masks": {
+    "result": {
+      "text": "Dear Jane Doelittle,\nYour request ref-20451 was passed to [email address].\nReply to [email address] or call [mobile number].\nSign in at [Alaveteli login link] to follow it.\n"
+    },
+    "changed": true,
+    "input_left_alone": true,
+    "went_out_as_it_came": [],
+    "rules_told": [],
+    "redactor_asked": [],
+    "logged": []
+  },
+  "text: a rule that matches what a mask put in": {
+    "result": {
+      "text": "Dear Jane Doelittle,\nYour request ref-20451 was passed to [email address].\nReply to [email address] or call [mobile number].\nSign in at [Alaveteli login link] to follow it.\n"
+    },
+    "changed": true,
+    "input_left_alone": true,
+    "went_out_as_it_came": [],
+    "rules_told": [
+      {
+        "rule": "email address",
+        "call": "record_match",
+        "given_what_is_masked": true,
+        "attribute": "body",
+        "matched": false
+      }
+    ],
+    "redactor_asked": [],
+    "logged": []
+  },
+  "text: a web page": {
+    "result": {
+      "text": "<p>Write to <a href=\"mailto:[email address]\">[email address]</a> about [name].</p>"
+    },
+    "changed": true,
+    "input_left_alone": true,
+    "went_out_as_it_came": [],
+    "rules_told": [
+      {
+        "rule": "Jane Doelittle",
+        "call": "record_match",
+        "given_what_is_masked": true,
+        "attribute": "body",
+        "matched": true
+      }
+    ],
+    "redactor_asked": [],
+    "logged": []
+  },
+  "text: nothing at all": {
+    "result": null,
+    "changed": false,
+    "input_left_alone": true,
+    "went_out_as_it_came": [],
+    "rules_told": [],
+    "redactor_asked": [],
+    "logged": []
+  },
+  "text: with a mask that is blank": {
+    "result": {
+      "text": "Dear Jane Doelittle,\nYour request ref-20451 was passed to [email address].\nReply to [email address] or call [mobile number].\nSign in at [Alaveteli login link] to follow it.\n"
+    },
+    "changed": true,
+    "input_left_alone": true,
+    "went_out_as_it_came": [],
+    "rules_told": [],
+    "redactor_asked": [],
+    "logged": []
+  },
+  "the PDF rules for censor rules and masks": {
+    "with masks": [
+      [
+        "/J(?:-?[​ ]|​?)a(?:-?[​ ]|​?)n(?:-?[​ ]|​?)e[\\s​ ]+D(?:-?[​ ]|​?)o(?:-?[​ ]|​?)e(?:-?[​ ]|​?)l(?:-?[​ ]|​?)i(?:-?[​ ]|​?)t(?:-?[​ ]|​?)t(?:-?[​ ]|​?)l(?:-?[​ ]|​?)e/",
+        true,
+        "Jane Doelittle",
+        "Jane Doelittle"
+      ],
+      [
+        "/ref-\\d+/m",
+        false,
+        "/ref-\\d+/m",
+        null
+      ],
+      [
+        "/foi@gritshire\\.example/",
+        false,
+        null,
+        null
+      ],
+      [
+        "/(\\b[A-Za-z0-9._%+-]+@(?:[A-Za-z0-9.-]+\\.[A-Za-z]{2,4}\\b|[A-Za-z0-9.-]+\\.(?:[a-z]{5,}|[A-Z]{5,})\\b(?!@|:\\/\\/)))/",
+        false,
+        null,
+        null
+      ],
+      [
+        "/(Mobile|Mob)([\\s\\/]*(Fax|Tel))*\\s*:?[\\s\\d]*\\d/",
+        false,
+        null,
+        null
+      ],
+      [
+        "/https?:\\/\\/test.host\\/c\\/[^\\s]+/",
+        false,
+        null,
+        null
+      ]
+    ],
+    "without default masks": [
+      [
+        "/J(?:-?[​ ]|​?)a(?:-?[​ ]|​?)n(?:-?[​ ]|​?)e[\\s​ ]+D(?:-?[​ ]|​?)o(?:-?[​ ]|​?)e(?:-?[​ ]|​?)l(?:-?[​ ]|​?)i(?:-?[​ ]|​?)t(?:-?[​ ]|​?)t(?:-?[​ ]|​?)l(?:-?[​ ]|​?)e/",
+        true,
+        "Jane Doelittle",
+        "Jane Doelittle"
+      ]
+    ]
+  },
+  "which content is an archive": {
+    "application/zip": true,
+    "APPLICATION/ZIP": true,
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document": true,
+    "application/vnd.ms-excel.sheet.macroEnabled.12": true,
+    "application/vnd.ms-excel": false,
+    "application/msword": false,
+    "application/vnd.oasis.opendocument.text": true,
+    "application/vnd.oasis.opendocument.text-flat-xml": false,
+    "application/octet-stream": true,
+    "application/x-unknown": true,
+    "application/gzip": true,
+    "application/x-rar": true,
+    "application/pdf": false,
+    "text/plain": false
+  }
+}

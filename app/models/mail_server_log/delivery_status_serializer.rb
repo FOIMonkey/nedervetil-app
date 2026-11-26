@@ -1,3 +1,5 @@
+# ActiveRecord coder converting MailServerLog#delivery_status between database
+# strings and MailServerLog::DeliveryStatus objects.
 class MailServerLog::DeliveryStatusSerializer
   # Public: Tries to load the cached delivery_status value from the database
   #
