@@ -1,5 +1,7 @@
 require 'external_command'
 
+# Runs external programs via ExternalCommand using utility_search_path or PATH.
+# Refuses execution and logs :not_routed when AlaveteliSandbox.required? is set.
 class AlaveteliExternalCommand
   def self.run(program_name, *args)
     new(program_name).run(*args)
@@ -11,20 +13,17 @@ class AlaveteliExternalCommand
     @program_name = program_name
   end
 
-  def add_args(*command_args)
-    @command_args = command_args
-    self
-  end
-
   # Final argument can be a hash of options.
   # Valid options are:
   # :append_to - string to append the output of the process to
   # :append_errors_to - string to append the errors produced by the process to
   # :stdin_string - stdin string to pass to the process
-  # :binary_output - boolean flag for treating the output as binary or text encoded with
-  #                   the default external encoding (only significant in ruby 1.9 and above)
-  # :binary_input - boolean flag for treating the input as binary or as text encoded with
-  #                   the default external encoding (only significant in ruby 1.9 and above)
+  # :binary_output - boolean flag for treating the output as binary or text
+  #                   encoded with the default external encoding (only
+  #                   significant in ruby 1.9 and above)
+  # :binary_input - boolean flag for treating the input as binary or as text
+  #                   encoded with the default external encoding (only
+  #                   significant in ruby 1.9 and above)
   # :memory_limit - maximum amount of memory (in bytes) available to the process
   # :timeout - maximum amount of time (in s) to allow the process to run for
   # :env - hash of environment variables to set for the process
@@ -33,10 +32,17 @@ class AlaveteliExternalCommand
     # Standard error is suppressed unless the program
     # fails (i.e. returns a non-zero exit status).
     # If the program fails, returns nil and writes any error to stderr.
-    # TODO: calling code should be able to specify error stream - may want to log it or
-    # otherwise act upon it.
+    # TODO: calling code should be able to specify error stream - may want to
+    # log it or otherwise act upon it.
     opts = {}
     opts = args.last if !args.empty? && args.last.is_a?(Hash)
+
+    # Converters run through AlaveteliSandbox when it is required. Anything
+    # still calling here then gets the usual failure, never an unsandboxed run.
+    if AlaveteliSandbox.required?
+      AlaveteliSandbox.log(:not_routed, program_name)
+      return nil
+    end
 
     program_path = find_program!
     xc = ExternalCommand.new(program_path, *command_args, *args)
@@ -47,21 +53,8 @@ class AlaveteliExternalCommand
       return nil
     end
 
-    if !xc.exited
-      # Crash or timeout
-      if xc.timed_out
-        $stderr.puts(%Q[External Command: "#{program_name} #{args.join(' ')}" timed out at #{opts[:timeout]}s])
-      else
-        $stderr.puts(%Q[External Command: "#{program_name} #{args.join(' ')}" exited abnormally])
-      end
-      $stderr.print(xc.err)
-      nil
-
-    elsif xc.status != 0
-      # Error
-      $stderr.puts(%Q[External Command: Error from command "#{program_name} #{args.join(' ')}":])
-      $stderr.print(xc.err)
-      nil
+    if !xc.exited || xc.status != 0
+      report_failure(xc, args, opts)
     elsif opts.key? :append_to
       opts[:append_to] << "\n\n"
     else
@@ -76,8 +69,36 @@ class AlaveteliExternalCommand
 
   private
 
+  def report_failure(xc, args, opts)
+    if !xc.exited
+      # Crash or timeout
+      if xc.timed_out
+        $stderr.puts(
+          %Q[External Command: "#{program_name} #{args.join(' ')}" ] \
+          "timed out at #{opts[:timeout]}s"
+        )
+      else
+        $stderr.puts(
+          %Q[External Command: "#{program_name} #{args.join(' ')}" ] \
+          "exited abnormally"
+        )
+      end
+      $stderr.print(xc.err)
+      nil
+
+    elsif xc.status != 0
+      # Error
+      $stderr.puts(
+        %Q[External Command: Error from command "#{program_name} ] \
+        "#{args.join(' ')}\":"
+      )
+      $stderr.print(xc.err)
+      nil
+    end
+  end
+
   def find_program
-    return program_name if program_name =~ %r(^/)
+    return program_name if %r(^/).match?(program_name)
 
     search_paths.each do |d|
       path = File.join(d, program_name)

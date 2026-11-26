@@ -156,6 +156,10 @@ module AlaveteliConfiguration
     # rubocop:enable Layout/LineLength
   end
 
+  def self.default_secret?(value)
+    value.to_s.length < 64 || value == DEFAULTS[:SECRET_KEY_BASE]
+  end
+
   def self.get(key, default)
     # Don't use the `Rails.env.test?` as this has to work for external commands
     # when Rails environment isn't loaded.
