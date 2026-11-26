@@ -133,6 +133,9 @@ Rails.application.routes.draw do
   match '/request/:url_title/download' => 'request#download_entire_request',
         :as => :download_entire_request,
         :via => :get
+
+  get '/regulator_packs/download' => 'regulator_packs#show',
+      as: :download_regulator_pack
   ####
 
   #### Citations controller

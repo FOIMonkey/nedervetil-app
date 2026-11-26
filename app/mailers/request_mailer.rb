@@ -209,6 +209,20 @@ class RequestMailer < ApplicationMailer
     )
   end
 
+  def regulator_pack_ready(info_request, user, token)
+    @info_request = info_request
+    @download_url = download_regulator_pack_url(token: token)
+
+    mail_user(
+      user,
+      subject: -> {
+        _('Your download is ready - {{request_title}}',
+          request_title: info_request.title)
+      },
+      charset: 'UTF-8'
+    )
+  end
+
   def self.receive(inbound_email)
     ActionMailbox::InboundEmail.create_and_extract_message_id!(inbound_email)
   end

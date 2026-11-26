@@ -46,17 +46,17 @@ class Legislation
     def parse_matches(string)
       string.
         # convert &amps; into &
-        gsub(/#{AND_SEPARATOR}/, '&').
+        gsub(/#{AND_SEPARATOR}/o, '&').
         # remove spaces before sub elements
-        gsub(/\s+(#{SUB_ELEMENTS})/, '\1').
+        gsub(/\s+(#{SUB_ELEMENTS})/o, '\1').
         # convert bracketed elements into decimal elements for easier processing
-        gsub(/\.?#{BRACKETED_ELEMENT}/, '.\1').
+        gsub(/\.?#{BRACKETED_ELEMENT}/o, '.\1').
         # split at AND separators into two distinct references
         gsub(AND_REGEXP, '\k<sup>.\k<sub_1> or \k<sup>.\k<sub_2>').
         # convert decimal elements back into preferred bracketed elements
-        gsub(/#{DECIMAL_ELEMENT}/, '(\1)').
+        gsub(/#{DECIMAL_ELEMENT}/o, '(\1)').
         # split OR separators into an array
-        split(/#{OR_SEPARATOR}/).
+        split(/#{OR_SEPARATOR}/o).
         # just in case, remove any blank references
         reject(&:blank?)
     end

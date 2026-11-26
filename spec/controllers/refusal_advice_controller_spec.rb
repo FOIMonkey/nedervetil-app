@@ -246,9 +246,10 @@ RSpec.describe RefusalAdviceController do
       let(:user) { FactoryBot.create(:user) }
       before { sign_in user }
 
-      it 'renders wrong user template' do
-        post :create, params: params
-        expect(response).to render_template('user/wrong_user')
+      it 'raises ActiveRecord::RecordNotFound' do
+        expect {
+          post :create, params: params
+        }.to raise_error(ActiveRecord::RecordNotFound)
       end
 
       context 'without url title param' do
@@ -264,14 +265,18 @@ RSpec.describe RefusalAdviceController do
     context 'when logged out' do
       let(:user) { nil }
 
-      it 'redirects to sign in form' do
-        post :create, params: params
-        expect(response).to be_redirect
+      it 'raises ActiveRecord::RecordNotFound' do
+        expect {
+          post :create, params: params
+        }.to raise_error(ActiveRecord::RecordNotFound)
       end
 
-      it 'saves post redirect' do
-        post :create, params: params
-        expect(get_last_post_redirect&.uri).to eq '/refusal_advice'
+      it 'does not save a post redirect' do
+        post_redirects = PostRedirect.count
+        expect {
+          post :create, params: params
+        }.to raise_error(ActiveRecord::RecordNotFound)
+        expect(PostRedirect.count).to eq(post_redirects)
       end
 
       context 'without url title param' do

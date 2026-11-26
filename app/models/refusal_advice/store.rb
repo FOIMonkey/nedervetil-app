@@ -29,7 +29,9 @@ class RefusalAdvice::Store
 
   def to_h
     @to_h ||= data.inject({}) do |memo, set|
-      memo.deep_merge!(set, &method(:merge_array_by_id))
+      memo.deep_merge!(set) do |key, this_val, other_val|
+        merge_array_by_id(key, this_val, other_val)
+      end
     end.deep_symbolize_keys
   end
 
@@ -64,7 +66,9 @@ class RefusalAdvice::Store
       next memo << val unless existing_hash
 
       # deep merge the hashes with matching ids and return
-      existing_hash.deep_merge!(val, &method(:merge_array_by_id))
+      existing_hash.deep_merge!(val) do |key, existing_val, incoming_val|
+        merge_array_by_id(key, existing_val, incoming_val)
+      end
       memo
     end
   end

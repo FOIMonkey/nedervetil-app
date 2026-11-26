@@ -8,8 +8,8 @@ class InfoRequest
       def call
         @relation.where(
           described_state: %w[
-            gone_postal internal_review error_message requires_admin
-            attention_requested vexatious not_foi
+            gone_postal internal_review under_appeal error_message
+            requires_admin attention_requested vexatious not_foi
           ],
           awaiting_description: false
         )

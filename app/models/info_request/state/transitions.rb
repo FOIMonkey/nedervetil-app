@@ -94,6 +94,10 @@ class InfoRequest
         end
       end
 
+      def self.owner_under_appeal_transition_label(_opts = {})
+        _("I've <strong>appealed</strong> to the regulator or a tribunal")
+      end
+
       def self.owner_error_message_transition_label(_opts = {})
         _("I've received an <strong>error message</strong>")
       end

@@ -289,6 +289,7 @@ class InfoRequest < ApplicationRecord
       'waiting_clarification' => _("Waiting clarification"),
       'gone_postal' => _("Handled by postal mail"),
       'internal_review' => _("Awaiting internal review"),
+      'under_appeal' => _('Under appeal'),
       'error_message' => _("Delivery error"),
       'requires_admin' => _("Unusual response"),
       'attention_requested' => _("Reported for administrator attention"),
@@ -649,6 +650,7 @@ class InfoRequest < ApplicationRecord
 
     # Remove any download zips
     FileUtils.rm_rf(download_zip_dir)
+    RegulatorPack.purge_for_request!(id)
 
     # Remove the database caches of body / attachment text (the attachment text
     # one is after privacy rules are applied)

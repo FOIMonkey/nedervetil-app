@@ -196,6 +196,11 @@ module InfoRequestHelper
       public_body_link: public_body_link(info_request.public_body))
   end
 
+  def status_text_under_appeal(_info_request, _opts = {})
+    _('<strong>Under appeal.</strong> The requester has appealed to the ' \
+      'regulator or a tribunal.')
+  end
+
   def status_text_error_message(info_request, _opts = {})
     body = info_request.public_body
     _('There was a <strong>delivery error</strong> or similar, which ' \

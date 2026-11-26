@@ -661,7 +661,7 @@ RSpec.describe 'In-place rule masking' do
 
   describe 'best-effort black masking and admin warnings on Replacement' do
     after do
-      FileUtils.rm_rf(RegulatorPack.storage_dir) if defined?(RegulatorPack)
+      FileUtils.rm_rf(RegulatorPack.storage_dir)
     end
 
     def regulator_pack_entries
@@ -749,16 +749,14 @@ RSpec.describe 'In-place rule masking' do
                                           [rule])
       ).to be(false)
 
-      if defined?(RegulatorPack)
-        entries = regulator_pack_entries
-        txt_entry = entries.find { |name, _| name.end_with?('notes.txt') }
-        pdf_entry = entries.find { |name, _| name.end_with?('report.pdf') }
-        expect(txt_entry.last).to include('[black]')
-        expect(txt_entry.last).not_to include('BlackSecret')
-        expect(
-          Disclosures::RuleCheck.pdf_match?(pdf_part, pdf_entry.last, [rule])
-        ).to be(false)
-      end
+      entries = regulator_pack_entries
+      txt_entry = entries.find { |name, _| name.end_with?('notes.txt') }
+      pdf_entry = entries.find { |name, _| name.end_with?('report.pdf') }
+      expect(txt_entry.last).to include('[black]')
+      expect(txt_entry.last).not_to include('BlackSecret')
+      expect(
+        Disclosures::RuleCheck.pdf_match?(pdf_part, pdf_entry.last, [rule])
+      ).to be(false)
     end
 
     it 'allows encrypted or faulty PDF uploads under Black rules, records the fault, blocks publication, and warns the admin' do

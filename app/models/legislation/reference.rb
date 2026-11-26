@@ -22,7 +22,7 @@ class Legislation
       type, elements = *reference.split(' ', 2)
       @type = parse_type(type)
       @elements = elements.gsub(
-        /\.?#{Constants::BRACKETED_ELEMENT}/,
+        /\.?#{Constants::BRACKETED_ELEMENT}/o,
         '.\1'
       ).split('.')
     end

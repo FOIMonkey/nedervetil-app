@@ -366,6 +366,17 @@ RSpec.describe InfoRequestHelper do
       end
     end
 
+    context 'under_appeal' do
+      it 'returns a description' do
+        allow(info_request).
+          to receive(:calculate_status).
+          and_return('under_appeal')
+        expected = '<strong>Under appeal.</strong> The requester has ' \
+                   'appealed to the regulator or a tribunal.'
+        expect(status_text(info_request)).to eq(expected)
+      end
+    end
+
     context 'error_message' do
       it 'returns a description' do
         allow(info_request).

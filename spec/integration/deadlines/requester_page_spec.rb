@@ -320,17 +320,15 @@ RSpec.describe 'The requester’s own request page' do
         expect(response).to have_http_status(:ok)
         expect(response.body).not_to include(reason, hidden.display_filename)
 
-        if defined?(RegulatorPack)
-          token = RegulatorPack.new(request, user: user).build!
-          get download_regulator_pack_path(token: token)
-          expect(response).to have_http_status(:ok)
-          zip = Zip::File.open_buffer(StringIO.new(response.body))
-          text = zip.find_entry('correspondence.txt').get_input_stream.read
-          expect(text).to include('This attachment has not been published.')
-          expect(text).not_to include(reason, hidden.display_filename)
-        end
+        token = RegulatorPack.new(request, user: user).build!
+        get download_regulator_pack_path(token: token)
+        expect(response).to have_http_status(:ok)
+        zip = Zip::File.open_buffer(StringIO.new(response.body))
+        text = zip.find_entry('correspondence.txt').get_input_stream.read
+        expect(text).to include('This attachment has not been published.')
+        expect(text).not_to include(reason, hidden.display_filename)
       ensure
-        FileUtils.rm_rf(RegulatorPack.storage_dir) if defined?(RegulatorPack)
+        FileUtils.rm_rf(RegulatorPack.storage_dir)
       end
 
       it 'still tells an admin why' do

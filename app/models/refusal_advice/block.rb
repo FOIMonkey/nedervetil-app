@@ -28,7 +28,7 @@ class RefusalAdvice::Block
   private
 
   def collection(value)
-    Array(value).map(&method(:object))
+    Array(value).map { |item| object(item) }
   end
 
   def object(value)
@@ -41,7 +41,9 @@ class RefusalAdvice::Block
     params = ActionController::Parameters.new(value).permit(
       :partial, :plain, :html
     )
+    # rubocop:disable Rails/OutputSafety -- HTML written in the site's own config/refusal_advice files
     params[:html] = params[:html].html_safe if params[:html]
+    # rubocop:enable Rails/OutputSafety
     params.to_h
   end
 end

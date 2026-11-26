@@ -1,0 +1,10 @@
+<%= _('Your download for the FOI request "{{request_title}}" is ready.',
+      request_title: @info_request.title.html_safe) %>
+
+<%= _('Sign in and use the link below to download the zip file:') %>
+
+<%= @download_url %>
+
+<%= _('This link expires in 48 hours, after which the temporary zip file is deleted.') %>
+
+-- <%= _('the {{site_name}} team', site_name: site_name.html_safe) %>

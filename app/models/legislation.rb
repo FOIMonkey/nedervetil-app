@@ -76,7 +76,8 @@ class Legislation
   def to_s(variant = :short)
     @variants.fetch(variant)
   rescue KeyError
-    raise UnknownLegislationVariant, "Unknown variant #{variant} in legislation #{key}."
+    raise UnknownLegislationVariant,
+          "Unknown variant #{variant} in legislation #{key}."
   end
 
   def ==(other)

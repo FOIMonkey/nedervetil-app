@@ -38,6 +38,11 @@ RSpec.describe InfoRequest::State::Calculator do
       expect(calculator.phase).to eq(:other)
     end
 
+    it 'returns :other when the request is in state "under_appeal"' do
+      info_request.set_described_state('under_appeal')
+      expect(calculator.phase).to eq(:other)
+    end
+
     it 'returns :response_received when the request is awaiting description' do
       info_request.awaiting_description = true
       info_request.save!
@@ -75,7 +80,8 @@ RSpec.describe InfoRequest::State::Calculator do
             "waiting_response"      => "I'm still <strong>waiting</strong> for my information <small>(maybe you got an acknowledgement)</small>",
             "waiting_clarification" => "I've been asked to <strong>clarify</strong> my request",
             "internal_review"       => "I'm waiting for an <strong>internal review</strong> response",
-            "gone_postal"           => "They are going to reply <strong>by postal mail</strong>"
+            "gone_postal"           => "They are going to reply <strong>by postal mail</strong>",
+            "under_appeal"          => "I've <strong>appealed</strong> to the regulator or a tribunal"
           },
           complete: {
             "not_held"              => "They do <strong>not have</strong> the information <small>(maybe they say who does)</small>",
@@ -96,7 +102,8 @@ RSpec.describe InfoRequest::State::Calculator do
           pending:  {
             "waiting_response"      => "I'm still <strong>waiting</strong> for my information <small>(maybe you got an acknowledgement)</small>",
             "waiting_clarification" => "I've been asked to <strong>clarify</strong> my request",
-            "gone_postal"           => "They are going to reply <strong>by postal mail</strong>"
+            "gone_postal"           => "They are going to reply <strong>by postal mail</strong>",
+            "under_appeal"          => "I've <strong>appealed</strong> to the regulator or a tribunal"
           },
           complete: {
             "not_held"              => "They do <strong>not have</strong> the information <small>(maybe they say who does)</small>",
@@ -204,7 +211,7 @@ RSpec.describe InfoRequest::State::Calculator do
           transitions = calculator.transitions(
             is_owning_user: true,
             user_asked_to_update_status: false)
-          expected = %w[internal_review gone_postal]
+          expected = %w[internal_review gone_postal under_appeal]
           expect(transitions[:pending].keys).to eq(expected)
         end
 
@@ -258,7 +265,7 @@ RSpec.describe InfoRequest::State::Calculator do
             user_asked_to_update_status: false
           )
           expected = %w[internal_review waiting_response waiting_clarification
-                        gone_postal]
+                        gone_postal under_appeal]
           expect(transitions[:pending].keys).to eq(expected)
         end
 
@@ -298,7 +305,7 @@ RSpec.describe InfoRequest::State::Calculator do
       context "and the user is the owner" do
         it_behaves_like(
           "#transitions for an owner",
-          %w[waiting_response waiting_clarification gone_postal])
+          %w[waiting_response waiting_clarification gone_postal under_appeal])
       end
 
       context "and the user is some other user" do

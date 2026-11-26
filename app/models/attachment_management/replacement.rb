@@ -352,7 +352,7 @@ module AttachmentManagement
       Previews.clear(attachment.id)
       return unless attachment.info_request
 
-      RegulatorPack.purge_for_request!(attachment.info_request.id) if defined?(RegulatorPack)
+      RegulatorPack.purge_for_request!(attachment.info_request.id)
     end
 
     def handle_publication_state!(attachment, publish:, was_public:, premask:)

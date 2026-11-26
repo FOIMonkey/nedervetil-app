@@ -246,7 +246,7 @@ module Disclosures
     def purge_regulator_packs(converted_request_id)
       return unless converted_request_id
 
-      RegulatorPack.purge_for_request!(converted_request_id) if defined?(RegulatorPack)
+      RegulatorPack.purge_for_request!(converted_request_id)
     end
 
     def cleanup_uploaded_blobs(blobs)

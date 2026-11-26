@@ -27,6 +27,7 @@ class InfoRequest
               :very_overdue
             when 'gone_postal',
                  'internal_review',
+                 'under_appeal',
                  'error_message',
                  'requires_admin',
                  'attention_requested',
@@ -146,6 +147,8 @@ class InfoRequest
             states += ['internal_review']
           end
         end
+        # An appeal to the regulator or a tribunal is the requester's own step.
+        states += ['under_appeal'] if opts.fetch(:is_owning_user, false)
         states.uniq
       end
 

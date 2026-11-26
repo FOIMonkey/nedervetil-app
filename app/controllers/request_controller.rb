@@ -198,13 +198,11 @@ class RequestController < ApplicationController
       else
         return render_hidden if cannot?(:read, @info_request)
 
-        if defined?(RegulatorPack)
-          RegulatorPack.enqueue_for(@info_request, @user)
-          flash[:notice] = _(
-            'We are preparing your download. We will email you a link once it ' \
-            'is ready; the link expires after 48 hours.'
-          )
-        end
+        RegulatorPack.enqueue_for(@info_request, @user)
+        flash[:notice] = _(
+          'We are preparing your download. We will email you a link once it ' \
+          'is ready; the link expires after 48 hours.'
+        )
         redirect_to show_request_path(@info_request.url_title)
       end
     end
