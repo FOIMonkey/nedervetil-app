@@ -1,0 +1,37 @@
+<% body = @public_body %>
+<%= render 'public_body/band', body: body, page: @page, current: 'documents' %>
+<div class="group-page__layout body-documents">
+  <div class="group-page__main">
+    <%= form_tag authority_tab_path(body, 'documents'), method: :get, class: 'body-search', role: 'search', enforce_utf8: false do %>
+      <label class="visually-hidden" for="body-q"><%= _('Search {{public_body_name}}’s documents and releases', public_body_name: body.name) %></label>
+      <input type="search" id="body-q" name="q" value="<%= @query %>" placeholder="<%= _('Parking fines') %>" maxlength="200">
+      <button type="submit" class="button"><%= _('Search') %></button>
+    <% end %>
+    <% if @search.results.any? %>
+      <section aria-labelledby="body-here">
+        <h2 id="body-here"><%= _('Published here') %></h2>
+        <ol class="documents__list">
+          <% @search.results.each do |document| %>
+            <%= render partial: 'disclosures/documents/result', locals: { document: document, search: @search, in_batch: false } %>
+          <% end %>
+        </ol>
+        <% if @search.pages > @search.page %>
+          <p class="groups-pager"><%= link_to _('Next page'), authority_tab_path(body, 'documents') + "?#{{ q: @query.presence, page: @search.page + 1 }.compact.to_query}" %></p>
+        <% end %>
+      </section>
+    <% end %>
+    <% if @releases.any? && @search.results.empty? %>
+      <%= render 'authority_feeds/releases', body: body, page: @page, releases: @releases %>
+      <%= render 'authority_groups/groups/pager', items: @releases, param: 'releases_page' %>
+    <% end %>
+    <% if @search.results.empty? && @releases.empty? %>
+      <p class="body-none"><%= _('Nothing matches “{{query}}”.', query: @query) %> <%= link_to _('Clear search'), authority_tab_path(body, 'documents') %></p>
+    <% end %>
+  </div>
+  <aside class="group-page__side">
+    <% if @search.results.any? && @releases.any? %>
+      <%= render 'authority_feeds/releases', body: body, page: @page, releases: @releases %>
+      <%= render 'authority_groups/groups/pager', items: @releases, param: 'releases_page' %>
+    <% end %>
+  </aside>
+</div>

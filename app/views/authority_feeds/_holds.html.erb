@@ -1,0 +1,37 @@
+<% holdings = page.holdings %>
+<% items = holdings.items %>
+<% caveats = page.notes.for(:caveat) %>
+<% if items.any? || caveats.any? %>
+  <% nation = defined?(Topics::Holds) ? Topics::Holds.nation(body) : 'england' %>
+  <% shown = 5 %>
+  <section class="body-holds" aria-labelledby="body-holds">
+    <h2 id="body-holds"><%= _('What they hold') %></h2>
+    <% if items.any? && (kind = holdings.kind_phrase) %>
+      <p class="body-holds__usually"><%= _('Usually, for {{kind}}:', kind: kind) %></p>
+    <% end %>
+    <% if items.any? %>
+      <ul>
+        <% items.first(shown).each do |holder, topic| %>
+          <li><span class="body-holds__what"><%= holder.what %></span> <%= link_to topic.title_for(nation), topic_path(topic.slug, nation: (nation unless nation == 'england')) %></li>
+        <% end %>
+      </ul>
+      <% if items.size > shown %>
+        <details class="body-holds__more">
+          <summary><%= _('Show {{count}} more', count: items.size - shown) %></summary>
+          <ul>
+            <% items.drop(shown).each do |holder, topic| %>
+              <li><span class="body-holds__what"><%= holder.what %></span> <%= link_to topic.title_for(nation), topic_path(topic.slug, nation: (nation unless nation == 'england')) %></li>
+            <% end %>
+          </ul>
+        </details>
+      <% end %>
+    <% end %>
+    <% if caveats.any? %>
+      <ul class="holds-caveats" aria-label="<%= _('Good to know') %>">
+        <% caveats.each do |note| %>
+          <li><%= authority_note(note, page.notes.county) %></li>
+        <% end %>
+      </ul>
+    <% end %>
+  </section>
+<% end %>

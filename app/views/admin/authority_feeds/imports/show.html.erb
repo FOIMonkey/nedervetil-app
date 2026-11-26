@@ -1,0 +1,38 @@
+<h1><%= @feed.heading %>: <%= @import.filename.presence || "upload #{@import.id}" %></h1>
+
+<% if @import.preview? %>
+  <% result = @import.result %>
+  <p>
+    <% if @feed.kind == 'figures' %>
+      <strong><%= number_with_delimiter(result.rows.size) %></strong> figures for <strong><%= result.rows.filter_map { |row| row[:public_body_id] }.uniq.size %></strong> authorities
+    <% else %>
+      <strong><%= number_with_delimiter(result.new_count) %></strong> new ·
+      <strong><%= number_with_delimiter(result.existing_count) %></strong> already here
+    <% end %>
+    · <strong><%= result.problems.size %></strong> <%= result.problems.one? ? 'problem' : 'problems' %>
+    <% if result.unmatched.any? %> · <strong><%= result.unmatched.size %></strong> <%= 'name'.pluralize(result.unmatched.size) %> to match<% end %>
+  </p>
+  <% if result.rows.any? %>
+    <%= button_to "Upload #{number_with_delimiter(result.rows.size)}", apply_admin_authority_feed_import_path(@feed, @import), class: 'btn btn-primary' %>
+  <% end %>
+<% else %>
+  <p>
+    Uploaded <%= @import.applied_at.strftime('%-d %B %Y, %H:%M') %><% if @import.user %> by <%= @import.user.name %><% end %>:
+    <strong><%= number_with_delimiter(@import.added_count) %></strong> new, <strong><%= number_with_delimiter(@import.updated_count) %></strong> updated,
+    <strong><%= number_with_delimiter(@import.skipped_count) %></strong> skipped.
+  </p>
+<% end %>
+
+<% if @import.preview? && (unmatched = @import.result.unmatched).any? %>
+  <h2>Names to match</h2>
+  <p><% if @feed.kind == 'figures' %>No authority has these <code>sic:</code> tags; their figures are left out.<% else %>Kept, and shown once matched.<% end %></p>
+  <ul>
+    <% unmatched.first(::Admin::AuthorityFeeds::ImportsController::PROBLEMS_SHOWN).each do |name, count| %>
+      <li><%= name %><% if count > 1 %> (<%= count %>)<% end %></li>
+    <% end %>
+  </ul>
+<% end %>
+
+<%= render 'admin/authority_feeds/imports/problems', import: @import -%>
+
+<p><%= link_to 'Authority pages', admin_authority_pages_path %></p>

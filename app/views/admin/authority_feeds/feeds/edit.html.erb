@@ -1,0 +1,64 @@
+<h1><%= @title %></h1>
+
+<% if @feed.errors.any? %>
+  <div class="alert alert-error">
+    <ul><% @feed.errors.full_messages.each do |message| %><li><%= message %></li><% end %></ul>
+  </div>
+<% end %>
+
+<%= form_with model: @feed, scope: :feed, url: admin_authority_feed_path(@feed), method: :patch, class: 'form-horizontal' do |f| %>
+  <div class="control-group">
+    <%= f.label :heading, class: 'control-label' %>
+    <div class="controls"><%= f.text_field :heading, class: 'span4', required: true, maxlength: 60 %>
+      <p class="help-block">One line, no full stop.</p></div>
+  </div>
+  <div class="control-group">
+    <%= f.label :tab, class: 'control-label' %>
+    <div class="controls"><%= f.select :tab, AuthorityFeeds::Feed::TABS.invert %></div>
+  </div>
+  <div class="control-group">
+    <%= f.label :position, 'Order', class: 'control-label' %>
+    <div class="controls"><%= f.number_field :position, class: 'span1' %></div>
+  </div>
+  <div class="control-group">
+    <%= f.label :updates, class: 'control-label' %>
+    <div class="controls"><%= f.select :updates, AuthorityFeeds::Feed::UPDATES.keys.map { |key| [key.capitalize, key] } %>
+      <p class="help-block">Late after <%= AuthorityFeeds::Feed::UPDATES.fetch(@feed.updates).inspect %> without an update. Older figures keep their year and never show at the top.</p></div>
+  </div>
+  <% if @feed.spotlight_choices.any? %>
+    <div class="control-group">
+      <span class="control-label">Show at the top</span>
+      <div class="controls">
+        <%= hidden_field_tag 'feed[spotlights][]', '' %>
+        <% @feed.spotlight_choices.each do |metric, label| %>
+          <label class="checkbox"><%= check_box_tag 'feed[spotlights][]', metric, Array(@feed.spotlights).include?(metric), id: "spotlight-#{metric}" %> <%= label %></label>
+        <% end %>
+        <p class="help-block">While up to date. Up to 3 figures a page, across all sections. Group pages add up their members’ figures.</p>
+      </div>
+    </div>
+  <% end %>
+  <div class="control-group">
+    <%= f.label :only_tags, 'Only for authorities tagged', class: 'control-label' %>
+    <div class="controls"><%= f.text_field :only_tags, class: 'span4' %>
+      <p class="help-block">Leave blank: it shows wherever it has rows.</p></div>
+  </div>
+  <div class="control-group">
+    <%= f.label :source_line, 'Source', class: 'control-label' %>
+    <div class="controls"><%= f.text_field :source_line, class: 'span6' %></div>
+  </div>
+  <div class="control-group">
+    <%= f.label :licence, class: 'control-label' %>
+    <div class="controls"><%= f.text_field :licence, class: 'span4' %></div>
+  </div>
+  <div class="control-group">
+    <span class="control-label">Hide</span>
+    <div class="controls">
+      <%= hidden_field_tag 'feed[hidden]', '0' %>
+      <label class="checkbox"><%= check_box_tag 'feed[hidden]', '1', @feed.hidden?, id: 'feed-hidden' %> Hide this section everywhere</label>
+    </div>
+  </div>
+  <div class="form-actions">
+    <%= f.submit 'Save section', class: 'btn btn-primary' %>
+    <%= link_to 'Cancel', admin_authority_pages_path, class: 'btn' %>
+  </div>
+<% end %>

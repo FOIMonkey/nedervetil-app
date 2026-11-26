@@ -8,6 +8,7 @@ class Ability
       can :access, :admin
 
       can %i[read admin], [InfoRequest, InfoRequestBatch]
+      can :admin, AuthorityGroups::Group
       # A message or file is read only through its parent's :read.
       can :read, [IncomingMessage, OutgoingMessage] do |message|
         can?(:read, message.info_request)

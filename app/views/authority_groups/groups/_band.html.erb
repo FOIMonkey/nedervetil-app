@@ -1,0 +1,22 @@
+<% content_for :body_class, 'band-view' %>
+<% paths = { 'overview' => authority_group_path(group.tag), 'authorities' => authority_group_section_path(group.tag, 'authorities'),
+             'documents' => authority_group_section_path(group.tag, here ? 'documents' : 'releases'),
+             'foi_record' => authority_group_section_path(group.tag, 'foi_record') } %>
+<header class="page-band page-band--tabs">
+  <p class="page-band__back"><%= link_to _('Authorities'), request_journey_destination('authorities') %> · <%= link_to group.heading_label, request_journey_link_path(authority_groups_path(by: group.heading_key)) %></p>
+  <% if admin? && group.hidden? %>
+    <p class="group-page__hidden page-band__label"><%= _('Hidden from visitors.') %></p>
+  <% end %>
+  <h1 class="page-band__title"><%= group.title %></h1>
+  <% if group.intro.present? %>
+    <div class="group-page__intro page-band__summary"><%= group.intro %></div>
+  <% end %>
+  <nav class="body-tabs" aria-label="<%= _('Sections') %>">
+    <ul>
+      <% page.tabs(documents: here || elsewhere).each do |tab| %>
+        <li><%= link_to tab.label, request_journey_link_path(paths.fetch(tab.key)), 'aria-current': (tab.key == current ? 'page' : nil) %></li>
+      <% end %>
+    </ul>
+  </nav>
+</header>
+<%= band_notice %>

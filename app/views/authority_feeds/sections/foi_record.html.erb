@@ -1,0 +1,48 @@
+<% body = @public_body %>
+<%= render 'public_body/band', body: body, page: @page, current: 'foi_record' %>
+<div class="group-page__layout body-stats">
+  <div class="group-page__main">
+    <% if (record = @page.foi_record) %>
+      <% scotland = @years.find { |year, _, _| year == record.year }&.last %>
+      <section aria-labelledby="stats-record">
+        <h2 id="stats-record"><%= _('FOI record, {{year}}', year: authority_year(record.year)) %></h2>
+        <table class="foi-table foi-table--headline">
+          <thead><tr><th scope="col"><span class="visually-hidden"><%= _('Figure') %></span></th><th scope="col"><%= body.name %></th><% if scotland %><th scope="col"><%= _('All Scottish authorities') %></th><% end %></tr></thead>
+          <tbody>
+            <tr><th scope="row"><%= _('Requests') %></th><td><%= number_with_delimiter(record.requests) %></td><% if scotland %><td><%= number_with_delimiter(scotland.requests) %></td><% end %></tr>
+            <% if record.on_time %><tr><th scope="row"><%= _('Answered on time') %></th><td><%= record.on_time %>%</td><% if scotland %><td><%= scotland.on_time %>%</td><% end %></tr><% end %>
+            <% if record.released %><tr><th scope="row"><%= _('Got some or all of the information') %></th><td><%= record.released %>%</td><% if scotland %><td><%= scotland.released %>%</td><% end %></tr><% end %>
+          </tbody>
+        </table>
+      </section>
+      <% if @years.count { |_, mine, _| mine.on_time } > 1 %>
+        <figure class="foi-trend">
+          <figcaption>
+            <h2><%= _('Answered on time, {{first_year}} to {{last_year}}', first_year: authority_year(@years.first[0]), last_year: authority_year(@years.last[0])) %></h2>
+            <p class="foi-trend__key"><%= _('Columns: {{public_body_name}}. Dashed marks: all Scottish authorities.', public_body_name: body.name) %></p>
+          </figcaption>
+          <%= render 'authority_feeds/trend', body: body, years: @years %>
+          <details>
+            <summary><%= _('Figures by year') %></summary>
+            <table class="foi-table">
+              <thead><tr><th scope="col"><%= _('Year') %></th><th scope="col"><%= _('Requests') %></th><th scope="col"><%= _('On time') %></th><th scope="col"><%= _('Some or all released') %></th><th scope="col"><%= _('Scotland on time') %></th></tr></thead>
+              <tbody>
+                <% @years.reverse_each do |year, mine, all| %>
+                  <tr><th scope="row"><%= authority_year(year) %></th><td><%= number_with_delimiter(mine.requests) %></td><td><%= mine.on_time ? "#{mine.on_time}%" : '–' %></td><td><%= mine.released ? "#{mine.released}%" : '–' %></td><td><%= all&.on_time ? "#{all.on_time}%" : '–' %></td></tr>
+                <% end %>
+              </tbody>
+            </table>
+          </details>
+        </figure>
+      <% end %>
+      <p class="foi-record__source"><% if record.note %><%= record.note %>. <% end %><%= _('Reported to the {{commissioner}}.', commissioner: link_to(_('Scottish Information Commissioner'), record.source)) %> <%= link_to _('Open Government Licence v3.0'), 'https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/' %>. <%= _('Below {{count}} requests in a year, no percentages are shown.', count: FoiStatistics::MIN_REQUESTS) %></p>
+    <% end %>
+    <% if @page.decision_feeds.any? %>
+      <%= render 'authority_feeds/decisions', body: body, page: @page, decisions: @decisions %>
+      <%= will_paginate(@decisions, class: 'groups-pager') %>
+    <% end %>
+  </div>
+  <aside class="group-page__side">
+    <%= render 'authority_feeds/cards', page: @page %>
+  </aside>
+</div>

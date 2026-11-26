@@ -1,0 +1,8 @@
+<ul class="group-page__list">
+  <% documents.each do |record| %><% document = record.public_view %>
+    <li>
+      <%= link_to document.title, request_journey_link_path(disclosure_document_path(document), public_body: document.authority) %>
+      <span class="group-page__meta"><%= document.authority&.name %> · <%= document.kind_label %> · <%= document_date(document.released_on || document.document_date || document.published_at) %></span>
+    </li>
+  <% end %>
+</ul>

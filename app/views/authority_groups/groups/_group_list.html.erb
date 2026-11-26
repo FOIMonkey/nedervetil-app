@@ -1,0 +1,5 @@
+<ul class="groups-index__list groups-index__list--cards">
+  <% groups.each do |category| %>
+    <li><%= link_to category.title, request_journey_link_path(authority_group_path(category.category_tag)) %></li>
+  <% end %>
+</ul>

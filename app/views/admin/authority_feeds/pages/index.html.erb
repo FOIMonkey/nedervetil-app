@@ -1,0 +1,69 @@
+<h1><%= @title %></h1>
+
+<% if @late.any? %>
+  <div class="alert">
+    <p><strong><%= pluralize(@late.size, 'source') %> <%= @late.one? ? 'is' : 'are' %> late</strong></p>
+    <ul>
+      <% @late.each do |feed| %>
+        <li><%= feed.heading %>: <% if feed.check_error.present? %>the last check failed (<%= feed.check_error %>)<% else %>last updated <%= feed.checked_at.strftime('%-d %B %Y') %>, expected <%= feed.updates %><% end %>.
+          <% unless feed.fetched? %><%= link_to 'Upload', new_admin_authority_feed_import_path(feed) %><% end %></li>
+      <% end %>
+    </ul>
+  </div>
+<% end %>
+
+<h2>Sections</h2>
+<p>A section shows on an authority’s page wherever it has rows. Decisions are checked once a day; other sections are uploaded.</p>
+<table class="table table-condensed">
+  <thead><tr><th>Section</th><th>Tab</th><th>Updates</th><th>Last update</th><th>Authorities</th><th>Status</th><th></th></tr></thead>
+  <tbody>
+    <% @feeds.each do |feed| %>
+      <tr class="<%= 'muted' if feed.hidden? %>">
+        <td><%= link_to feed.heading, edit_admin_authority_feed_path(feed) %><br><code><%= feed.key %></code><% if feed.hidden? %> <span class="label">Hidden</span><% end %></td>
+        <td><%= feed.tab_label %></td>
+        <td><%= feed.updates.capitalize %><%= ', checked by the site' if feed.fetched? %></td>
+        <td><%= feed.checked_at ? feed.checked_at.strftime('%-d %B %Y') : '–' %></td>
+        <td><%= number_with_delimiter(@authorities.fetch(feed.id, 0)) %></td>
+        <td><%= feed.late? ? tag.strong(feed.status) : feed.status %></td>
+        <td>
+          <% unless feed.fetched? %><%= link_to 'Upload', new_admin_authority_feed_import_path(feed), class: 'btn btn-small' %><% end %>
+          <% if feed.kind == 'decisions' %><%= link_to 'Upload history', new_admin_authority_feed_import_path(feed), class: 'btn btn-small' %><% end %>
+          <% if (names = @unmatched.fetch(feed.id, 0)).positive? %><%= link_to "Match #{names} #{'name'.pluralize(names)}", admin_authority_feed_names_path(feed), class: 'btn btn-small' %><% end %>
+        </td>
+      </tr>
+    <% end %>
+  </tbody>
+</table>
+
+<h2>Links</h2>
+<p>Each link shows on every authority with the tag, filled in from the tag’s value.</p>
+<table class="table table-condensed">
+  <thead><tr><th>Link</th><th>Address</th><th>Tag</th><th>Authorities</th></tr></thead>
+  <tbody>
+    <% @links.each do |link| %>
+      <tr>
+        <td><%= link_to link.label, edit_admin_authority_link_path(link) %></td>
+        <td><code><%= link.url_template %></code></td>
+        <td><%= link.tag ? tag.code("#{link.tag}:") : 'Every authority' %></td>
+        <td><%= link.tag ? number_with_delimiter(@link_counts.fetch(link.tag, 0)) : 'All' %></td>
+      </tr>
+    <% end %>
+  </tbody>
+</table>
+<p><%= link_to 'Add link', new_admin_authority_link_path, class: 'btn' %></p>
+
+<h2>Notes</h2>
+<p>Notes on a tag or one authority. Blue shows as a guidance card, yellow as a caveat under What they hold, red as a warning under the name. Write <code>{county}</code> to link the authority named by its <code>county:</code> tag.</p>
+<table class="table table-condensed">
+  <thead><tr><th>Note</th><th>On</th><th>Shows as</th></tr></thead>
+  <tbody>
+    <% @notes.each do |note| %>
+      <tr>
+        <td><%= link_to note.to_plain_text.squish.truncate(110), edit_admin_note_path(note) %></td>
+        <td><% if note.notable_tag %><code><%= note.notable_tag %></code><% elsif note.notable %><%= link_to note.notable.name, admin_body_path(note.notable) %><% end %></td>
+        <td><%= { card: 'Guidance card', caveat: 'Caveat', warning: 'Warning' }.fetch(AuthorityFeeds::Notes::PLACES.fetch(note.style, :caveat)) %></td>
+      </tr>
+    <% end %>
+  </tbody>
+</table>
+<p>Add a note from a tag’s admin page (Authority tags) or an authority’s admin page.</p>

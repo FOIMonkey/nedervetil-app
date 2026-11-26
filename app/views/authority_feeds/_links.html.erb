@@ -1,0 +1,19 @@
+<% map = AuthorityGroups::Map.for_body(body) %>
+<section class="useful-links" aria-labelledby="body-links">
+  <h2 id="body-links"><%= _('Useful links') %></h2>
+  <ul>
+    <% if body.disclosure_log_link %>
+      <li><%= link_to body.disclosure_log_link do %><%= _('Disclosure log') %><span class="visually-hidden"> <%= _('(another site)') %></span><% end %></li>
+    <% end %>
+    <% if body.publication_scheme_link %>
+      <li><%= link_to body.publication_scheme_link do %><%= _('Publication scheme') %><span class="visually-hidden"> <%= _('(another site)') %></span><% end %></li>
+    <% end %>
+    <% page.links.each do |label, url| %>
+      <li><%= link_to url do %><%= label %><% unless url.start_with?('/') %><span class="visually-hidden"> <%= _('(another site)') %></span><% end %><% end %></li>
+    <% end %>
+    <% if current_user %><li><%= link_to _('Report wrong email'), new_change_request_body_path(body: body.url_name) %></li><% end %>
+  </ul>
+  <% if map %>
+    <%= render 'authority_groups/shared/map', map: map %>
+  <% end %>
+</section>

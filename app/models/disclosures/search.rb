@@ -297,7 +297,7 @@ module Disclosures
     end
 
     def nation?(value)
-      value != 'england' && Topics::Topic::NATIONS.key?(value)
+      defined?(Topics::Topic) && value != 'england' && Topics::Topic::NATIONS.key?(value)
     end
 
     def matches_sql
@@ -404,8 +404,6 @@ module Disclosures
     end
 
     def group_titles
-      return {} unless defined?(AuthorityGroups::Group)
-
       @group_titles ||= AuthorityGroups::Group.headings.
         slice(*GROUP_HEADINGS).values.
         flat_map { |heading| AuthorityGroups::Group.listing(heading).to_a }.

@@ -1,0 +1,20 @@
+<h1><%= @title %></h1>
+
+<%= form_tag admin_external_release_imports_path, multipart: true, class: 'form-inline' do %>
+  <%= file_field_tag :file, accept: '.csv,text/csv', required: true %>
+  <%= submit_tag 'Preview', class: 'btn btn-primary', name: nil %>
+<% end %>
+
+<p>You'll see what it will add before anything changes. Re-importing a link updates it; nothing is deleted.</p>
+
+<table class="table table-condensed">
+  <thead><tr><th>Column</th><th></th></tr></thead>
+  <tbody>
+    <tr><td><code>body</code>, <code>gss_code</code> or <code>authority</code></td><td>The authority: its URL name, GSS code (a <code>gss:</code> tag) or exact name</td></tr>
+    <tr><td><code>title</code></td><td>Required</td></tr>
+    <tr><td><code>url</code></td><td>Required, http or https</td></tr>
+    <tr><td><code>published_date</code></td><td>YYYY-MM-DD or DD/MM/YYYY; <code>received_date</code> is used if it's empty</td></tr>
+    <tr><td><code>log_url</code></td><td>Optional: the disclosure log it came from</td></tr>
+  </tbody>
+</table>
+<p>Up to <%= number_with_delimiter(AuthorityGroups::ReleaseCsv::MAX_ROWS) %> rows and 10 MB per file.</p>

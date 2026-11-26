@@ -116,7 +116,7 @@ module RequestJourney
 
     def releases
       @releases ||=
-        if query.blank? || !defined?(AuthorityGroups::ExternalRelease)
+        if query.blank?
           []
         else
           AuthorityGroups::ExternalRelease.visible.

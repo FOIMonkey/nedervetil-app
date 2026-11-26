@@ -1,0 +1,11 @@
+<%# Areas link for pointer users; the authority list beside the map is the keyboard and screen reader route. %>
+<svg class="group-map" viewBox="<%= map[:view_box] %>" aria-hidden="true">
+  <% map[:areas].each do |area| %>
+    <% if area[:body] %>
+      <a href="<%= public_body_path(area[:body]) %>" tabindex="-1"><path d="<%= area[:d] %>" class="is-member"><title><%= area[:body].name %></title></path></a>
+    <% else %>
+      <path d="<%= area[:d] %>"/>
+    <% end %>
+  <% end %>
+</svg>
+<p class="group-page__source"><%= _('Contains OS data © Crown copyright and database right {{year}}. Source: Office for National Statistics, Open Government Licence v3.0.', year: Date.current.year) %></p>

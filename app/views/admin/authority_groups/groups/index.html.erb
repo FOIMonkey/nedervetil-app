@@ -1,0 +1,79 @@
+<div class="admin-list-head">
+  <h1><%= @title %></h1>
+  <div class="admin-summary__tools">
+    <%= link_to 'New group', new_admin_category_path(model_type: 'PublicBody'), class: 'btn btn-small btn-primary' %>
+    <%= link_to 'External releases', admin_external_releases_path, class: 'btn btn-small' %>
+    <%= link_to 'Import releases', new_admin_external_release_import_path, class: 'btn btn-small' %>
+    <%= link_to 'Public page', authority_groups_path, class: 'btn btn-small' %>
+  </div>
+</div>
+
+<p>A group is an authority category under Place, Type or Sector. Its members are the authorities with its tag.</p>
+<p>Its page builds itself from its members. The intro is the category’s body. A blue note on its tag shows as guidance (on its members’ pages too). The figures at the top follow the statistics section’s ticks, once at least half the members report them. Who does what comes from the topic files; a Type group’s description, once written, replaces its line, and a named authority’s line is set on its admin page.</p>
+
+<% check = @map_check %>
+<% if check.any? %>
+  <div class="alert">
+    <% if check.not_on_map.any? %>
+      <p><strong><%= pluralize(check.not_on_map.size, 'authority') %> not on the map.</strong> No current ONS code, usually after a boundary change or reorganisation. Replace the code with the new one (edit the authority's tags), or tag it <code>defunct</code>.</p>
+      <ul>
+        <% check.not_on_map.each do |body, codes| %>
+          <li><%= link_to body.name, admin_body_path(body) %>: <%= codes.map { |code| AuthorityGroups::Map.describe(code) }.join(', ') %></li>
+        <% end %>
+      </ul>
+    <% end %>
+    <% if check.old_codes.any? %>
+      <p><strong>Old codes to remove.</strong> These are on the map by their current code.</p>
+      <ul>
+        <% check.old_codes.each do |body, codes| %>
+          <li><%= link_to body.name, admin_body_path(body) %>: <%= codes.map { |code| AuthorityGroups::Map.describe(code) }.join(', ') %></li>
+        <% end %>
+      </ul>
+    <% end %>
+    <% if check.shared.any? %>
+      <p><strong>Codes on more than one authority.</strong> The map links each area to only one of them.</p>
+      <ul>
+        <% check.shared.each do |code, bodies| %>
+          <li><%= AuthorityGroups::Map.describe(code) %>: <%= safe_join(bodies.map { |body| link_to(body.name, admin_body_path(body)) }, ', ') %></li>
+        <% end %>
+      </ul>
+    <% end %>
+  </div>
+<% end %>
+
+<% if @headings.empty? %>
+  <p>Add the headings Place, Type and Sector under <%= link_to 'authority categories', admin_categories_path(model_type: 'PublicBody') %>.</p>
+<% else %>
+  <ul class="nav nav-tabs">
+    <% @headings.each_key do |key| %>
+      <li class="<%= 'active' if key == @key %>"><%= link_to AuthorityGroups::Group.label(key), admin_authority_groups_path(heading: key) %></li>
+    <% end %>
+  </ul>
+
+  <% if @groups.empty? %>
+    <p>No groups with a tag yet.</p>
+  <% else %>
+    <table class="table table-condensed">
+      <thead><tr><th>Group</th><th>Tag</th><th>Authorities</th><th>Shown</th><th></th></tr></thead>
+      <tbody>
+        <% @groups.each do |category| %>
+          <tr>
+            <td><%= link_to category.title, authority_group_path(category.category_tag) %></td>
+            <td><code><%= category.category_tag %></code></td>
+            <td><%= link_to category.members_count, admin_tag_path(category.category_tag, model_type: 'PublicBody') %></td>
+            <td><%= category.hidden_at ? 'Hidden' : 'Shown' %></td>
+            <td>
+              <%= link_to 'Edit', edit_admin_category_path(category, model_type: 'PublicBody'), class: 'btn btn-mini' %>
+              <% if category.hidden_at %>
+                <%= button_to 'Show', admin_unhide_authority_group_path(category), class: 'btn btn-mini', form: { style: 'display: inline; margin: 0' } %>
+              <% else %>
+                <%= button_to 'Hide', admin_hide_authority_group_path(category), class: 'btn btn-mini', form: { style: 'display: inline; margin: 0' } %>
+              <% end %>
+            </td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+    <%= will_paginate(@groups) %>
+  <% end %>
+<% end %>

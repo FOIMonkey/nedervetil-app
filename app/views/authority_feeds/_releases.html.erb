@@ -1,0 +1,20 @@
+<% listed = local_assigns[:releases] || (page.releases.pinned.order(pinned_at: :desc).limit(limit + 1).to_a +
+                                         page.releases.unpinned.newest_first.limit(limit + 1).to_a) %>
+<% releases = local_assigns[:releases] || listed.first(limit) %>
+<% newest = page.releases.maximum(:released_on) %>
+<% recent = AuthorityFeeds::Freshness.recent?(newest) %>
+<section class="body-elsewhere" aria-labelledby="body-releases">
+  <h2 id="body-releases"><%= recent ? _('Recent releases') : _('Releases') %></h2>
+  <ul class="group-page__list">
+    <% releases.each do |release| %>
+      <li>
+        <%= link_to release.url, rel: 'nofollow noopener', class: 'group-page__external' do %><%= release.title %><span class="visually-hidden"> <%= _('(another site)') %></span><% end %>
+        <span class="group-page__meta"><%= document_date(release.released_on) %></span>
+      </li>
+    <% end %>
+  </ul>
+  <% if local_assigns[:limit] && listed.size > releases.size %>
+    <p class="body-more"><%= link_to _('View all releases'), authority_tab_path(body, 'documents') %></p>
+  <% end %>
+  <p class="group-page__source"><%= _('From their disclosure log.') %><% unless recent %> <%= _('Newest from {{month}}.', month: newest.strftime('%B %Y')) %><% end %></p>
+</section>

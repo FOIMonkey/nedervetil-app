@@ -1,0 +1,8 @@
+<ul class="group-page__list">
+  <% releases.each do |release| %>
+    <li>
+      <%= link_to release.title, release.url, rel: 'nofollow noopener', class: 'group-page__external' %>
+      <span class="group-page__meta"><%= release.public_body.name %> · <%= document_date(release.released_on) %></span>
+    </li>
+  <% end %>
+</ul>

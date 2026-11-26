@@ -1,0 +1,5 @@
+<h1><%= @title = 'Edit release' %></h1>
+<%= render 'admin/authority_groups/releases/form', url: admin_external_release_path(@release), method: :patch %>
+
+<%= button_to 'Delete', admin_external_release_path(@release), method: :delete, class: 'btn btn-danger',
+              data: { confirm: 'Delete this release?' } %>

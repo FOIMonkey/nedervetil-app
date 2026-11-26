@@ -1,0 +1,14 @@
+<section class="foi-record" aria-labelledby="body-record">
+  <h2 id="body-record"><%= _('FOI record, {{year}}', year: authority_year(record.year)) %></h2>
+  <p class="foi-record__requests"><%= _('<strong>{{count}}</strong> requests', count: number_with_delimiter(record.requests)) %></p>
+  <dl class="foi-record__figures">
+    <% if record.on_time %>
+      <div><dt><%= _('Answered on time') %></dt><dd><%= record.on_time %>%</dd></div>
+    <% end %>
+    <% if record.released %>
+      <div><dt><%= _('Got some or all of the information') %></dt><dd><%= record.released %>%</dd></div>
+    <% end %>
+  </dl>
+  <p class="foi-record__more"><%= link_to _('View FOI record'), authority_tab_path(body, 'foi_record') %></p>
+  <p class="foi-record__source"><% if record.note %><%= record.note %>. <% end %><%= _('Reported to the {{commissioner}}.', commissioner: link_to(_('Scottish Information Commissioner'), record.source)) %> <%= link_to _('Open Government Licence v3.0'), 'https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/' %>.</p>
+</section>

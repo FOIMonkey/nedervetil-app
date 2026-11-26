@@ -1,0 +1,16 @@
+<% width = local_assigns.fetch(:width, 360) %>
+<% low, pad, step = 40, 14, 7 %>
+<% x = ->(pct) { (pad + ((width - (2 * pad)) * ([pct, low].max - low) / (100.0 - low))).round(1) } %>
+<% stacks = values.sort.map { |pct| [pct, (pct / 2.0).round] }.group_by(&:last).values %>
+<% base = 18 + (stacks.map(&:size).max * step) %>
+<svg class="strip" viewBox="0 0 <%= width %> <%= base + 30 %>" role="img" aria-label="<%= _('{{count}} authorities, from {{min}}% to {{max}}% answered on time', count: values.size, min: values.min, max: values.max) %>">
+  <line class="strip__axis" x1="<%= pad %>" x2="<%= width - pad %>" y1="<%= base %>" y2="<%= base %>"/>
+  <% stacks.each do |stack| %>
+    <% stack.each_with_index do |(pct, _), i| %>
+      <circle class="strip__dot" cx="<%= x.call(pct) %>" cy="<%= base - 4 - (i * step) %>" r="3"/>
+    <% end %>
+  <% end %>
+  <% [low, 60, 80, 100].each do |pct| %>
+    <text x="<%= x.call(pct) %>" y="<%= base + 16 %>" text-anchor="middle"><%= pct %>%</text>
+  <% end %>
+</svg>

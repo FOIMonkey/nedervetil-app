@@ -1,0 +1,10 @@
+<% content_for :body_class, 'band-view' %>
+<div class="groups-index">
+  <header class="page-band">
+    <p class="page-band__back"><%= link_to _('Authorities'), request_journey_destination('authorities') %></p>
+    <h1 class="page-band__title"><%= @title %></h1>
+  </header>
+  <%= band_notice %>
+  <%= render 'authority_groups/groups/group_list', groups: @groups %>
+  <%= render 'authority_groups/groups/pager', items: @groups %>
+</div>

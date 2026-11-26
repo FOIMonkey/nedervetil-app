@@ -1,0 +1,26 @@
+<h1><%= @title %></h1>
+
+<%= form_tag admin_authority_feed_imports_path(@feed), multipart: true, class: 'form-inline' do %>
+  <%= file_field_tag :file, accept: @feed.kind == 'figures' ? '.json,application/json' : '.csv,text/csv', required: true %>
+  <%= submit_tag 'Preview', class: 'btn btn-primary', name: nil %>
+<% end %>
+
+<p>You’ll see what it adds before anything changes. Uploading a row again updates it; nothing is deleted.</p>
+
+<% case @feed.kind %>
+<% when 'decisions' %>
+  <p>For a history of decisions before the daily check starts. New decisions are checked every day.</p>
+  <table class="table table-condensed">
+    <thead><tr><th>Column</th><th></th></tr></thead>
+    <tbody>
+      <tr><td><code>authority</code> or <code>body</code></td><td>The regulator’s name for the authority, or its URL name here. Names no authority matches are kept to match later.</td></tr>
+      <tr><td><code>date</code></td><td>YYYY-MM-DD or DD/MM/YYYY</td></tr>
+      <tr><td><code>reference</code></td><td>Required: the decision number (e.g. 003/2026 or IC-465234-M1M2)</td></tr>
+      <tr><td><code>title</code>, <code>outcome</code>, <code>url</code></td><td>Optional</td></tr>
+    </tbody>
+  </table>
+<% when 'figures' %>
+  <p>The Commissioner’s figures as JSON: each authority under its <code>sic:</code> tag, a Scotland-wide row, every year.</p>
+<% end %>
+
+<p><%= link_to 'Authority pages', admin_authority_pages_path %></p>

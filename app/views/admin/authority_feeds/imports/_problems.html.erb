@@ -1,0 +1,15 @@
+<% shown = ::Admin::AuthorityFeeds::ImportsController::PROBLEMS_SHOWN %>
+<% if import.preview? && (problems = import.result.problems).any? %>
+  <h2>Problems</h2>
+  <table class="table table-condensed">
+    <thead><tr><th>Line</th><th></th></tr></thead>
+    <tbody>
+      <% problems.first(shown).each do |problem| %>
+        <tr><td><%= problem.line %></td><td><%= problem.message %></td></tr>
+      <% end %>
+    </tbody>
+  </table>
+  <% if problems.size > shown %>
+    <p>And <%= problems.size - shown %> more.</p>
+  <% end %>
+<% end %>

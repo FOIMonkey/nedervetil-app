@@ -1,0 +1,48 @@
+<div class="admin-list-head">
+  <h1><%= @title %></h1>
+  <div class="admin-summary__tools">
+    <%= link_to 'Add a release', new_admin_external_release_path(body: params[:body]), class: 'btn btn-small btn-primary' %>
+    <%= link_to 'Import releases', new_admin_external_release_import_path, class: 'btn btn-small' %>
+    <%= link_to 'Imports', admin_external_release_imports_path, class: 'btn btn-small' %>
+    <%= link_to 'Groups', admin_authority_groups_path, class: 'btn btn-small' %>
+  </div>
+</div>
+
+<%= form_tag admin_external_releases_path, method: :get, class: 'admin-search-bar' do %>
+  <%= text_field_tag :q, params[:q], placeholder: 'Title contains' %>
+  <%= text_field_tag :body, params[:body], placeholder: 'Authority URL name' %>
+  <%= select_tag :state, options_for_select([['Any', '']] + ::Admin::AuthorityGroups::ReleasesController::STATES.map { |state| [state.capitalize, state] }, params[:state]) %>
+  <%= hidden_field_tag :import, params[:import] if params[:import].present? %>
+  <%= submit_tag 'Filter', class: 'btn btn-primary', name: nil %>
+  <% if params[:q].present? || params[:body].present? || params[:state].present? %>
+    <%= link_to 'Show all', admin_external_releases_path, class: 'btn' %>
+  <% end %>
+<% end %>
+
+<p class="muted"><%= pluralize(@releases.total_entries, 'release') %></p>
+
+<% if @releases.any? %>
+  <table class="table table-condensed">
+    <thead><tr><th>Date</th><th>Title</th><th>Authority</th><th></th><th></th></tr></thead>
+    <tbody>
+      <% @releases.each do |release| %>
+        <tr class="<%= 'muted' if release.hidden? %>">
+          <td><%= release.released_on.iso8601 %></td>
+          <td><%= link_to release.title, release.url, rel: 'nofollow noopener' %></td>
+          <td><%= link_to release.public_body.name, admin_external_releases_path(body: release.public_body.url_name) %></td>
+          <td>
+            <% if release.hidden? %><span class="label">Hidden</span><% end %>
+            <% if release.pinned? %><span class="label label-info">Pinned</span><% end %>
+            <% if release.edited_at %><span class="label">Edited</span><% end %>
+          </td>
+          <td class="text-right">
+            <%= link_to 'Edit', edit_admin_external_release_path(release), class: 'btn btn-mini' %>
+            <%= button_to(release.hidden? ? 'Show' : 'Hide', release.hidden? ? unhide_admin_external_release_path(release) : hide_admin_external_release_path(release), class: 'btn btn-mini', form: { style: 'display: inline; margin: 0' }) %>
+            <%= button_to(release.pinned? ? 'Unpin' : 'Pin', release.pinned? ? unpin_admin_external_release_path(release) : pin_admin_external_release_path(release), class: 'btn btn-mini', form: { style: 'display: inline; margin: 0' }) %>
+          </td>
+        </tr>
+      <% end %>
+    </tbody>
+  </table>
+  <%= will_paginate(@releases) %>
+<% end %>

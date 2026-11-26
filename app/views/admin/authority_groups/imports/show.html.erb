@@ -1,0 +1,28 @@
+<h1><%= @title %><% if @import.filename.present? %>: <%= @import.filename %><% end %></h1>
+
+<% if @import.preview? %>
+  <% result = @import.result %>
+  <p>
+    <strong><%= result.new_count %></strong> new ·
+    <strong><%= result.existing_count %></strong> already here (title and date updated unless edited) ·
+    <strong><%= result.problems.size %></strong> <%= result.problems.one? ? 'problem' : 'problems' %>
+  </p>
+  <% if result.rows.any? %>
+    <%= button_to "Import #{result.rows.size}", apply_admin_external_release_import_path(@import), class: 'btn btn-primary' %>
+  <% end %>
+<% else %>
+  <p>
+    Imported <%= @import.applied_at.to_fs(:long) %><% if @import.user %> by <%= @import.user.name %><% end %>:
+    <strong><%= @import.added_count %></strong> new, <strong><%= @import.updated_count %></strong> updated,
+    <strong><%= @import.skipped_count %></strong> skipped.
+  </p>
+  <div class="btn-toolbar">
+    <%= link_to 'Releases it added', admin_external_releases_path(import: @import.id), class: 'btn' %>
+    <%= button_to 'Hide all it added', hide_releases_admin_external_release_import_path(@import), class: 'btn', form: { style: 'display: inline; margin: 0' } %>
+    <%= button_to 'Show all it added', unhide_releases_admin_external_release_import_path(@import), class: 'btn', form: { style: 'display: inline; margin: 0' } %>
+  </div>
+<% end %>
+
+<%= render 'admin/authority_feeds/imports/problems', import: @import -%>
+
+<p><%= link_to 'All imports', admin_external_release_imports_path %></p>

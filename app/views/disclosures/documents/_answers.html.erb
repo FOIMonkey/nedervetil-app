@@ -1,5 +1,5 @@
 <% holders = defined?(Topics::Lookup) ? Topics::Lookup.holders(query) : [] %>
-<% names = defined?(AuthorityGroups::Names) ? AuthorityGroups::Names.match(query) : nil %>
+<% names = AuthorityGroups::Names.match(query) %>
 <% if holders.any? || names&.total&.positive? %>
   <div class="search-answers">
     <% if holders.any? %>

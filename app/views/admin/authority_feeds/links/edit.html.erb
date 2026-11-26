@@ -1,0 +1,4 @@
+<h1><%= @title %></h1>
+<%= render 'form', url: admin_authority_link_path(@link), method: :patch %>
+<%= button_to 'Delete link', admin_authority_link_path(@link), method: :delete, class: 'btn btn-danger',
+              data: { confirm: "Delete #{@link.label}? It goes from every authority page." } %>

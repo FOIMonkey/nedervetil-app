@@ -1,0 +1,94 @@
+<% group = @group %>
+<% page = @page %>
+<% shown = 5 %>
+<% documents = group.public_documents.limit(shown + 1).to_a %>
+<% releases = group.pinned_releases.to_a + group.latest_releases.limit(shown + 1).to_a %>
+<% decisions = page.decisions(limit: 4).to_a %>
+<% nation = page.nation %>
+<% type_groups = (heading = AuthorityGroups::Group.headings['type']) ? AuthorityGroups::Group.listing(heading).index_by(&:category_tag) : {} %>
+<% datasets = nation && defined?(Topics::Topic) ? Topics::Topic.all.flat_map(&:questions).filter_map { |q| q.dataset_for(nation) }.uniq.select { |d| d.geography == 'la' }.first(5) : [] %>
+<% cards = Note.with_translations.where(notable_tag: group.tag, style: %w[blue green]).to_a %>
+<%= render 'authority_groups/groups/band', group: group, page: page, current: 'overview', here: documents.any?, elsewhere: releases.any? %>
+<% if page.spotlights.any? %>
+  <%= render 'authority_feeds/spotlights', tiles: page.spotlights, href: authority_group_section_path(group.tag, 'foi_record') %>
+<% end %>
+<div class="group-page__layout body-hub">
+  <div class="group-page__main">
+    <% if documents.any? %>
+      <section aria-labelledby="group-here">
+        <h2 id="group-here"><%= _('Published here') %></h2>
+        <%= render 'authority_groups/groups/documents', documents: documents.first(shown) %>
+        <% if documents.size > shown %>
+          <p class="body-more"><%= link_to _('View all documents'), request_journey_link_path(authority_group_section_path(group.tag, 'documents')) %></p>
+        <% end %>
+      </section>
+    <% end %>
+
+    <% if (who = page.who_does_what).any? %>
+      <% lines = AuthorityGroups::WhoLine.where(public_body_id: who.map { |_, target, _| target }.grep(PublicBody).map(&:id)).pluck(:public_body_id, :line).to_h %>
+      <section aria-labelledby="group-who">
+        <h2 id="group-who"><%= _('Who does what') %></h2>
+        <ul class="who-does"><%= render partial: 'authority_groups/groups/who', collection: who.first(6), locals: { type_groups: type_groups, lines: lines } %></ul>
+        <% if who.size > 6 %>
+          <details class="body-holds__more">
+            <summary><%= _('Show {{count}} more', count: who.size - 6) %></summary>
+            <ul class="who-does"><%= render partial: 'authority_groups/groups/who', collection: who.drop(6), locals: { type_groups: type_groups, lines: lines } %></ul>
+          </details>
+        <% end %>
+      </section>
+    <% end %>
+
+    <% if releases.any? %>
+      <% newest = releases.map(&:released_on).max %>
+      <% recent = AuthorityFeeds::Freshness.recent?(newest) %>
+      <section aria-labelledby="group-elsewhere">
+        <h2 id="group-elsewhere"><%= recent ? _('Recent releases') : _('Releases') %></h2>
+        <%= render 'authority_groups/groups/releases', releases: releases.first(shown) %>
+        <% if releases.size > shown %>
+          <p class="body-more"><%= link_to _('View all releases'), request_journey_link_path(authority_group_section_path(group.tag, 'releases')) %></p>
+        <% end %>
+        <p class="group-page__source"><%= _('From their disclosure logs.') %><% unless recent %> <%= _('Newest from {{month}}.', month: newest.strftime('%B %Y')) %><% end %></p>
+      </section>
+    <% end %>
+
+    <% if decisions.any? %>
+      <%= render 'authority_feeds/decisions', page: page, decisions: decisions, more: true, with_authority: true,
+                                              more_path: authority_group_section_path(group.tag, 'foi_record') %>
+    <% end %>
+  </div>
+
+  <aside class="group-page__side">
+    <% if page.record && page.on_time_values.size > 1 %>
+      <section class="compare" aria-labelledby="group-compare">
+        <h2 id="group-compare"><%= _('How they compare') %></h2>
+        <p class="compare__lead"><%= _('Answered on time, {{year}}. Each dot is one authority.', year: authority_year(page.record.year)) %></p>
+        <%= render 'authority_groups/groups/strip', values: page.on_time_values %>
+        <p class="body-more"><%= link_to _('Compare all authorities'), request_journey_link_path(authority_group_section_path(group.tag, 'foi_record')) %></p>
+      </section>
+    <% end %>
+    <% if nation %>
+      <section aria-labelledby="group-topics">
+        <h2 id="group-topics"><%= _('Topics in {{nation}}', nation: _(Topics::Topic::NATIONS.fetch(nation))) %></h2>
+        <ul class="nation-topics">
+          <% Topics::Topic.all.each do |topic| %>
+            <li><%= link_to topic.title_for(nation), topic_path(topic.slug, nation: (nation unless nation == 'england')) %></li>
+          <% end %>
+        </ul>
+      </section>
+    <% end %>
+    <% if datasets.any? %>
+      <section class="body-figures" aria-labelledby="group-figures">
+        <h2 id="group-figures"><%= _('Area statistics') %></h2>
+        <ul>
+          <% datasets.each do |dataset| %>
+            <li><%= link_to dataset.url, class: 'body-figures__what topic-out' do %><%= dataset.title %><span class="visually-hidden"> <%= _('(another site)') %></span><% end %> <%= [dataset.publisher, dataset.frequency].compact.join(' · ') %></li>
+          <% end %>
+        </ul>
+        <p class="group-page__source"><%= _('Figures for every council in {{nation}}.', nation: _(Topics::Topic::NATIONS.fetch(nation))) %></p>
+      </section>
+    <% end %>
+    <% cards.each do |note| %>
+      <section class="guide-card"><%= authority_note(note, nil) %></section>
+    <% end %>
+  </aside>
+</div>

@@ -1,0 +1,5 @@
+<ul class="spotlights spotlights--<%= tiles.size %>" aria-label="<%= _('At a glance') %>">
+  <% tiles.each do |tile| %>
+    <li><%= link_to local_assigns[:href] || authority_tab_path(body, tile.tab) do %><span class="spotlight__figure"><%= authority_tile_value(tile) %></span> <span class="spotlight__label"><%= tile.label %></span><% if tile.extra %> <span class="spotlight__extra"><%= tile.extra %></span><% end %><% end %></li>
+  <% end %>
+</ul>

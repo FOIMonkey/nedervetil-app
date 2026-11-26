@@ -1,0 +1,44 @@
+<% type_group = page.holdings.type_group %>
+<% kind = page.holdings.kind %>
+<% nation_key = defined?(Topics::Holds) ? Topics::Holds.nation(body) : 'england' %>
+<% nation = defined?(Topics::Topic) ? _(Topics::Topic::NATIONS.fetch(nation_key)) : _('England') %>
+<% about = if kind then kind.match?(/Scottish|Welsh|Northern Ireland/) ? kind : _('{{kind}} in {{nation}}', kind: kind, nation: nation)
+           elsif nation_key != 'england' then _('In {{nation}}', nation: nation)
+           end %>
+<% content_for :body_class, 'band-view' %>
+<header class="page-band<%= ' page-band--tabs' if page.tabs.any? %>">
+  <p class="page-band__back"><%= link_to _('Authorities'), authority_groups_path %><% if type_group %> · <%= link_to type_group.title, authority_group_path(type_group.tag) %><% end %></p>
+  <h1 class="page-band__title"><%= body.name %></h1>
+  <% if about %><p class="page-band__summary"><%= about %></p><% end %>
+  <% ask = body.is_requestable? %>
+  <% if ask || body.calculated_home_page %>
+    <div class="page-band__actions">
+      <% if ask && (current_user || !ReadOnly.feature?(:signups)) %>
+        <%= link_to make_request_path(body), class: 'page-band__button' do %><%= _('Make request<span class="visually-hidden"> to {{public_body_name}}</span>', public_body_name: body.name) %><% end %>
+      <% elsif ask %>
+        <%= render partial: 'topics/topics/ask_elsewhere',
+                   locals: { url: Topics::OtherSite.url(body.name), label: _('Make request'),
+                             about: body.name, summary_class: 'page-band__button' } %>
+      <% end %>
+      <% if body.calculated_home_page %><%= link_to body.calculated_home_page, class: 'page-band__button page-band__button--ghost' do %><%= _('Visit website') %><span class="visually-hidden"> <%= _('(another site)') %></span><% end %><% end %>
+    </div>
+  <% end %>
+  <% if page.tabs.any? %>
+    <nav class="body-tabs" aria-label="<%= _('Sections') %>">
+      <ul>
+        <% page.tabs.each do |tab| %>
+          <li><%= link_to tab.label, request_journey_link_path(authority_tab_path(body, tab.key), public_body: body), 'aria-current': (tab.key == current ? 'page' : nil) %></li>
+        <% end %>
+      </ul>
+    </nav>
+  <% end %>
+</header>
+<%= band_notice %>
+<% warnings = page.notes.for(:warning) %>
+<% if warnings.any? %>
+  <div class="body-warnings">
+    <% warnings.each do |note| %>
+      <div class="body-warning"><%= authority_note(note, page.notes.county) %></div>
+    <% end %>
+  </div>
+<% end %>

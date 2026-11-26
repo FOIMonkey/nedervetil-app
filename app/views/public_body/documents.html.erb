@@ -1,18 +1,49 @@
-<%# Minimal /body/<name> view until B11/B13 adds AuthorityFeeds and Topics hub panels. %>
+<%# The /body/<name> page: the privacy gate (PrivateArchive) renders this in place of public_body/show. %>
 <% body = @public_body %>
-<div class="body-hub">
-  <h1><%= body.name %></h1>
-  <% if body.is_requestable? %>
-    <p><%= link_to make_request_path(body), class: 'page-band__button' do %><%= _('Make request<span class="visually-hidden"> to {{public_body_name}}</span>', public_body_name: body.name) %><% end %></p>
-  <% end %>
-  <% if @search&.results&.any? %>
-    <section aria-labelledby="body-here">
-      <h2 id="body-here"><%= _('Published here') %></h2>
-      <ol class="documents__list">
-        <% @search.results.first(5).each do |document| %>
-          <%= render partial: 'disclosures/documents/result', locals: { document: document, search: @search, in_batch: false } %>
+<% page = AuthorityFeeds::Page.new(body, documents: @search.results.any?) %>
+<%= render 'public_body/band', body: body, page: page, current: 'overview' %>
+<% if page.spotlights.any? %>
+  <%= render 'authority_feeds/spotlights', body: body, tiles: page.spotlights %>
+<% end %>
+<div class="group-page__layout body-hub">
+  <div class="group-page__main">
+    <%= render 'authority_feeds/holds', body: body, page: page %>
+    <%= render 'authority_feeds/cards', page: page %>
+    <% if @search.results.any? %>
+      <section aria-labelledby="body-here">
+        <h2 id="body-here"><%= _('Published here') %></h2>
+        <ol class="documents__list">
+          <% @search.results.first(5).each do |document| %>
+            <%= render partial: 'disclosures/documents/result', locals: { document: document, search: @search, in_batch: false } %>
+          <% end %>
+        </ol>
+        <% if @search.results.size > 5 %>
+          <p class="body-more"><%= link_to _('View all documents'), authority_tab_path(body, 'documents') %></p>
         <% end %>
-      </ol>
-    </section>
-  <% end %>
+      </section>
+    <% end %>
+    <% if page.releases? %>
+      <%= render 'authority_feeds/releases', body: body, page: page, limit: 5 %>
+    <% end %>
+    <% if page.decision_feeds.any? %>
+      <%= render 'authority_feeds/decisions', body: body, page: page, decisions: page.decisions(limit: 3), more: true %>
+    <% end %>
+  </div>
+  <aside class="group-page__side">
+    <% if page.foi_record && !page.record_at_top? %>
+      <%= render 'authority_feeds/foi_record', body: body, record: page.foi_record %>
+    <% end %>
+    <% figures = defined?(Topics::Holds) ? Topics::Holds.figures(body) : [] %>
+    <% if figures.any? %>
+      <section class="body-figures" aria-labelledby="body-figures">
+        <h2 id="body-figures"><%= _('Area statistics') %></h2>
+        <ul>
+          <% figures.each do |dataset, url| %>
+            <li><%= link_to url, class: 'body-figures__what topic-out' do %><%= dataset.title %><span class="visually-hidden"> <%= _('(another site)') %></span><% end %> <%= [dataset.publisher, dataset.frequency].compact.join(' · ') %></li>
+          <% end %>
+        </ul>
+      </section>
+    <% end %>
+    <%= render 'authority_feeds/links', body: body, page: page %>
+  </aside>
 </div>

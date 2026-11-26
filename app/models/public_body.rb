@@ -52,7 +52,7 @@ class PublicBody < ApplicationRecord
   # Set to 0 to prevent application of the not_many_requests tag
   cattr_accessor :not_many_public_requests_size,
                  instance_writer: false,
-                 default: 5
+                 default: 0
 
   # Any PublicBody tagged with any of the follow tags won't be returned in the
   # batch authority search results or batch category UI

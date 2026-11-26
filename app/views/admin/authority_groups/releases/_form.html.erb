@@ -1,0 +1,32 @@
+<% if @release.errors.any? %>
+  <div class="alert alert-error">
+    <ul><% @release.errors.full_messages.each do |message| %><li><%= message %></li><% end %></ul>
+  </div>
+<% end %>
+
+<%= form_with model: @release, scope: :external_release, url: url, method: method, class: 'form-horizontal' do |f| %>
+  <div class="control-group">
+    <%= label_tag :body, 'Authority URL name', class: 'control-label' %>
+    <div class="controls"><%= text_field_tag :body, @body_name, class: 'span4', required: true %></div>
+  </div>
+  <div class="control-group">
+    <%= f.label :title, class: 'control-label' %>
+    <div class="controls"><%= f.text_field :title, class: 'span6', required: true, maxlength: AuthorityFeeds::TITLE_MAX %></div>
+  </div>
+  <div class="control-group">
+    <%= f.label :url, 'Link', class: 'control-label' %>
+    <div class="controls"><%= f.url_field :url, class: 'span6', required: true %></div>
+  </div>
+  <div class="control-group">
+    <%= f.label :released_on, 'Date', class: 'control-label' %>
+    <div class="controls"><%= f.date_field :released_on, required: true %></div>
+  </div>
+  <div class="control-group">
+    <%= f.label :log_url, 'Disclosure log', class: 'control-label' %>
+    <div class="controls"><%= f.url_field :log_url, class: 'span6' %></div>
+  </div>
+  <div class="form-actions">
+    <%= f.submit 'Save', class: 'btn btn-primary' %>
+    <%= link_to 'Cancel', admin_external_releases_path, class: 'btn' %>
+  </div>
+<% end %>

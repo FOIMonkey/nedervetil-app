@@ -1,0 +1,30 @@
+<% width, height = 640, 230 %>
+<% left, right, top, base = 34, 8, 22, 196 %>
+<% shown = years.select { |_, record, _| record.on_time } %>
+<% slot = (width - left - right) / [shown.size, 1].max.to_f %>
+<% bar = slot * 0.62 %>
+<% y = ->(pct) { base - ((base - top) * pct / 100.0) } %>
+<% peak = shown.each_index.max_by { |i| shown[i][1].on_time } %>
+<svg viewBox="0 0 <%= width %> <%= height %>" role="img" aria-labelledby="trend-title trend-desc">
+  <title id="trend-title"><%= _('Share of requests {{public_body_name}} answered on time, {{first_year}} to {{last_year}}', public_body_name: body.name, first_year: authority_year(shown.first[0]), last_year: authority_year(shown.last[0])) %></title>
+  <desc id="trend-desc"><%= _('A column for each year, with a dashed mark for all Scottish authorities. The figures are in the table below.') %></desc>
+  <% [50, 100].each do |pct| %>
+    <line class="trend__grid" x1="<%= left %>" x2="<%= width - right %>" y1="<%= y.call(pct).round(1) %>" y2="<%= y.call(pct).round(1) %>"/>
+    <text x="<%= left - 6 %>" y="<%= (y.call(pct) + 4).round(1) %>" text-anchor="end"><%= pct %>%</text>
+  <% end %>
+  <% shown.each_with_index do |(year, record, scotland), i| %>
+    <% x = left + (i * slot) + ((slot - bar) / 2) %>
+    <% latest = i == shown.size - 1 %>
+    <rect class="trend__bar<%= ' trend__bar--latest' if latest %>" x="<%= x.round(1) %>" y="<%= y.call(record.on_time).round(1) %>" width="<%= bar.round(1) %>" height="<%= (base - y.call(record.on_time)).round(1) %>"><title><%= _('{{year}}: {{percent}}% on time', year: authority_year(year), percent: record.on_time) %><% if scotland&.on_time %> <%= _('(all Scottish authorities {{percent}}%)', percent: scotland.on_time) %><% end %></title></rect>
+    <% if scotland&.on_time %>
+      <line class="trend__all" x1="<%= (x - 3).round(1) %>" x2="<%= (x + bar + 3).round(1) %>" y1="<%= y.call(scotland.on_time).round(1) %>" y2="<%= y.call(scotland.on_time).round(1) %>"/>
+    <% end %>
+    <% if [0, peak, shown.size - 1].include?(i) %>
+      <text class="trend__value" x="<%= (x + (bar / 2)).round(1) %>" y="<%= ([y.call(record.on_time), scotland&.on_time ? y.call(scotland.on_time) : base].min - 7).round(1) %>" text-anchor="middle"><%= record.on_time %>%</text>
+    <% end %>
+    <% if (i % 4).zero? || latest %>
+      <text x="<%= (latest ? x + bar : (i.zero? ? x : x + (bar / 2))).round(1) %>" y="<%= base + 20 %>" text-anchor="<%= latest ? 'end' : (i.zero? ? 'start' : 'middle') %>"><%= authority_year(year) %></text>
+    <% end %>
+  <% end %>
+  <line class="trend__base" x1="<%= left %>" x2="<%= width - right %>" y1="<%= base %>" y2="<%= base %>"/>
+</svg>

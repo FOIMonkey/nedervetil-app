@@ -23,6 +23,69 @@ scope 'deadlines/:request_id',
   post ':stage/restore', to: 'adjustments#destroy', as: 'restore'
 end
 
+# Authority groups; the admin pages are behind the admin sign-in.
+get 'groups', to: 'authority_groups/groups#index', as: :authority_groups
+scope 'groups/:tag',
+      module: 'authority_groups',
+      constraints: { tag: /[a-z0-9_]+/ } do
+  get '', to: 'groups#show', as: :authority_group
+  get ':section', to: 'groups#section',
+                  as: :authority_group_section,
+                  constraints: {
+                    section: /documents|releases|authorities|foi_record/
+                  }
+end
+scope 'admin', module: 'admin/authority_groups', as: 'admin' do
+  get 'authority_groups', to: 'groups#index', as: 'authority_groups'
+  post 'authority_groups/:category_id/hide', to: 'groups#hide',
+                                             as: 'hide_authority_group'
+  post 'authority_groups/:category_id/show', to: 'groups#unhide',
+                                             as: 'unhide_authority_group'
+  post 'bodies/:id/who_line', to: 'who_lines#update',
+                              as: 'body_who_line',
+                              constraints: { id: /\d+/ }
+  resources :external_releases, controller: 'releases', except: :show do
+    member do
+      post 'hide'
+      post 'unhide'
+      post 'pin'
+      post 'unpin'
+    end
+  end
+  resources :external_release_imports, controller: 'imports',
+                                       only: %i[index new create show] do
+    member do
+      post 'apply'
+      post 'hide_releases'
+      post 'unhide_releases'
+    end
+  end
+end
+
+# Authority page tabs. These routes are drawn before the main routes, so they
+# win over /body/:url_name/:tag.
+scope 'body/:url_name',
+      module: 'authority_feeds',
+      constraints: { url_name: %r{[^/]+} } do
+  get 'documents', to: 'sections#documents', as: :public_body_documents
+  get 'foi-record', to: 'sections#foi_record', as: :public_body_foi_record
+end
+scope 'admin', module: 'admin/authority_feeds', as: 'admin' do
+  get 'authority_pages', to: 'pages#index', as: 'authority_pages'
+  resources :authority_feeds, controller: 'feeds',
+                              only: %i[edit update] do
+    resources :imports, controller: 'imports',
+                        only: %i[new create show] do
+      member { post 'apply' }
+    end
+    resources :names, controller: 'names', only: %i[index create]
+  end
+  resources :authority_links, controller: 'links', except: %i[index show]
+  post 'bodies/:id/holds', to: 'holds#update',
+                           as: 'body_holds',
+                           constraints: { id: /\d+/ }
+end
+
 get 'request/:url_title/delete', to: 'disclosures/request_deletions#new',
                                  as: :request_deletion
 post 'request/:url_title/delete', to: 'disclosures/request_deletions#create'

@@ -1,0 +1,78 @@
+<% group = @group %>
+<% page = @page %>
+<% current = @section == 'releases' ? 'documents' : @section %>
+<%= render 'authority_groups/groups/band', group: group, page: page, current: current,
+                                           here: group.documents.exists?, elsewhere: group.releases.exists? %>
+<% case @section %>
+<% when 'authorities' %>
+  <div class="group-page__layout body-hub">
+    <div class="group-page__main">
+      <% kinds = @kinds || [[nil, @items]] %>
+      <% kinds.each do |type, members| %>
+        <section class="members__kind" aria-labelledby="kind-<%= type&.category_tag || 'other' %>">
+          <h2 id="kind-<%= type&.category_tag || 'other' %>"><%= type ? link_to(type.title, request_journey_link_path(authority_group_path(type.category_tag))) : (kinds.one? ? _('Authorities') : _('Others')) %></h2>
+          <ul class="members__list">
+            <% members.each do |body| %>
+              <li><%= link_to body.name, request_journey_link_path(public_body_path(body), public_body: body) %></li>
+            <% end %>
+          </ul>
+        </section>
+      <% end %>
+      <% if @items %><%= render 'authority_groups/groups/pager', items: @items %><% end %>
+    </div>
+    <aside class="group-page__side">
+      <% if (map = AuthorityGroups::Map.for_group(group.bodies)) %>
+        <section class="members__map" aria-label="<%= _('Map') %>">
+          <%= render 'authority_groups/shared/map', map: map %>
+        </section>
+      <% end %>
+    </aside>
+  </div>
+<% when 'foi_record' %>
+  <% records = page.records %>
+  <% names = PublicBody.where(id: records.keys).includes(:translations).index_by(&:id) %>
+  <div class="group-page__layout body-stats">
+    <div class="group-page__main">
+      <% if records.size > 1 %>
+        <% year = authority_year(records.values.first.year) %>
+        <% if page.on_time_values.size > 1 %>
+          <section aria-labelledby="stats-spread">
+            <h2 id="stats-spread"><%= _('Answered on time, {{year}}', year: year) %></h2>
+            <p class="compare__lead"><%= _('Each dot is one authority.') %></p>
+            <%= render 'authority_groups/groups/strip', values: page.on_time_values, width: 700 %>
+          </section>
+        <% end %>
+        <section aria-labelledby="stats-table">
+          <h2 id="stats-table"><%= _('Every authority, {{year}}', year: year) %></h2>
+          <table class="foi-table">
+            <thead><tr><th scope="col"><%= _('Authority') %></th><th scope="col"><%= _('Requests') %></th><th scope="col"><%= _('On time') %></th><th scope="col"><%= _('Got some or all') %></th></tr></thead>
+            <tbody>
+              <% records.sort_by { |id, record| [-(record.on_time || -1), names[id].name] }.each do |id, record| %>
+                <tr><th scope="row"><%= link_to names[id].name, request_journey_link_path(public_body_path(names[id]), public_body: names[id]) %></th>
+                  <td><%= number_with_delimiter(record.requests) %></td><td><%= record.on_time ? "#{record.on_time}%" : '–' %></td><td><%= record.released ? "#{record.released}%" : '–' %></td></tr>
+              <% end %>
+            </tbody>
+          </table>
+          <p class="foi-record__source"><%= _('Reported to the {{commissioner}}.', commissioner: link_to(_('Scottish Information Commissioner'), FoiStatistics::SOURCE)) %> <%= link_to _('Open Government Licence v3.0'), 'https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/' %>. <%= _('Below {{count}} requests in a year, no percentages are shown.', count: FoiStatistics::MIN_REQUESTS) %></p>
+        </section>
+      <% end %>
+      <% if @items.any? %>
+        <%= render 'authority_feeds/decisions', page: page, decisions: @items, with_authority: true %>
+        <%= render 'authority_groups/groups/pager', items: @items %>
+      <% end %>
+    </div>
+  </div>
+<% else %>
+  <div class="group-page">
+    <% if @section == 'documents' %>
+      <%= render 'authority_groups/groups/documents', documents: @items %>
+    <% else %>
+      <% if @items.current_page == 1 %>
+        <%= render 'authority_groups/groups/releases', releases: group.pinned_releases %>
+      <% end %>
+      <%= render 'authority_groups/groups/releases', releases: @items %>
+      <p class="group-page__source"><%= _('From the authorities’ disclosure logs.') %></p>
+    <% end %>
+    <%= render 'authority_groups/groups/pager', items: @items %>
+  </div>
+<% end %>

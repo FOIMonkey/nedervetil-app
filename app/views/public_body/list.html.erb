@@ -1,8 +1,8 @@
 <% @title = @description.empty? ? _("Public authorities") : _("Public authorities - {{description}}", :description => @description) %>
 
-<div id="left_column_flip" class="left_column_flip left_column_flip--opposite">
-  <h1><%= _('Public authorities') %></h1>
+<%= page_band _('Public authorities'), back: link_to(_('Authorities'), authority_groups_path) %>
 
+<div id="left_column_flip" class="left_column_flip left_column_flip--opposite">
   <%= form_tag(list_public_bodies_default_url, :method => "get", :id=>"search_form") do %>
     <div>
       <label for="public_body_query"><%=_('Find an authority')%></label>

@@ -1,0 +1,37 @@
+<h1><%= @title %></h1>
+
+<p>Decisions under these names match no authority yet. Match a name once and every decision with it shows, now and in later checks.</p>
+
+<% if @names.empty? %>
+  <p>Every name is matched.</p>
+<% else %>
+  <table class="table table-condensed">
+    <thead><tr><th>Name</th><th>Decisions</th><th>Authority URL name</th></tr></thead>
+    <tbody>
+      <% @names.each do |name, count| %>
+        <tr>
+          <td><%= name %></td>
+          <td><%= count %></td>
+          <td>
+            <%= form_tag admin_authority_feed_names_path(@feed), class: 'form-inline' do %>
+              <%= hidden_field_tag :name, name, id: nil %>
+              <%= text_field_tag :url_name, nil, class: 'span3', placeholder: 'glasgow_city_council', required: true, id: nil, 'aria-label': "URL name for #{name}" %>
+              <%= submit_tag 'Match', class: 'btn btn-small', name: nil %>
+            <% end %>
+          </td>
+        </tr>
+      <% end %>
+    </tbody>
+  </table>
+<% end %>
+
+<% if @aliases.any? %>
+  <h2>Matched names</h2>
+  <ul>
+    <% @aliases.each do |found| %>
+      <li><%= found.name %>: <%= link_to found.public_body.name, admin_body_path(found.public_body) %></li>
+    <% end %>
+  </ul>
+<% end %>
+
+<p><%= link_to 'Authority pages', admin_authority_pages_path %></p>

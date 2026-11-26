@@ -1,0 +1,13 @@
+{
+  "source": "Invented areas for the specs",
+  "viewBox": "0 0 1000 1000",
+  "areas": [
+    { "code": "E07000901", "name": "Ashcombe", "d": "M100 100h20v20h-20z", "box": [100, 100, 120, 120] },
+    { "code": "E07000904", "name": "Brookfield", "d": "M120 100h20v20h-20z", "box": [120, 100, 140, 120] },
+    { "code": "E07000902", "name": "Brackwater", "d": "M300 300h20v20h-20z", "box": [300, 300, 320, 320], "ended": true },
+    { "code": "E07000903", "name": "Coldfell", "d": "M340 300h20v20h-20z", "box": [340, 300, 360, 320], "ended": true },
+    { "code": "E08000901", "name": "Dunmere", "d": "M500 500h30v30h-30z", "box": [500, 500, 530, 530], "ended": true },
+    { "code": "E08000902", "name": "Dunmere", "d": "M500 500h30v30h-30z", "box": [500, 500, 530, 530] },
+    { "code": "S12000049", "name": "Glenmoor", "d": "M600 100h40v40h-40z", "box": [600, 100, 640, 140] }
+  ]
+}

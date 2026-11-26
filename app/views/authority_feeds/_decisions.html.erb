@@ -1,0 +1,25 @@
+<% feeds = page.decision_feeds %>
+<% latest = page.decisions_latest_on %>
+<section aria-labelledby="body-decisions">
+  <h2 id="body-decisions"><%= feeds.one? ? feeds.first.heading : _('Decisions') %></h2>
+  <ol class="foi-decisions">
+    <% decisions.each do |decision| %>
+      <li>
+        <span class="foi-decisions__date"><%= document_date(decision.occurred_on) %></span>
+        <% if decision.url %>
+          <%= link_to decision.url, class: 'foi-decisions__what', rel: 'noopener' do %><%= decision.title.presence || decision.reference %><span class="visually-hidden"> <%= _('(another site)') %></span><% end %>
+        <% else %>
+          <span class="foi-decisions__what"><%= decision.title.presence || decision.reference %></span>
+        <% end %>
+        <span class="foi-decisions__ref"><%= [(decision.public_body&.name if local_assigns[:with_authority]), (feeds.one? ? decision.reference : "#{decision.feed.heading}, #{decision.reference}")].compact.join(' · ') %></span>
+        <% if decision.outcome %><span class="foi-decisions__outcome"><%= decision.outcome %></span><% end %>
+      </li>
+    <% end %>
+  </ol>
+  <% if local_assigns[:more] && page.decisions_count > decisions.size %>
+    <p class="body-more"><%= link_to _('View all decisions'), local_assigns[:more_path] || authority_tab_path(body, 'foi_record') %></p>
+  <% end %>
+  <% feeds.each do |feed| %>
+    <p class="group-page__source"><%= feed.source_line %>.<% unless AuthorityFeeds::Freshness.recent?(page.summary(feed).latest_on) %> <%= _('Newest from {{month}}.', month: page.summary(feed).latest_on.strftime('%B %Y')) %><% end %><% if feed.checked_at %> <%= _('Checked {{date}}.', date: authority_date(feed.checked_at.to_date)) %><% end %><% if feed.licence %> <%= feed.licence %>.<% end %></p>
+  <% end %>
+</section>

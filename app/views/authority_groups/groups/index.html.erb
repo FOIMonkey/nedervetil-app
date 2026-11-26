@@ -1,0 +1,25 @@
+<% content_for :body_class, 'band-view has-page-search' %>
+<div class="groups-index">
+  <header class="page-band">
+    <h1 class="page-band__title"><%= _('Authorities') %></h1>
+    <%= form_tag list_public_bodies_default_path, method: :get, role: 'search', enforce_utf8: false, class: 'band-search' do %>
+      <label for="groups-q" class="visually-hidden"><%= _('Find an authority') %></label>
+      <input type="search" id="groups-q" name="public_body_query" placeholder="<%= _('Fife Council') %>" maxlength="200" autocomplete="off">
+      <%= request_journey_hidden_fields %>
+      <button type="submit" class="button"><%= _('Find') %></button>
+    <% end %>
+    <p class="groups-index__all"><%= link_to _('View A to Z'), request_journey_link_path(list_public_bodies_default_path) %></p>
+  </header>
+  <%= band_notice %>
+  <% @listings.each do |key, groups| %>
+    <% next if groups.empty? %>
+    <% label = AuthorityGroups::Group.label(key) %>
+    <section class="groups-index__section" aria-labelledby="groups-<%= key %>">
+      <h2 id="groups-<%= key %>"><%= label %></h2>
+      <%= render 'authority_groups/groups/group_list', groups: groups %>
+      <% if groups.total_entries > groups.size %>
+        <p><%= link_to _('View all {{groups}}', groups: label.downcase), request_journey_link_path(authority_groups_path(by: key)) %></p>
+      <% end %>
+    </section>
+  <% end %>
+</div>
