@@ -1,0 +1,10 @@
+<%= _('A spreadsheet may hold data that wasn’t meant to be released, so it’s been held back from its requester.') %>
+
+<%= _('Check it, then change its prominence to release it:') %>
+<%= edit_admin_foi_attachment_url(@attachment) %>
+
+<%= _('Request:') %> <%= admin_request_url(@info_request) %>
+
+<% @metadata.to_h.each do |what, count| %>
+<%= what.to_s.humanize %>: <%= count %>
+<% end %>

@@ -185,7 +185,9 @@ RSpec.describe AlaveteliSandbox::CellServer do
     it 'caps no limit below what the app’s own callers ask for' do
       most = described_class::MOST
       expect(most[:stdout]).to be >= PDFRedactor::MAX_BYTES
-      expect(most[:memory]).to be >= AttachmentToText::LIBREOFFICE_MEMORY
+      expect(most[:stdout]).to be >= AttachmentManagement::Command::MAX_OUTPUT
+      expect(most[:memory]).
+        to be >= AttachmentManagement::Command::LIBREOFFICE_MEMORY
       expect(most[:memory]).to be >= AlaveteliSandbox::Job::JAVA_MEMORY
       expect(most[:file_size]).to be >= MailHandler::TNEF_MAX_BYTES
       expect(most[:timeout]).

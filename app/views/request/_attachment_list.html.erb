@@ -6,11 +6,12 @@
       <% if cannot?(:read, a) %>
         <%= image_tag('content_type/icon_unknown.png', class: 'attachment__image', alt: '') %>
       <% end %>
+      <% requester_view = @request_history || (incoming_message.info_request.is_actual_owning_user?(current_user) && !is_admin?) %>
       <% if Disclosures::SpreadsheetHold.held?(a) %>
         <p class="attachment__held"><%= a.prominence_reason %></p>
-      <% elsif @request_history && a.prominence != 'hidden' && !a.erased? && Disclosures::SpreadsheetHold.waiting?(a) %>
+      <% elsif requester_view && a.prominence != 'hidden' && !a.erased? && Disclosures::SpreadsheetHold.waiting?(a) %>
         <p class="attachment__held"><%= a.display_filename %>: <%= _('Getting it ready') %></p>
-      <% elsif @request_history && cannot?(:read, a) && !a.erased? %>
+      <% elsif requester_view && cannot?(:read, a) && !a.erased? %>
         <p class="attachment__held"><%= hidden_file_notice %></p>
       <% elsif concealed_prominence?(a) %>
         <span class="hidden_attachment"><%= render_prominence(a) %></span>

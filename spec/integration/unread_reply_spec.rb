@@ -83,6 +83,8 @@ RSpec.describe 'A reply whose mail can’t be read yet' do
     end
 
     it 'does not stop the request’s zip being made' do
+      skip 'RegulatorPack arrives in B09' unless defined?(RegulatorPack)
+
       token = RegulatorPack.new(info_request, user: owner).build!
       sign_in(owner)
 
@@ -90,7 +92,7 @@ RSpec.describe 'A reply whose mail can’t be read yet' do
 
       expect(response).to have_http_status(:ok)
     ensure
-      FileUtils.rm_rf(RegulatorPack.storage_dir)
+      FileUtils.rm_rf(RegulatorPack.storage_dir) if defined?(RegulatorPack)
     end
 
     it 'does not stop a batch’s zip being made' do

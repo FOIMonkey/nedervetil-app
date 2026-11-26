@@ -132,6 +132,71 @@ RSpec.describe IncomingMessage::StoreTextJob, type: :job do
     end
   end
 
+  describe 'the suggestion of documents from the reply' do
+    let(:info_request) { FactoryBot.create(:info_request) }
+
+    it 'is not queued when the mail arrives, only this job' do
+      message = receive_reply
+
+      expect(Disclosures::SuggestJob).not_to have_been_enqueued
+      expect(described_class).to have_been_enqueued.with(message)
+    end
+
+    it 'is queued once, when the text is stored' do
+      stored_when_queued = []
+      allow(Disclosures::SuggestJob).to receive(:perform_later) do |id|
+        stored_when_queued << IncomingMessage.where(id: id).
+          pick(:id, :cached_main_body_text_folded)
+      end
+
+      message = nil
+      perform_enqueued_jobs(only: described_class) { message = receive_reply }
+
+      expect(stored_when_queued).to match([[message.id, /No way!/]])
+    end
+
+    it 'is queued when the job gives up on the text' do
+      allow_any_instance_of(IncomingMessage).
+        to receive(:build_main_body_text) do
+          expect(Disclosures::SuggestJob).not_to have_been_enqueued
+          raise AttachmentToText::ConversionFailed
+        end
+
+      message = nil
+      perform_enqueued_jobs(only: described_class) { message = receive_reply }
+
+      expect(Disclosures::SuggestJob).
+        to have_been_enqueued.with(message.id).exactly(:once)
+    end
+
+    it 'is queued when the job is dropped for an erased email' do
+      message = receive_reply
+      allow_any_instance_of(RawEmail).to receive(:erased?).and_return(true)
+
+      perform_enqueued_jobs(only: described_class)
+
+      expect(Disclosures::SuggestJob).
+        to have_been_enqueued.with(message.id).exactly(:once)
+    end
+
+    it 'is queued as the mail arrives when this job cannot be queued' do
+      allow(described_class).to receive(:perform_later).
+        and_raise(RedisClient::CannotConnectError)
+
+      message = receive_reply
+
+      expect(Disclosures::SuggestJob).
+        to have_been_enqueued.with(message.id).exactly(:once)
+    end
+
+    it 'is not queued for mail in the holding pen' do
+      perform_enqueued_jobs(only: described_class) do
+        receive_reply(to: 'dummy@localhost')
+      end
+
+      expect(Disclosures::SuggestJob).not_to have_been_enqueued
+    end
+  end
 
   describe '#perform' do
     let(:message) { FactoryBot.create(:incoming_message) }

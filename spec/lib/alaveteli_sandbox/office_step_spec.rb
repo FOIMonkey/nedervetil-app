@@ -211,11 +211,11 @@ RSpec.describe AlaveteliSandbox::OfficeStep do
       end
     end
 
-    it 'allows typical sheet bounds for OfficePackage::Sheets' do
-      app = { max_rows: 1000,
-              max_columns: 60,
-              max_cells: 50_000,
-              max_read_cells: 500_000 }
+    it 'allows what the app asks of OfficePackage::Sheets' do
+      app = { max_rows: Disclosures.sheet_max_rows,
+              max_columns: Disclosures.sheet_max_columns,
+              max_cells: Disclosures::Sheets::MAX_CELLS,
+              max_read_cells: Disclosures::Sheets::MAX_READ_CELLS }
       expect { described_class.arguments(%w[sheets], app) }.not_to raise_error
     end
 

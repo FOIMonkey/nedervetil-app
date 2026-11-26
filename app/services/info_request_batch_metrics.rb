@@ -7,14 +7,15 @@ class InfoRequestBatchMetrics
   include Rails.application.routes.url_helpers
   default_url_options[:host] = AlaveteliConfiguration.domain
 
-  attr_reader :info_request_batch
+  attr_reader :info_request_batch, :ability
 
-  def initialize(info_request_batch)
+  def initialize(info_request_batch, ability:)
     @info_request_batch = info_request_batch
+    @ability = ability
   end
 
   def metrics
-    @metrics ||= @info_request_batch.info_requests.
+    @metrics ||= info_request_batch.readable_info_requests(ability).
       includes(public_body: :translations).map do |info_request|
       url = show_request_url(info_request.url_title)
       status = InfoRequest::State.short_description(

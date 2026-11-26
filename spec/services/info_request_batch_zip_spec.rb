@@ -1,8 +1,6 @@
 require 'spec_helper'
 
 RSpec.describe InfoRequestBatchZip do
-  ZippableFile = described_class::ZippableFile
-
   let(:batch) do
     FactoryBot.create(:info_request_batch, info_requests: [request])
   end
@@ -19,6 +17,17 @@ RSpec.describe InfoRequestBatchZip do
     it 'stores ability' do
       expect(instance.ability).to eq ability
     end
+
+    it 'keeps untrusted names within one ZIP path component' do
+      component = instance.send(:safe_zip_component,
+                                "../private\\file:one\n.txt")
+      expect(component).not_to match(%r{[/\\:\x00-\x1f]})
+      expect(component).not_to eq('..')
+      expect(instance.send(:safe_zip_component, '..')).to eq('_')
+      expect(instance.send(:safe_zip_component, '.')).to eq('_')
+      expect(instance.send(:safe_zip_component, 'Annual report..pdf')).
+        to eq('Annual report..pdf')
+    end
   end
 
   describe '#files' do
@@ -31,8 +40,10 @@ RSpec.describe InfoRequestBatchZip do
 
     before do
       # stub metrics service
-      allow(InfoRequestBatchMetrics).to receive(:new).with(batch).
+      allow(InfoRequestBatchMetrics).to receive(:new).
+        with(batch, ability: ability).
         and_return(double(:metrics, name: 'NAME', to_csv: 'CSV_DATA'))
+      ability.can :read, InfoRequest
     end
 
     around do |example|
@@ -42,11 +53,49 @@ RSpec.describe InfoRequestBatchZip do
     end
 
     it 'generates list of zippable files' do
-      is_expected.to all(be_a ZippableFile)
+      is_expected.to all(be_a described_class::ZippableFile)
+    end
+
+    # Its attachments can't be listed, and leaving them out would not show.
+    it 'is not made of a reply whose mail can’t be read now' do
+      batch
+      receive_incoming_mail('incoming-request-two-same-name.eml',
+                            to: request.incoming_email)
+      ability.can :read, IncomingMessage
+      allow(MailHandler::Reading).to receive(:of).
+        and_raise(MailHandler::ReadRefused, 'the mail cell is down')
+      allow(Rails.logger).to receive(:warn)
+
+      expect { files.to_a }.to raise_error(MailHandler::ReadRefused)
+    end
+
+    it 'serves stored reply text without re-reading the email once parsed' do
+      batch
+      receive_incoming_mail('incoming-request-plain.eml',
+                            to: request.incoming_email)
+      request.incoming_messages.last.parse_raw_email
+      request.expire
+      ability.can :read, IncomingMessage
+      ability.can :read, FoiAttachment
+      allow(MailHandler::Reading).to receive(:of).
+        and_raise(MailHandler::ReadRefused, 'the mail cell is down')
+
+      expect { files.to_a }.not_to raise_error
+    end
+
+    it 'reads no mail for a reply the person may not read' do
+      batch
+      receive_incoming_mail('incoming-request-two-same-name.eml',
+                            to: request.incoming_email)
+      expect(MailHandler::Reading).not_to receive(:of)
+
+      expect(files.map(&:path)).to eq(['NAME'])
     end
 
     it 'includes batch metrics at the root' do
-      is_expected.to include(ZippableFile.new('NAME', 'CSV_DATA'))
+      is_expected.to include(
+        described_class::ZippableFile.new('NAME', 'CSV_DATA')
+      )
     end
 
     context 'when batch info request has been sent' do
@@ -79,7 +128,10 @@ RSpec.describe InfoRequestBatchZip do
       let(:message) { event.incoming_message }
 
       context 'can read message' do
-        before { ability.can :read, message }
+        before do
+          ability.can :read, message
+          ability.can :read, message.get_main_body_text_part
+        end
 
         it 'includes incoming message' do
           expect(paths).to include(
@@ -119,6 +171,24 @@ RSpec.describe InfoRequestBatchZip do
           expect(paths).to include(
             "#{base_path}/2019-11-11-103000/attachments-#{message.id}/" \
               "#{attachment.display_filename}"
+          )
+        end
+
+        it 'uses the attachment body after masking' do
+          allow_any_instance_of(FoiAttachment).to receive(:masked_default_body).
+            and_return('synthetic-redacted-content')
+          file = files.find do |item|
+            item.path.end_with?(attachment.display_filename)
+          end
+          expect(file.body).to eq('synthetic-redacted-content')
+        end
+
+        it 'keeps an unsafe attachment filename inside its ZIP directory' do
+          allow_any_instance_of(FoiAttachment).to receive(:display_filename).
+            and_return('../private.pdf')
+          expect(paths).to include(
+            "#{base_path}/2019-11-11-103000/" \
+            "attachments-#{message.id}/.._private.pdf"
           )
         end
       end
@@ -184,5 +254,23 @@ RSpec.describe InfoRequestBatchZip do
       )
       travel_back
     end
+  end
+
+  it 'does not include a hidden message body for a batch owner' do
+    owner = FactoryBot.create(:pro_user)
+    request = FactoryBot.create(:info_request_with_incoming, user: owner)
+    batch = FactoryBot.create(:info_request_batch,
+                              user: owner,
+                              info_requests: [request])
+    body_part = request.incoming_messages.first.get_main_body_text_part
+    body_part.update!(prominence: 'hidden', prominence_reason: 'private')
+
+    ability = Ability.new(owner)
+    expect(ability.can?(:download, batch)).to be true
+    expect(ability.can?(:read, body_part)).to be false
+
+    incoming_file = described_class.new(batch, ability: ability).files.
+      find { |file| file.path.include?('/incoming_') }
+    expect(incoming_file).to be_nil
   end
 end

@@ -129,9 +129,8 @@ RSpec.describe 'Converters routed through AlaveteliSandbox' do
   end
 
   it 'masks PDFs with qpdf' do
-    rule = PDFRedactor::Rule.new(/foi@tfl\.gov\.uk/i, true, nil,
-                                 'foi@tfl.gov.uk')
-    masked, = PDFRedactor.redact(load_file_fixture('tfl.pdf'), [rule])
+    masked = AlaveteliTextMasker.apply_masks(load_file_fixture('tfl.pdf'),
+                                             'application/pdf')
     expect(masked).to start_with('%PDF')
     expect(AttachmentToText.from_string(masked,
                                         content_type: 'application/pdf').

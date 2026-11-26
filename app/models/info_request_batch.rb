@@ -98,6 +98,14 @@ class InfoRequestBatch < ApplicationRecord
              embargo_duration: draft.embargo_duration)
   end
 
+  # Read permission for a batch does not confer permission to read every
+  # child.
+  def readable_info_requests(ability)
+    ids = info_requests.includes(:user).
+      select { |request| ability.can?(:read, request) }.map(&:id)
+    info_requests.where(id: ids)
+  end
+
   def existing_batch
     self.class.find_existing(user, title, body, public_body_ids, id: id)
   end
