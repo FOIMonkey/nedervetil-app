@@ -184,18 +184,7 @@ class SearchDocument < ApplicationRecord
     relation ||= model&.all
     model ||= relation&.klass
 
-    supported_langs = Searchable.
-      class_variable_get(:@@locale_to_language_map).
-      values.
-      concat(
-        [
-          "simple",
-          nil
-        ]
-      )
-    unless supported_langs.include?(language)
-      raise(ArgumentError, "#{language} is not yet supported for search")
-    end
+    check_language!(language)
 
     limit = Integer(limit)
     return (relation || SearchDocument.all).none if limit < 1
@@ -248,6 +237,22 @@ class SearchDocument < ApplicationRecord
         order(Arel.sql("search_records.score DESC, #{record_id}"))
     end
   end
+
+  def self.check_language!(language)
+    supported_langs = Searchable.
+      class_variable_get(:@@locale_to_language_map).
+      values.
+      concat(
+        [
+          "simple",
+          nil
+        ]
+      )
+    return if supported_langs.include?(language)
+
+    raise(ArgumentError, "#{language} is not yet supported for search")
+  end
+  private_class_method :check_language!
 
   # Requires: lib/core_ext/active_record_materialized_cte.rb
   def self.materialized_cte(name, query, values = {})

@@ -112,7 +112,7 @@ class Comment < ApplicationRecord
   end
 
   def reindex_request_events
-    info_request_events.find_each { |e| Search.reindex_later(e) }
+    info_request_events.find_each(&:reindex)
   end
 
   # Return body for display as HTML

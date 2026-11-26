@@ -1,17 +1,11 @@
 ##
-# Contracts Search backend adapters must satisfy. Include them from an
-# adapter spec with a `subject` that returns the adapter instance:
+# The chainable search_scope interface, exercised against real fixture data.
+# Include it from an adapter spec with a `subject` that returns the adapter:
 #
-#   RSpec.describe Search::Adapters::Xapian::Adapter, :xapian do
+#   RSpec.describe Search::Adapters::Postgresql::Adapter, :postgresql do
 #     subject(:adapter) { described_class.new }
-#     it_behaves_like 'a search backend'
+#     it_behaves_like 'a scoped search backend'
 #   end
-#
-# 'a scoped search backend' covers the chainable search_scope interface and
-# the indexing hooks; 'a search backend' adds the paginated query interface
-# for backends that implement all of it. Both exercise the backend-agnostic
-# interface against real fixture data, so the including spec must run with
-# an indexed backend (e.g. tagged :xapian or :postgresql).
 RSpec.shared_examples 'a scoped search backend' do
   # Backends that only index some models privately (e.g. PostgreSQL indexes
   # users in the admin index) can supply the options needed to search them.
@@ -24,8 +18,9 @@ RSpec.shared_examples 'a scoped search backend' do
     end
 
     it 'constrains the relation to matching records' do
-      scope = adapter.search_scope('bob', User.all, **search_scope_options)
-      expect(scope).to include(users(:bob_smith_user))
+      scope = adapter.search_scope('quango', PublicBody.all,
+                                   **search_scope_options)
+      expect(scope).to include(public_bodies(:geraldine_public_body))
     end
 
     it 'keeps the relation chainable with further conditions' do
@@ -41,31 +36,6 @@ RSpec.shared_examples 'a scoped search backend' do
         'bob', User.where.not(id: bob.id), **search_scope_options
       )
       expect(scope).not_to include(bob)
-    end
-  end
-
-  describe '#reindex_later' do
-    it 'accepts a record without raising' do
-      expect { subject.reindex_later(users(:bob_smith_user)) }.
-        not_to raise_error
-    end
-  end
-
-  describe '#queued_jobs_count' do
-    it 'returns an Integer' do
-      expect(subject.queued_jobs_count).to be_a(Integer)
-    end
-  end
-end
-
-RSpec.shared_examples 'a search backend' do
-  include_examples 'a scoped search backend'
-
-  describe '#search' do
-    it 'returns a searcher whose #results is a Search::Results' do
-      searcher = subject.search('bob', models: [User])
-      results = searcher.results(page: 1, per_page: 25)
-      expect(results).to be_a(Search::Results)
     end
   end
 end

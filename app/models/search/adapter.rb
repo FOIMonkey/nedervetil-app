@@ -46,11 +46,5 @@ module Search
     def calculate_offset(page, per_page)
       (page - 1) * per_page
     end
-
-    def load_info_requests(ids)
-      return [] if ids.empty?
-
-      InfoRequest.includes(public_body: :translations).where(id: ids)
-    end
   end
 end

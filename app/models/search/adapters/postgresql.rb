@@ -1,24 +1,21 @@
 module Search
   module Adapters
     module Postgresql
-      ##
-      # PostgreSQL search backend implementing the scoped-search part of the
-      # Search::Backend interface.
-      #
-      # The database is itself the search index: queries run against the
-      # +search_documents+ table via SearchDocument.hybrid_search, and indexing
-      # is a SearchDocument upsert done inline via the record's #reindex.
-      #
-      # The paginated query interface (search, typeahead, similar) is
-      # follow-on work; those methods keep the base class's
-      # NotImplementedError behaviour.
-      #
-      class Adapter < Search::Backend
+      # PostgreSQL search backend behind Search (see doc/SEARCH.md).
+      class Adapter
+        def typeahead(query, model:, exclude_tags: [])
+          unless model == PublicBody
+            raise ArgumentError, "No typeahead for #{model}"
+          end
+
+          Typeahead.new(query, exclude_tags: exclude_tags)
+        end
+
         # Full-text search constrained to +relation+, returning the joined
         # ActiveRecord::Relation directly so callers can compose further
         # conditions and ordering.
         def search_scope(query, relation, admin_mode: false, exact_mode: false,
-                         case_sensitive: true, language: nil, limit: 1000, **)
+                         case_sensitive: true, language: nil, limit: 1000)
           SearchDocument.hybrid_search(
             query,
             relation: relation,
@@ -28,13 +25,6 @@ module Search
             language: language,
             limit: limit
           )
-        end
-
-        # Reindex the record. The database is itself the search index, so the
-        # work is a SearchDocument upsert done inline via the record's
-        # #reindex; queued_jobs_count stays at the base class default of zero.
-        def reindex_later(record)
-          record.reindex
         end
       end
     end

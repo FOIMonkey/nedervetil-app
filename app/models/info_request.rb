@@ -215,15 +215,15 @@ class InfoRequest < ApplicationRecord
   before_destroy :expire
   after_destroy :notify_associations, :update_counter_cache
 
-  searchable index: {
-               "title": "A",
-               "url_title": "B"
-             },
-             admin_index: {
-               "external_user_name": "A",
-               "external_url": "A",
-               "prominence_reason": "D"
-             }
+  searchable PrivateArchive::Policy.searchable_options(
+    index: {
+      title: "A",
+      url_title: "B"
+    },
+    admin_index: {
+      prominence_reason: "D"
+    }
+  )
 
   # Subset of states accepted via the API
   def self.allowed_incoming_states
@@ -443,13 +443,12 @@ class InfoRequest < ApplicationRecord
       end
   end
 
-  def self.request_list(filters, page, per_page, max_results)
-    Search.context(info_request: self).
-      request_list(filters, page, per_page, max_results)
+  def self.request_list(_filters, _page, _per_page, _max_results)
+    Search::Results.new(items: [], total_estimate: 0)
   end
 
   def self.recent_requests
-    Search.context(info_request: self).recent_requests
+    []
   end
 
   def self.find_in_state(state)
@@ -614,7 +613,7 @@ class InfoRequest < ApplicationRecord
   end
 
   def reindex_request_events
-    info_request_events.find_each { |e| Search.reindex_later(e) }
+    info_request_events.find_each(&:reindex)
   end
 
   # Force reindex when tag string changes
@@ -864,7 +863,6 @@ class InfoRequest < ApplicationRecord
   def calculate_event_states
     curr_state = nil
     info_request_events.reverse.each do |event|
-      Search.reindex_later(event)
       if curr_state.nil?
         curr_state = event.described_state if event.described_state
       end
@@ -1415,7 +1413,7 @@ class InfoRequest < ApplicationRecord
   end
 
   def similar_requests
-    Search.context(info_request: self).similar_requests
+    Search::Results.new(items: [], total_estimate: 0)
   end
 
   def move_to_public_body(destination_public_body, opts = {})

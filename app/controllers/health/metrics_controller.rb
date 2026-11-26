@@ -10,7 +10,6 @@ module Health
 
     def index
       @sidekiq_stats = Sidekiq::Stats.new
-      @queued_index_jobs = Search.queued_jobs_count
     end
   end
 end

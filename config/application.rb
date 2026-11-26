@@ -35,7 +35,6 @@ module Alaveteli
     # Common ones are `templates`, `generators`, or `middleware`, for example.
     config.autoload_lib(
       ignore: %w(
-        acts_as_xapian
         assets
         core_ext
         custom_cops

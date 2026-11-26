@@ -45,4 +45,21 @@ RSpec.describe 'PrivateArchive core policy overrides' do
       )
     end
   end
+
+  describe 'the complete public-to-admin search index moves' do
+    {
+      InfoRequest => {
+        admin_index: { title: 'A', url_title: 'B', prominence_reason: 'D' }
+      },
+      OutgoingMessage => {
+        admin_index: { '.get_text_for_indexing': 'A', '.safe_from_name': 'D',
+                       from_name: 'B', prominence_reason: 'D' },
+        root: :info_request
+      }
+    }.each do |model, options|
+      it "keeps #{model} fields and weights exclusively in the admin index" do
+        expect(model.search_options).to eq(options)
+      end
+    end
+  end
 end

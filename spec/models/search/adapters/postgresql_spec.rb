@@ -23,11 +23,10 @@ RSpec.describe Search::Adapters::Postgresql::Adapter, :postgresql do
     end
   end
 
-  describe '#reindex_later' do
-    it 'reindexes the record inline' do
-      user = users(:bob_smith_user)
-      expect(user).to receive(:reindex)
-      adapter.reindex_later(user)
+  describe '#typeahead' do
+    it 'has a typeahead for authorities only', :search_index do
+      expect { adapter.typeahead('bob', model: User) }.
+        to raise_error(ArgumentError, 'No typeahead for User')
     end
   end
 end

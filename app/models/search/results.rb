@@ -9,7 +9,7 @@ module Search
     attr_reader :items, :total_estimate, :current_page, :per_page, :offset,
                 :spelling_correction
 
-    # Compatibility aliases with ActsAsXapian search
+    # Older names for total_estimate and items, which callers still use
     alias matches_estimated total_estimate
     alias results items
 

@@ -115,8 +115,7 @@ class PublicBody < ApplicationRecord
 
   after_save :update_auto_applied_tags
 
-  after_update :reindex_requested_from, :invalidate_cached_pages,
-               unless: :no_xapian_reindex
+  after_update :reindex_requested_from, :invalidate_cached_pages
 
   # Every public body except for the internal admin one is visible
   scope :visible, -> { where("public_bodies.id <> #{ PublicBody.internal_admin_body.id }") }
@@ -130,17 +129,17 @@ class PublicBody < ApplicationRecord
              :publication_scheme, :disclosure_log
 
   searchable index: {
-               ".name": "A",
-               ".short_name": "A",
-               "home_page": "B",
-               ".notes_for_search": "C",
+               ".name_for_index": "A",
+               ".short_name_for_index": "A",
+               home_page: "B",
+               ".notes_for_index": "C",
                ".disclosure_log": "D",
-               ".publication_scheme": "D",
+               ".publication_scheme": "D"
              },
              admin_index: {
                ".request_email": "A",
-               "last_edit_editor": "D",
-               "last_edit_comment": "D",
+               last_edit_editor: "D",
+               last_edit_comment: "D"
              }
 
   # Cannot be grouped at top as it depends on the `translates` macro
@@ -234,6 +233,18 @@ class PublicBody < ApplicationRecord
   # return only the notes attached to the body itself, excluding
   # notes brought it by tags, as they pollute search results because
   # they tend to be non-specific.
+  def name_for_index
+    Searchable.without_apostrophes(name)
+  end
+
+  def short_name_for_index
+    Searchable.without_apostrophes(short_name)
+  end
+
+  def notes_for_index
+    Searchable.without_apostrophes(notes_as_string)
+  end
+
   def notes_for_search
     concrete_notes.map(&:body).join(' ')
   end

@@ -73,8 +73,6 @@ class OutgoingMessage < ApplicationRecord
   delegate :public_body, to: :info_request, private: true, allow_nil: true
 
   after_initialize :set_default_letter
-  # reindex if body text is edited (e.g. by admin interface)
-  after_update :xapian_reindex_after_update
 
   strip_attributes allow_empty: true
 
@@ -94,14 +92,14 @@ class OutgoingMessage < ApplicationRecord
             references(:embargoes)
   }
 
-  searchable(
+  searchable PrivateArchive::Policy.searchable_options(
     index: {
       ".get_text_for_indexing": "A",
       ".safe_from_name": "D"
     },
     admin_index: {
       from_name: "B",
-      prominence_reason: "D",
+      prominence_reason: "D"
     },
     root: :info_request
   )
@@ -301,12 +299,6 @@ class OutgoingMessage < ApplicationRecord
   # Return body for display as text
   def get_body_for_text_display
     get_text_for_indexing(strip_salutation=false)
-  end
-
-  def xapian_reindex_after_update
-    return unless saved_change_to_attribute?(:body)
-
-    info_request_events.find_each { |e| Search.reindex_later(e) }
   end
 
   def default_letter=(text)

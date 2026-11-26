@@ -444,7 +444,8 @@ class RequestController < ApplicationController
 
     @show_action_menu = !@render_to_file
 
-    @similar_requests, @similar_more = @info_request.similar_requests.first(10)
+    @similar_requests = []
+    @similar_more = false
 
     @citations = @info_request.citations.newest(3)
   end

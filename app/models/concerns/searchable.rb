@@ -1,14 +1,7 @@
 ##
-# Adds a chainable, backend-agnostic full-text search to indexed models.
-# Define search methods common to all searchable models
-#
-# +search_scope+ runs the configured search backend over the current
-# relation and returns an ActiveRecord::Relation, so it composes with
-# other query conditions both before and after the search.
-#
-# @example
+# Adds backend-independent full-text search to an ActiveRecord relation.
+# search_scope composes with scopes before and after the search:
 #   User.where.not(banned_at: nil).search_scope('alice').order(:created_at)
-#
 module Searchable
   extend ActiveSupport::Concern
 
@@ -48,6 +41,12 @@ module Searchable
     @@locale_to_language_map[locale]
   end
 
+  # Strip apostrophes so PostgreSQL won't split "King's" into two tokens;
+  # join possessives ("Kings") and turn other apostrophes into spaces.
+  def self.without_apostrophes(text)
+    text.to_s.gsub(/['\u2018\u2019]s\b/, 's').tr("'\u2018\u2019", ' ')
+  end
+
   def self.partition_table_name(model)
     "search_documents_#{model.downcase.gsub('::', '_')}"
   end
@@ -72,12 +71,14 @@ module Searchable
           "#{send(col[1..])} ".delete("\u0000")
         )
       else
-        c = "(SELECT concat(#{col}, ' ') FROM #{self.class.table_name} WHERE id=$1)"
+        c = "(SELECT concat(#{col}, ' ') " \
+            "FROM #{self.class.table_name} WHERE id=$1)"
       end
 
       raw_content_bits.push(c)
       content_tsv_bits.push(
-        "setweight(to_tsvector('#{language}'::regconfig, unaccent(coalesce(#{c}, ''))), '#{w}')"
+        "setweight(to_tsvector('#{language}'::regconfig, " \
+        "unaccent(coalesce(#{c}, ''))), '#{w}')"
       )
     end
 
@@ -175,10 +176,7 @@ module Searchable
     true
   end
 
-  # Refresh the search index data about a model.
-  # This would be the right place to queue up jobs like content extraction,
-  # embedding generation, etc...
-  # TODO: produce more than 1 section for attachments
+  # TODO: produce more than one section for attachments.
   def reindex
     return unless @@searchable_models.key?(self.class.to_s)
     return unless is_indexable?
@@ -203,41 +201,17 @@ module Searchable
   # call `MyModel.searchable(options)` on it.
   # Search is then available through `MyModel.newsearch("search query")`.
   module SearchableMethods
-    # make a model searchable by calling this in its definition.
-    # searchable takes a hash like:
-    # {
-    #   index: {
-    #     # define all columns (or methods) to include in the search index
-    #     # with the respective weight (as used by postgres)
-    #     # Prefix ruby method names with a ".", otherwise the column name
-    #     # will be passed to postgres unmodified.
-    #     # Reindexing columns is faster, as the data does not need to travel
-    #     # from pg to ruby and back.
-    #     # The value for each key (A, B, C, D) is the relative weight
-    #     # attached to the text in that col/method (A being highest).
-    #     "column_name": <A|B|C|D>
-    #     ".method_name": <A|B|C|D>
-    #     ...
-    #     },
-    #   admin_index: {
-    #     # :admin_index uses the same syntax as :index, but given its GDPR
-    #     # focus, the weight is less important here, all columns can be
-    #     # marked the same.
-    #     "column_name": <A|B|C|D>,
-    #     ".method_name": <A|B|C|D>,
-    #   },
-    #   # The record at the top of the tree this model belongs to, so hits
-    #   # on a message or attachment can be grouped under their request.
-    #   # Name a belongs_to association, or the two columns holding a
-    #   # polymorphic type and id. Leave it out when the model is its own
-    #   # root.
-    #   root: :info_request,
-    #   # Fields the search results can be filtered by,
-    #   # to limit search perimeter or do facetting.
-    #   filterable: [:col_a, :col_b],
-    #   # which fields the search results can be sorted by
-    #   sortable: [:col_c, :col_d]
-    # end
+    # Declare searchable fields and result grouping:
+    #
+    #   searchable index: { name: 'A', '.description': 'B' },
+    #              admin_index: { request_email: 'A' },
+    #              root: :info_request, filterable: [:locale], sortable: [:name]
+    #
+    # Weights run from A (highest) to D. Prefix Ruby methods with a dot; plain
+    # columns stay in SQL and index faster. admin_index uses the same syntax;
+    # equal weights usually suffice for its GDPR searches.
+    # root names a belongs_to association or the polymorphic type/id columns;
+    # omit it for a top-level record.
     def searchable(options)
       Searchable.class_variable_get(:@@searchable_models)[name] = options
     end
@@ -314,11 +288,7 @@ module Searchable
       Rails.logger.info("Reindexed #{count} #{name} in #{elapsed} seconds")
     end
 
-    # alternative implementation of reindex_all that works for models
-    # whose searchable.index and searchable.admin_index only contain
-    # SQL column names, and no ruby attributes. In that case, it is
-    # possible to send a single request to the db to generate the entire
-    # set of search_documents.
+    # Reindex in one SQL statement when all indexed fields are database columns.
     def reindex_all_inside_db
       language = Searchable.lang_from_locale(
         AlaveteliLocalization.default_locale
@@ -370,16 +340,6 @@ module Searchable
 
     def search_options
       Searchable.class_variable_get(:@@searchable_models)[name]
-    end
-
-    def search_root_class
-      root = search_options[:root]
-
-      case root
-      when nil then self
-      when Hash then nil
-      else reflect_on_association(root).klass
-      end
     end
 
     private
@@ -437,4 +397,6 @@ module Searchable
   end
 end
 
-ActiveRecord::Base.extend(Searchable::SearchableMethods)
+ActiveSupport.on_load(:active_record) do
+  extend Searchable::SearchableMethods
+end

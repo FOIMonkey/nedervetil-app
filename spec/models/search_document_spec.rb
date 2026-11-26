@@ -23,7 +23,7 @@ RSpec.describe SearchDocument do
   # created eagerly so the after_commit indexes it before the search runs
   let!(:user) do
     FactoryBot.create(:user, name: 'Florence Nightingale',
-                             about_me: 'I enjoy data visualisation')
+                             ban_text: 'Spamming data visualisation')
   end
 
   context 'model search' do
@@ -146,7 +146,7 @@ RSpec.describe SearchDocument do
     # The query is upper-case so it does not match the lower-cased url_name
     # either, isolating the case_sensitive behaviour.
     it 'matches substrings case-sensitively by default' do
-      user = FactoryBot.create(:user, name: "Charlotte Case")
+      FactoryBot.create(:user, name: "Charlotte Case")
 
       results = SearchDocument.hybrid_search(
         "ASE", model: User, admin_mode: true, exact_mode: true,

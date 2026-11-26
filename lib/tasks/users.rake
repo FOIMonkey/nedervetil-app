@@ -176,7 +176,7 @@ namespace :users do
 
     ActiveRecord::Base.logger.silence do
       User.where(id: ids).in_batches.each_record do |user|
-        Search.reindex_later(user)
+        user.reindex
         progressbar&.increment
       end
     end

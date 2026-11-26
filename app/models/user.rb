@@ -242,8 +242,7 @@ class User < ApplicationRecord
 
   validate :email_and_name_are_valid
 
-  after_update :reindex_referencing_models, :invalidate_cached_pages,
-               unless: :no_xapian_reindex
+  after_update :reindex_referencing_models, :invalidate_cached_pages
 
   searchable admin_index: {
     "email": "A",
@@ -702,7 +701,7 @@ class User < ApplicationRecord
   end
 
   def info_request_count_changed
-    Search.reindex_later(self)
+    reindex
   end
 
   def record_sign_in(*args)

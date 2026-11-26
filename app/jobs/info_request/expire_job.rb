@@ -8,7 +8,7 @@
 #   InfoRequest::ExpireJob.perform(PublicBody.first, :info_requests)
 #
 class InfoRequest::ExpireJob < ApplicationJob
-  queue_as :xapian
+  queue_as :default
 
   def perform(object, method = nil)
     return object.expire if object.is_a?(InfoRequest)

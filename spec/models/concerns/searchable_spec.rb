@@ -1,11 +1,11 @@
 require 'spec_helper'
 
-RSpec.describe Searchable, :xapian do
+RSpec.describe Searchable, :search_index do
   describe '.search_scope' do
-    it 'returns a chainable ActiveRecord::Relation' do
+    it 'returns a chainable ActiveRecord::Relation, without users as they are not indexed' do
       scope = User.search_scope('bob')
       expect(scope).to be_a(ActiveRecord::Relation)
-      expect(scope).to include(users(:bob_smith_user))
+      expect(scope).not_to include(users(:bob_smith_user))
     end
 
     it 'composes with conditions applied before the search' do
@@ -29,13 +29,6 @@ RSpec.describe Searchable, :xapian do
       expect(Search).to receive(:search_scope).
         with('bob', kind_of(ActiveRecord::Relation), admin_mode: true)
       User.search_scope('bob', admin_mode: true)
-    end
-
-    it 'forwards the backend option for the facade to resolve' do
-      expect(Search).to receive(:search_scope).
-        with('bob', kind_of(ActiveRecord::Relation),
-             backend: :postgresql, admin_mode: true)
-      User.search_scope('bob', backend: :postgresql, admin_mode: true)
     end
   end
 end
@@ -73,16 +66,16 @@ RSpec.describe Searchable, 'index lifecycle' do
   end
 
   it 'strips null bytes from content indexed from a method' do
-    message = FactoryBot.create(:info_request).outgoing_messages.first
-    allow(message).to receive(:get_text_for_indexing).
+    body = FactoryBot.create(:public_body)
+    allow(body).to receive(:notes_for_index).
       and_return("foo\u0000bar")
 
-    message.reindex
-    expect(message.search_documents.first.raw_content).to include('foobar')
+    body.reindex
+    expect(body.search_documents.first.raw_content).to include('foobar')
   end
 
   it 'does not index models that are not registered as searchable' do
-    n = FactoryBot.create(:notification)
+    FactoryBot.create(:notification)
     expect(SearchDocument.where(searchable_type: "Notification").count).to eq(0)
   end
 
@@ -151,11 +144,11 @@ RSpec.describe Searchable, 'index lifecycle' do
     end
 
     it 'reads the record when the root is not a belongs_to' do
-      allow(User).to receive(:search_options).
-        and_return(index: { name: 'A' }, root: :profile_photo)
+      allow(OutgoingMessage).to receive(:search_options).
+        and_return(index: { body: 'A' }, root: :user)
 
-      expect(User).not_to receive(:reindex_all_inside_db)
-      User.reindex_all
+      expect(OutgoingMessage).not_to receive(:reindex_all_inside_db)
+      OutgoingMessage.reindex_all
     end
 
     it 'copies the indexed columns into the raw content' do
