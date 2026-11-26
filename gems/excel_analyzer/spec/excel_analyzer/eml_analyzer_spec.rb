@@ -46,6 +46,12 @@ RSpec.describe ExcelAnalyzer::EmlAnalyzer do
 
     it { is_expected.to eq({}) }
 
+    it "asks what the mail holds, and for no part's bytes" do
+      expect(MailHandler::Reading).to receive(:of).
+        with(mail.to_s, bodies: false).and_call_original
+      metadata
+    end
+
     context "when mail contains XLS attachment" do
       let(:mail) do
         Mail.new { add_file File.join(__dir__, "../fixtures/data.xls") }

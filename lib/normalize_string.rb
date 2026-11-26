@@ -8,15 +8,16 @@ def normalize_line_endings(text)
   text.gsub(/\r\n?/, "\n") # Converts Windows line endings to Unix line endings
 end
 
-def normalize_string_to_utf8(s, suggested_character_encoding=nil)
+def normalize_string_to_utf8(s, suggested_character_encoding = nil)
   # Make a list of encodings to try:
   to_try = []
 
-  guessed_encoding = if CharlockHolmes::EncodingDetector.detect(s).blank?
-    ''
-  else
-    CharlockHolmes::EncodingDetector.detect(s)[:encoding]
-  end
+  detected = CharlockHolmes::EncodingDetector.detect(s)
+  guessed_encoding = if detected.nil? || detected.empty?
+                       ''
+                     else
+                       detected[:encoding]
+                     end
   guessed_encoding ||= ''
 
   # It's reasonably common for windows-1252 text to be mislabelled
@@ -30,26 +31,25 @@ def normalize_string_to_utf8(s, suggested_character_encoding=nil)
   to_try.push guessed_encoding
 
   to_try.each do |from_encoding|
-    if from_encoding == 'utf-7'
-      return Net::IMAP.decode_utf7(s)
-    else
-      begin
-        s.force_encoding from_encoding
-        return s.encode('UTF-8') if s.valid_encoding?
-      rescue ArgumentError, Encoding::UndefinedConversionError
-        # We get this is there are invalid bytes when
-        # interpreted as from_encoding at the point of
-        # the encode('UTF-8'); move onto the next one...
-      rescue Encoding::ConverterNotFoundError,
-             Encoding::InvalidByteSequenceError => ex
-        raise EncodingNormalizationError, ex.message
-      end
+    return Net::IMAP.decode_utf7(s) if from_encoding == 'utf-7'
+
+    begin
+      s.force_encoding from_encoding
+      return s.encode('UTF-8') if s.valid_encoding?
+    rescue ArgumentError, Encoding::UndefinedConversionError
+      # We get this is there are invalid bytes when
+      # interpreted as from_encoding at the point of
+      # the encode('UTF-8'); move onto the next one...
+    rescue Encoding::ConverterNotFoundError,
+           Encoding::InvalidByteSequenceError => ex
+      raise EncodingNormalizationError, ex.message
     end
   end
-  raise EncodingNormalizationError, "Couldn't find a valid character encoding for the string"
+  raise EncodingNormalizationError,
+        "Couldn't find a valid character encoding for the string"
 end
 
-def convert_string_to_utf8_or_binary(s, suggested_character_encoding=nil)
+def convert_string_to_utf8_or_binary(s, suggested_character_encoding = nil)
   # This function exists to help to keep consistent with the
   # behaviour of earlier versions of Alaveteli: in the code as it
   # is, there are situations where it's expected that we generally
@@ -78,7 +78,7 @@ StringConversionResult = Struct.new(:string, :scrubbed) do
   alias_method :scrubbed?, :scrubbed
 end
 
-def convert_string_to_utf8(s, suggested_character_encoding=nil)
+def convert_string_to_utf8(s, suggested_character_encoding = nil)
   result = normalize_string_to_utf8 s, suggested_character_encoding
   StringConversionResult.new(result, false)
 
@@ -89,12 +89,9 @@ end
 
 def scrub(string)
   string = string.force_encoding("utf-8")
-  string.valid_encoding? ? string : string.encode("utf-16le", invalid: :replace, replace: "").encode("utf-8")
-end
-
-def log_text_details(message, text)
-  STDERR.puts "#{message}, we have text: #{text}, of class #{text.class} and encoding #{text.encoding}"
-  filename = "/var/tmp/#{Digest::MD5.hexdigest(text)}.txt"
-  File.open(filename, "wb") { |f| f.write text }
-  STDERR.puts "#{message}, the filename is: #{filename}"
+  if string.valid_encoding?
+    string
+  else
+    string.encode("utf-16le", invalid: :replace, replace: "").encode("utf-8")
+  end
 end

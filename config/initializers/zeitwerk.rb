@@ -11,12 +11,11 @@ Rails.autoloaders.main.ignore(
   "lib/configuration.rb",
   "lib/i18n_fixes.rb",
   "lib/languages.rb",
-  "lib/mail_handler/backends/mail_extensions.rb",
+  "lib/mail_handler/mail_extensions.rb",
   "lib/no_constraint_disabling.rb",
   "lib/normalize_string.rb",
   "lib/quiet_opener.rb",
   "lib/routing_filters.rb",
-  "lib/stripe_mock_patch.rb",
   "lib/theme.rb",
   "lib/use_spans_for_errors.rb"
 )

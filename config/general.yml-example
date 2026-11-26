@@ -587,6 +587,50 @@ GEOIP_DATABASE: vendor/data/GeoLite2-Country.mmdb
 # ---
 MAXMIND_LICENSE_KEY: ''
 
+# Run external attachment converters in bubblewrap sandboxes instead of the
+# app's own environment. With required, a conversion is refused if the sandbox
+# can't start; it never runs unsandboxed. Check it with `bin/rails sandbox:check`.
+#
+# SANDBOX_CONVERTERS - String, off or required (default: off)
+#
+# ---
+SANDBOX_CONVERTERS: 'off'
+
+# Where sandboxed conversions keep their files: a tmpfs, mounted nosuid,
+# nodev and noexec, owned by the app user with mode 0700 (or 0710 shared with
+# converter cells).
+#
+# SANDBOX_VOLUME - String (default: /run/alaveteli-convert)
+#
+# ---
+SANDBOX_VOLUME: '/run/alaveteli-convert'
+
+# The UNIX sockets of the three converter cells (pdf, office, mail). Set all
+# three, or none; they require SANDBOX_CONVERTERS: required.
+#
+# SANDBOX_PDF_CELL - String (default: '')
+# SANDBOX_OFFICE_CELL - String (default: '')
+# SANDBOX_MAIL_CELL - String (default: '')
+#
+# ---
+SANDBOX_PDF_CELL: ''
+SANDBOX_OFFICE_CELL: ''
+SANDBOX_MAIL_CELL: ''
+
+# The bubblewrap executable.
+#
+# SANDBOX_BWRAP - String (default: /usr/bin/bwrap)
+#
+# ---
+SANDBOX_BWRAP: '/usr/bin/bwrap'
+
+# Stop every conversion without stopping the site.
+#
+# CONVERTERS_DISABLED - Boolean (default: false)
+#
+# ---
+CONVERTERS_DISABLED: false
+
 # The email address to which non-bounce responses to emails sent out by
 # Alaveteli should be forwarded
 #

@@ -20,7 +20,8 @@ RSpec.describe 'when creating a mail object from raw data' do
 
   it 'should parse multiple to addresses with unquoted display names' do
     mail = get_fixture_mail('multiple-unquoted-display-names.eml')
-    expect(mail.to).to eq(["request-66666-caa77777@whatdotheyknow.com", "foi@example.com"])
+    expect(mail.to).
+      to eq(["request-66666-caa77777@whatdotheyknow.com", "foi@example.com"])
   end
 
   it 'should return nil for malformed To: and Cc: lines' do
@@ -88,7 +89,8 @@ RSpec.describe 'when asked for the from name' do
 
   it 'should correctly return an encoded name from the from field' do
     mail = get_fixture_mail('quoted-subject-iso8859-1.eml')
-    expect(MailHandler.get_from_name(mail)).to eq('Coordenação de Relacionamento, Pesquisa e Informação/CEDI')
+    expect(MailHandler.get_from_name(mail)).
+      to eq('Coordenação de Relacionamento, Pesquisa e Informação/CEDI')
   end
 
   it 'should get a name from a "From" field with a name and address' do
@@ -96,7 +98,7 @@ RSpec.describe 'when asked for the from name' do
     expect(MailHandler.get_from_name(mail)).to eq('Public Authority')
   end
 
-  it 'should return nil from a "From" field that is just a name'do
+  it 'should return nil from a "From" field that is just a name' do
     mail = get_fixture_mail('track-response-webshield-bounce.eml')
     expect(MailHandler.get_from_name(mail)).to eq(nil)
   end
@@ -110,7 +112,8 @@ RSpec.describe 'when asked for the from address' do
 
   it 'should correctly return an address from a mail that has an encoded name in the from field' do
     mail = get_fixture_mail('quoted-subject-iso8859-1.eml')
-    expect(MailHandler.get_from_address(mail)).to eq('geraldinequango@localhost')
+    expect(MailHandler.get_from_address(mail)).
+      to eq('geraldinequango@localhost')
   end
 
   it 'should return nil if there is no address in the "From" field' do
@@ -120,7 +123,8 @@ RSpec.describe 'when asked for the from address' do
 
   it 'should return the "From" email address if there is one' do
     mail = get_fixture_mail('track-response-abcmail-oof.eml')
-    expect(MailHandler.get_from_address(mail)).to eq('Name.Removed@example.gov.uk')
+    expect(MailHandler.get_from_address(mail)).
+      to eq('Name.Removed@example.gov.uk')
   end
 
   it 'should get an address from a "From" field with a name and address' do
@@ -137,17 +141,17 @@ RSpec.describe 'when asked for all the addresses a mail has been sent to' do
       bcc: 'request-4444-xxxxxxxx@whatdotheyknow.com',
       envelope_to: 'request-5555-xxxxxxxx@whatdotheyknow.com'
     )
-    expect(MailHandler.get_all_addresses(mail)).to eq([
-      'request-3333-xxxxxxxx@whatdotheyknow.com',
-      'request-4444-xxxxxxxx@whatdotheyknow.com',
-      'request-5555-xxxxxxxx@whatdotheyknow.com'
-    ])
+    expect(MailHandler.get_all_addresses(mail)).
+      to eq(['request-3333-xxxxxxxx@whatdotheyknow.com',
+             'request-4444-xxxxxxxx@whatdotheyknow.com',
+             'request-5555-xxxxxxxx@whatdotheyknow.com'])
   end
 
   it 'should only return unique values' do
     # envelope-to and to fields are the same
     mail = get_fixture_mail('humberside-police-odd-mime-type.eml')
-    expect(MailHandler.get_all_addresses(mail)).to eq(['request-5335-xxxxxxxx@whatdotheyknow.com'])
+    expect(MailHandler.get_all_addresses(mail)).
+      to eq(['request-5335-xxxxxxxx@whatdotheyknow.com'])
   end
 
   it 'should handle the absence of an envelope-to or cc field' do
@@ -156,11 +160,15 @@ RSpec.describe 'when asked for all the addresses a mail has been sent to' do
       to: 'request-5555-xxxxxxxx@whatdotheyknow.com'
     )
 
-    expect(MailHandler.get_all_addresses(mail)).to eq(["request-5555-xxxxxxxx@whatdotheyknow.com"])
+    expect(MailHandler.get_all_addresses(mail)).
+      to eq(["request-5555-xxxxxxxx@whatdotheyknow.com"])
   end
 
   it 'should not return invalid addresses' do
-    mail = get_fixture_mail('autoresponse-header.eml', to: 'request-5555-xxxxxxxx')
+    mail = get_fixture_mail(
+      'autoresponse-header.eml',
+      to: 'request-5555-xxxxxxxx'
+    )
 
     expect(MailHandler.get_all_addresses(mail)).to eq([])
   end
@@ -254,7 +262,8 @@ RSpec.describe 'when getting the content type of a mail part' do
   end
 
   it 'should correctly return a type of "multipart/report"' do
-    expect_content_type('track-response-multipart-report.eml', 'multipart/report')
+    expect_content_type('track-response-multipart-report.eml',
+                        'multipart/report')
   end
 
   it 'should correctly return a type of "text/plain"' do
@@ -262,15 +271,20 @@ RSpec.describe 'when getting the content type of a mail part' do
   end
 
   it 'should correctly return a type of "multipart/mixed"' do
-    expect_content_type('track-response-messageclass-oof.eml', 'multipart/mixed')
+    expect_content_type('track-response-messageclass-oof.eml',
+                        'multipart/mixed')
   end
 
   it 'should correctly return the types in an example bounce report' do
     mail = get_fixture_mail('track-response-ms-bounce.eml')
-    report = mail.parts.detect { |part| MailHandler.get_content_type(part) == 'multipart/report' }
+    report = mail.parts.detect do |part|
+      MailHandler.get_content_type(part) == 'multipart/report'
+    end
     expect(MailHandler.get_content_type(report.parts[0])).to eq('text/plain')
-    expect(MailHandler.get_content_type(report.parts[1])).to eq('message/delivery-status')
-    expect(MailHandler.get_content_type(report.parts[2])).to eq('message/rfc822')
+    expect(MailHandler.get_content_type(report.parts[1])).
+      to eq('message/delivery-status')
+    expect(MailHandler.get_content_type(report.parts[2])).
+      to eq('message/rfc822')
   end
 end
 
@@ -328,8 +342,10 @@ RSpec.describe 'when getting attachment attributes' do
     expect(attributes.size).to eq(2)
   end
 
+  # rubocop:disable Layout/LineLength -- a description that spans lines
   it 'should get two attachment parts from a multipart mail with text and html alternatives
     and an image' do
+    # rubocop:enable Layout/LineLength
     mail = get_fixture_mail('quoted-subject-iso8859-1.eml')
     attributes = MailHandler.get_attachment_attributes(mail)
     expect(attributes.size).to eq(2)
@@ -349,25 +365,28 @@ RSpec.describe 'when getting attachment attributes' do
   end
 
   it 'should expand a mail attached as text' do
-    # Note that this spec will only pass using Tmail in the timezone set as datetime headers
-    # are rendered out in the local time - using the Mail gem this is not necessary
+    # Note that this spec will only pass using Tmail in the timezone set as
+    # datetime headers are rendered out in the local time - using the Mail
+    # gem this is not necessary
     with_env_tz('London') do
       mail = get_fixture_mail('rfc822-attachment.eml')
       attributes = MailHandler.get_attachment_attributes(mail)
       expect(attributes.size).to eq(2)
       rfc_attachment = attributes[1]
-      expect(rfc_attachment[:within_rfc822_subject]).to eq('Freedom of Information request')
+      expect(rfc_attachment[:within_rfc822_subject]).
+        to eq('Freedom of Information request')
       headers = ['Date: Thu, 13 Mar 2008 16:57:33 +0000',
                  'Subject: Freedom of Information request',
                  'From: An FOI Officer <foi.officer@example.com>',
                  'To: request-bounce-xx-xxxxx@whatdotheyno.com']
-      expect(rfc_attachment[:body]).to eq("#{headers.join("\n")}\n\nsome example text")
+      expect(rfc_attachment[:body]).
+        to eq("#{headers.join("\n")}\n\nsome example text")
     end
   end
 
   it 'should handle a mail which causes Tmail to generate a blank header value' do
     mail = get_fixture_mail('many-attachments-date-header.eml')
-    attributes = MailHandler.get_attachment_attributes(mail)
+    expect { MailHandler.get_attachment_attributes(mail) }.not_to raise_error
   end
 
   it 'should ignore truncated TNEF attachment' do
@@ -393,7 +412,8 @@ RSpec.describe 'when getting attachment attributes' do
     mail = get_fixture_mail('multipart-no-final-boundary.eml')
     attributes = MailHandler.get_attachment_attributes(mail)
     expect(attributes.length).to eq(1)
-    expect(attributes[0][:body]).to match(/This is an acknowledgement of your email/)
+    expect(attributes[0][:body]).
+      to match(/This is an acknowledgement of your email/)
     expect(attributes[0][:content_type]).to eq("text/html")
     expect(attributes[0][:url_part_number]).to eq(1)
   end
@@ -422,78 +442,82 @@ RSpec.describe 'when getting attachment attributes' do
     expect(attributes[1][:content_type]).to eq("application/pdf")
   end
 
+  # rubocop:disable Layout/LineLength -- a description that spans lines
   it 'should produce a consistent set of url_part_numbers, content_types, within_rfc822_subjects
         and filenames from an example mail with lots of attachments' do
+    # rubocop:enable Layout/LineLength
     mail = get_fixture_mail('many-attachments-date-header.eml')
     attributes = MailHandler.get_attachment_attributes(mail)
 
-    expected_attributes = [ { content_type: "text/plain",
-                              url_part_number: 1,
-                              within_rfc822_subject: nil,
-                              filename: nil },
-                            { content_type: "text/plain",
-                              url_part_number: 2,
-                              within_rfc822_subject: "Re: xxx",
-                              filename: nil },
-                            { content_type: "text/html",
-                              url_part_number: 4,
-                              within_rfc822_subject: "example",
-                              filename: nil },
-                            { content_type: "image/gif", url_part_number: 5,
-                              within_rfc822_subject: "example",
-                              filename: "image001.gif" },
-                            { content_type: "application/vnd.ms-excel",
-                              url_part_number: 6,
-                              within_rfc822_subject: "example",
-                              filename: "participant list.xls" },
-                            { content_type: "text/plain",
-                              url_part_number: 7,
-                              within_rfc822_subject: "RE: example",
-                              filename: nil },
-                            { content_type: "text/html",
-                              url_part_number: 9,
-                              within_rfc822_subject: "As promised - Masterclass info (example)",
-                              filename: nil },
-                            { content_type: "image/gif",
-                              url_part_number: 10,
-                              within_rfc822_subject: "As promised - Masterclass info (example)",
-                              filename: "image001.gif" },
-                            { content_type: "application/vnd.ms-word",
-                              url_part_number: 11,
-                              within_rfc822_subject: "As promised - Masterclass info (example)",
-                              filename: "Participant List.doc" },
-                            { content_type: "application/vnd.ms-word",
-                              url_part_number: 12,
-                              within_rfc822_subject: "As promised - Masterclass info (example)",
-                              filename: "Information & Booking Form.doc" },
-                            { content_type: "text/plain",
-                              url_part_number: 13,
-                              within_rfc822_subject: "Re: As promised - info (example)",
-                              filename: nil },
-                            { content_type: "text/html",
-                              url_part_number: 15,
-                              within_rfc822_subject: "Thank you from example",
-                              filename: nil },
-                            { content_type: "image/gif",
-                              url_part_number: 16,
-                              within_rfc822_subject: "Thank you from example",
-                              filename: "image001.gif" },
-                            { content_type: "text/plain",
-                              url_part_number: 17,
-                              within_rfc822_subject: "example - Meeting - Tuesday 2nd March",
-                              filename: nil },
-                            { content_type: "text/plain",
-                              url_part_number: 18,
-                              within_rfc822_subject: "example - Help needed",
-                              filename: nil },
-                            { content_type: "application/pdf",
-                              url_part_number: 19,
-                              within_rfc822_subject: "example - Help needed",
-                              filename: "Information Pack.pdf" },
-                            { content_type: "text/plain",
-                              url_part_number: 20,
-                              within_rfc822_subject: "Re: As promised - info (example)",
-                              filename: nil } ]
+    expected_attributes = [
+      { content_type: "text/plain",
+        url_part_number: 1,
+        within_rfc822_subject: nil,
+        filename: nil },
+      { content_type: "text/plain",
+        url_part_number: 2,
+        within_rfc822_subject: "Re: xxx",
+        filename: nil },
+      { content_type: "text/html",
+        url_part_number: 4,
+        within_rfc822_subject: "example",
+        filename: nil },
+      { content_type: "image/gif", url_part_number: 5,
+        within_rfc822_subject: "example",
+        filename: "image001.gif" },
+      { content_type: "application/vnd.ms-excel",
+        url_part_number: 6,
+        within_rfc822_subject: "example",
+        filename: "participant list.xls" },
+      { content_type: "text/plain",
+        url_part_number: 7,
+        within_rfc822_subject: "RE: example",
+        filename: nil },
+      { content_type: "text/html",
+        url_part_number: 9,
+        within_rfc822_subject: "As promised - Masterclass info (example)",
+        filename: nil },
+      { content_type: "image/gif",
+        url_part_number: 10,
+        within_rfc822_subject: "As promised - Masterclass info (example)",
+        filename: "image001.gif" },
+      { content_type: "application/vnd.ms-word",
+        url_part_number: 11,
+        within_rfc822_subject: "As promised - Masterclass info (example)",
+        filename: "Participant List.doc" },
+      { content_type: "application/vnd.ms-word",
+        url_part_number: 12,
+        within_rfc822_subject: "As promised - Masterclass info (example)",
+        filename: "Information & Booking Form.doc" },
+      { content_type: "text/plain",
+        url_part_number: 13,
+        within_rfc822_subject: "Re: As promised - info (example)",
+        filename: nil },
+      { content_type: "text/html",
+        url_part_number: 15,
+        within_rfc822_subject: "Thank you from example",
+        filename: nil },
+      { content_type: "image/gif",
+        url_part_number: 16,
+        within_rfc822_subject: "Thank you from example",
+        filename: "image001.gif" },
+      { content_type: "text/plain",
+        url_part_number: 17,
+        within_rfc822_subject: "example - Meeting - Tuesday 2nd March",
+        filename: nil },
+      { content_type: "text/plain",
+        url_part_number: 18,
+        within_rfc822_subject: "example - Help needed",
+        filename: nil },
+      { content_type: "application/pdf",
+        url_part_number: 19,
+        within_rfc822_subject: "example - Help needed",
+        filename: "Information Pack.pdf" },
+      { content_type: "text/plain",
+        url_part_number: 20,
+        within_rfc822_subject: "Re: As promised - info (example)",
+        filename: nil }
+    ]
 
     attributes.each_with_index do |attr, index|
       attr.delete(:charset)
@@ -509,5 +533,88 @@ RSpec.describe 'when getting the address part from an address string' do
   it 'should handle non-ascii characters in the name input' do
     address = "\"Someone’s name\" <test@example.com>"
     expect(MailHandler.address_from_string(address)).to eq('test@example.com')
+  end
+end
+
+RSpec.describe MailHandler, '.outlook_as_mime' do
+  subject(:converted) { described_class.outlook_as_mime(outlook) }
+
+  let(:outlook) do
+    mail = get_fixture_mail('incoming-request-oft-attachments.eml')
+    mail.all_parts.find { |part| described_class.is_outlook?(part) }.
+      body.decoded
+  end
+
+  def result(stderr)
+    instance_double(AlaveteliSandbox::ProcessRunner::Result, stderr: stderr)
+  end
+
+  def failing_with(error)
+    allow(AlaveteliSandbox).to receive(:job).and_raise(error)
+  end
+
+  it 'gives the message as MIME source' do
+    mail = Mail.from_source(converted)
+
+    expect(mail.subject).to eq('test')
+    expect(mail.attachments.map(&:filename)).to eq(['attach.txt'])
+  end
+
+  # Only the MIME boundaries differ from one conversion to the next, so the
+  # parts keep the digests they are matched to stored attachments by.
+  it 'gives the same parts each time' do
+    parts = Array.new(2) do
+      Mail.from_source(described_class.outlook_as_mime(outlook)).
+        all_parts.reject(&:multipart?).
+        map { |part| [part.mime_type, part.body.decoded] }
+    end
+
+    expect(parts.first).to eq(parts.last)
+  end
+
+  it 'is nil for a file msgconvert ran on and could not convert' do
+    failing_with(AlaveteliSandbox::Failed.new(
+                   'msgconvert failed (exit 2)',
+                   result('Not an OLE file at /usr/bin/msgconvert line 40.')
+                 ))
+
+    expect(converted).to be_nil
+  end
+
+  it 'is nil for a file that converts to more than is allowed' do
+    failing_with(AlaveteliSandbox::LimitExceeded.new('too much output'))
+
+    expect(converted).to be_nil
+  end
+
+  {
+    'msgconvert is not installed' =>
+      AlaveteliSandbox::Failed.new('msgconvert is not installed'),
+    'Perl cannot load one of its modules' =>
+      [AlaveteliSandbox::Failed, 'msgconvert failed (exit 2)',
+       "Can't locate Email/Address.pm in @INC (you may need to install " \
+       'the Email::Address module) at /usr/bin/msgconvert line 8.'],
+    'Perl cannot compile it' =>
+      [AlaveteliSandbox::Failed, 'msgconvert failed (exit 255)',
+       'BEGIN failed--compilation aborted at /usr/bin/msgconvert line 8.'],
+    'the sandbox refuses' => AlaveteliSandbox::Refused.new('cell is down'),
+    'the step runs out of time' => AlaveteliSandbox::TimedOut.new('timed out')
+  }.each do |what, error|
+    it "raises ReadRefused, not nil, when #{what}" do
+      if error.is_a?(Array)
+        klass, message, stderr = error
+        error = klass.new(message, result(stderr))
+      end
+      failing_with(error)
+
+      expect { converted }.
+        to raise_error(MailHandler::ReadRefused, /msgconvert could not run/)
+    end
+  end
+end
+
+RSpec.describe MailHandler, '.backend' do
+  it 'should return the name of the backend' do
+    expect(described_class.backend).to eq('Mail')
   end
 end

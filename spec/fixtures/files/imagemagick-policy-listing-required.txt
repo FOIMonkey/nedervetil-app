@@ -1,0 +1,63 @@
+
+Path: /etc/ImageMagick-7/policy.xml
+  Policy: Resource
+    name: list-length
+    value: 3
+  Policy: Resource
+    name: time
+    value: 120
+  Policy: Resource
+    name: thread
+    value: 1
+  Policy: Resource
+    name: file
+    value: 32
+  Policy: Resource
+    name: disk
+    value: 2GiB
+  Policy: Resource
+    name: map
+    value: 1GiB
+  Policy: Resource
+    name: memory
+    value: 512MiB
+  Policy: Resource
+    name: area
+    value: 25MP
+  Policy: Resource
+    name: height
+    value: 5000
+  Policy: Resource
+    name: width
+    value: 5000
+  Policy: Delegate
+    rights: None 
+    pattern: *
+  Policy: Filter
+    rights: None 
+    pattern: *
+  Policy: Path
+    rights: None 
+    pattern: @*
+  Policy: Path
+    rights: None 
+    pattern: |*
+  Policy: Module
+    rights: None 
+    pattern: *
+  Policy: Module
+    rights: Read Write 
+    pattern: {PNG,JPEG,GIF,BMP,TIFF,WEBP,PDF,INFO}
+  Policy: Coder
+    rights: None 
+    pattern: *
+  Policy: Coder
+    rights: Read Write 
+    pattern: {PNG,PNG8,PNG24,PNG32,PNG48,PNG64,JPEG,JPG,JPE,GIF,BMP,BMP2,BMP3,TIFF,TIFF64,WEBP}
+  Policy: Coder
+    rights: Write 
+    pattern: {PDF,INFO}
+
+Path: [built-in]
+  Policy: Undefined
+    rights: None 

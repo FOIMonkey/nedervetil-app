@@ -4,6 +4,8 @@ require "active_storage"
 require "active_storage/analyzer"
 
 require "mail_handler"
+require "mail_handler/report"
+require "mail_handler/reading"
 
 module ExcelAnalyzer
   ##
@@ -22,21 +24,27 @@ module ExcelAnalyzer
       raw_copy && blob.content_type == CONTENT_TYPE
     end
 
+    # Only the types of the mail's parts are wanted, so none of their bytes
+    # are read back (MailHandler::Reading).
+    #
+    # This only brings the callback forward: whatever parses the mail runs
+    # the same check. So a mail that can't be read just now, or is past the
+    # part limits, is left to that, and the analysis is not tried again.
     def metadata
       download_blob_to_tempfile do |file|
-        mail = Mail.read_from_string(File.binread(file.path))
-        parts = mail.attachments.map do |part|
-          { content_type: part.mime_type, filename: part.filename }
-        end
+        parts = MailHandler::Reading.
+                of(File.binread(file.path), bodies: false).parts
 
         if parts.any? { |part|
-             ExcelAnalyzer.monitored?(content_type: part[:content_type],
-                                      filename: part[:filename])
+             ExcelAnalyzer.monitored?(content_type: part.content_type,
+                                      filename: part.filename)
            }
           notify_spreadsheet_received
         end
       end
 
+      {}
+    rescue MailHandler::ReadRefused, MailHandler::TooComplex
       {}
     end
 

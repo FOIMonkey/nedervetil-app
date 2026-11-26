@@ -9,82 +9,30 @@ RSpec.describe MailHandler::ReplyHandler do
       it 'forwards the mail to sendmail' do
         expect(IO).
           to receive(:popen).
-          with('/usr/sbin/sendmail -i "user-support@localhost"', 'wb')
+          with(['/usr/sbin/sendmail', '-i', '--', 'user-support@localhost'],
+               'wb')
         MailHandler::ReplyHandler.forward_on(mail.raw_source, mail)
       end
     end
   end
 
+  # Every reply that isn't a bounce goes to the one support address, even
+  # one sent to the Pro contact's old address.
   describe '.get_forward_to_address' do
-    let(:normal_contact_email) { AlaveteliConfiguration.contact_email }
-    let(:pro_contact_email) { AlaveteliConfiguration.pro_contact_email }
-
-    let(:normal_mail) { get_fixture_mail('normal-contact-reply.eml') }
-    let(:pro_mail) { get_fixture_mail('pro-contact-reply.eml') }
-
-    let(:both_mail) do
-      Mail.from_source(<<~EOF)
-      To: #{ normal_contact_email }
-      Cc: #{ pro_contact_email }
-      From: bob@example.com
-      Subject: Sending to both
-
-      Foo Bar baz
-      EOF
-    end
-
     let(:normal_recipient) do
       AlaveteliConfiguration.forward_nonbounce_responses_to
     end
 
-    let(:pro_recipient) do
-      AlaveteliConfiguration.forward_pro_nonbounce_responses_to
+    it 'returns the support address for a reply to the contact address' do
+      mail = get_fixture_mail('normal-contact-reply.eml')
+      expect(MailHandler::ReplyHandler.get_forward_to_address(mail)).
+        to eq(normal_recipient)
     end
 
-    context 'when alaveteli pro is disabled' do
-      before do
-        allow(AlaveteliConfiguration).
-          to receive(:enable_alaveteli_pro).and_return(false)
-      end
-
-      it 'returns the normal forwarding address' do
-        address =
-          MailHandler::ReplyHandler.get_forward_to_address(normal_mail)
-
-        expect(address).to eq(normal_recipient)
-      end
-    end
-
-    context 'if alaveteli pro is enabled' do
-      before do
-        allow(AlaveteliConfiguration).
-          to receive(:enable_alaveteli_pro).and_return(true)
-      end
-
-      context 'when addressed to the pro contact' do
-        it 'returns the pro forwarding address' do
-          expect(MailHandler::ReplyHandler.get_forward_to_address(pro_mail)).
-            to eq(pro_recipient)
-        end
-      end
-
-      context 'when addressed to the normal contact' do
-        it 'returns the normal contact address' do
-          address =
-            MailHandler::ReplyHandler.get_forward_to_address(normal_mail)
-
-          expect(address).to eq(normal_recipient)
-        end
-      end
-
-      context 'when addressed to both contacts' do
-        it 'returns the both contact addresses' do
-          address =
-            MailHandler::ReplyHandler.get_forward_to_address(both_mail)
-
-          expect(address).to eq("#{normal_recipient},#{pro_recipient}")
-        end
-      end
+    it 'returns the support address for a reply to the old Pro contact' do
+      mail = get_fixture_mail('pro-contact-reply.eml')
+      expect(MailHandler::ReplyHandler.get_forward_to_address(mail)).
+        to eq(normal_recipient)
     end
   end
 end

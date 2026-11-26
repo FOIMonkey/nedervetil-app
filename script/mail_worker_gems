@@ -1,0 +1,20 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+# Prints the directories of the gems the mail worker loads
+# (script/mail_worker.rb), one to a line, as this checkout's Gemfile.lock and
+# bundle have them. Their names carry each gem's version, so run this again
+# after any change to the bundle.
+#
+# The mail converter cell has no RubyGems and is told these in
+# SANDBOX_MAIL_GEMS, joined with colons (script/sandbox_cell.rb):
+#
+#   SANDBOX_MAIL_GEMS="$(script/mail_worker_gems | paste -sd: -)"
+#
+# Each directory must also be one the cell's user can read.
+ENV['BUNDLE_GEMFILE'] ||= File.expand_path('../Gemfile', __dir__)
+require 'bundler/setup'
+require_relative '../lib/alaveteli_sandbox/worker_step'
+require_relative '../lib/alaveteli_sandbox/mail_step'
+
+puts AlaveteliSandbox::MailStep.gem_directories

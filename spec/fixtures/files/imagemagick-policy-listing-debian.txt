@@ -1,0 +1,38 @@
+
+Path: /etc/ImageMagick-7/policy.xml
+  Policy: Resource
+    name: disk
+    value: 2GiB
+  Policy: Resource
+    name: map
+    value: 2048MiB
+  Policy: Resource
+    name: memory
+    value: 1024MiB
+  Policy: Resource
+    name: area
+    value: 256MP
+  Policy: Resource
+    name: height
+    value: 32KP
+  Policy: Resource
+    name: width
+    value: 32KP
+  Policy: Undefined
+    rights: None 
+  Policy: Path
+    rights: None 
+    pattern: @*
+  Policy: Coder
+    rights: None 
+    pattern: URL
+  Policy: Coder
+    rights: None 
+    pattern: HTTPS
+  Policy: Coder
+    rights: None 
+    pattern: HTTP
+
+Path: [built-in]
+  Policy: Undefined
+    rights: None 

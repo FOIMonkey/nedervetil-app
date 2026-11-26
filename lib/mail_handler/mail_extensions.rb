@@ -2,22 +2,24 @@ require 'mail/message'
 require 'mail/part'
 require 'mail/fields/parameter_hash'
 
-require 'action_mailbox/mail_ext'
-
 module Mail
+  # Adds transient part-numbering and embedded-message attributes used while
+  # MailHandler::Parts walks a message's MIME tree.
   class Message
     attr_accessor :url_part_number
-    attr_accessor :rfc822_attachment # when a whole email message is attached as text
-    attr_accessor :within_rfc822_attachment # for parts within a message attached as text (for getting subject mainly)
+    # when a whole email message is attached as text
+    attr_accessor :rfc822_attachment
+    # for parts within a message attached as text (for getting subject mainly)
+    attr_accessor :within_rfc822_attachment
     attr_accessor :count_parts_count
     attr_accessor :count_first_uudecode_count
   end
 
-  # A patched version of the parameter hash that handles nil values without throwing
-  # an error.
+  # A patched version of the parameter hash that handles nil values without
+  # throwing an error.
   class ParameterHash < IndifferentHash
     def encoded
-      map.sort { |a,b| a.first.to_s <=> b.first.to_s }.map do |key_name, value|
+      map.sort { |a, b| a.first.to_s <=> b.first.to_s }.map do |key_name, value|
         # The replacement of this commented out line is the change
         # unless value.ascii_only?
         unless value.nil? || value.ascii_only?

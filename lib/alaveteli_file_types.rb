@@ -1,14 +1,18 @@
 require "marcel"
+require "stringio"
 
+# Maps file extensions to MIME types and detects content MIME types with Marcel
+# plus a UTF-8 plain-text fallback for application/octet-stream.
 class AlaveteliFileTypes
   # To add an image, create a file with appropriate name corresponding to the
   # mime type in app/assets/images/content_type/ e.g. icon_image_tiff_large.png
-  FileExtensionToMimeType = {
+  FILE_EXTENSION_TO_MIME_TYPE = {
     'csv' => 'text/csv',
     "txt" => 'text/plain',
     "pdf" => 'application/pdf',
     "rtf" => 'application/rtf',
     "doc" => 'application/vnd.ms-word',
+    # rubocop:disable Layout/LineLength -- a table of MIME types
     "docx" => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
     "xls" => 'application/vnd.ms-excel',
     "xlsx" => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
@@ -17,6 +21,7 @@ class AlaveteliFileTypes
     "docm" => 'application/vnd.ms-word.document.macroenabled.12',
     "ppt" => 'application/vnd.ms-powerpoint',
     "pptx" => 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+    # rubocop:enable Layout/LineLength
     "pptm" => 'application/vnd.ms-powerpoint.presentation.macroenabled.12',
     "ppsm" => 'application/vnd.ms-powerpoint.slideshow.macroenabled.12',
     "eml" => 'message/rfc822',
@@ -34,16 +39,12 @@ class AlaveteliFileTypes
     "vcf" => 'text/x-vcard',
     "zip" => 'application/zip',
     "delivery-status" => 'message/delivery-status'
-  }
+  }.freeze
   # Duplicate MIME types (e.g. image/jpeg) map to the last extension listed
   # above, so preferred extensions (jpg, html) should come after aliases.
-  FileExtensionToMimeTypeRev = FileExtensionToMimeType.invert
+  MIME_TYPE_TO_FILE_EXTENSION = FILE_EXTENSION_TO_MIME_TYPE.invert
 
   class << self
-    def all_extensions
-      FileExtensionToMimeType.keys
-    end
-
     # Given file name and its content, return most likely type
     def filename_and_content_to_mimetype(filename, content)
       filename_to_mimetype(filename) || content_to_mimetype(content)
@@ -61,25 +62,20 @@ class AlaveteliFileTypes
     def filename_to_mimetype(filename)
       return nil unless filename
 
-      if filename.match(/\.([^.]+)$/i)
-        lext = $1.downcase
-        if FileExtensionToMimeType.include?(lext)
-          return FileExtensionToMimeType[lext]
-        end
-      end
-      nil
+      match = /\.([^.]+)$/i.match(filename)
+      match && FILE_EXTENSION_TO_MIME_TYPE[match[1].downcase]
     end
 
     def text_content?(content)
       return false if content.nil? || content.empty?
 
-      content.force_encoding('UTF-8').valid_encoding? &&
-        !content.match?(/[\x00-\x08\x0E-\x1F]/)
+      utf8 = content.dup.force_encoding('UTF-8')
+      utf8.valid_encoding? && !utf8.match?(/[\x00-\x08\x0E-\x1F]/)
     end
 
     def mimetype_to_extension(mimetype)
-      if FileExtensionToMimeTypeRev.include?(mimetype)
-        return FileExtensionToMimeTypeRev[mimetype]
+      if MIME_TYPE_TO_FILE_EXTENSION.include?(mimetype)
+        return MIME_TYPE_TO_FILE_EXTENSION[mimetype]
       end
 
       nil

@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  The ImageMagick security policy every conversion step must run under
+  (AlaveteliSandbox::ImagePolicy): no delegates, no filters, and only the
+  coders listed here. Install it as /etc/ImageMagick-7/policy.xml on the
+  machine, or in the image, that runs the converters.
+-->
+<policymap>
+  <!-- Two-frame GIFs need one extra internal image slot. PDFs stay page-by-page. -->
+  <policy domain="resource" name="list-length" value="3"/>
+  <policy domain="resource" name="time" value="120"/>
+  <policy domain="resource" name="thread" value="1"/>
+  <policy domain="resource" name="file" value="32"/>
+  <policy domain="resource" name="memory" value="512MiB"/>
+  <policy domain="resource" name="map" value="1GiB"/>
+  <policy domain="resource" name="disk" value="2GiB"/>
+  <policy domain="resource" name="area" value="25MP"/>
+  <policy domain="resource" name="width" value="5000"/>
+  <policy domain="resource" name="height" value="5000"/>
+  <policy domain="delegate" rights="none" pattern="*"/>
+  <policy domain="filter" rights="none" pattern="*"/>
+  <policy domain="path" rights="none" pattern="@*"/>
+  <policy domain="path" rights="none" pattern="|*"/>
+  <policy domain="module" rights="none" pattern="*"/>
+  <policy domain="module" rights="read|write" pattern="{PNG,JPEG,GIF,BMP,TIFF,WEBP,PDF,INFO}"/>
+  <policy domain="coder" rights="none" pattern="*"/>
+  <policy domain="coder" rights="read|write" pattern="{PNG,PNG8,PNG24,PNG32,PNG48,PNG64,JPEG,JPG,JPE,GIF,BMP,BMP2,BMP3,TIFF,TIFF64,WEBP}"/>
+  <!-- PDFs are only written from page pixels; Poppler reads the originals. -->
+  <policy domain="coder" rights="write" pattern="{PDF,INFO}"/>
+</policymap>
