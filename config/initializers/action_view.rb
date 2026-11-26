@@ -3,7 +3,7 @@ Rails.application.configure do
                              sup dfn cite big small address hr br div span h1
                              h2 h3 h4 h5 h6 ul ol li dl dt dd abbr acronym a
                              img blockquote del ins)
-  alaveteli_extra_tags = %w(html head body table tr td style)
+  alaveteli_extra_tags = %w(table tr td)
 
   allowed_tags = rails_41_default_tags + alaveteli_extra_tags
 

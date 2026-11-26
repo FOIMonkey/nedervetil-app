@@ -36,8 +36,8 @@ module AlaveteliFeatures
       @items ||= []
     end
 
-    def each(*_args, &block)
-      return to_enum(:each) unless block_given?
+    def each(*args, &block)
+      return to_enum(:each, *args) unless block_given?
 
       all.each(&block)
     end

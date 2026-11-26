@@ -42,13 +42,15 @@ RSpec.describe AlaveteliFeatures::Feature do
   describe '#with_actor' do
     let(:actor) { double }
 
-    it 'sets actor' do
-      expect { instance.with_actor(actor) }.to \
-        change(instance, :actor).from(nil).to(actor)
-    end
+    it 'returns an independently bound feature' do
+      instance.roles << :admin
+      bound = instance.with_actor(actor)
 
-    it 'returns feature' do
-      expect(instance.with_actor(actor)).to eq(instance)
+      expect(bound).not_to equal(instance)
+      expect(bound.actor).to equal(actor)
+      expect(bound.roles).to eq([:admin])
+      expect(bound.roles).not_to equal(instance.roles)
+      expect(instance.actor).to be_nil
     end
   end
 
@@ -87,7 +89,7 @@ RSpec.describe AlaveteliFeatures::Feature do
     let(:actor) { MockUser.new(1) }
 
     context 'without actor' do
-      let(:actor) {}
+      let(:actor) { nil }
 
       it 'raises ActorNotDefinedError' do
         expect { instance.enabled? }.to raise_error(
@@ -114,7 +116,7 @@ RSpec.describe AlaveteliFeatures::Feature do
     let(:actor) { MockUser.new(1) }
 
     context 'without actor' do
-      let(:actor) {}
+      let(:actor) { nil }
 
       it 'raises ActorNotDefinedError' do
         expect { instance.disabled? }.to raise_error(
@@ -139,7 +141,7 @@ RSpec.describe AlaveteliFeatures::Feature do
     let(:actor) { MockUser.new(1) }
 
     context 'without actor' do
-      let(:actor) {}
+      let(:actor) { nil }
 
       it 'raises ActorNotDefinedError' do
         expect { instance.enable }.to raise_error(
@@ -162,7 +164,7 @@ RSpec.describe AlaveteliFeatures::Feature do
     let(:actor) { MockUser.new(1) }
 
     context 'without actor' do
-      let(:actor) {}
+      let(:actor) { nil }
 
       it 'raises ActorNotDefinedError' do
         expect { instance.disable }.to raise_error(

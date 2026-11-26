@@ -1,8 +1,11 @@
 require 'rails/generators'
 
 module AlaveteliFeatures
+  # Rails generator that copies and optionally runs Flipper's ActiveRecord
+  # migrations and installs config/initializers/alaveteli_features.rb.
   class InstallGenerator < Rails::Generators::Base
-    class_option :migrate, type: :boolean, default: true, banner: 'Run AlaveteliFeatures migrations'
+    class_option :migrate, type: :boolean, default: true,
+                           banner: 'Run AlaveteliFeatures migrations'
 
     def self.source_paths
       paths = superclass.source_paths
@@ -31,12 +34,14 @@ module AlaveteliFeatures
     end
 
     def add_files
-      template 'config/initializers/alaveteli_features.rb.erb', 'config/initializers/alaveteli_features.rb'
+      template 'config/initializers/alaveteli_features.rb.erb',
+               'config/initializers/alaveteli_features.rb'
     end
 
     def complete
       puts "*" * 50
-      puts "AlaveteliFeatures has been installed successfully. You're all ready to go!"
+      puts "AlaveteliFeatures has been installed successfully. " \
+           "You're all ready to go!"
       puts " "
       puts "Enjoy!"
     end

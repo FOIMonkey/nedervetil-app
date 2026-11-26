@@ -1,4 +1,6 @@
 module AlaveteliFeatures
+  # RSpec helpers and :feature / :features metadata hooks for stubbing
+  # AlaveteliFeatures backend state during examples.
   module SpecHelpers
     def with_feature_enabled(feature)
       allow(AlaveteliFeatures.backend).to receive(:enabled?).and_call_original
@@ -20,7 +22,7 @@ module AlaveteliFeatures
         return unless features
         return features if features.is_a?(Hash)
 
-        features = Array(features).map { [_1, true] }.to_h
+        Array(features).map { [_1, true] }.to_h
       end
 
       config.before(:each) do |example|

@@ -24,18 +24,39 @@ RSpec.describe AlaveteliFeatures::Feature::CollectionMethods do
   end
 
   describe '#with_actor' do
-    it 'sets actor on collection' do
-      expect { base_collection.with_actor(actor) }.to \
-        change(base_collection, :actor).from(nil).to(actor)
+    it 'returns a collection with independently bound features' do
+      bound = base_collection.with_actor(actor)
+
+      expect(bound).not_to equal(base_collection)
+      expect(bound.actor).to equal(actor)
+      expect(bound.first.actor).to equal(actor)
+      expect(bound.first).not_to equal(feature_1)
+      expect(base_collection.actor).to be_nil
+      expect(feature_1.actor).to be_nil
     end
 
-    it 'sets actor on instances' do
-      expect { base_collection.with_actor(actor) }.to \
-        change(feature_1, :actor).from(nil).to(actor)
-    end
+    it 'keeps actors separate across concurrent callers' do
+      other_actor = MockUser.new(2, [admin_role])
+      ready = Queue.new
+      release = Queue.new
+      threads = [actor, other_actor].map do |current_actor|
+        Thread.new do
+          bound = base_collection.with_actor(current_actor)
+          ready << true
+          release.pop
+          [bound.actor, bound.map(&:actor)]
+        end
+      end
 
-    it 'returns collection' do
-      expect(base_collection.with_actor(actor)).to eq(base_collection)
+      2.times { ready.pop }
+      2.times { release << true }
+      expected = [
+        [actor, Array.new(base_collection.count, actor)],
+        [other_actor, Array.new(base_collection.count, other_actor)]
+      ]
+      expect(threads.map(&:value)).to eq(expected)
+      expect(base_collection.actor).to be_nil
+      expect(base_collection.map(&:actor)).to all(be_nil)
     end
   end
 

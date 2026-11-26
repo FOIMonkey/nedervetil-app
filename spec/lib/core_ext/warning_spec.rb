@@ -5,7 +5,7 @@ RSpec.describe Warning do
     it 'makes .warn raise' do
       expect {
         described_class.with_raised_warnings { Warning.warn('foo') }
-      }.to raise_error(RaisedWarning)
+      }.to raise_error(Warning::RaisedWarning)
     end
 
     it 'only affects calls to .warn within the block' do

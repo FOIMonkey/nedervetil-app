@@ -1,4 +1,6 @@
 module AlaveteliFeatures
+  # Mixed into views, controllers, mailers and models to check whether a
+  # Flipper feature is enabled and to enable or disable features per actor.
   module Helpers
     def feature_enabled?(feature, *args)
       AlaveteliFeatures.backend.enabled?(feature, *args)

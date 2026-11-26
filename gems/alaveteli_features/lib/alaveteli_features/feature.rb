@@ -16,9 +16,10 @@ module AlaveteliFeatures
       attr_reader :actor
 
       def with_actor(actor)
-        @actor = actor
-        each { |feature| feature.with_actor(actor) }
-        self
+        copy = Collection.new(klass)
+        copy.instance_variable_set(:@actor, actor)
+        copy.all.concat(map { |feature| feature.with_actor(actor) })
+        copy
       end
 
       def enabled?(key)
@@ -81,8 +82,10 @@ module AlaveteliFeatures
     end
 
     def with_actor(actor)
-      @actor = actor
-      self
+      copy = dup
+      copy.instance_variable_set(:@actor, actor)
+      copy.roles = roles.dup
+      copy
     end
 
     def roles?
