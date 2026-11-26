@@ -102,11 +102,8 @@ FactoryBot.define do
     end
 
     trait :enable_totp do
-      after(:build) do |user|
-        user.otp_regenerate_secret
-        user.otp_counter = nil
-        user.otp_enabled = true
-      end
+      otp_secret { User.generate_otp_secret }
+      otp_required_for_login { true }
     end
 
     trait :unconfirmed do

@@ -1,0 +1,4 @@
+<div data-controller="signin-success" data-signin-success-return-value="<%= @continue_path %>">
+  <p><%= _('You are signed in.') %></p>
+  <%= link_to _('Continue'), @continue_path, target: '_top', data: { action: 'signin-success#continue' } %>
+</div>

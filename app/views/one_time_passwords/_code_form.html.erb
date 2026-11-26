@@ -1,8 +1,9 @@
-<%# locals: (model:, form_url:, form_method: :post, submit_label: _('Verify')) %>
+<%# locals: (model:, form_url:, form_method: :post, submit_label: _('Verify'), full_load: false) %>
 <%= form_with model: model,
               url: form_url,
               method: form_method,
-              local: true do |f| %>
+              local: true,
+              data: ({ turbo: false } if full_load) do |f| %>
   <p>
     <%= f.label :otp_code,
                 _('Code from your authenticator app'),

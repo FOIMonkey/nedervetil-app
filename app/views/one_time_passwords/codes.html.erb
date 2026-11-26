@@ -1,0 +1,5 @@
+<% @title = _('Save your recovery codes') %>
+<%= page_band %>
+<p><%= _('These codes are shown once. Store them safely. Each code works once, together with your password.') %></p>
+<%= render 'one_time_passwords/backup_codes', codes: @codes %>
+<p><%= link_to _('Continue'), @continue_path, target: '_top' %></p>

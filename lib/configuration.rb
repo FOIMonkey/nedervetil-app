@@ -19,7 +19,7 @@ module AlaveteliConfiguration
   # Ensure any sensitive values match this pattern, or add to the pattern if
   # adding a new value that doesn't fit.
   mattr_accessor :sensitive_key_patterns,
-                 default: /SECRET|PASSWORD|LICENSE_KEY/
+                 default: /SECRET|PASSWORD|LICENSE_KEY|TOKEN|_KEY\z/
 
   unless const_defined?(:DEFAULTS)
 
@@ -130,6 +130,8 @@ module AlaveteliConfiguration
       THEME_BRANCH: false,
       THEME_URL: '',
       THEME_URLS: [],
+      TURNSTILE_SECRET_KEY: '',
+      TURNSTILE_SITE_KEY: '',
       TIME_ZONE: 'UTC',
       TRACK_SENDER_EMAIL: 'contact@localhost',
       TRACK_SENDER_NAME: 'Alaveteli',

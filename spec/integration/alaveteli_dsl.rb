@@ -107,19 +107,18 @@ end
 
 def login(user, **params)
   u = user.is_a?(User) ? user : users(user)
+  if u.totp?
+    # Arrange a fresh fixture proof; replay is tested by dedicated flows.
+    u.update_columns(consumed_timestep: nil)
+    code = u.current_otp
+  end
   alaveteli_session(u.id) do
     visit signin_path(**params)
     within '#signin_form' do
       fill_in "user_signin_email", with: u.email
       fill_in "user_signin_password", with: "jonespassword"
-      find("input[name='commit']", visible: true).click
-    end
-
-    # TOTP users are gated by the sign-in two factor challenge
-    if u.totp?
-      fill_in 'Code from your authenticator app',
-              with: u.otp_code
-      click_button 'Verify'
+      fill_in 'user_signin_otp_attempt', with: code if code
+      click_button(name: 'commit', visible: :visible)
     end
   end
   u.id
@@ -135,7 +134,7 @@ end
 
 def confirm(user)
   u = users(user)
-  u.email_confirmed = true
+  u.skip_confirmation!
   u.save!
 end
 

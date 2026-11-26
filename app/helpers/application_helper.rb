@@ -8,6 +8,66 @@
 require 'languages'
 
 module ApplicationHelper
+  def turnstile_box(action)
+    return unless Turnstile.configured?
+
+    load_in_full!
+    widget = tag.div(class: 'cf-turnstile',
+                     data: { sitekey: Turnstile.site_key, action: action })
+    script = javascript_include_tag(Turnstile::SCRIPT_URL,
+                                    async: true, defer: true, nonce: true)
+    widget + script
+  end
+
+  def page_flashes
+    @page_flashes ||= render('general/flashes')
+  end
+
+  # Places flashes directly below a page's band so the layout omits its top
+  # notice (#band_notice_placed?) and avoids splitting band from masthead.
+  def band_notice
+    return if band_notice_placed? || no_page_flashes?
+
+    @band_notice_placed = true
+    tag.div(page_flashes, class: 'band-flash',
+                          data: { controller: 'flash-focus', uncached: true })
+  end
+
+  def band_notice_placed?
+    @band_notice_placed == true
+  end
+
+  # Strip Rails development template comments so an empty flash box does not
+  # cancel the page band's bottom margin.
+  def no_page_flashes?
+    page_flashes.to_str.gsub(/<!--.*?-->/m, '').blank?
+  end
+
+  def in_sign_in_dialog?
+    controller.respond_to?(:in_sign_in_dialog?, true) &&
+      controller.send(:in_sign_in_dialog?)
+  end
+
+  # Standard page-band header plus band_notice. Sign-in dialogs (no_chrome)
+  # have no masthead and render flashes themselves; admin layouts do too.
+  def page_band(title = @title, back: nil)
+    return tag.h1(title) if in_sign_in_dialog?
+
+    content_for :body_class, ' band-view '
+    header = tag.header(class: 'page-band') do
+      safe_join([
+                  (tag.p(back, class: 'page-band__back') if back),
+                  tag.h1(title, class: 'page-band__title')
+                ])
+    end
+    return header if controller.is_a?(AdminController)
+
+    safe_join([header, band_notice])
+  end
+
+  def back_to_account
+    link_to _('Account'), show_user_path(url_name: current_user.url_name)
+  end
   # URL generating functions are needed by all controllers (for redirects),
   # views (for links) and mailers (for use in emails), so include them into
   # all of all.

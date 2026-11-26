@@ -291,15 +291,13 @@ module LinkToHelper
   end
 
   def current_path_without_locale
-    unsafe_keys = %w[protocol host locale]
-    sanitized_params = params.reject { |k| unsafe_keys.include?(k) }.permit!
-    url_for(sanitized_params.merge(only_path: true))
+    path_with_query(safe_request_path,
+                    request.query_parameters.except('locale'))
   end
 
   def current_path_with_locale(locale)
-    unsafe_keys = %w[protocol host]
-    sanitized_params = params.reject { |k| unsafe_keys.include?(k) }.permit!
-    url_for(sanitized_params.merge(locale: locale, only_path: true))
+    path_with_query(safe_request_path,
+                    request.query_parameters.merge('locale' => locale))
   end
 
   def current_path_as_json
@@ -314,6 +312,15 @@ module LinkToHelper
   end
 
   private
+
+  def safe_request_path
+    "/#{request.path_info.to_s.sub(%r{\A[/\\]+}, '')}"
+  end
+
+  def path_with_query(path, query)
+    encoded = query.to_query
+    encoded.empty? ? path : "#{path}?#{encoded}"
+  end
 
   # Private: Generate a request_url linking to the new correspondence
   def message_url(message, options = {})

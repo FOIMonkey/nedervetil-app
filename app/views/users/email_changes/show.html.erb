@@ -1,0 +1,9 @@
+<% @title = _('Confirm your new email address') %>
+<%= page_band %>
+<p><%= _('Change your email address to {{address}}?', address: @email_change.new_email) %></p>
+<%= form_tag confirm_email_change_path(email_token: params[:email_token]), data: { turbo: false } do %>
+  <%= render 'credentials' %>
+  <div class="form_button">
+    <%= submit_tag _('Change email address') %>
+  </div>
+<% end %>

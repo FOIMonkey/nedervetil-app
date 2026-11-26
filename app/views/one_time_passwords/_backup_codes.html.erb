@@ -26,10 +26,12 @@
                    type: 'button',
                    class: 'button',
                    data: {
-                     'clipboard-text': codes.join("\n"),
-                     'clipboard-success': _('Copied!')
+                     controller: 'clipboard',
+                     action: 'clipboard#copy',
+                     clipboard_text_value: codes.join("\n"),
+                     clipboard_success_value: _('Copied!')
                    } %>
 
-    <%= link_to _('Print codes'), '#', data: { print: true } %>
+    <%= link_to _('Print codes'), '#', data: { controller: 'print', action: 'print#print' } %>
   </div>
 </div>

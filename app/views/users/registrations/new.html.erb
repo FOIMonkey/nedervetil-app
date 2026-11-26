@@ -1,0 +1,10 @@
+<% @title = _('Create an account') %>
+<%= page_band %>
+<div class="sign-page">
+  <%= render 'user/saved_request_notice', carry_on: _('Create an account to carry on with it.') %>
+  <%= render 'user/signup' %>
+  <p class="sign-page__other">
+    <%= _('Already have an account?') %>
+    <%= link_to _('Sign in'), signin_path(sign_page_params) %>
+  </p>
+</div>

@@ -43,8 +43,19 @@ Rails.application.config.after_initialize do
     Time.zone.at(last_changed)
   end
 
+  # The person check fails closed outside development and test, so without
+  # its keys every form it protects refuses (Turnstile).
+  person_check_configured = HealthChecks::Checks::ConditionCheck.new(
+    failure_message: _('The person check (Turnstile) has no keys, so the ' \
+                       'forms it protects refuse everyone'),
+    success_message: _('The person check (Turnstile) has its keys')
+  ) do
+    Rails.env.local? || Turnstile.configured?
+  end
+
   HealthChecks.add user_last_created
   HealthChecks.add incoming_message_last_created
   HealthChecks.add outgoing_message_last_created
   HealthChecks.add xapian_queue_check
+  HealthChecks.add person_check_configured
 end

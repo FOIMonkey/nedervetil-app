@@ -1,0 +1,29 @@
+<% @title = _('Confirm your email address') %>
+<%= page_band %>
+<p>
+  <%= _('Choose a password to confirm your account, then sign in to continue.') %>
+  <% if @request_saved %>
+    <%= _('Your request is saved and has not been sent.') %>
+  <% end %>
+</p>
+<%= foi_error_messages_for :confirmation %>
+<%= form_tag confirm_path(email_token: params[:email_token]), data: { turbo: false } do %>
+  <%= hidden_field_tag :draft_claim, params[:draft_claim] %>
+  <%# Not sent: tells a password manager which account the password is for. %>
+  <%# On the div: the themes style inputs, which overrides hidden on one. %>
+  <div hidden><%= tag.input type: 'email', value: @confirmation.email, autocomplete: 'username', readonly: true %></div>
+  <p>
+    <%= label_tag 'confirm_user_password', _('Password'), class: 'form_label' %>
+    <%= password_field_tag 'confirm_user[password]', nil, required: true, autocomplete: 'new-password' %>
+  </p>
+  <div class="form_item_note">
+    <%= _('12 characters minimum. 72 characters maximum.') %>
+  </div>
+  <p>
+    <%= label_tag 'confirm_user_password_confirmation', _('Confirm password'), class: 'form_label' %>
+    <%= password_field_tag 'confirm_user[password_confirmation]', nil, required: true, autocomplete: 'new-password' %>
+  </p>
+  <div class="form_button">
+    <%= submit_tag _('Confirm email') %>
+  </div>
+<% end %>

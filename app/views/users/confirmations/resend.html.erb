@@ -1,0 +1,11 @@
+<% @title = _('Resend confirmation email') %>
+<%= page_band %>
+<%= form_tag user_confirmation_path, data: { turbo: false } do %>
+  <p>
+    <%= label_tag 'user_email', _('Email address'), class: 'form_label' %>
+    <%= email_field_tag 'user[email]', nil, required: true, autocomplete: 'email' %>
+  </p>
+  <div class="form_button">
+    <%= submit_tag _('Send confirmation') %>
+  </div>
+<% end %>

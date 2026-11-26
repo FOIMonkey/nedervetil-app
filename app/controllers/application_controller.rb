@@ -17,15 +17,31 @@ class ApplicationController < ActionController::Base
   before_action :redirect_gettext_locale, :collect_locales
 
   protect_from_forgery if: :authenticated?, with: :exception
-  skip_before_action :verify_authenticity_token, unless: :authenticated?
+  before_action :verify_signed_out_origin, unless: :authenticated?
+
+  # assign our own handler method for non-local exceptions
+  rescue_from Exception, with: :render_exception
 
   # Deal with access denied errors from CanCan
   rescue_from CanCan::AccessDenied do |_exception|
     raise PermissionDenied
   end
 
-  # assign our own handler method for non-local exceptions
-  rescue_from Exception, with: :render_exception
+  # Missing CSRF token or cross-origin POST: plain refusal, no error report.
+  rescue_from ActionController::InvalidAuthenticityToken do
+    render_form_refused(:unprocessable_content)
+  end
+
+  # Controllers omit `with:` on rate_limit so every 429 renders a friendly page.
+  rescue_from ActionController::TooManyRequests do
+    respond_to do |format|
+      format.html do
+        render template: 'general/too_many_attempts',
+               status: :too_many_requests
+      end
+      format.any { head :too_many_requests }
+    end
+  end
 
   # Standard headers, footers and navigation for whole site
   layout "default"
@@ -35,15 +51,12 @@ class ApplicationController < ActionController::Base
   include ReadOnly
   include RobotsHeaders
   include TurboDrive
+  include SigningIn
 
   # NOTE: a filter stops the chain if it redirects or renders something
   before_action :html_response
   before_action :authentication_check
-  before_action :check_in_post_redirect
-  before_action :session_remember_me
   before_action :set_vary_header
-  before_action :validate_session_timestamp
-  after_action  :persist_session_timestamp
 
   add_flash_types :error
 
@@ -132,80 +145,6 @@ class ApplicationController < ActionController::Base
     end
   end
 
-  # Set cookie expiry according to "remember me" checkbox, as per "An easier
-  # and more flexible hack" on this page:
-  #   http://wiki.rubyonrails.org/rails/pages/HowtoChangeSessionOptions
-  def session_remember_me
-    # Reset the "sliding window" session expiry time.
-    if request.env['rack.session.options']
-      if session[:remember_me]
-        request.env['rack.session.options'][:expire_after] = 1.month
-      else
-        request.env['rack.session.options'][:expire_after] = nil
-      end
-    end
-  end
-
-  # Set a TTL for non "remember me" sessions so that the cookie
-  # is not replayable forever
-  SESSION_TTL = 3.hours
-  def validate_session_timestamp
-    if session[:user_id] && session[:ttl] && session[:ttl] < SESSION_TTL.ago
-      clear_session_credentials
-    end
-  end
-
-  def persist_session_timestamp
-    session[:ttl] = Time.zone.now if authenticated? && !session[:remember_me]
-  end
-
-  def sign_in(user, remember_me: nil)
-    remember_me ||= session[:remember_me]
-    clear_session_credentials
-    session[:user_id] = user.id
-    session[:user_login_token] = user.login_token
-    session[:remember_me] = remember_me
-    user.record_sign_in(
-      ip: user_ip, country: country_from_ip, user_agent: request.user_agent
-    )
-  end
-
-  # Establish the session and send the user on to where they were heading.
-  # `circumstance` is re-set after sign_in because sign_in clears it (see
-  # clear_session_credentials). A sign-in resumed after a 2FA challenge, e.g.
-  # change_email confirmation, still needs it downstream.
-  def complete_sign_in(user, post_redirect:, remember_me:, circumstance: nil)
-    sign_in(user, remember_me: remember_me)
-    session[:user_circumstance] = circumstance if circumstance
-
-    if modal_dialog?
-      render template: 'users/sessions/show'
-    elsif post_redirect
-      do_post_redirect(post_redirect, user)
-    else
-      redirect_to frontpage_path
-    end
-  end
-
-  def modal_dialog?
-    params[:modal].to_i != 0
-  end
-
-  # Logout form
-  def clear_session_credentials
-    session[:admin_id] = nil
-    session[:user_id] = nil
-    session[:user_login_token] = nil
-    session[:user_circumstance] = nil
-    session[:remember_me] = false
-    session[:using_admin] = nil
-    session[:admin_name] = nil
-    session[:change_password_post_redirect_id] = nil
-    session[:post_redirect_token] = nil
-    session[:ttl] = nil
-    PendingTwoFactorSignIn.new(session).clear
-  end
-
   def render_exception(exception)
     # In development let Rails handle the exception with its stack trace
     # templates.
@@ -264,115 +203,19 @@ class ApplicationController < ActionController::Base
 
   private
 
-  # Override the Rails method to only set the CSRF form token if there is a
-  # logged in user
-  def form_authenticity_token(**args)
-    super if authenticated?
-  end
-
-  # Check the user is logged in
-  def authenticated?(as: nil)
-    if as
-      authenticated_user == as
-    else
-      authenticated_user.present?
+  def render_form_refused(status)
+    respond_to do |format|
+      format.html { render template: 'general/form_refused', status: status }
+      format.any { head status }
     end
   end
 
-  def ask_to_login(as: nil, **reason_params)
-    if as
-      reason_params[:user_name] = as.name
-      reason_params[:user_url] = show_user_url(url_name: as.url_name)
-
-      if authenticated?
-        # They are already logged in, but as the wrong user
-        @reason_params = reason_params
-        render(template: 'user/wrong_user') && return
-      end
-    end
-
-    post_redirect = reason_params.delete(:post_redirect)
-    post_redirect ||= PostRedirect.new(uri: request.fullpath,
-                                       post_params: params,
-                                       reason_params: reason_params)
-    post_redirect.save!
-
-    # Make sure this redirect does not get cached - it only applies to this user
-    # HTTP 1.1
-    headers['Cache-Control'] = 'private, no-cache, no-store, max-age=0, must-revalidate'
-    # HTTP 1.0
-    headers['Pragma'] = 'no-cache'
-    # Proxies
-    headers['Expires'] = '0'
-
-    # 'modal' controls whether the sign-in form will be displayed in the typical
-    # full-blown page or on its own, useful for pop-ups
-    redirect_to signin_url(token: post_redirect.token, modal: params[:modal])
-
-    false
-  end
-
-  # Return logged in user
-  def authenticated_user
-    return unless session[:user_id]
-    @user ||= User.authenticate_from_session(session)
-  end
-
-  # For CanCanCan and other libs which need a Devise-like current_user method
-  alias current_user authenticated_user
-  helper_method :current_user
-
-  # Do a POST redirect. This is a nasty hack - we store the posted values in
-  # the session, and when the GET redirect with "?post_redirect=1" happens,
-  # load them in.
-  def do_post_redirect(post_redirect, user=nil)
-    uri = SafeRedirect.new(post_redirect.uri).path
-    if feature_enabled?(:alaveteli_pro) &&
-       user &&
-       user.is_pro? &&
-       session[:admin_confirmation] != 1
-      uri = override_post_redirect_for_pro(uri,
-                                           post_redirect,
-                                           user)
-    end
-    session[:post_redirect_token] = post_redirect.token
-    uri = add_post_redirect_param_to_uri(uri)
-    session.delete(:admin_confirmation)
-    redirect_to uri
-  end
-
-  def add_post_redirect_param_to_uri(uri)
-    add_query_params_to_url(uri, post_redirect: 1)
-  end
-
-  # If we are in a faked redirect to POST request, then set post params.
-  def check_in_post_redirect
-    if params[:post_redirect]
-      if session[:post_redirect_token]
-        post_redirect =
-          PostRedirect.find_by_token(session[:post_redirect_token])
-        if post_redirect
-          post_redirect_params =
-            params_to_unsafe_hash(post_redirect.post_params)
-          params.merge!(post_redirect_params)
-          params[:post_redirect_user] = post_redirect.user
-        end
-      else
-        logger.warn "Missing post redirect token. " \
-                    "Session: #{session.to_hash} " \
-                    "IP: #{user_ip} " \
-                    "Params: #{params}"
-      end
-    end
+  def failed_submit_status
+    request.get? || request.head? ? :ok : :unprocessable_content
   end
 
   def html_response
     respond_to :html
-  end
-
-  # Default layout shows user in corner, so needs access to it
-  def authentication_check
-    @user ||= authenticated_user
   end
 
   # Convert URL name for sort by order, to Xapian query

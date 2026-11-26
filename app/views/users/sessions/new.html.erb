@@ -1,0 +1,15 @@
+<% @title = _('Sign in') %>
+<%= page_band %>
+<div class="sign-page">
+  <%= render 'user/saved_request_notice', carry_on: _('Sign in to carry on with it.') %>
+  <%= render 'user/signin' %>
+  <p class="sign-page__other">
+    <% if ReadOnly.feature?(:signups) %>
+      <%= _('Sign-ups for new accounts are closed.') %>
+    <% else %>
+      <%= _('New here?') %>
+      <%# data-turbo="false": the sign-up page can show the person check, which loads in full (doc/FORK.md). %>
+      <%= link_to _('Create an account'), signup_path(sign_page_params), data: { turbo: false } %>
+    <% end %>
+  </p>
+</div>

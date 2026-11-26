@@ -1,0 +1,22 @@
+<% @title = _('Choose a new password') %>
+<%= page_band %>
+<%= foi_error_messages_for :password_change_user %>
+<%= form_tag password_change_path(id: @reset_token), method: :patch, data: { turbo: false } do %>
+  <p>
+    <%= label_tag 'password_change_user_password', _('New password'), class: 'form_label' %>
+    <%= password_field_tag 'password_change_user[password]', nil, required: true, autocomplete: 'new-password' %>
+  </p>
+  <p>
+    <%= label_tag 'password_change_user_password_confirmation', _('Confirm password'), class: 'form_label' %>
+    <%= password_field_tag 'password_change_user[password_confirmation]', nil, required: true, autocomplete: 'new-password' %>
+  </p>
+  <% if @totp_required %>
+    <p>
+      <%= label_tag 'password_change_user_otp_attempt', _('Authenticator code or recovery code'), class: 'form_label' %>
+      <%= text_field_tag 'password_change_user[otp_attempt]', nil, required: true, autocomplete: 'one-time-code' %>
+    </p>
+  <% end %>
+  <div class="form_button">
+    <%= submit_tag _('Change password') %>
+  </div>
+<% end %>

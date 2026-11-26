@@ -9,9 +9,8 @@ class User
     def self.disable_by_token(token)
       id = verifier.verify(token)
       new(User.find(id)).disable
-    rescue ActiveSupport::MessageVerifier::InvalidSignature
-      false
-    rescue ActiveRecord::RecordNotFound
+    rescue ActiveSupport::MessageVerifier::InvalidSignature,
+           ActiveRecord::RecordNotFound
       false
     end
 

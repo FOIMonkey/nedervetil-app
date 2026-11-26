@@ -1,53 +1,50 @@
 require 'spec_helper'
 require 'integration/alaveteli_dsl'
 
-RSpec.describe 'managing two factor backup codes' do
-  before do
-    allow(AlaveteliConfiguration).
-      to receive(:enable_two_factor_auth).and_return(true)
-  end
-
+RSpec.describe 'managing recovery codes' do
   let(:user) { FactoryBot.create(:user, :enable_totp) }
 
-  it 'regenerates codes from the management page' do
-    user.otp_regenerate_backup_codes
-    user.save!
-
+  it 'generates replacement codes after password and second-factor step-up' do
     using_session(login(user)) do
-      # The sign-in challenge consumed the current TOTP code; move past its
-      # 30 second window so the confirmation code is fresh.
-      travel(31.seconds) do
-        visit one_time_password_path
-        click_link 'Manage backup codes'
-
-        expect(page).to have_content('Backup codes')
-
-        fill_in 'Code from your authenticator app',
-                with: user.otp_code
-        click_button 'Generate new backup codes'
-
-        expect(page).to have_content('New backup codes generated')
-        expect(page).to have_content('Save these codes somewhere safe')
-
-        new_codes = page.all('.backup-codes__list code').map(&:text)
-        expect(new_codes.size).to eq(12)
-      end
+      visit one_time_password_path
+      click_link 'Manage recovery codes'
+      fill_in 'Current password', with: 'jonespassword'
+      codes = user.generate_otp_backup_codes!
+      user.save!
+      fill_in 'Authenticator code or recovery code', with: codes.first
+      click_button 'Generate new recovery codes'
+      expect(page).to have_content('Save these codes somewhere safe')
+      expect(page.all('.backup-codes__list code').size).to eq(12)
     end
   end
 
-  it 'rejects regeneration with a wrong code' do
-    user.otp_regenerate_backup_codes
-    user.save!
+  it 'does not put submitted credentials into language links after regeneration' do
+    allow(AlaveteliLocalization).to receive(:available_locales).
+      and_return(%w[en cy])
 
     using_session(login(user)) do
+      codes = user.generate_otp_backup_codes!
+      user.save!
       visit one_time_password_backup_codes_path
+      fill_in 'Current password', with: 'jonespassword'
+      fill_in 'Authenticator code or recovery code', with: codes.first
+      click_button 'Generate new recovery codes'
 
-      valid_code = user.otp_code
-      wrong_code = valid_code == '000000' ? '000001' : '000000'
-      fill_in 'Code from your authenticator app', with: wrong_code
-      click_button 'Generate new backup codes'
+      expect(page).to have_css('#user_locale_switcher a')
+      links = page.all('#user_locale_switcher a').map { |link| link[:href] }
+      expect(links.join).not_to include('jonespassword', codes.first)
+    end
+  end
 
-      expect(page).to have_content('Invalid one time password')
+  it 'rejects an incorrect second factor without replacing any codes' do
+    using_session(login(user)) do
+      original = user.reload.otp_backup_codes
+      visit one_time_password_backup_codes_path
+      fill_in 'Current password', with: 'jonespassword'
+      fill_in 'Authenticator code or recovery code', with: 'invalid'
+      click_button 'Generate new recovery codes'
+      expect(page.status_code).to eq(422)
+      expect(user.reload.otp_backup_codes).to eq(original)
     end
   end
 end

@@ -1,4 +1,7 @@
 class UserSpamScorer
+  def self.for_accounts
+    new
+  end
   DEFAULT_SCORE_MAPPINGS = {
     name_is_all_lowercase?: 1,
     name_is_one_word?: 1,

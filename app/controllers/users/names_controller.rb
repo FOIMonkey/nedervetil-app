@@ -9,7 +9,7 @@ class Users::NamesController < ApplicationController
       flash[:notice] = _('Name successfully updated.')
       redirect_to user_url(@edit_user)
     else
-      render action: 'edit'
+      render action: 'edit', status: :unprocessable_content
     end
   end
 
@@ -26,11 +26,13 @@ class Users::NamesController < ApplicationController
                 error: _('You need to be logged in to change your name')
   end
 
+  # A suspended account can't open its own account page, so it is told here,
+  # as it is when it tries to send.
   def check_user_suspension
     return unless current_user.suspended?
 
-    redirect_to edit_profile_about_me_path,
-                error: _('Suspended users cannot edit their profile')
+    @details = current_user.can_fail_html
+    render template: 'user/banned', status: failed_submit_status
   end
 
   def load_user

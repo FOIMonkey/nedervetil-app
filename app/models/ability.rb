@@ -40,6 +40,9 @@ class Ability
     @project = project
     @public_token = public_token
 
+    # Creating requests (full PrivateArchive/Ability rules land in B03 PR 2)
+    can :create, InfoRequest if user&.active?
+
     # Updating request status
     can :update_request_state, InfoRequest do |request|
       can_update_request_state?(request)

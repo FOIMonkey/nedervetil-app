@@ -15,11 +15,7 @@ end
 
 class AdminConstraint # :nodoc:
   def matches?(request)
-    user = User.find_by(
-      id: request.session[:user_id],
-      login_token: request.session[:user_login_token]
-    )
-    user && user.is_admin?
+    Authentication::Session.admin?(request)
   end
 end
 
@@ -30,6 +26,7 @@ class PreviewConstraint # :nodoc:
 end
 
 Rails.application.routes.draw do
+  devise_for :users, skip: :all
   draw :redirects
 
   mount Sidekiq::Web => '/sidekiq', constraints: AdminConstraint.new
@@ -272,42 +269,47 @@ Rails.application.routes.draw do
   # Use /profile for things to do with the currently signed in user.
   # Use /user/XXXX for things that anyone can see about that user.
   # Note that /profile isn't indexed by search (see robots.txt)
-  resources :password_changes,
-            :only => [:new, :create, :edit, :update],
-            :path => '/profile/change_password',
-            :path_names => { :edit => '' }
+  devise_scope :user do
+    # Devise failure/timeout helpers point to the existing public URLs.
+    get '/profile/sign_in', to: 'users/sessions#new', as: :new_user_session
+    get '/profile/change_password', to: 'users/passwords#new',
+                                    as: :new_user_password
+    get '/profile/sign_in', to: 'users/sessions#new', as: :signin
+    post '/profile/sign_in', to: 'users/sessions#create', as: :create_session
+    get '/profile/sign_out', to: 'users/sessions#confirm_destroy', as: :signout
+    match '/profile/sign_out', to: 'users/sessions#destroy',
+                               via: [:post, :delete]
+    get '/profile/sign_up', to: 'users/registrations#new', as: :signup
+    post '/profile/sign_up', to: 'users/registrations#create'
+    get '/profile/change_password', to: 'users/passwords#new',
+                                    as: :new_password_change
+    post '/profile/change_password', to: 'users/passwords#create',
+                                     as: :password_changes
+    get '/profile/change_password/:id', to: 'users/passwords#edit',
+                                        as: :edit_password_change
+    match '/profile/change_password/:id', to: 'users/passwords#update',
+                                          via: [:patch, :put],
+                                          as: :password_change
+    get '/c/:email_token', to: 'users/confirmations#show', as: :confirm
+    post '/c/:email_token', to: 'users/confirmations#update'
+    get '/profile/confirmation', to: 'users/confirmations#new',
+                                 as: :new_user_confirmation
+    post '/profile/confirmation', to: 'users/confirmations#create',
+                                  as: :user_confirmation
+    get '/profile/sign_in/two_factor', to: redirect('/profile/sign_in'),
+                                       as: :signin_two_factor
+  end
 
-  resource :one_time_password,
-           :only => [:new, :show, :create, :update, :destroy],
-           :path => '/profile/two_factor'
-
+  resource :one_time_password, only: [:new, :show, :create, :destroy],
+                               path: '/profile/two_factor'
+  post '/profile/two_factor/start', to: 'one_time_passwords#start',
+                                    as: :start_one_time_password
   resource :one_time_password_backup_codes,
-           :only => [:show, :create],
-           :path => '/profile/two_factor/backup_codes',
-           :controller => 'one_time_passwords/backup_codes'
+           only: [:show, :create],
+           path: '/profile/two_factor/backup_codes',
+           controller: 'one_time_passwords/backup_codes'
 
-  match '/profile/sign_in' => 'users/sessions#new',
-        :as => :signin,
-        :via => :get
-  match '/profile/sign_in' => 'users/sessions#create',
-        :as => :create_session,
-        :via => :post
-  match '/profile/sign_out' => 'users/sessions#destroy',
-        :as => :signout,
-        :via => :get
-  match '/profile/sign_in/two_factor' => 'users/two_factor_challenges#new',
-        :as => :signin_two_factor,
-        :via => :get
-  match '/profile/sign_in/two_factor' => 'users/two_factor_challenges#create',
-        :via => :post
-  match '/profile/sign_up' => 'user#signup',
-        :as => :signup, :via => :post
-
-  match '/tor' => 'user#tor', via: :get
-
-  match '/c/:email_token' => 'users/confirmations#confirm',
-        :as => :confirm,
-        :via => :get
+  match '/tor', to: 'user#tor', via: :get
   match '/user/:url_name' => 'user#show',
         :as => :show_user,
         :via => :get
@@ -325,9 +327,17 @@ Rails.application.routes.draw do
   match '/user/contact/:url_name' => 'users/messages#contact',
         :as => :contact_user,
         :via => [:get, :post]
-  match '/profile/change_email' => 'user#signchangeemail',
+  match '/profile/change_email' => 'users/email_changes#new',
         :as => :signchangeemail,
-        :via => [:get, :post]
+        :via => :get
+  post '/profile/change_email', to: 'users/email_changes#create'
+  match '/profile/change_email/confirm/:email_token' =>
+          'users/email_changes#show',
+        :as => :confirm_email_change,
+        :via => :get
+  match '/profile/change_email/confirm/:email_token' =>
+          'users/email_changes#update',
+        :via => :post
   match '/profile/set_photo' => 'user#set_profile_photo',
         :as => :set_profile_photo,
         :via => [:get, :post]

@@ -1,4 +1,5 @@
-<h1><%= _('Email Alerts Disabled') %></h1>
+<% @title = _('Email Alerts Disabled') %>
+<%= page_band %>
 
 <p>
   <%= _('Email alerts for things you follow have now been disabled.') %>
@@ -6,9 +7,9 @@
 
 <% if current_user %>
   <p>
-    <%= _('<a href="{{wall_link}}">Visit your Wall</a> to get updates on ' \
+    <%= _('<a href="{{inbox_link}}">Visit your requests</a> to get updates on ' \
           'things you follow or re-enable email alerts.',
-          wall_link: show_user_wall_path(url_name: current_user.url_name)) %>
+          inbox_link: alaveteli_pro_info_requests_path) %>
   </p>
 <% else %>
   <p>

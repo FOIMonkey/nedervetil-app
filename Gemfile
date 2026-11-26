@@ -93,7 +93,8 @@ gem 'bootsnap', '~> 1.26.2', require: false
 # New gem releases aren't being done. master is newer and supports Rails > 3.0
 gem 'addressable', '~> 2.9.0'
 gem 'acts_as_versioned', mysociety: 'acts_as_versioned', ref: '13e928b'
-gem 'active_model_otp'
+gem 'devise', '~> 5.0.4'
+gem 'devise-two-factor', '~> 6.4.1'
 gem 'activejob-unique', '~> 0.5.0'
 gem 'bcrypt', '~> 3.1.22'
 gem 'cancancan', '~> 3.7.0'

@@ -30,6 +30,10 @@ Rails.application.configure do
   config.consider_all_requests_local = true
   config.cache_store = :null_store
 
+  # Rate limiting reads and writes through the controller cache store.
+  config.action_controller.cache_store = :memory_store
+  config.action_controller.perform_caching = false
+
   # Rate limiting reads and writes through the controller cache store, so give
   # it a real in-memory store rather than the :null_store used for Rails.cache.
   # Keep fragment/view caching switched off so rendered output is never reused

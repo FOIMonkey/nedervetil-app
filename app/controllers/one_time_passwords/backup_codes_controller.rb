@@ -1,53 +1,43 @@
-# View and regenerate two factor backup codes
+# Replace recovery codes only after a fresh password and second factor.
 class OneTimePasswords::BackupCodesController < ApplicationController
-  include OtpRateLimit
-
-  before_action :check_two_factor_config, :authenticate, :require_totp
-
-  limit_otp_attempts only: :create, by: -> { @user.id }, template: :show
+  include AuthenticationPages
+  before_action :require_account
+  rate_limit to: 5, within: 5.minutes, only: :create, name: 'backup-codes'
+  rate_limit to: 5, within: 5.minutes, only: :create, name: 'backup-account',
+             by: -> { current_user.id }
 
   def show
   end
 
   def create
-    unless @user.authenticate_otp(params[:otp_code].to_s)
-      flash.now[:error] = _('Invalid one time password')
-      return render :show
+    @codes = current_user.with_lock do
+      unless current_user.valid_password?(params[:password].to_s) &&
+             current_user.verify_second_factor!(params[:otp_code])
+        next
+      end
+
+      codes = current_user.generate_otp_backup_codes!
+      current_user.update!(otp_backup_codes_generated_at: Time.current,
+                           authentication_version: SecureRandom.uuid)
+      codes
+    end
+    unless @codes
+      flash.now[:error] = _('The password or code was not recognised.')
+      return render :show, status: :unprocessable_content
     end
 
-    codes = @user.otp_regenerate_backup_codes
-
-    if @user.save
-      flash[:backup_codes] = codes
-      redirect_to one_time_password_backup_codes_path,
-                  notice: _('New backup codes generated')
-    else
-      flash.now[:error] = _('Backup codes could not be regenerated')
-      render :show
-    end
+    Authentication::Session.establish(request, current_user, two_factor: true)
+    @continue_path = one_time_password_path
+    render 'one_time_passwords/codes'
   end
 
   private
 
-  def check_two_factor_config
-    return if AlaveteliConfiguration.enable_two_factor_auth
-
-    raise ActiveRecord::RecordNotFound, 'Page not enabled'
-  end
-
-  def authenticate
-    authenticated? || ask_to_login(
-      web: _('To manage your two factor backup codes'),
-      email: _('To manage your two factor backup codes'),
-      email_subject: _('To manage your two factor backup codes')
-    )
-  end
-
-  # Backup codes only exist for TOTP users. HOTP and no-2FA users manage
-  # their setup from the two factor settings page.
-  def require_totp
-    return if @user&.totp?
-
-    redirect_to one_time_password_path
+  def require_account
+    return ask_to_login unless current_user
+    unless current_user.active? && current_user.totp? &&
+           AlaveteliConfiguration.enable_two_factor_auth
+      raise ActiveRecord::RecordNotFound
+    end
   end
 end

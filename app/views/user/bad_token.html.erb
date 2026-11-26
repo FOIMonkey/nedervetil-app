@@ -1,7 +1,10 @@
-<h1>
+<% @title = _('Check the link in your email') %>
+<%= page_band %>
+
+<p>
 <%= _('Please check the URL (i.e. the long code of letters and numbers) is ' \
       'copied correctly from your email.') %>
-</h1>
+</p>
 
 <p>
 <%= _("If you can't click on it in the email, you'll have to <strong>select " \
@@ -11,10 +14,10 @@
 </p>
 
 <p>
-<%= _("If you got the email <strong>more than two months ago</strong> or " \
-      "<strong>updated your user profile</strong>, then this login link " \
-      "won't work any more. Please try doing what you were doing from the " \
-      "beginning.") %>
+<%= _("A link works <strong>once</strong>, for <strong>a day</strong> " \
+      "(an hour for a password reset), and stops working if you " \
+      "<strong>change your email address or password</strong>. If it has " \
+      "stopped, please start again from the beginning.") %>
 </p>
 
 

@@ -1,0 +1,12 @@
+<% @title = _('Change your email address') %>
+<%= page_band back: back_to_account %>
+<%= form_tag signchangeemail_path, data: { turbo: false } do %>
+  <p>
+    <%= label_tag 'signchangeemail_new_email', _('New email address'), class: 'form_label' %>
+    <%= email_field_tag 'signchangeemail[new_email]', @new_email, required: true, autocomplete: 'email' %>
+  </p>
+  <%= render 'credentials' %>
+  <div class="form_button">
+    <%= submit_tag _('Send confirmation') %>
+  </div>
+<% end %>

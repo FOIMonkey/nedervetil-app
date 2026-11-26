@@ -1,87 +1,130 @@
-require 'bcrypt'
-require 'digest/sha1'
-
+# Devise-backed authentication, two-factor enforcement and session revocation
+# for User. Legacy password/OTP columns are never used for authentication.
 module User::Authentication
   extend ActiveSupport::Concern
 
   included do
-    attr_reader :password
-    attr_accessor :password_confirmation
+    attr_accessor :draft_claim_for_confirmation
 
-    scope :sha1, -> {
-      where("users.salt IS NOT NULL AND users.hashed_password NOT LIKE '$2a$%'")
+    devise :two_factor_authenticatable, :two_factor_backupable,
+           :recoverable, :confirmable, :registerable, :validatable,
+           :timeoutable,
+           otp_number_of_backup_codes: 12, otp_backup_code_length: 16
+
+    prepend Policy
+
+    alias_attribute :otp_backup_codes, :devise_otp_backup_codes
+    scope :without_two_factor, -> {
+      where(otp_required_for_login: false).or(where(otp_secret: nil))
     }
+    scope :with_totp, -> {
+      where(otp_required_for_login: true).where.not(otp_secret: nil)
+    }
+    before_validation :initialize_authentication_version, on: :create
+    before_save :rotate_authentication_version
+    after_save :synchronize_confirmation_fact
+  end
 
-    validate do |user|
-      if user.hashed_password.blank?
-        user.errors.add(:password, _('Please enter a password'))
+  # Prepended over Devise's included modules so site policy takes precedence.
+  module Policy
+    def active_for_authentication?
+      super && !closed? && !credential_reset_required? &&
+        (!(is_admin? || requires_two_factor_enrolment?) ||
+          AlaveteliConfiguration.enable_two_factor_auth)
+    end
+
+    # Unenrolled admins must fail normal Warden strategies and use enrolment.
+    def otp_required_for_login
+      self[:otp_required_for_login] || is_admin?
+    end
+
+    def requires_two_factor_enrolment?
+      otp_required_for_login && !totp?
+    end
+
+    def authenticatable_salt
+      "#{super}:#{authentication_version}"
+    end
+
+    def credential_state
+      Digest::SHA256.hexdigest("#{id}:#{email}:#{encrypted_password}:#{authentication_version}")
+    end
+
+    def revoke_authentication!
+      update!(authentication_version: SecureRandom.uuid)
+    end
+
+    # Serialize consumption across requests, including independent Warden
+    # strategies. A stale instance must reload before comparing/consuming.
+    def validate_and_consume_otp!(code, options = {})
+      with_lock { super(code, options) }
+    end
+
+    def invalidate_otp_backup_code!(code)
+      return false if code.blank?
+
+      with_lock { super(code) }
+    end
+
+    def verify_second_factor!(code)
+      return false unless totp?
+
+      validate_and_consume_otp!(code.to_s) ||
+        invalidate_otp_backup_code!(code.to_s)
+    end
+
+    def totp?
+      self[:otp_required_for_login] && otp_secret.present?
+    end
+
+    def otp_enabled?
+      totp?
+    end
+
+    # Re-sends confirmation under a row lock so the link goes to the current
+    # address and races against confirmation or closure send nothing. Runs
+    # an optional block under the same lock before mailing.
+    def send_confirmation_while_pending
+      with_lock do
+        next false if confirmed? || closed?
+
+        yield if block_given?
+        send_confirmation_instructions
+        true
       end
     end
 
-    validates :password, length: {
-      minimum: 12,
-      allow_blank: true,
-      message: _('Password is too short (minimum is 12 characters)')
-    }
-    validates :password, length: {
-      maximum: 72,
-      allow_blank: true,
-      message: _('Password is too long (maximum is 72 characters)')
-    }
-    validates :password, confirmation: {
-      allow_blank: true,
-      message: _('Please enter the same password twice')
-    }
-  end
+    private
 
-  module ClassMethods
-    def sha1_password(password, salt)
-      string_to_hash = password + salt.to_s
-      Digest::SHA1.hexdigest(string_to_hash)
-    end
-  end
-
-  def password=(pwd)
-    if pwd.blank?
-      self.hashed_password = nil
-    else
-      @password = pwd
-      self.hashed_password = BCrypt::Password.create(password)
-    end
-  end
-
-  def has_this_password?(password)
-    begin
-      # check if bcrypt hashed_password matches password
-      bcrypt_password = BCrypt::Password.new(hashed_password)
-      return true if bcrypt_password == password
-    rescue BCrypt::Errors::InvalidHash
+    def initialize_authentication_version
+      if authentication_version.blank?
+        self.authentication_version = SecureRandom.uuid
+      end
+      # Factory/operator creation may explicitly carry the existing confirmation
+      # fact; public registration never permits this attribute.
+      self.confirmed_at ||= Time.current if email_confirmed?
     end
 
-    sha1_password = User.sha1_password(password, salt)
-    if bcrypt_password == sha1_password # password been rehashed
-      attempt_password_upgrade(password)
-      true
-
-    elsif hashed_password == sha1_password # password not rehashed
-      attempt_password_upgrade(password)
-      true
-
-    else # password invalid
-      false
+    def rotate_authentication_version
+      credentials = %w[email encrypted_password otp_secret
+                       otp_required_for_login closed_at]
+      changed = credentials.any? { |key| will_save_change_to_attribute?(key) }
+      if persisted? && changed
+        self.authentication_version = SecureRandom.uuid
+        unless will_save_change_to_encrypted_password?
+          self.reset_password_token = nil
+        end
+        self.confirmation_token = nil if will_save_change_to_email?
+      end
+      if encrypted_password.present? && will_save_change_to_encrypted_password?
+        self.credential_reset_required = false
+      end
     end
-  end
 
-  private
+    def synchronize_confirmation_fact
+      return if email_confirmed? == confirmed?
 
-  def attempt_password_upgrade(password)
-    # don't upgrade if record has been modified as we're skipping validation
-    # below
-    return if changed?
-
-    self.password = password
-    self.salt = nil
-
-    save!(validate: false)
+      update_column(:email_confirmed, confirmed?)
+    end
   end
 end

@@ -73,10 +73,8 @@ module Alaveteli
     # Make Active Record use UTC-base instead of local time
     config.active_record.default_timezone = :utc
 
-    # otp_secret_key predates encryption, so an install holds plaintext secrets
-    # until its data migration encrypts them in place. Reading them has to keep
-    # working until that migration has run.
-    config.active_record.encryption.support_unencrypted_data = true
+    # Active Record Encryption uses the Rails default
+    # (support_unencrypted_data = false) so plaintext secrets fail closed.
 
     # Disable the IP spoofing warning. This is triggered by a conflict between
     # the CLIENT_IP and X_FORWARDED_FOR headers. If you're using the example

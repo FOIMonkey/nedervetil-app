@@ -1,0 +1,7 @@
+<%# Shown while a letter written signed out is waiting (SigningIn#ask_to_login keeps it). %>
+<% if PendingRequestDraft.for_browser(session) %>
+  <p id="sign_in_reason" class="sign_in_reason">
+    <%= _('Your request is saved and has not been sent.') %>
+    <%= carry_on %>
+  </p>
+<% end %>

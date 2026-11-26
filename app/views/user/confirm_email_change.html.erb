@@ -1,0 +1,15 @@
+<% @title = _("Confirm your new email address") %>
+
+<%= page_band %>
+
+<p>
+  <%= _('Change the email address for your account on {{site_name}} to ' \
+        '<strong>{{new_email}}</strong>?',
+        site_name: site_name, new_email: h(@new_email)) %>
+</p>
+
+<%# data-turbo="false": the change ends in a full redirect. %>
+<%= form_tag(confirm_email_change_path(email_token: params[:email_token]),
+             method: :post, data: { turbo: false }) do %>
+  <%= submit_tag _('Confirm new address') %>
+<% end %>

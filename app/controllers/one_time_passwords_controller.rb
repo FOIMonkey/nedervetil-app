@@ -1,128 +1,95 @@
-# app/controllers/one_time_passwords_controller.rb:
-# View and update User one time passwords
-#
-# Copyright (c) 2015 UK Citizens Online Democracy. All rights reserved.
-# Email: hello@mysociety.org; WWW: http://www.mysociety.org/
+# Password-bound enrolment, one-time code display and stepped-up removal.
 class OneTimePasswordsController < ApplicationController
-  include OtpRateLimit
-
-  before_action :check_two_factor_config, :authenticate
-  before_action :prevent_reenrolment, only: [:new, :create]
-  before_action :require_hotp, only: :update
-  before_action :require_pending_otp_secret, only: :create
-
-  limit_otp_attempts only: :destroy, by: -> { @user.id },
-                     if: -> { @user.totp? && !params[:otp_code].nil? },
-                     template: :destroy_confirmation
-
-  def new
-    session[:pending_otp_secret_key] ||= ROTP::Base32.random
-    @enrolment = OtpEnrolment.new(
-      user: @user, secret: session[:pending_otp_secret_key]
-    )
-  end
+  include AuthenticationPages
+  before_action :check_two_factor_config
+  rate_limit to: 5, within: 5.minutes, only: [:start, :create, :destroy],
+             name: 'otp-ip'
+  rate_limit to: 5, within: 5.minutes, only: [:start, :create, :destroy],
+             name: 'otp-account',
+             by: -> {
+               current_user&.id ||
+                 AuthenticationEnrolment.pending(session)&.user_id ||
+                 request.remote_ip
+             }
 
   def show
+    ask_to_login unless current_user
+  end
+
+  def new
+    @enrolment = AuthenticationEnrolment.pending(session)
+    return render(:new) if @enrolment
+    return ask_to_login unless current_user
+    return redirect_to(one_time_password_path) if current_user.totp?
+
+    render :start
+  end
+
+  def start
+    return ask_to_login unless current_user
+    return head(:forbidden) unless current_user.active? && !current_user.totp?
+
+    unless current_user.valid_password?(params[:password].to_s)
+      flash.now[:error] = _('That password was not recognised.')
+      return render :start, status: :unprocessable_content
+    end
+
+    AuthenticationEnrolment.start(session, current_user)
+    redirect_to new_one_time_password_path
   end
 
   def create
-    @enrolment = OtpEnrolment.new(
-      user: @user,
-      secret: session[:pending_otp_secret_key],
-      otp_code: enrolment_params[:otp_code].to_s
-    )
+    @enrolment = AuthenticationEnrolment.pending(session)
+    return redirect_to(signin_path) unless @enrolment
 
-    if @enrolment.save
-      session.delete(:pending_otp_secret_key)
-      if @user.otp_counter_previously_was.present?
-        flash[:just_upgraded_from_hotp] = true
-      end
-      flash[:backup_codes] = @enrolment.backup_codes
-      redirect_to one_time_password_path,
-                  notice: _('Two factor authentication enabled')
-    else
-      render :new
+    @codes = @enrolment.complete(params[:otp_code])
+    unless @codes
+      flash.now[:error] = _('Invalid or expired authentication code.')
+      return render :new, status: :unprocessable_content
     end
-  end
-
-  def update
-    if @user.increment!(:otp_counter)
-      redirect_to one_time_password_path,
-                  notice: _('Two factor one time passcode updated')
-    else
-      flash.now[:error] = _('Could not update your two factor one time passcode')
-      render :show
-    end
+    account = @enrolment.user
+    session.delete(:authentication_enrolment)
+    carry = session.to_hash.slice('authentication_return',
+      'pending_request_draft', 'pending_draft_transfer')
+    reset_session
+    carry.each { |key, value| session[key] = value }
+    Authentication::Session.establish(request, account, two_factor: true)
+    @user = @current_user = account
+    @continue_path = after_sign_in_path_for(account)
+    render :codes
   end
 
   def destroy
-    if @user.totp?
-      return render :destroy_confirmation if params[:otp_code].nil?
+    return ask_to_login unless current_user
+    unless current_user.active? && !current_user.is_admin?
+      return head(:forbidden)
+    end
 
-      unless @user.authenticate_otp(params[:otp_code])
-        flash.now[:error] = _('Invalid one time password')
-        return render :destroy_confirmation
+    removed = current_user.with_lock do
+      unless current_user.valid_password?(params[:password].to_s) &&
+             current_user.verify_second_factor!(params[:otp_code])
+        next false
       end
+
+      current_user.update!(otp_required_for_login: false, otp_secret: nil,
+                           devise_otp_backup_codes: [], consumed_timestep: nil)
+    end
+    unless removed
+      flash.now[:error] = _('The password or code was not recognised.')
+      return render :show, status: :unprocessable_content
     end
 
-    @user.disable_otp
-
-    if @user.save
-      redirect_to one_time_password_path,
-                  notice: _('Two factor authentication disabled')
-    else
-      flash.now[:error] = _('Two factor authentication could not be disabled')
-      render :show
-    end
+    clear_session_credentials
+    redirect_to signin_path,
+      notice: _('Two factor authentication disabled. Please sign in.'),
+      status: :see_other
   end
 
   private
 
-  def enrolment_params
-    params.fetch(:otp_enrolment, {}).permit(:otp_code)
-  end
-
-  # Block enrolment for users who already have an authenticator app. HOTP users
-  # are allowed through so they can upgrade to an authenticator app.
-  def prevent_reenrolment
-    return unless @user.totp?
-
-    flash[:error] =
-      _('Two factor authentication is already set up. To use a different ' \
-        'authenticator app, disable two factor authentication first, then ' \
-        'set it up again.')
-    redirect_to one_time_password_path
-  end
-
-  # Prevent TOTP users from being downgraded to HOTP by restricting to HOTP
-  # users only.
-  def require_hotp
-    return if @user.hotp?
-
-    flash[:error] =
-      _('Your account does not have a two factor one time passcode to update')
-    redirect_to one_time_password_path
-  end
-
-  def require_pending_otp_secret
-    return if session[:pending_otp_secret_key].present?
-
-    flash[:notice] = _('Your two factor authentication setup expired. ' \
-                       'Please scan the new QR code below to start again.')
-    redirect_to new_one_time_password_path
-  end
-
   def check_two_factor_config
-    unless AlaveteliConfiguration.enable_two_factor_auth
-      raise ActiveRecord::RecordNotFound, 'Page not enabled'
-    end
-  end
+    return if AlaveteliConfiguration.enable_two_factor_auth
 
-  def authenticate
-    authenticated? || ask_to_login(
-      web: _('To view your two factor authentication details'),
-      email: _('To view your two factor authentication details'),
-      email_subject: _('To view your two factor authentication details')
-    )
+    raise ActiveRecord::RecordNotFound
   end
 end

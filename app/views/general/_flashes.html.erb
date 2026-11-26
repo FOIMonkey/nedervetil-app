@@ -1,0 +1,9 @@
+<%# data-uncached: Turbo's cached copy of the page leaves the notice out, so
+    Back doesn't show it again. A notice sits below the page's band
+    (ApplicationHelper#band_notice). %>
+<% if flash[:notice] %>
+  <div id="notice" role="status" data-uncached><%= render_flash(flash[:notice]) %></div>
+<% end %>
+<% if flash[:error] %>
+  <div id="error" role="alert" data-uncached><%= render_flash(flash[:error]) %></div>
+<% end %>

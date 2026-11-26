@@ -99,6 +99,7 @@ RSpec.configure do |config|
   # cleared out correctly in controller specs. So, do it here for everything.
   config.before(:each) do
     ActionMailer::Base.deliveries = []
+    ActionController::Base.cache_store.clear
   end
 
   config.before(:suite) do

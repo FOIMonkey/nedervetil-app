@@ -59,8 +59,6 @@ class User < ApplicationRecord
   include User::Erasable
   include User::InternalAdmin
   include User::LimitedProfile
-  include User::LoginToken
-  include User::OneTimePassword
   include User::Slug
   include User::SpreadableAlerts
   include User::Survey
@@ -84,11 +82,21 @@ class User < ApplicationRecord
 
   admin_columns include: [:user_messages_count],
                 exclude: [:hashed_password, :salt,
-                          :login_token,
+                          :login_token, :encrypted_password,
+                          :reset_password_token,
+                          :confirmation_token, :otp_secret,
+                          :devise_otp_backup_codes,
+                          :authentication_version,
                           :otp_secret_key, :otp_counter, :otp_backup_codes,
                           :url_name]
 
   attr_accessor :no_xapian_reindex
+
+  has_many :authentication_returns, dependent: :delete_all
+  has_many :authentication_enrolments, dependent: :delete_all
+  has_many :pending_email_changes, dependent: :delete_all
+  has_many :pending_request_drafts, foreign_key: :intended_user_id,
+                                    dependent: :delete_all
 
   has_many :info_requests,
            -> { order(created_at: :desc) },
@@ -285,12 +293,6 @@ class User < ApplicationRecord
     user
   end
 
-  def self.authenticate_from_session(session)
-    return unless session[:user_id]
-
-    find_by(id: session[:user_id], login_token: session[:user_login_token])
-  end
-
   # Case-insensitively find a user from their email
   def self.find_user_by_email(email)
     return nil if email.blank?
@@ -459,6 +461,10 @@ class User < ApplicationRecord
 
   def active?
     !banned? && !closed?
+  end
+
+  def active_admin?
+    active? && is_admin?
   end
 
   def suspended?
