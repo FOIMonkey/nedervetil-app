@@ -3,6 +3,16 @@
   <head>
     <meta charset="utf-8">
     <%= csrf_meta_tags %>
+    <% unless @render_to_file %>
+      <%= csp_meta_tag %>
+      <meta name="turbo-prefetch" content="false">
+      <% if turbo_visit_reload? %>
+        <meta name="turbo-visit-control" content="reload">
+      <% end %>
+      <% if current_user || keep_no_turbo_copy? %>
+        <meta name="turbo-cache-control" content="no-cache">
+      <% end %>
+    <% end %>
 
     <title>
       <% if @title %>
@@ -16,7 +26,7 @@
 
     <%= render :partial => 'general/stylesheet_includes' %>
     <% if is_admin? %>
-      <%= stylesheet_link_tag "admin", :title => "Main", :rel => "stylesheet" %>
+      <%= render :partial => 'general/admin_stylesheet' %>
     <% end %>
 
     <% if @feed_autodetect %>
@@ -43,9 +53,14 @@
         H.className = H.className.replace(/\bno-js\b/,'js-loaded')
       })(document.documentElement);
     <% end %>
+    <%= javascript_importmap_tags("public") unless @render_to_file %>
     <%= content_for :javascript_head %>
   </head>
-  <body class="<%= yield :body_class -%> <% if @in_pro_area %>alaveteli-pro<% end %>">
+  <body class="<%= yield :body_class -%> <% if @in_pro_area %>alaveteli-pro<% end %>" <% unless turbo_drive? || @render_to_file %>data-turbo="false" <% end %>data-controller="confirm method-link form-lock" data-action="click->confirm#click submit->confirm#submit click->method-link#follow submit->form-lock#lock">
+    <% unless @render_to_file %>
+      <div id="page-announcer" aria-live="polite" aria-atomic="true" data-turbo-permanent
+           style="position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0"></div>
+    <% end %>
     <% if is_admin? %>
       <%= render :partial => 'admin_general/admin_navbar' %>
     <% end %>

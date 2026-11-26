@@ -3,6 +3,7 @@
   <head>
     <meta charset="utf-8">
     <%= csrf_meta_tags %>
+    <%= csp_meta_tag %>
 
     <title>
       <% if @title %>
@@ -12,12 +13,11 @@
       <% end %>
     </title>
 
-    <%= javascript_include_tag "application", nonce: true %>
-
     <%= render :partial => 'general/responsive_stylesheets' %>
     <%= render :partial => 'layouts/favicon' %>
+    <%= javascript_importmap_tags("public") %>
   </head>
-  <body>
+  <body data-turbo="false" data-controller="confirm method-link form-lock" data-action="click->confirm#click submit->confirm#submit click->method-link#follow submit->form-lock#lock">
     <div class="entirebody">
       <div id="content">
         <% if flash[:notice] %>

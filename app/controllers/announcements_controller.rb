@@ -1,10 +1,15 @@
+# Dismisses an Announcement for the current user via AnnouncementDismissal or
+# in the visitor's session, supporting both XHR and standard form submissions.
 class AnnouncementsController < ApplicationController
-  skip_before_action :verify_authenticity_token, only: [:destroy]
-
   def destroy
     if announcement
       store_dismissal_in_session unless dismissal.save
-      head :ok
+      # The announcement-dismiss controller asks in the background.
+      if request.xhr?
+        head :ok
+      else
+        redirect_back fallback_location: frontpage_path
+      end
     else
       head :forbidden
     end
@@ -20,7 +25,9 @@ class AnnouncementsController < ApplicationController
   end
 
   def announcement
-    @announcement ||= Announcement.find_by(id: params.require(:id))
+    return @announcement if defined?(@announcement)
+
+    @announcement = Announcement.find_by(id: params.require(:id))
   end
 
   def store_dismissal_in_session
