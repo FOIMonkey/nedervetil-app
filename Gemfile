@@ -186,6 +186,7 @@ gem 'aws-sdk-s3', require: false
 gem 'google-cloud-storage', '~> 1.62', require: false
 
 # Storage content analyzers
+gem 'office_package', path: 'gems/office_package'
 gem 'pdf_redactor', path: 'gems/pdf_redactor'
 gem 'excel_analyzer', path: 'gems/excel_analyzer', require: false
 

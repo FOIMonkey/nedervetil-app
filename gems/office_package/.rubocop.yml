@@ -1,0 +1,25 @@
+inherit_from: ../../.rubocop.yml
+
+Metrics/ClassLength:
+  Exclude:
+    - 'lib/office_package/archive.rb'
+    - 'lib/office_package/hidden.rb'
+    - 'lib/office_package/package.rb'
+    - 'lib/office_package/tidy.rb'
+
+Metrics/CyclomaticComplexity:
+  Exclude:
+    - 'lib/office_package/detector.rb'
+    - 'lib/office_package/hidden.rb'
+    - 'lib/office_package/package.rb'
+    - 'lib/office_package/sheets.rb'
+    - 'lib/office_package/tidy.rb'
+
+Metrics/MethodLength:
+  Exclude:
+    - 'lib/office_package/sheets.rb'
+    - 'lib/office_package/tidy.rb'
+
+Metrics/ModuleLength:
+  Exclude:
+    - 'lib/office_package/sheets.rb'

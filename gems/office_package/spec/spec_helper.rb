@@ -1,0 +1,5 @@
+require 'office_package'
+require 'pathname'
+require 'zip'
+require_relative '../../../spec/support/attachment_fixtures'
+require_relative '../../../spec/support/office_fixtures'
