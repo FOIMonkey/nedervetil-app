@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <id><%= disclosure_documents_url %></id><title><%= _('Published documents') %></title>
+  <link href="<%= disclosure_documents_url %>"/>
+  <updated><%= (@search.results.map { |record| record.updated_at }.max || Time.current).iso8601 %></updated>
+  <author><name><%= site_name %></name></author>
+  <% @search.results.each do |record| %>
+    <entry><id><%= disclosure_document_url(record) %></id><title><%= record.title %></title>
+      <link href="<%= disclosure_document_url(record) %>"/>
+      <published><%= record.first_published_at.iso8601 %></published>
+      <updated><%= [record.published_at, record.updated_at].compact.max.iso8601 %></updated>
+      <summary><%= record.description %></summary>
+    </entry>
+  <% end %>
+</feed>

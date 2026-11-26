@@ -306,7 +306,7 @@ class AttachmentToText
 
   def extract_zip_pass(body, text, depth:, budget:, zip:)
     OfficePackage::Isolated.read_zip(bytes: body, zip: zip) do |read|
-      read.value('guard')
+      AttachmentManagement::ZipGuard.checked!(read)
       extract_zip_entries(read, text, depth: depth, budget: budget,
                                       skip: zip[:skip])
     end

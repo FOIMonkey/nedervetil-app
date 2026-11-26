@@ -1,0 +1,111 @@
+<% request_record = document.info_request %>
+<% public_view = document.stage_in?(:listed) %>
+  <header class="document__header">
+    <h1 id="document-title"><%= document.title %></h1>
+    <% if document.description.present? %>
+      <p class="document__description"><%= document.description %></p>
+    <% end %>
+
+    <% body = document.authority %>
+    <dl class="document__facts">
+      <div class="document__fact">
+        <dt><%= _('Type') %></dt>
+        <dd><%= document.kind_label %></dd>
+      </div>
+      <% if body %>
+        <div class="document__fact">
+          <dt><%= _('Authority') %></dt>
+          <dd><%= link_to body.name, public_body_path(body) %></dd>
+        </div>
+      <% end %>
+      <% if document.document_date %>
+        <div class="document__fact">
+          <dt><%= _('Date') %></dt>
+          <dd><time datetime="<%= document.document_date.iso8601 %>"><%= document_date(document.document_date) %></time></dd>
+        </div>
+      <% end %>
+      <% if document.released_on && document.released_on != document.document_date %>
+        <div class="document__fact">
+          <dt><%= _('Released') %></dt>
+          <dd><time datetime="<%= document.released_on.iso8601 %>"><%= document_date(document.released_on) %></time></dd>
+        </div>
+      <% end %>
+      <% if document.servable? %>
+        <div class="document__fact">
+          <dt><%= _('File') %></dt>
+          <dd><%= document_format_line(document) %></dd>
+        </div>
+        <% if (converted_from = document_converted_from_note(document)) %>
+          <div class="document__fact">
+            <dt><%= _('Original file') %></dt>
+            <dd><%= converted_from %></dd>
+          </div>
+        <% end %>
+        <% attribution = Disclosures::Attribution.new(document) %>
+        <% if (line = attribution.text) %>
+          <% verb, who = line.split(' ', 2) %>
+          <div class="document__fact">
+            <dt><%= verb %></dt>
+            <dd><%= who.upcase_first %><% if attribution.changed_at %>, <time datetime="<%= attribution.changed_at.to_date.iso8601 %>"><%= document_date(attribution.changed_at) %></time><% end %></dd>
+          </div>
+        <% end %>
+      <% end %>
+      <% if request_record && can?(:read, request_record) %>
+        <div class="document__fact">
+          <dt><%= _('From the request') %></dt>
+          <dd>
+            <% if @manager || Ability.guest.can?(:read, request_record) %>
+              <%= link_to request_record.title, show_request_path(url_title: request_record.url_title) %>
+            <% else %>
+              “<%= request_record.title %>”
+            <% end %>
+            <% sent = request_record.date_initial_request_last_sent_at %>
+            <% if sent %><span class="document__soft"><%= _('sent {{date}}', date: document_date(sent)) %></span><% end %>
+          </dd>
+        </div>
+        <% status, label = outcome(request_record) %>
+        <% if status.in?(%w[successful partially_successful rejected not_held]) %>
+          <div class="document__fact">
+            <dt><%= _('Request outcome') %></dt>
+            <dd class="document__outcome"><span class="icon-standalone icon_<%= status %>" aria-hidden="true"></span> <%= label %></dd>
+          </div>
+        <% end %>
+      <% end %>
+      <% if document.stage_in?(:listed) && document.first_published_at && document.published_at && document.published_at > document.first_published_at + 1.minute %>
+        <div class="document__fact">
+          <dt><%= _('Updated') %></dt>
+          <dd><%= document_date(document.published_at) %> <span class="document__soft"><%= _('(first published {{date}})', date: document_date(document.first_published_at)) %></span></dd>
+        </div>
+      <% end %>
+    </dl>
+
+    <% if public_view %>
+      <p class="document__download">
+        <%= link_to disclosure_document_download_path(document), class: 'button', data: { turbo: false } do %><%= _('Download') %><span class="visually-hidden"> <%= document.title %></span> (<%= document_format_line(document) %>)<% end %>
+      </p>
+    <% end %>
+
+    <% same_request = document.request_siblings %>
+    <% if same_request.any? %>
+      <section class="document__siblings" aria-labelledby="document-same-request">
+        <h2 id="document-same-request"><%= _('From the same request') %></h2>
+        <ul>
+          <% same_request.each do |sibling| %>
+            <li><%= link_to sibling.title, disclosure_document_path(sibling) %> <span class="document__soft"><%= sibling.kind_label %>, <%= document_format_line(sibling) %></span></li>
+          <% end %>
+        </ul>
+      </section>
+    <% end %>
+
+    <% siblings = document.batch_siblings %>
+    <% if siblings.any? %>
+      <section class="document__siblings" aria-labelledby="document-siblings">
+        <h2 id="document-siblings"><%= _('The same request to other authorities') %></h2>
+        <ul>
+          <% siblings.each do |sibling| %>
+            <li><%= link_to sibling.public_body&.name || sibling.title, disclosure_document_path(sibling) %> <span class="document__soft"><%= sibling.kind_label %></span></li>
+          <% end %>
+        </ul>
+      </section>
+    <% end %>
+  </header>

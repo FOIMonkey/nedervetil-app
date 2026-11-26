@@ -16,6 +16,8 @@ class Ability
         !RequesterVisible.nobody?(attachment) &&
           can?(:read, attachment.incoming_message)
       end
+
+      can %i[read view_document_pages admin], Disclosures::Document
     end
   end
 end

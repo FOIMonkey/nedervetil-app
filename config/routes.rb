@@ -27,6 +27,7 @@ end
 
 Rails.application.routes.draw do
   devise_for :users, skip: :all
+  draw :features
   draw :redirects
 
   mount Sidekiq::Web => '/sidekiq', constraints: AdminConstraint.new
@@ -40,33 +41,19 @@ Rails.application.routes.draw do
   match '/blog' => 'general#blog',
         :as => :blog,
         :via => :get
-  match '/search' => 'general#search_redirect',
-        :as => :search_redirect,
-        :via => :get
-  match '/search/all' => 'general#search_redirect',
-        :as => :search_redirect_all,
-        :via => :get
-  # `combined` is the search query, and then if sorted a "/newest" at the end.
-  # Couldn't find a way to do this in routes which also picked up multiple other slashes
-  # and dots and other characters that can appear in search query. So we sort it all
-  # out in the controller.
-  match '/search/*combined/all' => 'general#search',
-        :as => :search_general_all,
-        :view => 'all',
-        :via => :get
-  match '/search(/*combined)' => 'general#search',
-        :as => :search_general,
-        :via => :get
-  match '/search/:query/requests' => 'general#search',
-        as: :search_requests,
-        via: :get
-  match '/search/:query/users' => 'general#search',
-        as: :search_users,
-        via: :get
-  match '/advancedsearch' => 'general#search_redirect',
-        :as => :advanced_search,
-        :advanced => true,
-        :via => :get
+  # Requests are private, so the published documents are the only search.
+  # The old search URLs put their words in the path, with the kind of result
+  # and the sort order as trailing segments, or in ?query=.
+  documents_search = redirect do |params, request|
+    words = request.params['query'].presence || params[:combined].to_s.
+      # rubocop:disable Layout/LineLength -- a regex
+      sub(%r{(/(all|requests|users|bodies))?(/(newest|described|relevant))?(/advanced)?\z}, '')
+    # rubocop:enable Layout/LineLength
+    path = '/documents'
+    words.present? ? "#{path}?q=#{ERB::Util.url_encode(words)}" : path
+  end
+  get '/search(/*combined)', to: documents_search, format: false, as: :search_redirect
+  get '/advancedsearch', to: documents_search, as: :advanced_search
   match '/version.:format' => 'general#version',
         :as => :version,
         :via => :get
@@ -718,14 +705,11 @@ Rails.application.routes.draw do
   namespace :admin do
     resources :foi_attachments, path: :attachments,
                                 only: [:edit, :update] do
+      get :download_unmasked, on: :member
       resource :prominence, controller: 'foi_attachments/prominence',
                             only: [:update]
       resource :masks, controller: 'foi_attachments/masks',
                        only: [:create]
-      resource :locks, controller: 'foi_attachments/locks',
-                       only: [:create, :destroy]
-      resource :replacements, controller: 'foi_attachments/replacements',
-                              only: [:create, :destroy]
       resources :erasures, controller: 'foi_attachments/erasures',
                            only: [:create]
     end

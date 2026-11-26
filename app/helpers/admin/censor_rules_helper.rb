@@ -5,6 +5,13 @@ module Admin::CensorRulesHelper
     censorable ? both_links(censorable) : tag.strong('everything')
   end
 
+  # Whether the rule has been applied everywhere it reaches since it was
+  # last saved (Disclosures::RuleJob), and when.
+  def censor_rule_applied(censor_rule)
+    finished = censor_rule.masking_finished_at
+    finished ? "Finished at #{finished}" : 'Still working'
+  end
+
   # Whether to show redaction tracking for this list of rules. Counts are only
   # meaningful within a single request, so the user, body and global rule
   # lists pass no request and don't show them.

@@ -1,0 +1,33 @@
+<%= render partial: 'disclosures/publishing/band' %>
+<% args = { url_title: @info_request.url_title, message_id: @message.id } %>
+<div class="publish-ask">
+  <div class="publish-ask__what">
+    <% if @stuck.any? %>
+      <ul class="publish-files">
+        <% @to_publish.each do |document| %>
+          <li>
+            <span class="publish-card__sheet<%= ' publish-card__sheet--grid' if publish_sheet?(document) %>" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+            <span class="publish-files__text"><b><%= publish_file_name(document) %></b> <span class="publish-wait__word"><%= @stuck.include?(document) ? _('This one didn’t work') : _('Ready') %></span></span>
+          </li>
+        <% end %>
+      </ul>
+    <% else %>
+      <%= render partial: 'disclosures/publishing/waiting', locals: { documents: @to_publish } %>
+    <% end %>
+  </div>
+  <div class="publish-ask__answers publish-answers">
+    <% if @stuck.any? %>
+      <%= form_tag publish_reply_try_again_path(**args), class: 'publish-answers__form' do %>
+        <button type="submit" class="publish-answer publish-answer--primary" data-disable-with="<%= _('Trying again…') %>"><%= _('Try again') %></button>
+      <% end %>
+      <%= form_tag publish_reply_path(**args), class: 'publish-answers__form' do %>
+        <% @stuck.each do |document| %><%= hidden_field_tag "files[#{document.foi_attachment_id}]", 'private', id: nil %><% end %>
+        <button type="submit" class="publish-answer"><%= _('Keep private') %></button>
+      <% end %>
+      <% if @to_publish.size > 1 %><p class="publish-note"><%= _('You can share the others without it.') %></p><% end %>
+    <% else %>
+      <p class="publish-note"><%= _('This usually takes a few seconds, and longer for a long file. You can leave and come back.') %></p>
+    <% end %>
+    <%= link_to _('Back to the request'), show_request_path(url_title: @info_request.url_title), class: 'publish-back-link' %>
+  </div>
+</div>

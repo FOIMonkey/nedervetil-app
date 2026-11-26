@@ -19,7 +19,7 @@ class Admin::IncomingMessages::RedeliveriesController < AdminController
     ActiveRecord::Base.transaction do
       message_ids.each do |m|
         destination_request =
-          if m.match(/^[0-9]+$/)
+          if /^[0-9]+$/.match?(m)
             InfoRequest.find_by_id(m.to_i)
           else
             InfoRequest.find_by_url_title!(m)

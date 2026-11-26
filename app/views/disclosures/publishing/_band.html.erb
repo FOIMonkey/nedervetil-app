@@ -1,0 +1,6 @@
+<% content_for :body_class, 'band-view request-flow-view publish-view' %>
+<div class="page-band request-flow-band publish-band" data-controller="publish-landing anchor-focus" data-action="click@document->anchor-focus#focus">
+  <p class="request-band__crumb"><%= link_to @info_request.title, show_request_path(url_title: @info_request.url_title) %> · <%= _('reply of {{date}}', date: I18n.l(@message.sent_at || @message.created_at, format: '%-d %b')) %></p>
+  <h1 class="page-band__title"><%= @title %></h1>
+</div>
+<%= band_notice %>

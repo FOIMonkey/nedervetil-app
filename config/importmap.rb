@@ -8,6 +8,8 @@ pin "sortablejs" # @1.15.2
 pin "public", to: "public/index.js"
 pin_all_from "app/javascript/controllers", under: "controllers"
 pin_all_from "app/javascript/helpers", under: "helpers"
+# The box and text editors' modules, fetched only by their controllers.
+pin_all_from "app/javascript/editor", under: "editor", preload: false
 pin_all_from "app/javascript/public/controllers",
              under: "controllers", to: "public/controllers"
 pin_all_from "app/javascript/public/helpers",

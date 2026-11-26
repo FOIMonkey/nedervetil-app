@@ -1,0 +1,24 @@
+<% withdraw = can?(:withdraw_document, document) %>
+<% delete = can?(:delete_document, document) %>
+<% if withdraw || delete %>
+  <section class="document-remove" aria-labelledby="document-remove-title">
+    <h2 id="document-remove-title"><%= withdraw ? _('Take this document down') : _('Delete') %></h2>
+    <% if withdraw %>
+      <%= render partial: 'disclosures/documents/withdraw_form', locals: { document: document } %>
+      <%= render partial: 'disclosures/documents/start_again_form', locals: { document: document } %>
+    <% end %>
+    <% if delete %>
+      <details class="document-manage__more">
+        <summary><%= _('Delete this draft') %> <span class="document-remove__permanent"><%= _('Permanent') %></span></summary>
+        <%= form_tag disclosure_manage_document_path(document), method: :delete, class: 'document-manage__form' do %>
+          <p><%= _('This draft has never been shared publicly. Deleting it removes it from your list (any redactions already saved to the file stay in place).') %></p>
+          <p class="document-publish__check">
+            <input type="checkbox" id="delete-confirm" name="confirm" value="1" required>
+            <label for="delete-confirm"><%= _('Delete this draft.') %></label>
+          </p>
+          <button type="submit" class="button"><%= _('Delete the draft') %></button>
+        <% end %>
+      </details>
+    <% end %>
+  </section>
+<% end %>

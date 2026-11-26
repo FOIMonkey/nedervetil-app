@@ -1,0 +1,60 @@
+<%= render partial: 'disclosures/publishing/band' %>
+<% args = { url_title: @info_request.url_title, message_id: @message.id } %>
+<% going = @ready + @review %>
+<div class="publish-ask publish-check">
+  <div class="publish-ask__what">
+    <% if @to_publish.empty? %>
+      <p class="publish-none"><%= _('Nothing from this reply is waiting to be shared.') %></p>
+    <% end %>
+    <% @to_publish.each_with_index do |document, index| %>
+      <% problems = @problems[document] %>
+      <% readable = document.servable? %>
+      <section class="publish-doc" aria-labelledby="doc-<%= document.public_id %>">
+        <%= render partial: 'disclosures/publishing/thumb', locals: { document: document, eager: index < 3, link: (publish_reply_read_path(**args, id: document) if readable) } %>
+        <div class="publish-doc__text">
+          <h2 class="publish-doc__name" id="doc-<%= document.public_id %>"><%= publish_file_name(document) %></h2>
+          <p class="publish-doc__kind"><%= [document.kind_label, document_extent(document)].compact.join(' · ') %></p>
+          <% if document.foi_attachment && Disclosures::Formats.legacy_doc?(document.foi_attachment.content_type, document.foi_attachment.filename) %>
+            <p class="publish-doc__line"><%= _('This Word (.doc) file will be converted to a PDF when you share it, and the public page will note the original file type.') %></p>
+          <% end %>
+          <% if own_title?(document) %><p class="publish-doc__line"><%= _('Goes public as “{{title}}”', title: document.title) %></p><% end %>
+          <% if document.description.present? %><p class="publish-doc__line"><%= document.description %></p><% end %>
+          <% if @consents[document.id] %><p class="publish-doc__line"><%= _('Your name stays showing.') %></p><% end %>
+          <% if (line = @attributions[document]&.text) %><p class="publish-doc__line publish-preview__who"><%= line %>.</p><% end %>
+          <% if @pending.include?(document) %>
+            <p class="publish-doc__line publish-doc__line--needs"><%= _('Waiting for admin review. It goes public once they’ve checked it.') %></p>
+          <% end %>
+          <% if (hits = @name_hits[document]).present? %>
+            <p class="publish-doc__line publish-doc__line--needs">
+              <% if document.format == 'pdf' %>
+                <%= _('Your name or email is on {{pages}}.', pages: Disclosures::RequesterPublication.pages(hits.map(&:page).uniq)) %>
+              <% else %>
+                <%= _('Your name or email appears in this file.') %>
+              <% end %>
+            </p>
+            <% if @hide_name[document] %>
+              <%= form_tag publish_reply_hide_name_path(**args, id: document), class: 'publish-doc__action' do %>
+                <button type="submit" class="publish-answer"><%= _('Hide my name and share') %></button>
+              <% end %>
+            <% end %>
+          <% end %>
+          <% problems.each do |problem| %>
+            <% next if problem.fix == :admin %>
+            <p class="publish-doc__line publish-doc__line--needs">
+              <%= problem.text %>
+              <% if problem.fix == :details && can?(:edit_document, document) %>
+                <%= link_to _('Change it'), disclosure_edit_document_path(document, flow: 'check') %>
+              <% end %>
+            </p>
+          <% end %>
+          <p class="publish-doc__links">
+            <% if readable %><%= link_to publish_reply_read_path(**args, id: document) do %><%= _('Read it') %><span class="visually-hidden">: <%= publish_file_name(document) %></span><% end %><% end %>
+            <% if can?(:edit_document, document) %><%= link_to disclosure_edit_document_path(document, flow: 'check') do %><%= own_title?(document) ? _('Change title') : _('Add a subject') %><span class="visually-hidden">: <%= publish_file_name(document) %></span><% end %><% end %>
+          </p>
+          <% if !own_title?(document) && can?(:edit_document, document) %><p class="publish-doc__hint"><%= _('A subject helps other people find it.') %></p><% end %>
+        </div>
+      </section>
+    <% end %>
+  </div>
+  <div class="publish-ask__answers publish-answers"><%= render partial: 'disclosures/publishing/check_answers', locals: { going: going } %></div>
+</div>

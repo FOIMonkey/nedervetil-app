@@ -1,0 +1,51 @@
+<%# The document's public details, as a step of the requester's flow. %>
+<% document = @document %>
+<% @info_request = document.info_request %>
+<% @message = document.incoming_message %>
+<% suggested = Disclosures::Titles.suggest(document.kind_was, @info_request, document.released_on) %>
+<% adding = document.title_was == suggested %>
+<% @title = adding ? _('Add a subject') : _('Change title') %>
+<%= render partial: 'disclosures/publishing/band' %>
+<%= form_with model: document, scope: :document, url: manage_path, method: :patch, local: true do |f| %>
+  <%= hidden_field_tag :flow, 'check', id: nil %>
+  <div class="publish-ask publish-details">
+    <div class="publish-ask__what">
+      <% if document.errors.any? %>
+        <div class="publish-failed" role="alert">
+          <p><%= _('These details can’t be saved yet:') %></p>
+          <ul><% document.errors.full_messages.each do |message| %><li><%= message %></li><% end %></ul>
+        </div>
+      <% end %>
+      <div class="publish-field">
+        <%= f.label :title, adding ? _('Subject') : _('Title') %>
+        <%= f.text_field :title, maxlength: 200, required: !adding, value: (adding ? '' : document.title), 'aria-describedby': 'title-help' %>
+        <span class="publish-field__help" id="title-help"><%= _('Say what it’s about, like “Library opening hours”. It goes public, so leave out names. Adding your own title means an admin will check it before it goes public.') %><% if adding %> <%= _('With none, it’s called “{{title}}”.', title: suggested) %><% end %></span>
+      </div>
+      <details class="publish-help publish-details__more"<%= ' open' if document.errors.any? %>>
+        <summary><%= _('Description, date and type') %></summary>
+        <div class="publish-field">
+          <%= f.label :description, _('Description (optional)') %>
+          <%= f.text_area :description, rows: 4, maxlength: 2000 %>
+        </div>
+        <div class="publish-field">
+          <%= f.label :document_date, _('Date of the document') %>
+          <%= f.date_field :document_date %>
+        </div>
+        <fieldset class="publish-details__kind">
+          <legend><%= _('Type') %></legend>
+          <% Disclosures::Document::KIND_LABELS.each do |value, label| %>
+            <label class="publish-which__file">
+              <%= f.radio_button :kind, value %>
+              <span><%= _(label) %></span>
+            </label>
+          <% end %>
+        </fieldset>
+      </details>
+    </div>
+    <%# Under the fields, not across the page from them. %>
+    <div class="publish-answers publish-details__go">
+      <%= f.submit _('Save'), class: 'publish-answer publish-answer--primary' %>
+      <%= link_to _('Back'), publish_flow_check_path(document), class: 'publish-back-link' %>
+    </div>
+  </div>
+<% end %>

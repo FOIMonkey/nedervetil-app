@@ -1,0 +1,60 @@
+<%= render partial: 'disclosures/publishing/band' %>
+<% args = { url_title: @info_request.url_title, message_id: @message.id } %>
+<div class="publish-page publish-done">
+  <% if @documents.any? %>
+    <p class="publish-done__lede"><%= @documents.one? ? _('Anyone can read it. Thanks for sharing it.') : _('Anyone can read these. Thanks for sharing them.') %></p>
+    <p class="publish-note"><%= _('Your original request and messages stay private; only the documents you share go public.') %></p>
+  <% elsif @waiting.any? %>
+    <p class="publish-done__lede"><%= _('It goes public once they’ve checked it. Thanks for sharing.') %></p>
+    <p class="publish-note"><%= _('Your original request and messages stay private; only the documents you share go public.') %></p>
+  <% elsif @withdrawn.any? %>
+    <p class="publish-done__lede"><%= _('This document has been taken down and is no longer public.') %></p>
+  <% else %>
+    <p class="publish-done__lede"><%= _('Nothing from this reply is public. You can share it later.') %></p>
+  <% end %>
+  <% if @documents.any? || @waiting.any? || @withdrawn.any? %>
+    <ul class="publish-receipt">
+      <% @documents.each do |document| %>
+        <li>
+          <%= link_to document.title, disclosure_document_path(document), class: 'publish-receipt__title' %>
+          <span class="publish-receipt__status"><%= _('Public') %></span>
+          <span class="publish-receipt__meta"><%= [document.kind_label, document_extent(document), Disclosures::Attribution.new(document).text, (_('Published {{date}}', date: I18n.l(document.published_at.to_date, format: '%-d %b')) if document.published_at)].compact.join(' · ') %></span>
+          <% if can?(:withdraw_document, document) %>
+            <details class="publish-receipt__withdraw">
+              <summary><%= can?(:publish_document, document) ? _('Withdraw') : _('Withdraw (only an admin can share it again)') %><span class="visually-hidden">: <%= document.title %></span></summary>
+              <%= form_tag disclosure_withdraw_document_path(document) do %>
+                <%= hidden_field_tag :flow, '1', id: nil %>
+                <label for="reason-<%= document.public_id %>"><%= _('Why? It goes in the document’s history.') %></label>
+                <input type="text" id="reason-<%= document.public_id %>" name="reason" maxlength="500" required>
+                <button type="submit" class="publish-answer publish-answer--row publish-answer--stop"><%= _('Withdraw now') %></button>
+              <% end %>
+            </details>
+            <%= render partial: 'disclosures/documents/start_again_form', locals: { document: document, show_title: true } %>
+          <% end %>
+        </li>
+      <% end %>
+      <% @waiting.each do |document| %>
+        <li>
+          <span class="publish-receipt__title"><%= publish_file_name(document) %></span>
+          <span class="publish-receipt__status"><%= _('Waiting for admin review') %></span>
+          <span class="publish-receipt__meta"><%= _('It goes public once they’ve checked it.') %></span>
+        </li>
+      <% end %>
+      <% @withdrawn.each do |document| %>
+        <li>
+          <span class="publish-receipt__title"><%= publish_file_name(document) %></span>
+          <span class="publish-receipt__status"><%= _('Withdrawn') %></span>
+        </li>
+      <% end %>
+    </ul>
+  <% end %>
+  <div class="publish-done__acts">
+    <% see_it = @documents.one? %>
+    <% if see_it %>
+      <%= link_to _('See it'), disclosure_document_path(@documents.first), class: 'publish-answer publish-answer--primary' %>
+    <% elsif @documents.empty? && @waiting.empty? && @withdrawn.empty? %>
+      <%= link_to _('Share documents'), publish_reply_path(**args), class: 'publish-answer publish-answer--primary' %>
+    <% end %>
+    <%= link_to _('Back to the request'), show_request_path(url_title: @info_request.url_title), class: see_it || (@documents.empty? && @waiting.empty? && @withdrawn.empty?) ? 'publish-answer' : 'publish-answer publish-answer--primary' %>
+  </div>
+</div>

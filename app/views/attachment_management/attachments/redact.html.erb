@@ -1,0 +1,76 @@
+<%# The page images are rendered server-side from the file being redacted, so a box
+    lands where it is drawn. %>
+<% page_url = lambda do |n|
+     if @parent
+       page_manage_attachment_revision_path(@attachment, @parent, page: n)
+     else
+       manage_attachment_page_path(@attachment, page: n)
+     end
+   end %>
+<%= page_band(_('Draw redaction boxes'),
+              back: link_to(_('Back to the attachment'), manage_attachment_path(@attachment))) %>
+<div class="attachment-management">
+  <p class="attachment-management__lede">
+    <%= @attachment.display_filename %><% if @parent %>, <%= _('as converted to PDF') %><% end %>.
+    <%= _('Drag across anything that should go. Each box becomes solid black in a
+    new {{image_or_pdf}}; nothing changes until you have
+    checked that file and confirmed it.', image_or_pdf: @image ? _('image') : _('PDF')) %>
+  </p>
+  <% unless @image %>
+    <p class="warning"><%= _('The new PDF is made from images of the pages. Everything under a box is removed for good, and so is all the PDF’s text: the new file can’t be searched, copied from or read aloud by a screen reader.') %></p>
+  <% end %>
+
+  <%= form_tag manage_attachment_revisions_path(@attachment), class: 'redaction-editor', data: { controller: 'box-editor', redaction_editor: true } do %>
+    <%= hidden_field_tag :kind, @image ? 'image_redaction' : 'pdf_redaction' %>
+    <%= hidden_field_tag :parent_id, @parent&.id %>
+    <%= hidden_field_tag :boxes, @boxes_json.presence || '{}', id: 'redaction-boxes' %>
+
+    <div class="redaction-editor__help" id="redaction-help">
+      <p>
+        <%= _('<strong>With a mouse or finger:</strong> drag across a page to draw a box, and drag a box to move it.
+        To remove a box, touch it, then choose “Remove this box”. On a touch screen a swipe up or down
+        scrolls, so start each box with a sideways drag.') %>
+      </p>
+      <p>
+        <%= _('<strong>With a keyboard:</strong> choose “Add a box” beside the page number, then use the arrow
+        keys to move the box, Shift and an arrow to move it further, Alt (Option) and an arrow to change
+        its size, and Delete to remove it. Use Undo/Redo or Ctrl (Command) Z / Shift Z to step through edits. Choose Pan to drag the view without changing boxes.') %>
+      </p>
+    </div>
+    <noscript>
+      <p class="warning"><%= _('Drawing boxes needs JavaScript. You can still {{upload_link}}.', upload_link: link_to(_('upload a replacement'), manage_attachment_path(@attachment))) %></p>
+    </noscript>
+
+    <%= render partial: 'attachment_management/editor_tools' %>
+
+    <ol class="redaction-editor__pages">
+      <% (1..@page_count).each do |n| %>
+        <li class="redaction-page" data-page="<%= n %>">
+          <div class="redaction-page__bar">
+            <span class="redaction-page__label"><%= @image ? _('Image') : _('Page {{page}} of {{page_count}}', page: n, page_count: @page_count) %></span>
+            <span class="redaction-page__count"><%= _('No boxes') %></span>
+            <button type="button" class="redaction-page__add" data-add-box><%= _('Add a box') %></button>
+            <button type="button" class="redaction-page__remove" data-remove-box hidden><%= _('Remove this box') %></button>
+            <button type="button" class="redaction-page__clear" data-clear-page hidden><%= @image ? _('Remove all boxes on this image') : _('Remove all boxes on this page') %></button>
+          </div>
+          <div class="redaction-page__sheet" data-sheet aria-describedby="redaction-help">
+            <%= image_tag page_url.call(n), alt: (@image ? _('The image') : _('Page {{page}}', page: n)), loading: (n > 2 ? 'lazy' : 'eager'), draggable: false, class: 'redaction-page__image' %>
+          </div>
+        </li>
+      <% end %>
+    </ol>
+
+    <div class="redaction-editor__submit">
+      <p class="redaction-editor__total" aria-live="polite" data-total><%= _('No boxes yet.') %></p>
+      <% if can?(:admin, @info_request) %>
+        <p class="redaction-editor__black-mask">
+          <label>
+            <%= check_box_tag :black_mask, '1', params[:black_mask] == '1' %>
+            <%= _('Apply as black mask (hides this content from the requester and regulator pack, and blocks requester redaction on this file)') %>
+          </label>
+        </p>
+      <% end %>
+      <%= submit_tag(@image ? _('Make the redacted image') : _('Make the redacted PDF'), data: { disable_with: _('Making the file…') }) %>
+    </div>
+  <% end %>
+</div>

@@ -29,4 +29,3 @@ class Admin::FoiAttachments::MasksController < AdminController
     raise ActiveRecord::RecordNotFound
   end
 end
-

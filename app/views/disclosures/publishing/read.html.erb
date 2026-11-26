@@ -1,0 +1,43 @@
+<%= render partial: 'disclosures/publishing/band' %>
+<% args = { url_title: @info_request.url_title, message_id: @message.id } %>
+<div class="publish-ask publish-ask--read">
+  <div class="publish-ask__what">
+    <% if @pages.any? %>
+      <%= render partial: 'disclosures/documents/pages',
+                 locals: { document: @document, page_url: ->(page) { disclosure_document_page_path(@document, page: page.number) } } %>
+    <% elsif @text %>
+      <section class="document-pages" aria-label="<%= _('The document') %>">
+        <section class="document-text" id="page-1" aria-label="<%= _('Text') %>">
+          <%= tag.pre(@text, tabindex: 0) %>
+        </section>
+      </section>
+    <% elsif @page_count.to_i.positive? %>
+      <section class="document-pages" aria-label="<%= _('The document') %>">
+        <% (1..@page_count).each do |number| %>
+          <figure class="document-page" id="page-<%= number %>">
+            <figcaption class="document-page__label">
+              <%= _('Page {{page}}', page: number) %><% if @page_count > 1 %> <%= _('of {{count}}', count: @page_count) %><% end %>
+            </figcaption>
+            <div class="document-page__sheet">
+              <img src="<%= manage_attachment_page_path(@attachment, page: number) %>"
+                   alt="<%= _('Page {{page}}', page: number) %>"
+                   loading="<%= number > 2 ? 'lazy' : 'eager' %>"
+                   class="document-page__image">
+            </div>
+          </figure>
+        <% end %>
+      </section>
+    <% elsif @attachment %>
+      <% if Disclosures::Formats.legacy_doc?(@attachment.content_type, @attachment.filename) %>
+        <p class="publish-doc__line"><%= _('This Word (.doc) file will be converted to a PDF when you share it, and the public page will note the original file type.') %></p>
+      <% end %>
+      <p><%= link_to _('Download {{name}}', name: publish_file_name(@document)), attachment_path(@attachment) %></p>
+    <% end %>
+  </div>
+  <div class="publish-ask__answers publish-answers">
+    <% if can?(:redact_document, @document) %>
+      <%= link_to _('Hide something'), publish_reply_redact_path(**args, id: @document), class: 'publish-answer' %>
+    <% end %>
+    <%= link_to _('Back'), publish_reply_check_path(**args), class: 'publish-back-link' %>
+  </div>
+</div>

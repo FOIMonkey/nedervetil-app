@@ -1,0 +1,38 @@
+<% pdf = report['pdf'] || (report.key?('fonts') ? report : nil) %>
+<ul class="attachment-management__checks">
+  <% if report.key?('boxes') %>
+    <li><%= n_('<strong>{{verified}} of {{count}} box</strong> re-read from the new file and found solid black.', '<strong>{{verified}} of {{count}} boxes</strong> re-read from the new file and found solid black.', report['boxes'], verified: report['boxes_verified'], count: report['boxes'] || 0) %></li>
+  <% end %>
+  <% if revision.kind == 'pdf_redaction' %>
+    <li><%= _('Pages: {{pages}}', pages: report['pages']) %><% if report.dig('source', 'pages') %> <%= _('(the source had {{pages}})', pages: report.dig('source', 'pages')) %><% end %>, <%= _('rebuilt at up to {{dpi}} dpi.', dpi: report['dpi']) %></li>
+    <% if report['page_sizes'].present? %>
+      <% largest = report['page_sizes'].max_by { |w, h| w * h } %>
+      <li><%= _('Every page is the size it was shown at in the source') %><% if largest %> <%= _('(the largest {{width}} × {{height}} in)', width: number_with_precision(largest[0] / 72.0, precision: 1, strip_insignificant_zeros: true), height: number_with_precision(largest[1] / 72.0, precision: 1, strip_insignificant_zeros: true)) %><% end %>.</li>
+    <% end %>
+    <li><%= _('Text left in the PDF: <strong>{{characters}} characters</strong>', characters: report['text_characters']) %><% if report.dig('source', 'text_characters').to_i.positive? %> <%= _('(the source had {{characters}}, none of which can now be searched or read aloud)', characters: number_with_delimiter(report.dig('source', 'text_characters'))) %><% end %>.</li>
+  <% end %>
+  <% if pdf %>
+    <% if revision.kind != 'pdf_redaction' %>
+      <li><%= _('Pages: {{pages}}. Text: {{characters}} characters.', pages: pdf['pages'], characters: number_with_delimiter(pdf['text_characters'])) %></li>
+    <% end %>
+    <li><%= _('Fonts: {{fonts}}. Images per page: {{images_per_page}}.', fonts: pdf['fonts'], images_per_page: Array(pdf['images_per_page']).uniq.join(', ').presence || _('none')) %></li>
+    <li><%= _('Embedded files: {{embedded_files}}. Scripts: {{scripts}}. Form: {{form}}. Annotations found: {{annotations}}.', embedded_files: pdf['embedded_files'], scripts: pdf['javascript'] ? _('yes') : _('none'), form: pdf['form'].presence || _('none'), annotations: pdf['annotations']) %></li>
+    <li><%= _('Document properties: {{properties}}', properties: pdf['metadata'].present? ? pdf['metadata'].map { |k, v| "#{k}: #{v}" }.join('; ') : _('none')) %><%= " #{_('(plus an XMP metadata stream)')}" if pdf['metadata_stream'] %>.</li>
+  <% end %>
+  <% if revision.kind == 'image_redaction' %>
+    <li><%= _('{{width}} × {{height}} pixels', width: report['width'], height: report['height']) %><% if report['frames'].to_i > 1 %>, <%= _('{{frames}} frames (boxes on every frame)', frames: report['frames']) %><% end %>, <%= _('the same size as before.') %></li>
+    <li><%= _('Metadata removed: {{metadata}}. The new image has none.', metadata: Array(report['metadata_removed']).any? ? Array(report['metadata_removed']).join(', ') : _('there was none')) %></li>
+  <% end %>
+  <% if revision.kind == 'text_edit' %>
+    <li><%= n_('{{count}} line removed or changed; {{before}} characters before, {{after}} after.', '{{count}} lines removed or changed; {{before}} characters before, {{after}} after.', report['lines_changed'], count: report['lines_changed'] || 0, before: number_with_delimiter(report['characters_before']), after: number_with_delimiter(report['characters_after'])) %></li>
+  <% end %>
+  <% if report['html_sanitised'] %>
+    <li><%= _('HTML cleaned the way the site cleans HTML attachments.') %></li>
+  <% end %>
+  <% if revision.kind == 'upload' %>
+    <li><%= _('Recognised as {{type}}', type: FoiAttachment.content_type_names[report['detected_type']] || report['detected_type']) %><% if report['declared_type'].present? && report['declared_type'] != report['detected_type'] %> <%= _('(the browser said {{type}})', type: report['declared_type']) %><% end %>.</li>
+  <% end %>
+  <% if Array(report['office_findings']).any? %>
+    <li><%= _('In the Office file, not visible on the page: {{findings}}.', findings: Array(report['office_findings']).join('; ')) %></li>
+  <% end %>
+</ul>

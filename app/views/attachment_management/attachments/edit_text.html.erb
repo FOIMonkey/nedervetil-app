@@ -1,0 +1,47 @@
+<%= page_band(redact_only? ? _('Redact the text') : (@attachment.main_body_part? ? _('Edit message text') : _('Edit the text')),
+              back: link_to(_('Back to the attachment'), manage_attachment_path(@attachment))) %>
+<div class="attachment-management">
+  <% if redact_only? %>
+    <p class="attachment-management__lede">
+      <%= _('{{filename}}. Replace each thing that should go
+      with <code>[redacted]</code>: select it and choose “Replace the selection
+      with [redacted]”, or type the marker. Nothing else in the text may change.
+      Saving makes a draft for you to check before it replaces the
+      {{message_text_or_file}}.', filename: @attachment.display_filename, message_text_or_file: @attachment.main_body_part? ? _('message text') : _('file')) %>
+    </p>
+  <% else %>
+    <p class="attachment-management__lede">
+      <%= _('{{filename}}. Change or delete what should go; saving
+      makes a draft for you to check before it replaces the
+      {{message_text_or_file}}.', filename: @attachment.display_filename, message_text_or_file: @attachment.main_body_part? ? _('message text') : _('file')) %>
+    </p>
+  <% end %>
+  <% if @editable && @attachment.content_type == 'text/html' %>
+    <p class="warning"><%= _('This is the message’s HTML. When saved it is cleaned the way the site cleans every HTML attachment (no scripts, no images from other sites).') %></p>
+  <% end %>
+
+  <% if @editable %>
+    <%= form_tag manage_attachment_revisions_path(@attachment), class: 'text-editor', data: { controller: 'text-redaction', text_redaction: 'text', unsaved_on_load: response.status == 422 } do %>
+      <%= hidden_field_tag :kind, 'text_edit' %>
+      <%= label_tag :text, _('Text') %>
+      <%= text_area_tag :text, @text, rows: 28, spellcheck: false, class: 'text-editor__field' %>
+      <% if can?(:admin, @info_request) %>
+        <p class="text-editor__black-mask">
+          <label>
+            <%= check_box_tag :black_mask, '1', params[:black_mask] == '1' %>
+            <%= _('Apply as black mask (hides this content from the requester and regulator pack, and blocks requester redaction on this file)') %>
+          </label>
+        </p>
+      <% end %>
+      <p class="text-editor__actions">
+        <% if redact_only? %>
+          <button type="button" class="text-editor__redact" data-redact-selection="text" hidden><%= _('Replace the selection with [redacted]') %></button>
+        <% end %>
+        <button type="button" data-undo-text disabled><%= _('Undo') %></button>
+        <button type="button" data-redo-text disabled><%= _('Redo') %></button>
+        <span class="visually-hidden" role="status" data-editor-status></span>
+        <%= submit_tag _('Save as a draft') %>
+      </p>
+    <% end %>
+  <% end %>
+</div>

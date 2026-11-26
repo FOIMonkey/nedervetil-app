@@ -1,6 +1,13 @@
 <% attachments = incoming_message.get_attachments_for_display %>
-<% if not attachments.nil? and attachments.size > 0 %>
-  <div class="attachments">
+<%# Requesters publish from the request page's Documents section, so they don't get Manage or Edit message text. %>
+<% publishes = can?(:publish_from_reply, incoming_message) && !can?(:admin, incoming_message.info_request) %>
+<%# On the requester's page the latest reply's files sit at the top of the page, and a row lists only its own, plainly. %>
+<% if @request_history %>
+  <% unless @receipt_message == incoming_message %>
+    <%= render partial: 'request/attachment_list', locals: { incoming_message: incoming_message, attachments: attachments, publishes: publishes } %>
+  <% end %>
+<% elsif not attachments.nil? and attachments.size > 0 %>
+  <div class="attachments" data-controller="attachments-limit" data-attachments-limit-show-all-value="<%= _('Show all attachments') %>" data-attachments-limit-show-fewer-value="<%= _('Show fewer attachments') %>">
     <div class="attachments__header">
       <h3>
         <%= n_('{{count}} Attachment',
@@ -10,85 +17,36 @@
       </h3>
     </div>
 
-    <ul class="list-of-attachments">
-      <% attachments.each do |a| %>
-        <%= tag.li class: 'attachment', id: dom_id(a) do %>
-          <% if cannot?(:read, a) %>
-            <%= image_tag('content_type/icon_unknown.png', class: 'attachment__image') %>
-          <% end %>
-          <% if concealed_prominence?(a) %>
-            <span class="hidden_attachment"><%= render_prominence(a) %></span>
-          <% end %>
-          <% if can?(:read, a) && a.masking_failed? %>
-            <p class="attachment__name">
-              <%= h a.display_filename %>
-            </p>
+    <%= render partial: 'request/attachment_list', locals: { incoming_message: incoming_message, attachments: attachments, publishes: publishes } %>
 
-            <p class="attachment__meta">
-              <%= a.display_size %>
-              <em><%= _('We were not able to process this attachment.') %></em>
-
-              <% if @user.present? && @user.admin_page_links? %>
-                <%= link_to _('Admin'), edit_admin_foi_attachment_path(a) %>
-              <% end %>
-            </p>
-
-          <% elsif can?(:read, a) %>
-            <%= attachment_link(incoming_message, a) %>
-
-            <p class="attachment__name">
-              <%= h a.display_filename %>
-            </p>
-
-            <p class="attachment__meta">
-              <%= a.display_size %>
-              <% if a.html_viewer? && incoming_message.info_request.prominence(:decorate => true).is_public? %>
-                <%= link_to _('View'), attachment_path(a, :html => true) %>
-              <% end %>
-              <%= link_to _('Download'), attachment_path(a) %>
-
-              <%= explore_in_datasette(a) %>
-
-              <% if note = a.extra_note %>
-                <em><%= note %></em>
-              <% end %>
-
-              <% if @user.present? && @user.admin_page_links? %>
-                <%= link_to _('Admin'), edit_admin_foi_attachment_path(a) %>
-              <% end %>
-            </p>
-
-          <% elsif a.erased? %>
-            <p class="attachment__name">
-              <%= h a.display_filename %>
-            </p>
-
-            <p class="attachment__meta">
-              <em><%= _('This file has been erased.') %></em>
-
-              <% if @user.present? && @user.admin_page_links? %>
-                <%= link_to _('Admin'), edit_admin_foi_attachment_path(a) %>
-              <% end %>
-            </p>
-
-          <% end %>
-        <% end %>
-      <% end %>
-    </ul>
-
-    <a href="#" class="attachments__show-more" style="display: none;" data-show-all="<%= _('Show all attachments') %>" data-show-fewer="<%= _('Show fewer attachments') %>"></a>
+    <a href="#" class="attachments__show-more" style="display: none;" data-attachments-limit-target="toggle" data-action="attachments-limit#toggle"></a>
   </div>
 <% end %>
 
+<% body_part = incoming_message.get_main_body_text_part %>
 <%= tag.div id: incoming_message_dom_id(incoming_message) do %>
-  <% if concealed_prominence?(incoming_message.get_main_body_text_part) %>
+  <% if @request_history && body_part && cannot?(:read, body_part) && !body_part.erased? %>
+    <p class="attachment__held"><%= hidden_reply_text_notice %></p>
+  <% elsif concealed_prominence?(body_part) %>
     <p class="hidden_attachment">
-      <%= render_prominence(incoming_message.get_main_body_text_part) %>
+      <%= render_prominence(body_part) %>
     </p>
   <% end %>
   <% if can?(:read, incoming_message.get_main_body_text_part) %>
     <%= incoming_message.get_body_for_html_display(@collapse_quotes) %>
+  <% elsif !incoming_message.parsed_for_display? %>
+    <%# Its mail can't be read yet, so it has no parts: the reply's note stands where its text will be. %>
+    <%= incoming_message.get_body_for_html_display(@collapse_quotes) %>
   <% elsif incoming_message.get_main_body_text_part&.erased? %>
     <%= _('This message has been erased.') %>
   <% end %>
+<% end %>
+<% if can?(:read, incoming_message.get_main_body_text_part) %>
+  <%= render partial: 'request/attachment_attribution', locals: { attachment: incoming_message.get_main_body_text_part } %>
+  <%= render partial: 'disclosures/attachment_document', locals: { attachment: incoming_message.get_main_body_text_part } %>
+<% end %>
+<% if body_part && can?(:manage_attachment, body_part) && can?(:edit_attachment_text, body_part) && !publishes %>
+  <p class="attachment-management-body-link">
+    <%= link_to _('Edit message text'), manage_attachment_path(body_part) %>
+  </p>
 <% end %>

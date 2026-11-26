@@ -1,0 +1,11 @@
+<% documents = Ability.guest.can?(:read, info_request) ? Disclosures::Document.listed.where(info_request_id: info_request.id).order(:kind, :title).to_a : [] %>
+<% if documents.any? %>
+  <div class="sidebar__section sidebar__request-documents">
+    <h2><%= _('Documents') %></h2>
+    <ul>
+      <% documents.each do |document| %>
+        <li><%= link_to document.title, disclosure_manage_document_path(document) %> <span class="sidebar__documents__meta"><%= document.kind_label %></span></li>
+      <% end %>
+    </ul>
+  </div>
+<% end %>

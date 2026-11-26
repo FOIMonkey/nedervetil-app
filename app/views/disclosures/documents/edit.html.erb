@@ -1,0 +1,5 @@
+<% if params[:flow] == 'check' && publish_flow_check_path(@document) %>
+  <%= render partial: 'disclosures/publishing/details_form', locals: { manage_path: disclosure_manage_document_path(@document) } %>
+<% else %>
+  <%= render partial: 'disclosures/documents/form', locals: { manage_path: disclosure_manage_document_path(@document) } %>
+<% end %>

@@ -33,6 +33,9 @@
                      old_unclassified: @old_unclassified } %>
 
 <div id="left_column" class="left_column">
+  <% if !@render_to_file && can?(:see_document_panel, @info_request) %>
+    <%= render partial: 'disclosures/request_panel', locals: { info_request: @info_request } %>
+  <% end %>
   <%= render_notes(@info_request.all_notes) %>
 
   <% @info_request.info_request_events.each do |info_request_event| %>

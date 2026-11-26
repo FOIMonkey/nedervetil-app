@@ -1,0 +1,39 @@
+<%= render partial: 'disclosures/publishing/band' %>
+<% rows = @reply.rows %>
+<% kinds = Disclosures::Document::KIND_LABELS %>
+<% open_row = ->(row) { row.suggestion.suggestion != 'none' && !done?(row) && (row.document ? row.document.stage_in?(:held, :in_review, :not_ready, :ready) : can?(:create_document, row.attachment)) } %>
+<% likely = rows.select { |row| open_row.(row) && !(row.document && stuck?(row.document)) && (row.document || kinds.key?(row.suggestion.suggestion)) } %>
+<% maybe = rows.select(&open_row) - likely %>
+<% done = rows.select { |row| done?(row) } %>
+<% name_of = ->(row) { row.email_text ? _('Their email') : row.name } %>
+<% sheet = ->(row) { row.name.to_s.match?(/\.(xlsx|xlsm|xls|csv)\z/i) } %>
+<% answers = { likely: likely, maybe: maybe, name_of: name_of } %>
+<%# What's being asked about, then the answers, in the page as on the screen. %>
+<div class="publish-ask">
+  <div class="publish-ask__what">
+    <% if @reply.pending && rows.empty? %>
+      <%= render partial: 'disclosures/publishing/waiting', locals: { message: _('Working out what this reply holds.'), what: 'reply' } %>
+    <% end %>
+    <% if likely.any? %>
+      <ul class="publish-files">
+        <% likely.each do |row| %>
+          <li>
+            <span class="publish-card__sheet<%= ' publish-card__sheet--grid' if sheet.(row) %>" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+            <span class="publish-files__text"><b><%= name_of.(row) %></b> <span><%= [Disclosures::Document::KIND_LABELS[row.document&.kind || row.suggestion.suggestion]&.then { |label| _(label) }, (document_extent(row.document) if row.document)].compact.join(' · ') %></span></span>
+          </li>
+        <% end %>
+      </ul>
+    <% elsif (!@reply.pending || rows.any?) && done.size < rows.size %>
+      <p class="publish-none"><%= done.any? ? _('Choose another file from this reply if you’d like to share it too.') : _('Nothing here looks like the decision or the records. Choose a file if you’d like to share one.') %></p>
+    <% end %>
+    <% if done.any? %>
+      <% if likely.any? || done.size < rows.size %><h2 class="publish-ask__sub"><%= _('Already done') %></h2><% end %>
+      <ul class="publish-files publish-files--plain">
+        <% done.each do |row| %>
+          <li><span class="publish-files__text"><b><%= row.document.title %></b> <span><%= requester_document_state(row.document) %>. <%= link_to _('See it'), row.document.stage_in?(:listed) ? disclosure_document_path(row.document) : disclosure_manage_document_path(row.document) %></span></span></li>
+        <% end %>
+      </ul>
+    <% end %>
+  </div>
+  <div class="publish-ask__answers publish-answers"><%= render partial: 'disclosures/publishing/choose_answers', locals: answers %></div>
+</div>

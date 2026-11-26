@@ -11,6 +11,8 @@
 <%= form_tag admin_censor_rule_path(@censor_rule), method: :put, class: 'form form-horizontal' do %>
   <%= render partial: 'form' %>
 
+  <p>Applied to the published documents and the files in threads it reaches, since it was last saved: <strong><%= censor_rule_applied(@censor_rule) %></strong>.</p>
+
   <div class="form-actions">
     <%= submit_tag 'Save', accesskey: 's', class: 'btn btn-success' %>
 
@@ -23,9 +25,4 @@
   </div>
 <% end %>
 
-<div class="row">
-  <div class="span12">
-    <%= render partial: 'warnings' %>
-    <%= render partial: 'about' %>
-  </div>
-</div>
+<p class="admin-note">Regular expressions that are hard to match slow down every page the rule covers. Use one only when plain text won’t do.</p>

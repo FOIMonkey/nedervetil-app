@@ -1,64 +1,30 @@
 ##
-# Controller to serve FoiAttachment records in both raw and as HTML.
+# Controller to serve FoiAttachment records.
 #
 class AttachmentsController < ApplicationController
   include InfoRequestHelper
-  include PublicTokenable
+  include FileDelivery
 
   skip_before_action :html_response, :store_gettext_locale
 
   before_action :find_info_request, :find_incoming_message, :find_attachment
-  before_action :find_project
-
-  include ProminenceHeaders
 
   before_action :authenticate_attachment
-  before_action :authenticate_attachment_as_html, only: :show_as_html
   before_action :set_cors
 
   around_action :ensure_masked
 
   def show
-    if request.headers['Sec-Fetch-Dest'] == 'iframe' &&
-       request.headers['Sec-Fetch-Site'] == 'same-origin'
-
-      render body: @attachment.body, content_type: content_type
-    else
-      send_data(
-        @attachment.body,
-        filename: @attachment.display_filename,
-        type: content_type
-      )
-    end
-  end
-
-  def show_as_html
-    html = @attachment.masked_body_to_html(
-      attachment_url: attachment_url(@attachment),
-      content_for: {
-        head_suffix: render_to_string(
-          partial: 'request/view_html_stylesheet',
-          formats: [:html]
-        ),
-        body_prefix: render_to_string(
-          partial: 'request/view_html_prefix',
-          formats: [:html]
-        )
-      }
-    )
-
-    render html: html.html_safe
+    send_file_content(@attachment.body,
+                      filename: @attachment.display_filename,
+                      content_type: content_type,
+                      csp: FileDelivery::ATTACHMENT_CSP)
   end
 
   private
 
   def find_info_request
-    @info_request =
-      if public_token?
-        InfoRequest.find_by!(public_token: public_token)
-      else
-        InfoRequest.find_by!(url_title: params[:request_url_title])
-      end
+    @info_request = InfoRequest.find_by!(url_title: params[:request_url_title])
   end
 
   def find_incoming_message
@@ -68,21 +34,22 @@ class AttachmentsController < ApplicationController
   end
 
   def find_attachment
-    @attachment = (
-      @incoming_message.parse_raw_email
+    return if cannot?(:read, @info_request) || cannot?(:read, @incoming_message)
 
+    attachments = @incoming_message.get_attachments_for_display
+    numbered = attachments.find { |attachment|
+      attachment.url_part_number == part_number
+    }
+    return if numbered && !numbered.erased? && cannot?(:read, numbered)
+
+    @attachment =
       IncomingMessage.get_attachment_by_url_part_number_and_filename!(
-        @incoming_message.get_attachments_for_display,
+        attachments.select { |attachment|
+          attachment.erased? || can?(:read, attachment)
+        },
         part_number,
         original_filename
       )
-    )
-  end
-
-  def find_project
-    return unless current_user && params[:project_id]
-
-    @project = current_user.projects.find_by(id: params[:project_id])
   end
 
   def authenticate_attachment
@@ -100,16 +67,9 @@ class AttachmentsController < ApplicationController
       # Check for erased attachment
       if @attachment.erased?
         request.format = :html
-        return render_hidden('request/erased_attachment')
+        render_hidden('request/erased_attachment')
       end
 
-      if cannot?(:read, @attachment)
-        request.format = :html
-        render_hidden('request/hidden_attachment')
-      end
-    elsif params[:file_name] =~ /^foiextract.*/
-      # 404 for AttachmentToHTML sub-files that can't be found
-      raise ActiveRecord::RecordNotFound
     elsif params[:file_name]
       # If we can't find the right attachment, redirect to the incoming message:
       redirect_to incoming_message_url(@incoming_message), status: 303
@@ -118,34 +78,21 @@ class AttachmentsController < ApplicationController
     end
   end
 
-  def authenticate_attachment_as_html
-    # The conversion process can generate files in the cache directory that can
-    # be served up directly by the webserver according to httpd.conf, so don't
-    # allow it unless that's OK.
-    return if attachment_is_public?
-
-    raise ActiveRecord::RecordNotFound, 'Attachment HTML not found.'
-  end
-
+  # Masking always leaves a copy for the requester, even after a fault
+  # (FoiAttachment::Maskable#masking_outcome), so this waits for it.
   def ensure_masked
     if @attachment.masked?
       yield
-    elsif @attachment.masking_failed?
-      render_attachment_masking_failed
     else
       @attachment.mask_later
 
       Timeout.timeout(5) do
-        until @attachment.masked? || @attachment.masking_failed?
+        until @attachment.masked?
           sleep 0.5
           @attachment.reload
         end
 
-        if @attachment.masking_failed?
-          render_attachment_masking_failed
-        else
-          redirect_to(request.fullpath)
-        end
+        redirect_to(request.fullpath)
       end
     end
 
@@ -156,34 +103,20 @@ class AttachmentsController < ApplicationController
     )
   end
 
-  def render_attachment_masking_failed
-    request.format = :html
-    render template: 'attachments/masking_failed', status: 422
-  end
-
   def set_cors
     # Allow CSVs to be explored in a Datasette instance
     return unless @attachment.content_type == 'text/csv'
 
-    headers['Access-Control-Allow-Origin'] = '*'
-    headers['Access-Control-Request-Method'] = 'GET'
+    headers['access-control-allow-origin'] = '*'
+    headers['access-control-request-method'] = 'GET'
   end
-
-
 
   def part_number
     params[:part].to_i
   end
 
   def original_filename
-    filename = params[:file_name]
-    return unless filename
-
-    if action_name == 'show_as_html'
-      filename.gsub(/\.html$/, '')
-    else
-      filename
-    end
+    params[:file_name]
   end
 
   def content_type
@@ -191,30 +124,6 @@ class AttachmentsController < ApplicationController
     # when cached in cache_attachments above
     AlaveteliFileTypes.filename_to_mimetype(params[:file_name]) ||
       'application/octet-stream'
-  end
-
-  def attachment_is_public?
-    # If this a request, message and attachment are public then it can be served
-    # up without authentication
-    prominence.is_public? &&
-      @incoming_message.is_public? &&
-      @attachment.is_public?
-  end
-
-
-
-  def current_ability
-    @current_ability ||= Ability.new(
-      current_user, project: @project, public_token: public_token?
-    )
-  end
-
-  def prominence
-    @info_request.prominence(decorate: true)
-  end
-
-  def with_prominence
-    @info_request
   end
 
   def verifier

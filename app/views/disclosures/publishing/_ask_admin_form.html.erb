@@ -1,0 +1,5 @@
+<%= form_tag publish_reply_ask_admin_path(**args, id: document), class: ['publish-answers__form', 'publish-ask-admin', local_assigns[:form_class]].compact.join(' ') do %>
+  <label for="<%= field_id %>"><%= _('What needs to be hidden?') %></label>
+  <textarea id="<%= field_id %>" name="note" rows="4" maxlength="500" required></textarea>
+  <button type="submit" class="publish-answer publish-answer--primary" data-disable-with="<%= _('Asking…') %>"><%= _('Ask admin to hide it') %></button>
+<% end %>

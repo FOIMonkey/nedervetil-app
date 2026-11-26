@@ -1,0 +1,40 @@
+<% triage_frame = local_assigns.fetch(:triage_frame, false) %>
+<% selected_triage = local_assigns[:selected_triage] %>
+<% if items.any? %>
+  <details class="admin-todo<%= ' admin-todo--mine' if mine %>"<% if open %> open<% end %>>
+    <summary><span class="admin-todo__count"><%= items.size %></span> <%= label %></summary>
+    <ul class="admin-rows">
+      <% items.each do |item| %>
+        <% document = item.respond_to?(:document) ? item.document : item %>
+        <% target = disclosure_manage_document_path(document) %>
+        <% active = triage_frame && selected_triage && selected_triage[:kind] == 'document' && selected_triage[:record]&.id == document.id %>
+        <li class="<%= 'admin-triage-row' if triage_frame %>"<% if active %> data-selected="true"<% end %><% if triage_frame %> data-action="click->triage-list#selectRow"<% end %>>
+          <% if triage_frame %>
+            <%= link_to document.title, admin_triage_path('document', document.id),
+                        class: 'admin-rows__title admin-triage-link',
+                        'aria-current': (active ? 'true' : nil),
+                        data: { turbo: true,
+                                turbo_frame: 'triage_detail',
+                                triage_list_target: 'item',
+                                action: 'click->triage-list#select' } %>
+          <% else %>
+            <%= link_to document.title, target, class: 'admin-rows__title' %>
+          <% end %>
+          <span class="admin-rows__act"><%= link_to 'Open', target, class: (triage_frame ? 'admin-rows__open' : 'btn btn-small') %></span>
+          <span class="admin-rows__meta">
+            <span><%= document.kind_label %></span>
+            <% if document.authority %><span><%= document.authority.name %></span><% end %>
+            <% if document.stage_in?(:erased, :erasing, :withdrawn, :taken_down) %>
+              <span>Withdrawn <%= document_date(document.withdrawn_at) %></span>
+              <span><%= document.request_deleted? ? 'Its request was deleted' : 'Withdrawn; check the file before publishing again' %></span>
+            <% else %>
+              <span><%= distance_of_time_in_words_to_now(document.created_at) %></span>
+              <% if item.respond_to?(:waiting) && Disclosures::ReviewSubmission.unwanted(document) %><span><strong>The requester no longer wants it published</strong></span><% end %>
+              <% if item.respond_to?(:why) && item.why %><span><%= item.why %></span><% end %>
+            <% end %>
+          </span>
+        </li>
+      <% end %>
+    </ul>
+  </details>
+<% end %>

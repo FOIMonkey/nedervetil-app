@@ -1,0 +1,7 @@
+<% document = current_user && !@render_to_file &&
+     (@disclosure_attachment_documents ||= Disclosures::AttachmentDocuments.new(@info_request&.id)).for(attachment.id) %>
+<% if document && can?(:manage_document, document) %>
+  <% listed = document.stage_in?(:listed) %>
+  <%# The same word and tag as the end of the flow. %>
+  <p class="attachment__meta attachment__document"><span class="publish-receipt__status"><%= listed ? _('Public') : requester_document_state(document) %></span> <%= link_to listed ? _('See it') : _('Open it'), document_row_path(document) %><span class="visually-hidden">: <%= document.title %></span></p>
+<% end %>

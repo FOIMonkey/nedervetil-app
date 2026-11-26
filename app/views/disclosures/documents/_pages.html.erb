@@ -1,0 +1,52 @@
+<% record = local_assigns[:document] || local_assigns[:version] %>
+<% pages = record.pages.to_a %>
+<% tags = Disclosures::Attribution.new(record.respond_to?(:document) ? record.document : record).boxes %>
+<% notes = record.render_notes || {} %>
+<section class="document-pages" aria-label="<%= _('The document') %>">
+  <% if pages.empty? %>
+    <p class="document-pages__none">
+      <% if notes['no_preview'] %>
+        <%= _('This kind of file can’t be shown here. Download it to read it.') %>
+      <% else %>
+        <%= _('Nothing to show for this file.') %>
+      <% end %>
+    </p>
+  <% end %>
+
+  <% pages.each do |page| %>
+    <% case page.kind %>
+    <% when 'image' %>
+      <figure class="document-page" id="<%= page.anchor %>">
+        <figcaption class="document-page__label">
+          <%= page.label %><% if record.page_count.to_i > 1 %> <%= _('of {{count}}', count: record.page_count) %><% end %>
+        </figcaption>
+        <div class="document-page__sheet">
+          <img src="<%= page_url.call(page) %>" alt="<%= page.label %><% if page.text.present? %> <%= _('(text below)') %><% end %>"
+               width="<%= page.width %>" height="<%= page.height %>" loading="<%= page.number > 2 ? 'lazy' : 'eager' %>"
+               class="document-page__image">
+          <% document_box_tags(tags[page.number]).each do |_x0, y0, x1, _y1, who| %>
+            <span class="document-paper__tag" style="top: <%= (y0 * 100).round(2) %>%; right: <%= ((1 - x1) * 100).round(2) %>%" aria-hidden="true"><%= who %></span>
+          <% end %>
+        </div>
+        <% if page.text.present? %>
+          <details class="document-page__text">
+            <summary><span class="document-page__text-label"><%= _('Text of {{page}}', page: page.label.downcase) %></span><% if page.text_source == 'ocr' %> <span class="document__soft"><%= _('(read from the page image by this site, leaving out blacked-out parts; may contain mistakes)') %></span><% end %></summary>
+            <%= tag.pre(page.text, tabindex: 0, class: (page.columnar? ? 'is-columns' : nil)) %>
+          </details>
+        <% else %>
+          <p class="document-page__no-text"><%= _('No text could be read from this page.') %></p>
+        <% end %>
+      </figure>
+    <% when 'sheet' %>
+      <%= render partial: 'disclosures/documents/sheet', locals: { page: page, document: record, note: local_assigns.fetch(:sheet_note, true) } %>
+    <% else %>
+      <section class="document-text" id="<%= page.anchor %>" aria-label="<%= _('Text') %>">
+        <%= tag.pre(page.text, tabindex: 0, class: (page.columnar? ? 'is-columns' : nil)) %>
+      </section>
+    <% end %>
+  <% end %>
+
+  <% if notes['pages_not_shown'].to_i.positive? %>
+    <p class="document-pages__more"><%= n_('Only the first page is shown here. Download the file to read the rest.', 'Only the first {{count}} pages are shown here. Download the file to read the rest.', pages.size, count: pages.size) %></p>
+  <% end %>
+</section>

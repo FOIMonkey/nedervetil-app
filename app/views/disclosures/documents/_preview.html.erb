@@ -1,0 +1,10 @@
+<span class="doc-sheet" aria-hidden="true">
+  <% if document.thumbnail.attached? %>
+    <img src="<%= disclosure_document_thumbnail_path(document) %>" alt="" loading="lazy">
+  <% elsif (rows = sheet_preview(sheet_text)).any? %>
+    <%= render partial: 'disclosures/documents/sheet_grid', locals: { rows: rows } %>
+  <% else %>
+    <%= image_tag document_icon_path(document), alt: '', class: 'doc-sheet__icon' %>
+  <% end %>
+  <span class="doc-sheet__type"><%= document_format_tag(document) %></span>
+</span>

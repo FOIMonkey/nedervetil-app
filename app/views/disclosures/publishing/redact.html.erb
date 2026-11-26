@@ -1,0 +1,196 @@
+<%= render partial: 'disclosures/publishing/band' %>
+<% args = { url_title: @info_request.url_title, message_id: @message.id } %>
+<% document = @document %>
+<% check_path = publish_reply_check_path(**args) %>
+<% file_format = @attachment ? Disclosures::Formats.declared(@attachment.content_type, @attachment.filename) : document.format %>
+<% admin_only_reason = if @attachment&.black_masked? || @attachment&.manual_black_mask?
+                         _('An admin has already redacted this file, so only an admin can make further changes. Tell them what else needs to be hidden.')
+                       elsif file_format.in?(%w[csv spreadsheet])
+                         _('Spreadsheets and CSV files can’t be edited here. Tell an admin what needs to be hidden.')
+                       else
+                         _('This type of file can’t be edited here. Tell an admin what needs to be hidden.')
+                       end %>
+<div class="publish-page">
+  <% if @documents.size > 1 %>
+    <nav class="publish-tabs" aria-label="<%= _('Documents') %>">
+      <% @documents.each do |tab| %>
+        <%= link_to publish_file_name(tab), publish_reply_redact_path(**args, id: tab), 'aria-current': (tab == document ? 'page' : nil) %>
+      <% end %>
+    </nav>
+  <% end %>
+
+  <% if !@can_redact %>
+    <div class="request-flow--two publish-work">
+      <div class="publish-bench">
+        <section class="publish-doc" aria-labelledby="doc-<%= document.public_id %>">
+          <div class="publish-doc__text">
+            <h2 class="publish-doc__name" id="doc-<%= document.public_id %>"><%= publish_file_name(document) %></h2>
+            <p class="publish-doc__line"><%= admin_only_reason %></p>
+          </div>
+        </section>
+      </div>
+      <aside class="publish-side publish-answers">
+        <%= render partial: 'disclosures/publishing/ask_admin_form', locals: { args: args, document: document, field_id: 'hide-note' } %>
+        <%= link_to _('Back'), check_path, class: 'publish-back-link' %>
+      </aside>
+    </div>
+  <% elsif @text %>
+    <div class="request-flow--two publish-work">
+      <div class="publish-bench">
+        <%= form_tag publish_reply_redact_path(**args, id: document),
+                     class: 'publish-editor publish-editor--text',
+                     id: 'publish-redaction',
+                     data: { controller: 'text-redaction', text_redaction: 'document-text' } do %>
+          <p class="publish-lede"><%= _('Select anything that should go, then choose Hide: it becomes [redacted]. Change nothing else.') %></p>
+          <%= hidden_field_tag :kind, 'text_edit', id: nil %>
+          <div class="publish-tools" role="toolbar" aria-label="<%= _('Tools') %>">
+            <button type="button" class="publish-tool" aria-pressed="true" data-redact-selection="document-text" title="<%= _('Replace the selected text with [redacted]') %>">
+              <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 5h12M10 5v11" stroke="currentColor" stroke-width="2.5" fill="none"/></svg><%= _('Hide') %>
+            </button>
+            <button type="button" class="publish-tool" data-undo-text="document-text">
+              <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M7 5L3 9l4 4M3.5 9H12a4.5 4.5 0 0 1 0 9H9" stroke="currentColor" stroke-width="2.2" fill="none"/></svg><%= _('Undo') %>
+            </button>
+            <button type="button" class="publish-tool" data-redo-text="document-text">
+              <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M13 5l4 4-4 4M16.5 9H8a4.5 4.5 0 0 0 0 9h3" stroke="currentColor" stroke-width="2.2" fill="none"/></svg><%= _('Redo') %>
+            </button>
+            <span class="visually-hidden" role="status" data-editor-status></span>
+          </div>
+          <div class="publish-sheets">
+            <label for="document-text" class="visually-hidden"><%= _('The text') %></label>
+            <textarea id="document-text" name="text" rows="24" class="attachment-management__textarea publish-text" spellcheck="false"><%= @text %></textarea>
+          </div>
+        <% end %>
+      </div>
+      <aside class="request-flow__side publish-side">
+        <div class="publish-finish" id="publish-finish">
+          <p class="publish-side__next" data-redaction-none><%= link_to _('Done'), check_path, class: 'publish-answer publish-answer--primary' %></p>
+          <div class="publish-save" data-redaction-pending>
+            <button type="submit" form="publish-redaction" class="publish-answer publish-answer--primary publish-save__go" data-disable-with="<%= _('Saving…') %>"><%= _('Save redactions') %></button>
+            <p class="publish-note-field">
+              <label for="text-reason"><%= _('Note (optional)') %></label>
+              <input type="text" id="text-reason" name="reason" form="publish-redaction" maxlength="500">
+            </p>
+          </div>
+        </div>
+        <%= link_to _('Back'), check_path, class: 'publish-back-link' %>
+      </aside>
+    </div>
+  <% elsif @can_convert_word %>
+    <div class="request-flow--two publish-work">
+      <div class="publish-bench">
+        <section class="publish-doc" aria-labelledby="doc-<%= document.public_id %>">
+          <div class="publish-doc__text">
+            <h2 class="publish-doc__name" id="doc-<%= document.public_id %>"><%= publish_file_name(document) %></h2>
+            <p class="publish-doc__line"><%= _('Convert this Word document to a PDF so you can draw redaction boxes over anything to hide. Saving replaces the file with the redacted PDF.') %></p>
+            <%= form_tag publish_reply_redact_path(**args, id: document) do %>
+              <%= hidden_field_tag :kind, 'office_pdf', id: nil %>
+              <button type="submit" class="publish-answer publish-answer--primary" data-disable-with="<%= _('Converting…') %>"><%= _('Convert to PDF to draw boxes') %></button>
+            <% end %>
+          </div>
+        </section>
+      </div>
+      <aside class="publish-side publish-answers">
+        <% if can?(:manage_document, document) %>
+          <details class="publish-ask-fold" open>
+            <summary><%= _('Ask admin instead') %></summary>
+            <%= render partial: 'disclosures/publishing/ask_admin_form', locals: { args: args, document: document, field_id: 'hide-note-word', form_class: nil } %>
+          </details>
+        <% end %>
+        <%= link_to _('Back'), check_path, class: 'publish-back-link' %>
+      </aside>
+    </div>
+  <% elsif @page_count.to_i > 0 %>
+    <% long_file = @page_count > 5 %>
+    <div class="request-flow--two publish-work">
+      <div class="publish-bench">
+        <% if can?(:manage_document, document) %>
+          <noscript>
+            <%= render partial: 'disclosures/publishing/ask_admin_form', locals: { args: args, document: document, field_id: 'hide-note-nojs', form_class: 'publish-nojs' } %>
+          </noscript>
+        <% end %>
+        <%= form_tag publish_reply_redact_path(**args, id: document),
+                     class: 'redaction-editor publish-editor',
+                     id: 'publish-redaction',
+                     data: { controller: 'box-editor', redaction_editor: true, box_list: 'publish-new-boxes' } do %>
+          <p class="publish-lede"><%= _('Draw a box over anything that should go.') %></p>
+          <a href="#publish-finish" class="publish-skip" data-skip-finish data-pending="<%= _('Skip to Save redactions') %>" data-none="<%= _('Skip to Done') %>"><%= _('Skip to Done') %></a>
+          <details class="publish-help" id="redaction-help">
+            <summary><%= _('How to draw boxes') %></summary>
+            <ul>
+              <li><%= _('Drag across the page to draw a box.') %></li>
+              <li><%= _('Drag a box to move it. On a touch screen, start with a sideways drag.') %></li>
+              <li><%= _('Can’t drag? Choose Add a box, then use the Move and Size buttons that appear.') %></li>
+              <li><%= _('With a keyboard, arrow keys move it. Add Shift to move it further, or Alt to change its size.') %></li>
+              <li><%= _('Press the Delete key to remove the selected box. Undo brings it back.') %></li>
+            </ul>
+          </details>
+          <%= hidden_field_tag :kind, 'pdf_redaction', id: nil %>
+          <%= hidden_field_tag :parent_id, @conversion.id, id: nil if @conversion %>
+          <%= hidden_field_tag :boxes, '{}', id: 'redaction-boxes' %>
+          <%= render partial: 'attachment_management/editor_tools', locals: { folded: true, hide_selection: _('Hide selection'), hide_match: _('Hide this match') } %>
+          <div class="publish-sheets">
+            <ol class="redaction-editor__pages">
+              <% (1..@page_count).each do |page| %>
+                <% page_src = @conversion ? page_manage_attachment_revision_path(@attachment, @conversion, page: page) : manage_attachment_page_path(@attachment, page: page) %>
+                <li class="redaction-page" id="page-<%= page %>" data-page="<%= page %>">
+                  <div class="redaction-page__bar">
+                    <span class="redaction-page__label"><%= _('Page {{page}} of {{count}}', page: page, count: @page_count) %></span>
+                    <span class="redaction-page__count"><%= _('No boxes') %></span>
+                    <button type="button" class="redaction-page__add" data-add-box<%= ' tabindex="-1"'.html_safe if long_file %>><%= _('Add a box') %><span class="visually-hidden">: <%= _('Page {{page}}', page: page) %></span></button>
+                    <button type="button" class="redaction-page__remove" data-remove-box hidden><%= _('Remove this box') %></button>
+                    <button type="button" class="redaction-page__clear" data-clear-page hidden><%= _('Remove all boxes on this page') %></button>
+                  </div>
+                  <div class="redaction-page__sheet" data-sheet aria-describedby="redaction-help">
+                    <%= image_tag page_src,
+                                  alt: _('Page {{page}}', page: page),
+                                  loading: (page > 2 ? 'lazy' : 'eager'),
+                                  draggable: false,
+                                  class: 'redaction-page__image' %>
+                  </div>
+                </li>
+              <% end %>
+            </ol>
+          </div>
+          <p class="redaction-editor__total visually-hidden" aria-live="polite" data-total><%= _('No boxes yet.') %></p>
+        <% end %>
+      </div>
+      <aside class="request-flow__side publish-side">
+        <div class="publish-finish" id="publish-finish">
+          <p class="publish-side__next" data-redaction-none><%= link_to _('Done'), check_path, class: 'publish-answer publish-answer--primary' %></p>
+          <div class="publish-save" data-redaction-pending hidden>
+            <button type="submit" form="publish-redaction" class="publish-answer publish-answer--primary publish-save__go" data-disable-with="<%= _('Saving…') %>"><%= _('Save redactions') %></button>
+            <p class="publish-note-field">
+              <label for="redaction-reason"><%= _('Note (optional)') %></label>
+              <input type="text" id="redaction-reason" name="reason" form="publish-redaction" maxlength="500">
+            </p>
+          </div>
+        </div>
+        <h2 class="request-flow__side-title publish-side__title"><%= _('Hidden') %></h2>
+        <ul class="publish-list" id="publish-new-boxes"></ul>
+        <p class="publish-side__none" data-redaction-none><%= _('Nothing yet.') %></p>
+        <% if can?(:manage_document, document) %>
+          <details class="publish-ask-fold">
+            <summary><%= _('Ask admin instead') %></summary>
+            <%= render partial: 'disclosures/publishing/ask_admin_form', locals: { args: args, document: document, field_id: 'hide-note-ask', form_class: nil } %>
+          </details>
+        <% end %>
+        <%= link_to _('Back'), check_path, class: 'publish-back-link' %>
+      </aside>
+    </div>
+  <% else %>
+    <div class="request-flow--two publish-work">
+      <div class="publish-bench">
+        <section class="publish-doc" aria-labelledby="doc-<%= document.public_id %>">
+          <div class="publish-doc__text">
+            <h2 class="publish-doc__name" id="doc-<%= document.public_id %>"><%= publish_file_name(document) %></h2>
+            <p class="publish-doc__line"><%= admin_only_reason %></p>
+          </div>
+        </section>
+      </div>
+      <aside class="publish-side publish-answers">
+        <%= render partial: 'disclosures/publishing/ask_admin_form', locals: { args: args, document: document, field_id: 'hide-note' } %>
+        <%= link_to _('Back'), check_path, class: 'publish-back-link' %>
+      </aside>
+    </div>
+  <% end %>
+</div>

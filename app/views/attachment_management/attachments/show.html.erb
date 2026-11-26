@@ -1,0 +1,173 @@
+<%= page_band(@capabilities.main_body? ? _('Edit message text') : _('Manage attachment'),
+              back: link_to(_('Back to the message'), foi_attachment_path(@attachment))) %>
+<div class="attachment-management">
+  <dl class="attachment-management__facts">
+    <dt><%= _('File') %></dt>
+    <dd><%= @attachment.display_filename %> <span class="attachment-management__soft">(<%= @capabilities.label %>, <%= @attachment.display_size %>)</span></dd>
+    <dt><%= _('Request') %></dt>
+    <dd>
+      <%= link_to @info_request.title, request_path(@info_request) %>,
+      <%= _('reply from {{public_body_name}} on {{date}}', public_body_name: @info_request.public_body.name, date: simple_date(@incoming_message.sent_at)) %>
+      <% if @info_request.info_request_batch_id %>
+        <span class="attachment-management__soft"><%= _('(part of a batch request)') %></span>
+      <% end %>
+    </dd>
+    <dt><%= _('Who can see it') %></dt>
+    <dd><%= AttachmentManagement::Visibility.describe(@attachment) %></dd>
+  </dl>
+
+  <% if !redact_only? && @attachment.masking_failed? %>
+    <% _served, fault = @attachment.masking_fault %>
+    <div class="warning" role="alert">
+      <p>
+        <strong><%= _('Automatic masking failed on this file.') %></strong>
+        <% if @attachment.prominence == 'hidden' %>
+          <%= _('It is currently hidden from the requester and can’t be published.') %>
+        <% else %>
+          <%= _('The requester can currently see this file as it arrived, and it can’t be published.') %>
+        <% end %>
+        <%= _('Upload an unencrypted or redacted replacement below, or hide the attachment in admin.') %>
+      </p>
+      <% if fault.present? %>
+        <p><code><%= fault %></code></p>
+      <% end %>
+      <p>
+        <%= link_to _('Manage visibility in admin'), edit_admin_foi_attachment_path(@attachment) %>
+        <% if !@attachment.erased? && @attachment.raw_email&.kept? && !@attachment.raw_email_erased? %>
+          · <%= link_to _('Download original from email'), download_unmasked_admin_foi_attachment_path(@attachment) %>
+        <% end %>
+      </p>
+    </div>
+  <% elsif !redact_only? && @attachment.unmasked_parts.any? %>
+    <div class="warning" role="status">
+      <p>
+        <strong><%= _('Parts of this file could not be masked automatically.') %></strong>
+        <%= _('The requester can see those parts as they arrived. Upload an unencrypted or redacted replacement below, or hide the attachment in admin if it contains protected information.') %>
+      </p>
+      <ul>
+        <% @attachment.unmasked_parts.each do |part| %>
+          <li><%= part %></li>
+        <% end %>
+      </ul>
+      <p><%= link_to _('Manage visibility in admin'), edit_admin_foi_attachment_path(@attachment) %></p>
+    </div>
+  <% end %>
+
+  <section class="attachment-management__section" aria-labelledby="am-review">
+    <h2 id="am-review"><%= _('Look at it') %></h2>
+    <% if @available %>
+      <ul class="attachment-management__links">
+        <% if FileDelivery.inline_viewable?(@attachment.content_type) %>
+          <li><%= link_to _('Open the current file'), manage_attachment_current_path(@attachment, inline: 1) %></li>
+        <% end %>
+        <li><%= link_to _('Download the current file'), manage_attachment_current_path(@attachment) %></li>
+      </ul>
+    <% else %>
+      <p><%= _('The site couldn’t process this attachment, so it can’t be shown here.') %> <%= redact_only? ? _('An admin can upload a replacement.') : _('Upload a replacement below.') %></p>
+    <% end %>
+
+    <% if @office_findings.any? %>
+      <div class="attachment-management__findings">
+        <h3><%= _('Not visible on the page, but in the file') %></h3>
+        <ul>
+          <% @office_findings.each do |finding| %>
+            <li><%= finding %></li>
+          <% end %>
+        </ul>
+      </div>
+    <% end %>
+  </section>
+
+  <section class="attachment-management__section" aria-labelledby="am-change">
+    <h2 id="am-change"><%= _('Change it') %></h2>
+    <p><%= _('Nothing changes until you have checked the new file and confirmed it.') %></p>
+
+    <% if @unsupported %>
+      <p class="warning"><%= @unsupported.explanation %> <%= redact_only? ? _('An admin can still upload a replacement.') : _('You can still upload a replacement.') %></p>
+    <% end %>
+
+    <% if @capabilities.redact_boxes? && @available && !@unsupported && (!redact_only? || @capabilities.kind == :pdf) %>
+      <div class="attachment-management__action">
+        <h3><%= _('Draw redaction boxes') %></h3>
+        <% if @capabilities.kind == :pdf %>
+          <p><%= n_('Draw boxes over anything to remove on any of the {{count}} page.', 'Draw boxes over anything to remove on any of the {{count}} pages.', @page_count, count: @page_count) %> <%= _('A new PDF is made from images of the pages with the boxes painted in: everything under a box is gone, and so is all the PDF’s text, so the new file can’t be searched or read aloud.') %></p>
+        <% else %>
+          <p><%= _('Draw boxes over anything to remove. A new image is made with the boxes painted in, and its metadata (camera, location, comments) removed.') %></p>
+        <% end %>
+        <p><%= link_to _('Draw redaction boxes'), manage_attachment_redact_path(@attachment), class: 'attachment-management__button' %></p>
+      </div>
+    <% end %>
+
+    <% if @capabilities.edit_text? && @available && can?(:edit_attachment_text, @attachment) && (!redact_only? || @capabilities.main_body?) %>
+      <div class="attachment-management__action">
+        <% if redact_only? %>
+          <h3><%= _('Redact the text') %></h3>
+          <p><%= _('Replace what should go with <code>[redacted]</code>, then check the result before it replaces the {{message_text_or_file}}. Nothing else in the text can be changed.', message_text_or_file: @capabilities.main_body? ? _('message text') : _('file')) %></p>
+          <p><%= link_to _('Redact the text'), manage_attachment_text_path(@attachment), class: 'attachment-management__button' %></p>
+        <% else %>
+          <h3><%= _('Edit the text') %></h3>
+          <p><%= _('Change or remove words, then check the result before it replaces the {{message_text_or_file}}.', message_text_or_file: @capabilities.main_body? ? _('message text') : _('file')) %></p>
+          <p><%= link_to _('Edit the text'), manage_attachment_text_path(@attachment), class: 'attachment-management__button' %></p>
+        <% end %>
+      </div>
+    <% end %>
+
+    <% if redact_only? %>
+      <% if @capabilities.kind == :office || @capabilities.kind == :other || !@available %>
+        <p><%= _('Only an admin can replace this file or convert it to another format. You can still download it to check it.') %></p>
+      <% end %>
+    <% elsif @capabilities.kind == :office %>
+      <div class="attachment-management__action">
+        <h3><%= _('Convert to PDF') %></h3>
+        <p><%= @capabilities.limitation %></p>
+        <% if @capabilities.convert_to_pdf? && @available %>
+          <p><%= _('LibreOffice, on this server, makes a PDF of the document as it would print. You can then draw boxes on it. <strong>If it replaces the attachment, the attachment becomes a PDF.</strong>') %></p>
+          <%= form_tag manage_attachment_revisions_path(@attachment), class: 'attachment-management__inline-form' do %>
+            <%= hidden_field_tag :kind, 'office_pdf' %>
+            <%= submit_tag _('Convert to PDF') %>
+          <% end %>
+        <% end %>
+      </div>
+    <% elsif @capabilities.limitation %>
+      <p><%= @capabilities.limitation %></p>
+    <% end %>
+
+    <% unless @capabilities.main_body? || redact_only? %>
+      <div class="attachment-management__action">
+        <h3><%= _('Upload a replacement') %></h3>
+        <p><%= _('A file you have checked or redacted yourself. If it is a different format, you’ll be asked to accept the change. The name shown on the site stays <strong>{{filename}}</strong>, with the new file’s extension.', filename: @attachment.display_filename.sub(/\.[A-Za-z0-9]{1,5}\z/, '')) %></p>
+        <%= form_tag manage_attachment_revisions_path(@attachment), multipart: true, class: 'attachment-management__inline-form' do %>
+          <%= hidden_field_tag :kind, 'upload' %>
+          <%= label_tag :file, _('Replacement file') %>
+          <%= file_field_tag :file, required: true %>
+          <%= submit_tag _('Upload as a draft') %>
+        <% end %>
+      </div>
+    <% end %>
+  </section>
+
+  <% if @drafts.any? %>
+    <section class="attachment-management__section" aria-labelledby="am-drafts">
+      <h2 id="am-drafts"><%= _('Drafts') %></h2>
+      <table class="attachment-management__drafts">
+        <thead>
+          <tr><th scope="col"><%= _('Draft') %></th><th scope="col"><%= _('Status') %></th><th scope="col"><%= _('Made') %></th></tr>
+        </thead>
+        <tbody>
+          <% @drafts.each do |draft| %>
+            <tr>
+              <td><%= link_to draft.kind_label, manage_attachment_revision_path(@attachment, draft) %></td>
+              <td><%= draft.status_label %></td>
+              <td><%= _('{{date}} by {{user_name}}', date: simple_date(draft.created_at), user_name: draft.user.name) %></td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </section>
+  <% end %>
+
+  <section class="attachment-management__section attachment-management__notes" aria-labelledby="am-kept">
+    <h2 id="am-kept"><%= _('What a replacement keeps') %></h2>
+    <p><%= _('The site then serves the new file wherever this attachment appears: its links, views, downloads and search.') %></p>
+  </section>
+</div>

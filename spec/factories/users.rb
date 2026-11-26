@@ -66,6 +66,11 @@ FactoryBot.define do
       admin
     end
 
+    # Alias for a plain user; kept for existing specs that name :pro_user.
+    factory :pro_user do
+      sequence(:name, 'A') { |n| "Pro User #{n}" }
+    end
+
     trait :admin do
       after(:create) { |user| user.add_role(:admin) }
     end

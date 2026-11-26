@@ -1,0 +1,29 @@
+<% args = { url_title: @info_request.url_title, message_id: @message.id } %>
+<% open_files = @to_publish - @pending %>
+<% if going.any? %>
+  <%= form_tag publish_reply_check_path(**args), class: 'publish-answers__form' do %>
+    <% going.each do |document| %>
+      <%= hidden_field_tag 'documents[]', document.public_id, id: nil %>
+    <% end %>
+    <button type="submit" class="publish-answer publish-answer--primary publish-publish" data-disable-with="<%= _('Sharing…') %>">
+      <% if going.one? %><%= _('No, share it') %>
+      <% elsif going.size == 2 %><%= _('No, share both') %>
+      <% else %><%= _('No, share all {{count}}', count: going.size) %><% end %>
+    </button>
+  <% end %>
+<% elsif @to_publish.empty? %>
+  <%= link_to _('Choose what to share'), publish_reply_path(**args), class: 'publish-answer' %>
+<% end %>
+<%# Every file can be asked about: tabs on the next screen reach the others. %>
+<% if (first = open_files.find { |document| can?(:redact_document, document) }) %>
+  <%= link_to _('Yes, hide something'), publish_reply_redact_path(**args, id: first), class: 'publish-answer' %>
+<% end %>
+<%# Never which files: that would show what a check found. %>
+<% if @review.any? %><p class="publish-note"><%= _('An admin may check files first.') %></p><% end %>
+<% if open_files.any? %>
+  <p class="publish-note"><%= _('Check for other people’s names too. Your original request and messages stay private.') %></p>
+  <p class="publish-note"><%= _('This site tries to hide email addresses, mobile numbers, sign-in links and this request’s reply address.') %></p>
+  <%= link_to _('Back'), publish_reply_path(**args), class: 'publish-back-link' %>
+<% else %>
+  <%= link_to _('Back to the request'), show_request_path(url_title: @info_request.url_title), class: 'publish-back-link' %>
+<% end %>

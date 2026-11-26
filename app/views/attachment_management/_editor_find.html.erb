@@ -1,0 +1,13 @@
+<%# word_status: the first thing Find says. hide_match: what a found match's button says. %>
+<div class="redaction-editor__find" data-word-tools<% if local_assigns[:hide_match] %> data-match-label="<%= hide_match %>"<% end %> hidden>
+  <div class="redaction-editor__tool-row">
+    <label><%= _('Find') %> <input type="search" data-word-query maxlength="100" autocomplete="off" placeholder="<%= _('Word or phrase') %>"></label>
+    <div class="redaction-editor__group">
+      <button type="button" data-word-find><%= _('Find in document') %></button>
+      <button type="button" data-word-stop disabled><%= _('Stop') %></button>
+    </div>
+  </div>
+  <p data-word-progress></p>
+  <p class="redaction-editor__word-status" role="status" aria-live="polite" data-word-status><%= word_status %></p>
+  <details data-word-results-wrap hidden><summary data-word-results-summary><%= _('Find results') %></summary><ol data-word-results></ol></details>
+</div>

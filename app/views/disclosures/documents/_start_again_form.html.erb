@@ -1,0 +1,14 @@
+<% attachment = document.foi_attachment %>
+<% if can?(:withdraw_document, document) && document.incoming_message && document.info_request && can?(:publish_from_reply, document.incoming_message) && !attachment&.manual_black_mask? %>
+  <details class="document-manage__more">
+    <summary><%= _('Take down and edit again') %><% if local_assigns[:show_title] %><span class="visually-hidden">: <%= document.title %></span><% end %></summary>
+    <%= form_tag publish_reply_start_again_path(url_title: document.info_request.url_title, message_id: document.incoming_message_id, id: document), class: 'document-manage__form' do %>
+      <% if attachment&.raw_email&.kept? %>
+        <p><%= _('Takes this document off the public site and restores the original file from the email (kept for 120 days after the last activity on this request), keeping any site redactions in place.') %></p>
+      <% else %>
+        <p><%= _('Takes this document off the public site so you can redact more or share it again. Original emails are deleted after 120 days, so earlier redactions can’t be undone.') %></p>
+      <% end %>
+      <button type="submit" class="button"><%= _('Take down and edit again') %></button>
+    <% end %>
+  </details>
+<% end %>

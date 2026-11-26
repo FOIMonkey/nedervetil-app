@@ -229,7 +229,6 @@ class IncomingMessage < ApplicationRecord
   end
 
   def suggest_documents_later
-    return unless defined?(Disclosures::SuggestJob)
     return if info_request&.holding_pen_request?(read_only: true)
 
     message_id = id

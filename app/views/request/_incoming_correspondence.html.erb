@@ -14,6 +14,7 @@
     <% end %>
   </div>
 
+  <% incoming_message.parsed_for_display? if incoming_message.last_parsed.nil? && can?(:read, incoming_message) %>
   <%= render partial: 'request/prominence', locals: { prominenceable: incoming_message } %>
 
   <%- if can?(:read, incoming_message) %>

@@ -1,0 +1,126 @@
+<% report = @revision.report || {} %>
+<%= page_band(_('Check the draft'),
+              back: link_to(_('Back to the attachment'), manage_attachment_path(@attachment))) %>
+<div class="attachment-management">
+  <p class="attachment-management__lede">
+    <%= _('{{kind}} for <strong>{{filename}}</strong>,
+    made {{date}} by {{user_name}}.
+    Status: <strong>{{status}}</strong>.', kind: @revision.kind_label, filename: @attachment.display_filename, date: simple_date(@revision.created_at), user_name: @revision.user.name, status: @revision.status_label) %>
+  </p>
+
+  <% case @revision.status %>
+  <% when 'processing' %>
+    <meta http-equiv="refresh" content="2">
+    <p class="attachment-management__waiting" role="status"><%= _('Making the file. This page checks again every two seconds. {{check_now_link}}.', check_now_link: link_to(_('Check now'), manage_attachment_revision_path(@attachment, @revision))) %></p>
+    <% if @revision.stuck? %>
+      <p class="warning"><%= _('This has taken more than ten minutes. The background job runner may be stopped. The attachment hasn’t changed; you can discard this draft and try again.') %></p>
+    <% end %>
+
+  <% when 'failed' %>
+    <p class="warning"><%= @revision.error %></p>
+    <p><%= _('The attachment hasn’t changed. {{back_link}} to try again or upload a replacement.', back_link: link_to(_('Back to the attachment'), manage_attachment_path(@attachment))) %></p>
+
+  <% when 'applied' %>
+    <p><%= _('Applied on {{date}} by {{user_name}}. Reason: {{reason}}', date: simple_date(@revision.applied_at), user_name: @revision.applied_by&.name, reason: @revision.reason) %></p>
+    <p><%= link_to _('See the attachment'), foi_attachment_path(@attachment) %></p>
+
+  <% when 'superseded' %>
+    <p><%= _('The attachment changed after this draft was made, so it can no longer be applied. Make a new one from the attachment as it is now.') %></p>
+
+  <% when 'discarded' %>
+    <p><%= _('This draft was discarded.') %></p>
+
+  <% when 'expired' %>
+    <p><%= _('This draft wasn’t confirmed in time, so its file was deleted. Make a new one from the attachment as it is now.') %></p>
+  <% end %>
+
+  <% if @revision.ready? %>
+    <section class="attachment-management__section" aria-labelledby="am-what">
+      <h2 id="am-what"><%= _('What would change') %></h2>
+      <dl class="attachment-management__facts">
+        <dt><%= _('Now') %></dt>
+        <dd><%= @attachment.display_filename %> <span class="attachment-management__soft">(<%= @attachment.name_of_content_type || @attachment.content_type %>, <%= @attachment.display_size %>)</span></dd>
+        <dt><%= _('After') %></dt>
+        <dd><%= @revision.output_filename == @attachment.redacted_filename ? @attachment.display_filename : @revision.output_filename %> <span class="attachment-management__soft">(<%= FoiAttachment.content_type_names[@revision.output_content_type] || @revision.output_content_type %>, <%= number_to_human_size(@revision.output_byte_size) %>)</span></dd>
+      </dl>
+      <% if @revision.instructions['black_mask'] == true %>
+        <p class="warning"><%= _('<strong>Black mask.</strong> Applying this draft hides the redacted content from the requester and regulator pack and blocks requester redaction on this file.') %></p>
+      <% end %>
+      <% if @revision.format_change? %>
+        <p class="warning"><%= _('<strong>The format changes.</strong> The attachment would become {{new_type}} instead of {{old_type}}, and its name changes to {{filename}}. Old links to the file go to the message instead.', new_type: FoiAttachment.content_type_names[@revision.output_content_type] || @revision.output_content_type, old_type: @attachment.name_of_content_type || @attachment.content_type, filename: @revision.output_filename) %></p>
+      <% end %>
+      <% if @unmaskable_with_black_rules %>
+        <p class="warning"><%= _('<strong>Automatic black masking doesn’t run on this file format.</strong> Make sure any protected information is already removed before replacing, or hide the attachment in admin afterwards.') %></p>
+      <% end %>
+    </section>
+
+    <section class="attachment-management__section" aria-labelledby="am-file">
+      <h2 id="am-file"><%= _('The new file') %></h2>
+      <ul class="attachment-management__links">
+        <% if @revision.output_kind.in?(%i[pdf image text]) %>
+          <li><%= link_to _('Open the new file'), file_manage_attachment_revision_path(@attachment, @revision, inline: 1) %></li>
+        <% end %>
+        <li><%= link_to _('Download the new file'), file_manage_attachment_revision_path(@attachment, @revision) %></li>
+      </ul>
+
+      <% if @page_count.positive? %>
+        <p><%= _('Rendered from the new file itself') %><%= ", #{_('all {{count}} pages', count: @page_count)}" if @page_count > 1 %>:</p>
+        <ol class="attachment-management__pages">
+          <% (1..@page_count).each do |n| %>
+            <li>
+              <%= image_tag page_manage_attachment_revision_path(@attachment, @revision, page: n), alt: _('Page {{page}} of the new file', page: n), loading: (n > 2 ? 'lazy' : 'eager'), class: 'attachment-management__page-image' %>
+            </li>
+          <% end %>
+        </ol>
+      <% elsif @text %>
+        <pre class="attachment-management__text" tabindex="0"><%= @text %></pre>
+      <% end %>
+    </section>
+
+    <section class="attachment-management__section" aria-labelledby="am-checks">
+      <h2 id="am-checks"><%= _('Checks on the new file') %></h2>
+      <%= render partial: 'attachment_management/revisions/checks', locals: { revision: @revision, report: report } %>
+    </section>
+
+    <% if @revision.kind == 'office_pdf' %>
+      <section class="attachment-management__section" aria-labelledby="am-next">
+        <h2 id="am-next"><%= _('Redact it') %></h2>
+        <p><%= _('The converted PDF still has its text, fonts and document properties. To remove anything from it, draw boxes: the result is rebuilt from page images like any redacted PDF.') %></p>
+        <p><%= link_to _('Draw redaction boxes on this PDF'), manage_attachment_redact_path(@attachment, from: @revision.id), class: 'attachment-management__button' %></p>
+      </section>
+    <% end %>
+
+    <% if confirmable?(@revision) %>
+    <section class="attachment-management__section attachment-management__confirm" aria-labelledby="am-confirm">
+      <h2 id="am-confirm"><%= _('Replace the attachment with this file') %></h2>
+      <%= form_tag apply_manage_attachment_revision_path(@attachment, @revision) do %>
+        <%= hidden_field_tag :output_sha256, @revision.output_sha256 %>
+        <p class="attachment-management__fingerprint"><%= _('Confirming this exact file: SHA-256 <code>{{fingerprint}}…</code>. A new draft needs a new confirmation.', fingerprint: @revision.output_sha256.first(16)) %></p>
+        <p>
+          <%= label_tag :reason, _('Reason (kept in the request’s history)') %>
+          <%= text_area_tag :reason, nil, rows: 3, required: true, class: 'attachment-management__reason' %>
+        </p>
+        <p class="attachment-management__check">
+          <%= check_box_tag :reviewed, '1', false, required: true %>
+          <%= label_tag :reviewed, @page_count > 1 ? _('I have checked every page of the new file.') : _('I have checked the whole new file.') %>
+        </p>
+        <% if @revision.format_change? %>
+          <p class="attachment-management__check">
+            <%= check_box_tag :accept_format_change, '1', false, required: true %>
+            <%= label_tag :accept_format_change, _('Replace the {{old_type}} with this {{new_type}}.', old_type: @attachment.name_of_content_type || @attachment.content_type, new_type: FoiAttachment.content_type_names[@revision.output_content_type] || @revision.output_content_type) %>
+          </p>
+        <% end %>
+        <p><%= submit_tag _('Replace the attachment') %></p>
+      <% end %>
+    </section>
+    <% else %>
+    <p class="warning"><%= _('Only an admin can confirm this draft: it does more than redact.') %></p>
+    <% end %>
+  <% end %>
+
+  <% if @revision.processing? || @revision.ready? || @revision.failed? %>
+    <%= form_tag discard_manage_attachment_revision_path(@attachment, @revision), class: 'attachment-management__discard' do %>
+      <%= submit_tag _('Discard this draft'), class: 'attachment-management__secondary' %>
+    <% end %>
+  <% end %>
+</div>

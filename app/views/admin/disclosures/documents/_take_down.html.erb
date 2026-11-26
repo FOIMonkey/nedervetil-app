@@ -1,0 +1,43 @@
+<% withdraw = can?(:withdraw_document, document) %>
+<% erase = can?(:erase_document, document) && document.ever_published? %>
+<% delete = can?(:delete_document, document) %>
+<% if withdraw || erase || delete %>
+  <section class="document-remove admin-danger-zone" aria-labelledby="document-remove-title">
+    <h2 id="document-remove-title"><%= if can?(:publish_document, document) then _('Take down or remove') elsif withdraw then _('Withdraw') else _('Delete') end %></h2>
+    <% if withdraw %>
+      <%= render partial: 'disclosures/documents/withdraw_form', locals: { document: document } %>
+    <% end %>
+    <% if erase %>
+      <details class="document-manage__more">
+        <summary>
+          <span><%= _('Erase every file') %></span>
+          <span class="document-remove__permanent"><%= _('Permanent') %></span>
+        </summary>
+        <%= form_tag disclosure_erase_document_path(document), class: 'document-manage__form' do %>
+          <p><%= _('Its page images and text go now, along with its file if its request was deleted. A record that it existed stays, with its history.') %></p>
+          <p class="document-publish__check">
+            <input type="checkbox" id="erase-confirm" name="confirm" value="1" required>
+            <label for="erase-confirm"><%= _('Erase every file of this document.') %></label>
+          </p>
+          <button type="submit" class="button btn btn-danger"><%= _('Erase') %></button>
+        <% end %>
+      </details>
+    <% end %>
+    <% if delete %>
+      <details class="document-manage__more">
+        <summary>
+          <span><%= _('Delete this draft') %></span>
+          <span class="document-remove__permanent"><%= _('Permanent') %></span>
+        </summary>
+        <%= form_tag admin_disclosure_manage_document_path(document), method: :delete, class: 'document-manage__form' do %>
+          <p><%= _('This draft has never been shared publicly. Deleting it removes it from the document list (any redactions already saved to the file stay in place).') %></p>
+          <p class="document-publish__check">
+            <input type="checkbox" id="delete-confirm" name="confirm" value="1" required>
+            <label for="delete-confirm"><%= _('Delete this draft.') %></label>
+          </p>
+          <button type="submit" class="button btn btn-danger"><%= _('Delete the draft') %></button>
+        <% end %>
+      </details>
+    <% end %>
+  </section>
+<% end %>

@@ -1,0 +1,145 @@
+<%# Find and suggestions sit after the toolbar, not in it, so only its rows stay in
+    view while scrolling. folded: the requester's flow shows the few tools most people
+    need and keeps the rest under one More tools, out of the part that stays in view;
+    Find goes with Find names beside the pages. %>
+<% folded = local_assigns[:folded] %>
+<% selection_label = local_assigns[:hide_selection] || _('Redact selection') %>
+<% if folded %>
+<div class="redaction-editor__tools redaction-editor__tools--folded" role="group" aria-label="<%= _('Tools') %>">
+  <div class="redaction-editor__tool-row">
+    <div class="redaction-editor__modes">
+      <button type="button" data-mode-draw aria-pressed="true"><%= _('Draw') %></button>
+    </div>
+    <button type="button" data-add-box-here><%= _('Add a box') %></button>
+    <button type="button" data-undo disabled title="<%= _('Undo: Ctrl or Command Z') %>"><%= _('Undo') %></button>
+    <select data-page-jump aria-label="<%= _('Go to page') %>"></select>
+    <div class="redaction-editor__group publish-zoom">
+      <button type="button" data-zoom-out aria-label="<%= _('Zoom out') %>">−</button>
+      <span class="redaction-editor__zoom" data-zoom-level aria-label="<%= _('Zoom level') %>">100%</span>
+      <button type="button" data-zoom-in aria-label="<%= _('Zoom in') %>">+</button>
+      <button type="button" data-zoom-fit title="<%= _('Reset zoom to fit the page width') %>"><%= _('Fit width') %></button>
+    </div>
+  </div>
+  <%# The way to place a box without dragging, for the box chosen on the page. %>
+  <div class="publish-box-tools" role="group" aria-label="<%= _('Chosen box') %>" data-box-tools hidden>
+    <div class="publish-box-tools__set">
+      <span class="publish-tool-row__label"><%= _('Move') %></span>
+      <button type="button" data-box-move="-1,0" aria-label="<%= _('Move box left') %>"><svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M9 3 4 8l5 5M4 8h9" fill="none" stroke="currentColor" stroke-width="2"/></svg></button>
+      <button type="button" data-box-move="0,-1" aria-label="<%= _('Move box up') %>"><svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M3 7l5-5 5 5M8 2v11" fill="none" stroke="currentColor" stroke-width="2"/></svg></button>
+      <button type="button" data-box-move="0,1" aria-label="<%= _('Move box down') %>"><svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M3 9l5 5 5-5M8 14V3" fill="none" stroke="currentColor" stroke-width="2"/></svg></button>
+      <button type="button" data-box-move="1,0" aria-label="<%= _('Move box right') %>"><svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="m7 3 5 5-5 5M12 8H3" fill="none" stroke="currentColor" stroke-width="2"/></svg></button>
+    </div>
+    <div class="publish-box-tools__set">
+      <span class="publish-tool-row__label"><%= _('Size') %></span>
+      <button type="button" data-box-size="-1,0"><%= _('Narrower') %></button>
+      <button type="button" data-box-size="1,0"><%= _('Wider') %></button>
+      <button type="button" data-box-size="0,-1"><%= _('Shorter') %></button>
+      <button type="button" data-box-size="0,1"><%= _('Taller') %></button>
+    </div>
+  </div>
+</div>
+<details class="redaction-editor__more">
+  <summary><%= _('More tools') %></summary>
+  <div class="publish-tool-rows">
+    <div class="publish-tool-row">
+      <span class="publish-tool-row__label"><%= _('Boxes') %></span>
+      <div class="publish-tool-row__tools">
+        <button type="button" data-redo disabled title="<%= _('Redo: Ctrl or Command Shift Z') %>"><%= _('Redo') %></button>
+        <button type="button" data-box-prev disabled><%= _('Previous box') %></button>
+        <button type="button" data-box-next disabled><%= _('Next box') %></button>
+      </div>
+    </div>
+    <div class="publish-tool-row">
+      <span class="publish-tool-row__label"><%= _('Move') %></span>
+      <div class="publish-tool-row__tools">
+        <div class="redaction-editor__modes">
+          <button type="button" data-mode-pan aria-pressed="false"><%= _('Pan') %></button>
+        </div>
+        <button type="button" data-page-prev aria-label="<%= _('Previous page') %>"><svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M10 3 5 8l5 5" fill="none" stroke="currentColor" stroke-width="2"/></svg></button>
+        <button type="button" data-page-next aria-label="<%= _('Next page') %>"><svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="m6 3 5 5-5 5" fill="none" stroke="currentColor" stroke-width="2"/></svg></button>
+      </div>
+    </div>
+    <div class="publish-tool-row">
+      <span class="publish-tool-row__label"><%= _('Text') %></span>
+      <div class="publish-tool-row__tools">
+        <div class="redaction-editor__modes">
+          <button type="button" data-mode-select aria-pressed="false" hidden><%= _('Select text') %></button>
+        </div>
+        <button type="button" data-redact-words disabled hidden><%= selection_label %></button>
+        <button type="button" data-clear-selection hidden><%= _('Clear selection') %></button>
+      </div>
+    </div>
+  </div>
+</details>
+<% else %>
+<div class="redaction-editor__tools" role="group" aria-label="<%= _('Redaction editing tools') %>">
+  <div class="redaction-editor__tool-row">
+    <div class="redaction-editor__modes">
+      <button type="button" data-mode-draw aria-pressed="true"><%= _('Draw') %></button>
+      <button type="button" data-mode-select aria-pressed="false" hidden><%= _('Select text') %></button>
+      <button type="button" data-mode-pan aria-pressed="false"><%= _('Pan') %></button>
+    </div>
+    <div class="redaction-editor__group">
+      <button type="button" data-undo disabled title="<%= _('Undo: Ctrl or Command Z') %>"><%= _('Undo') %></button>
+      <button type="button" data-redo disabled title="<%= _('Redo: Ctrl or Command Shift Z') %>"><%= _('Redo') %></button>
+    </div>
+    <div class="redaction-editor__group">
+      <button type="button" data-add-box-here><%= _('Add a box') %></button>
+      <button type="button" data-redact-words disabled hidden><%= _('Redact selection') %></button>
+      <button type="button" data-clear-selection hidden><%= _('Clear selection') %></button>
+    </div>
+  </div>
+  <div class="redaction-editor__tool-row">
+    <div class="redaction-editor__group">
+      <button type="button" data-zoom-out aria-label="<%= _('Zoom out') %>">−</button>
+      <span class="redaction-editor__zoom" data-zoom-level aria-label="<%= _('Zoom level') %>">100%</span>
+      <button type="button" data-zoom-in aria-label="<%= _('Zoom in') %>">+</button>
+      <button type="button" data-zoom-fit title="<%= _('Reset zoom to fit the page width') %>"><%= _('Fit width') %></button>
+    </div>
+    <div class="redaction-editor__group">
+      <button type="button" data-page-prev aria-label="<%= _('Previous page') %>"><svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M10 3 5 8l5 5" fill="none" stroke="currentColor" stroke-width="2"/></svg></button>
+      <select data-page-jump aria-label="<%= _('Go to page') %>"></select>
+      <button type="button" data-page-next aria-label="<%= _('Next page') %>"><svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="m6 3 5 5-5 5" fill="none" stroke="currentColor" stroke-width="2"/></svg></button>
+    </div>
+    <div class="redaction-editor__group">
+      <button type="button" data-box-prev disabled><%= _('Previous box') %></button>
+      <button type="button" data-box-next disabled><%= _('Next box') %></button>
+    </div>
+  </div>
+</div>
+<%= render partial: 'attachment_management/editor_find', locals: { word_status: _('Find reads the text in the file, so it can’t see scans or pictures. It includes words under unsaved boxes. Select one page at a time; whole words are redacted. Check every page.') } %>
+<% end %>
+<% if folded %>
+<%# A tool the requester runs for themselves: nothing here says a check found anything. %>
+<div class="redaction-personal redaction-personal--plain" data-personal-tools data-personal-plain hidden>
+  <div class="redaction-editor__tool-row">
+    <button type="button" data-personal-scan><%= _('Find my name') %></button>
+    <button type="button" data-personal-stop disabled hidden><%= _('Stop') %></button>
+  </div>
+  <p><%= _('Check every page too. This can miss things.') %></p>
+  <details class="redaction-personal__else">
+    <summary><%= _('Find something else') %></summary>
+    <%= render partial: 'attachment_management/editor_find', locals: { word_status: '', hide_match: local_assigns[:hide_match] } %>
+  </details>
+  <p data-personal-progress></p>
+  <p role="status" aria-live="polite" data-personal-status></p>
+  <ol data-personal-results></ol>
+</div>
+<% else %>
+<details class="redaction-personal" data-personal-tools hidden>
+  <summary><%= _('Personal details') %></summary>
+  <p><%= _("Suggest boxes for the requester's name and email. Nothing is removed automatically. Check each occurrence; a surname may belong to someone else.") %></p>
+  <label><%= _('Optional phrase or address for this session') %>
+    <textarea data-personal-phrase maxlength="500" rows="2" autocomplete="off" spellcheck="false" placeholder="<%= _('A phrase or address to find') %>"></textarea>
+  </label>
+  <p><%= _('Used only in this open editor. It is not saved by the site or sent to the server.') %></p>
+  <div class="redaction-editor__tool-row">
+    <button type="button" data-personal-scan><%= _('Suggest boxes') %></button>
+    <button type="button" data-personal-stop disabled><%= _('Stop suggestions') %></button>
+  </div>
+  <p data-personal-progress></p>
+  <p role="status" aria-live="polite" data-personal-status><%= _('Scan to look for personal details in the file’s text. Check the whole file, including scans and pictures, which can’t be searched. No suggestions does not mean no sensitive information.') %></p>
+  <ol data-personal-results></ol>
+</details>
+<% end %>
+<p class="visually-hidden" role="status" aria-live="polite" data-editor-status></p>

@@ -1,0 +1,29 @@
+<table class="table table-striped table-condensed">
+  <tbody>
+    <% incoming_message.for_admin_column do |name, value| %>
+      <tr>
+        <td>
+          <b><%= name.humanize %></b>
+        </td>
+
+        <td>
+          <% if name =~ /^cached_.*?$/ %>
+            <% squished = value.to_s.squish %>
+            <% if squished.length > 100 %>
+              <details class="admin-more">
+                <summary title="Show more"><%= truncate(squished, length: 100, separator: ' ') %></summary>
+                <%= simple_format(h(value&.truncate(1000))) %>
+              </details>
+            <% else %>
+              <%= squished %>
+            <% end %>
+          <% elsif name == 'prominence' %>
+            <%= h highlight_prominence(value) %>
+          <% else %>
+            <%= admin_value(value) %>
+          <% end %>
+        </td>
+      </tr>
+    <% end %>
+  </tbody>
+</table>

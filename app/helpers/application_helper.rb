@@ -269,4 +269,28 @@ module ApplicationHelper
   def show_pro_upsell?(_user)
     false
   end
+
+  # Omit file sizes below 1 MB to avoid noisy labels like "324 Bytes".
+  LARGE_FILE_BYTES = 1.megabyte
+
+  def large_file_size(bytes)
+    number_to_human_size(bytes) if bytes.to_i >= LARGE_FILE_BYTES
+  end
+
+  # Full request-choice preservation arrives in B08 (RequestJourney::NavigationHelper).
+  def request_journey_link_path(path, public_body: nil)
+    path
+  end
+
+  def request_journey_hidden_fields(*)
+    ''.html_safe
+  end
+
+  def request_journey_destination(section)
+    section == 'authorities' ? list_public_bodies_default_path : frontpage_path
+  end
+
+  def request_journey_pro?
+    false
+  end
 end

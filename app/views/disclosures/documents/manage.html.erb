@@ -1,0 +1,15 @@
+<article class="document" aria-labelledby="document-title">
+  <%= render partial: 'disclosures/documents/details', locals: { document: @document } %>
+  <% if @manager %>
+    <%= render partial: 'disclosures/documents/manager_panel', locals: { document: @document } %>
+  <% else %>
+    <section class="document-manage" aria-label="<%= _('Your document') %>">
+      <%= render partial: 'disclosures/documents/take_down', locals: { document: @document } %>
+    </section>
+  <% end %>
+  <% if @pages.any? %>
+    <%= render partial: 'disclosures/documents/pages', locals: { document: @document, page_url: ->(page) { disclosure_document_page_path(@document, page: page.number) } } %>
+  <% elsif @manager && @document.stage_in?(:erasing, :erased) %>
+    <p class="document__waiting"><%= _('It has been erased.') %></p>
+  <% end %>
+</article>

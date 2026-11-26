@@ -1,0 +1,9 @@
+<%# Withdrawn (410): says only that and when, so the address reveals nothing new. %>
+<%= page_band _('This document has been withdrawn') %>
+<div class="document document--gone">
+  <p><%= _('It was published here but is no longer available.') %></p>
+  <% if @document.stage_in?(:erased, :erasing, :withdrawn, :taken_down) && @document.withdrawn_at %>
+    <p class="document__gone-date"><%= _('Withdrawn on {{date}}', date: document_date(@document.withdrawn_at)) %></p>
+  <% end %>
+  <p><%= link_to _('All documents'), disclosure_documents_path %></p>
+</div>

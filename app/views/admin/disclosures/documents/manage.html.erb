@@ -1,0 +1,28 @@
+<% @title = @document.title %>
+<article class="document admin-doc-manage" aria-labelledby="document-title">
+  <nav class="admin-doc-manage__crumbs" aria-label="Breadcrumb">
+    <%= link_to '← Review queue', disclosure_document_reviews_path %>
+    <% if @document.info_request %>
+      <span aria-hidden="true">·</span>
+      <%= link_to "Request ##{@document.info_request.id}", admin_request_path(@document.info_request) %>
+    <% end %>
+    <% if @document.authority %>
+      <span aria-hidden="true">·</span>
+      <%= link_to @document.authority.name, admin_body_path(@document.authority) %>
+    <% end %>
+  </nav>
+
+  <div class="admin-doc-manage__grid">
+    <div class="admin-doc-manage__main">
+      <%= render partial: 'disclosures/documents/details', locals: { document: @document } %>
+      <% if @pages.any? %>
+        <%= render partial: 'disclosures/documents/pages', locals: { document: @document, page_url: ->(page) { disclosure_document_page_path(@document, page: page.number) } } %>
+      <% end %>
+    </div>
+
+    <aside class="admin-doc-manage__rail" aria-label="Document status and actions">
+      <%= render partial: 'admin/disclosures/documents/manager_panel', locals: { document: @document } %>
+      <%= render partial: 'admin/disclosures/documents/take_down', locals: { document: @document } %>
+    </aside>
+  </div>
+</article>

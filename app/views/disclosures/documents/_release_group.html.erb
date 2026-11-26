@@ -1,0 +1,29 @@
+<% documents = group.documents.map(&:public_view) %>
+<% first = documents.first %>
+<% extents = documents.map { |document| document_extent(document) }.uniq %>
+<li class="document-result document-result--group">
+  <span class="doc-stack" aria-hidden="true">
+    <% documents.first(3).each_with_index.reverse_each do |document, index| %>
+      <span class="doc-stack__sheet doc-stack__sheet--<%= index + 1 %>">
+        <%= render partial: 'disclosures/documents/preview', locals: { document: document, sheet_text: search.sheet_previews[document.id] } %>
+      </span>
+    <% end %>
+  </span>
+  <div class="document-result__body">
+    <h3 class="document-result__title"><%= link_to document_display_title(first), request_journey_link_path(disclosure_document_path(first), public_body: first.authority) %></h3>
+    <p class="document-result__meta">
+      <% if first.released_on %><span><%= _('Released {{date}}', date: document_short_date(first.released_on)) %></span><% end %>
+      <% if extents.size == 1 && extents.first && extents.first != 'Table' %><span><%= _('{{extent}} each', extent: extents.first) %></span><% end %>
+      <span class="document-result__kind"><%= first.kind_label %></span>
+      <span><%= _('{{count}} authorities', count: documents.size) %></span>
+    </p>
+    <% if first.description.present? && documents.map(&:description).uniq.size == 1 %>
+      <p class="document-result__description"><%= first.description.truncate(220) %></p>
+    <% end %>
+    <ul class="document-result__bodies" aria-label="<%= _('From each authority') %>">
+      <% documents.each do |document| %>
+        <li><%= link_to document.authority&.name || document.title, request_journey_link_path(disclosure_document_path(document), public_body: document.authority) %></li>
+      <% end %>
+    </ul>
+  </div>
+</li>

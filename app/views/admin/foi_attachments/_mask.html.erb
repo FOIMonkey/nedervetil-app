@@ -15,13 +15,45 @@
           masking to happen from here.
         </p>
       </div>
+
+      <% if (served, fault = @foi_attachment.masking_fault) %>
+        <div class="alert alert-error" id="masking-fault">
+          <p>
+            <strong>Masking hit a fault</strong>, so
+            <%= served == :previous_copy ? 'the previous masked copy is served' : 'the file is served as it came' %>
+            to the requester. It can't be published.
+          </p>
+          <p><tt><%= fault %></tt></p>
+          <% if !@foi_attachment.erased? && @foi_attachment.raw_email&.kept? && !@foi_attachment.raw_email_erased? %>
+            <p>
+              <%= link_to 'Download the original', download_unmasked_admin_foi_attachment_path(@foi_attachment), class: 'btn' %>
+              <span class="muted">As it is in the email: download only, and open it in an isolated viewer.</span>
+            </p>
+          <% end %>
+        </div>
+      <% end %>
+
+      <% if (unmasked = @foi_attachment.unmasked_parts).any? %>
+        <div class="alert alert-warning" id="unmasked-parts">
+          <p>
+            <strong>Served with parts not masked.</strong> Masking couldn't
+            reach these, so they went out as they came:
+          </p>
+          <ul>
+            <% unmasked.each do |part| %>
+              <li><%= part %></li>
+            <% end %>
+          </ul>
+        </div>
+      <% end %>
     </div>
   </fieldset>
 
   <div class="form-actions">
-    <%= f.submit 'Mask now', disabled: @foi_attachment.masked?, class: 'btn' %>
+    <% done = @foi_attachment.masked? && !@foi_attachment.masking_failed? %>
+    <%= f.submit 'Mask now', disabled: done, class: 'btn' %>
 
-    <% if @foi_attachment.masked? %>
+    <% if done %>
       <span class="help-inline">
         Already masked.
       </span>

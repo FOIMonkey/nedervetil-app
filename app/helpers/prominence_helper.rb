@@ -4,6 +4,10 @@
 #
 module ProminenceHelper
   def concealed_prominence?(prominenceable)
+    if prominenceable.is_a?(FoiAttachment)
+      return prominenceable.prominence == 'hidden'
+    end
+
     %w[hidden requester_only].include?(prominenceable&.prominence)
   end
 
@@ -13,21 +17,35 @@ module ProminenceHelper
     klass = prominenceable.class::Prominence::Helper
     prominence = klass.new(self, prominenceable)
 
-    return prominence.notice + "\n" * 2 if format == :text
+    return prominence.notice + ("\n" * 2) if format == :text
 
+    # rubocop:disable Rails/OutputSafety -- each part is made by _(), which escapes the reason an admin typed; squish would lose the parts' safe mark
     [prominence.notice, prominence.sign_in, prominence.contact_us].
       join(' ').squish.html_safe
+    # rubocop:enable Rails/OutputSafety
+  end
+
+  # Intentionally omits which file or why so check findings are not disclosed.
+  def hidden_file_notice
+    _('We’ve hidden this file. Please {{contact_us_link}} if you have any ' \
+      'questions.',
+      contact_us_link: link_to(_('contact us'), help_contact_path))
+  end
+
+  def hidden_reply_text_notice
+    _('We’ve hidden the text of this reply. Please {{contact_us_link}} if ' \
+      'you have any questions.',
+      contact_us_link: link_to(_('contact us'), help_contact_path))
   end
 
   class Base # :nodoc:
     attr_reader :prominenceable
 
-    delegate :current_user, :request, :link_to,
+    delegate :current_user, :request, :link_to, :can?,
              :help_contact_path, :signin_path, to: :@helper
 
     def self.default_prominence_reason
-      _("There are various reasons why we might have done this, sorry we " \
-        "can't be more specific here.")
+      _('Requests on this site are private until they are published.')
     end
 
     def initialize(helper, prominenceable)
@@ -35,8 +53,16 @@ module ProminenceHelper
       @prominenceable = prominenceable
     end
 
-    def user
+    def info_request
       raise NotImplementedError
+    end
+
+    def user
+      info_request.user
+    end
+
+    def admin?
+      can?(:admin, info_request)
     end
 
     def notice
@@ -53,7 +79,7 @@ module ProminenceHelper
     end
 
     def contact_us
-      return if current_user&.is_admin?
+      return if admin?
 
       contact_us_notice(
         contact_us_link: link_to(_('contact us'), help_contact_path)
@@ -63,7 +89,7 @@ module ProminenceHelper
     def sign_in
       return if prominenceable.prominence != 'requester_only'
       return if current_user && current_user == user
-      return if current_user&.is_admin?
+      return if admin?
 
       sign_in_notice(
         sign_in_link: link_to(_('sign in'), signin_path(r: request.fullpath))
@@ -93,36 +119,36 @@ module ProminenceHelper
     end
 
     def default_prominence_reason
-      return '' if current_user&.is_admin?
+      return '' if admin?
 
       self.class.default_prominence_reason
     end
   end
 
   class InfoRequest::Prominence::Helper < Base # :nodoc:
-    def user
-      prominenceable.user
+    def info_request
+      prominenceable
     end
 
     def hidden_notice
-      if current_user&.is_admin?
+      if admin?
         _('This request has prominence "hidden". {{reason}} You can only see ' \
           'it because you are logged in as a super user.', reason: reason)
       else
-        _('This request has been hidden. {{reason}}', reason: reason)
+        _('This request has not been published. {{reason}}', reason: reason)
       end
     end
 
     def requester_only_notice
       if current_user && current_user == user
-        _('This request is hidden, so that only you, the requester, can see ' \
-          'it. {{reason}}', reason: reason)
-      elsif current_user&.is_admin?
+        _('Private: only you and the site’s admins can see it. ' \
+          '{{reason}}', reason: reason)
+      elsif admin?
         _('This request has prominence "requester_only". {{reason}} You can ' \
           'only see it because you are logged in as a super user.',
           reason: reason)
       else
-        _('This request has been hidden. {{reason}}', reason: reason)
+        _('This request has not been published. {{reason}}', reason: reason)
       end
     end
 
@@ -133,29 +159,16 @@ module ProminenceHelper
   end
 
   class IncomingMessage::Prominence::Helper < Base # :nodoc:
-    def user
-      prominenceable.info_request.user
+    def info_request
+      prominenceable.info_request
     end
 
     def hidden_notice
-      if current_user&.is_admin?
+      if admin?
         _('This message has prominence "hidden". {{reason}} You can only see ' \
           'it because you are logged in as a super user.', reason: reason)
       else
-        _('This message has been hidden. {{reason}}', reason: reason)
-      end
-    end
-
-    def requester_only_notice
-      if current_user && current_user == user
-        _('This message is hidden, so that only you, the requester, can see ' \
-          'it. {{reason}}', reason: reason)
-      elsif current_user&.is_admin?
-        _('This message has prominence "requester_only". {{reason}} You can ' \
-          'only see it because you are logged in as a super user.',
-          reason: reason)
-      else
-        _('This message has been hidden. {{reason}}', reason: reason)
+        _('This message has not been published. {{reason}}', reason: reason)
       end
     end
 
@@ -168,29 +181,30 @@ module ProminenceHelper
   ::OutgoingMessage::Prominence::Helper = IncomingMessage::Prominence::Helper
 
   class FoiAttachment::Prominence::Helper < Base # :nodoc:
-    def user
-      prominenceable.incoming_message.info_request.user
+    def info_request
+      prominenceable.incoming_message.info_request
     end
 
     def hidden_notice
-      if current_user&.is_admin?
+      if admin?
         _('This attachment has prominence "hidden". {{reason}} You can only ' \
           'see it because you are logged in as a super user.', reason: reason)
       else
-        _('This attachment has been hidden. {{reason}}', reason: reason)
+        # Not why, which only admins are told: it can be what a check found.
+        _('This attachment has not been published.')
       end
     end
 
     def requester_only_notice
       if current_user && current_user == user
-        _('This attachment is hidden, so that only you, the requester, can ' \
-          'see it. {{reason}}', reason: reason)
-      elsif current_user&.is_admin?
+        _('Private: only you and the site’s admins can see it. ' \
+          '{{reason}}', reason: reason)
+      elsif admin?
         _('This attachment has prominence "requester_only". {{reason}} You ' \
           'can only see it because you are logged in as a super user.',
           reason: reason)
       else
-        _('This attachment has been hidden. {{reason}}', reason: reason)
+        _('This attachment has not been published. {{reason}}', reason: reason)
       end
     end
 

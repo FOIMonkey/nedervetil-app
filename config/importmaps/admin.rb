@@ -6,5 +6,7 @@ pin "sortablejs" # @1.15.2
 pin "admin", to: "admin/new.js"
 pin_all_from "app/javascript/controllers", under: "controllers"
 pin_all_from "app/javascript/helpers", under: "helpers"
+# The box and text editors' modules, fetched only by their controllers.
+pin_all_from "app/javascript/editor", under: "editor", preload: false
 pin_all_from "app/javascript/admin/controllers",
              under: "controllers", to: "admin/controllers"

@@ -5,6 +5,21 @@
 </div>
 
 <div class="control-group">
+  <span class="control-label">Hide from</span>
+  <div class="controls">
+    <label class="radio" for="censor_rule_colour_black">
+      <%= radio_button 'censor_rule', 'colour', 'black' %>
+      <strong>Black:</strong> the requester, the regulator pack and the public
+    </label>
+    <label class="radio" for="censor_rule_colour_blue">
+      <%= radio_button 'censor_rule', 'colour', 'blue' %>
+      <strong>Blue:</strong> the public only. The requester and the regulator
+      pack still see it.
+    </label>
+  </div>
+</div>
+
+<div class="control-group">
   <label for="censor_rule_regexp" class="control-label">Is it regexp replacement?</label>
   <div class="controls">
     <%= check_box 'censor_rule', 'regexp' %>
@@ -77,9 +92,13 @@
 <div class="control-group">
   <label for="censor_rule_last_edit_comment" class="control-label">Comment for this edit</label>
   <div class="controls">
-    <%= text_area 'censor_rule', 'last_edit_comment', :data => { last_edit_comment: @censor_rule.last_edit_comment }, :value => '', :rows => 2, :class => "span6" %>
+    <%= text_area 'censor_rule', 'last_edit_comment', :value => '', :rows => 2, :class => "span6" %>
     <% if @censor_rule.last_edit_comment %>
-      <a href="#" id="js-use-previous-comment" data-target="#censor_rule_last_edit_comment" class="btn">Use previous comment</a>
+      <button type="button" class="btn" hidden
+              data-controller="previous-comment"
+              data-previous-comment-field-value="censor_rule_last_edit_comment"
+              data-previous-comment-text-value="<%= @censor_rule.last_edit_comment %>"
+              data-action="previous-comment#use">Use previous comment</button>
     <% end %>
     <div class="help-block">
       put purpose of the rule, and why the change

@@ -1,11 +1,20 @@
 # CanCanCan authorization policy. Read visibility is split across VisitorRules,
-# RequesterRules and AdminRules; action abilities live here. Document and
-# attachment rules join in B07.
+# RequesterRules and AdminRules; this class, AttachmentRules and DocumentRules
+# define action abilities.
 class Ability
   include CanCan::Ability
   include Ability::VisitorRules
   include Ability::RequesterRules
   include Ability::AdminRules
+  include Ability::AttachmentRules
+  include Ability::DocumentRules
+
+  ERASURE = %i[erasing erased].freeze
+  PUBLISHED = %i[listed unlisted].freeze
+  # Stages where a requester may self-publish; withdrawn/held stay down.
+  OWN_PUBLISHING = %i[not_ready ready in_review listed unlisted].freeze
+  # Editable stages; callers also check source_changed? where needed.
+  UNPUBLISHED = %i[not_ready ready in_review withdrawn].freeze
 
   attr_reader :user
 
@@ -25,23 +34,30 @@ class Ability
     request_care_rules
     snippet_and_batch_rules
     account_rules
+
+    attachment_rules
+    document_rules
   end
 
   private
 
   def request_state_rules
+    # Updating request status
     can :update_request_state, InfoRequest do |request|
       can_update_request_state?(request)
     end
   end
 
   def sending_rules
+    # Follow-ups check access to the request, not the reply (a hidden reply is
+    # simply not quoted).
     can :create, InfoRequest if may_act?
     can %i[follow_up send_reminder], InfoRequest do |request|
       may_act? && requester_of?(request) && can?(:read, request)
     end
 
-    return unless may_act? && user.trusted?
+    return unless may_act? &&
+                  (defined?(RequestLimits) ? RequestLimits.batches_allowed?(user) : user.trusted?)
 
     can :create, InfoRequestBatch
   end
@@ -106,6 +122,28 @@ class Ability
   # Actual requester only (not an admin), regardless of account state.
   def requester_of?(request)
     user.present? && request.is_actual_owning_user?(user)
+  end
+
+  def document_admin?(document)
+    request = document.info_request
+    request ? can?(:admin, request) : admin?
+  end
+
+  def own_document?(document)
+    return false unless user
+    # RequestDeletion refuses while anything is hidden from the requester.
+    return document.owner_id == user.id if document.request_deleted?
+
+    request = document.info_request
+    request.present? && requester_of?(request) &&
+      RequesterVisible.requester?(request) &&
+      RequesterVisible.requester?(document)
+  end
+
+  def document_requester?(document, active: true)
+    return false unless active ? may_act? : may_withdraw_or_delete?
+
+    own_document?(document)
   end
 
   def can_update_request_state?(request)

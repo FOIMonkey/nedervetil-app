@@ -1,0 +1,25 @@
+<% rows = page.table_rows %>
+<% record = local_assigns[:document] || local_assigns[:version] %>
+<section class="document-sheet" id="<%= page.anchor %>">
+  <h2 id="<%= page.anchor %>-title" class="document-sheet__title"><%= record&.format == 'csv' ? _('Table') : _('Sheet: {{name}}', name: page.label) %></h2>
+  <% if rows.empty? %>
+    <p class="document__soft"><%= _('This sheet is empty.') %></p>
+  <% else %>
+    <div class="document-sheet__scroll" tabindex="0" role="region" aria-labelledby="<%= page.anchor %>-title">
+      <table class="document-sheet__table">
+        <thead>
+          <tr><% rows.first.each do |cell| %><th scope="col"><%= cell %></th><% end %></tr>
+        </thead>
+        <tbody>
+          <% rows.drop(1).each do |row| %>
+            <tr><% row.each do |cell| %><td<% if numeric_cell?(cell) %> class="is-number"<% end %>><%= cell %></td><% end %></tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+    <% shown = rows.size %>
+    <% if (page.rows.to_i > shown || page.truncated) && local_assigns.fetch(:note, true) %>
+      <p class="document-sheet__note"><%= n_('Showing the first {{count}} row of {{total}}', 'Showing the first {{count}} rows of {{total}}', shown, count: shown, total: number_with_delimiter(page.rows)) %><% if page.columns.to_i > Disclosures.sheet_max_columns %> <%= _('(and the first columns only)') %><% end %>. <%= _('Download the file for the rest.') %></p>
+    <% end %>
+  <% end %>
+</section>

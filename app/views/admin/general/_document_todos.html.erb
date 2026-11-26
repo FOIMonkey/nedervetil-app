@@ -1,0 +1,21 @@
+<% triage_frame = local_assigns.fetch(:triage_frame, false) %>
+<% selected_triage = local_assigns[:selected_triage] %>
+<% open_default = local_assigns.fetch(:open_default, true) %>
+<% Disclosures::ReviewQueue::WAITING.each do |waiting, label| %>
+  <% mine = Disclosures::ReviewQueue::FOR_YOU.include?(waiting) %>
+  <%= render partial: 'admin/general/document_todo',
+             locals: { items: drafts[waiting] || [], label: label,
+                       open: mine && open_default,
+                       mine: mine, triage_frame: triage_frame,
+                       selected_triage: selected_triage } %>
+<% end %>
+<%= render partial: 'admin/general/document_todo',
+           locals: { items: queue.source_changed,
+                     label: Disclosures::ReviewQueue::SOURCE_CHANGED,
+                     open: open_default, mine: true, triage_frame: triage_frame,
+                     selected_triage: selected_triage } %>
+<%= render partial: 'admin/general/document_todo',
+           locals: { items: queue.erasing,
+                     label: 'Erasure still running: this site retries it',
+                     open: false, mine: false, triage_frame: false,
+                     selected_triage: nil } %>

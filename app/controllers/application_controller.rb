@@ -104,13 +104,17 @@ class ApplicationController < ActionController::Base
     response.headers['Content-Language'] = I18n.locale.to_s
   end
 
+  # Set the locale cookie only on multi-locale switches so public pages stay
+  # CDN-cacheable; write user.locale only on change to preserve query cache.
   def store_gettext_locale
-    # set the current stored locale to the requested_locale
-    locale = AlaveteliLocalization.locale
-    cookies[:locale] = locale
+    locale = AlaveteliLocalization.locale.to_s
+    if params[:locale].present? &&
+       AlaveteliLocalization.available_locales.size > 1
+      cookies[:locale] = locale
+    end
+    return unless current_user && current_user.read_attribute(:locale) != locale
 
-    # ensure current user locale attribute is up-to-date
-    current_user.update_column(:locale, locale) if current_user
+    current_user.update_column(:locale, locale)
   end
 
   def redirect_gettext_locale

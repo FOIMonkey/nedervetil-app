@@ -1,0 +1,4 @@
+<% @title = "Edit details — #{@document.title_was}" %>
+<div class="admin-doc-edit">
+  <%= render partial: 'disclosures/documents/form', locals: { manage_path: admin_disclosure_manage_document_path(@document) } %>
+</div>

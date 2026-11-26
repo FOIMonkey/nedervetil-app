@@ -1,0 +1,49 @@
+<% panel = Disclosures::Panel.new(info_request, current_ability) %>
+<%# The files in the thread below find their documents in the panel's list. %>
+<% @disclosure_attachment_documents = panel.attachment_documents %>
+<section class="documents-panel" id="documents" aria-labelledby="documents-panel-title" data-documents-panel>
+  <h2 id="documents-panel-title"><%= _('Documents') %></h2>
+  <p class="documents-panel__who"><%= private_note_for(info_request.user_id, current_user) %> <%= _('Published documents appear in {{documents}}, even if this request is private.', documents: link_to(_('Documents'), disclosure_documents_path)) %></p>
+
+  <% if panel.documents.any? %>
+    <ul class="documents-panel__documents">
+      <% panel.documents.each do |document| %>
+        <li class="documents-panel__document">
+          <span class="document-state document-state--<%= document.state %>"><%= document_state(document) %></span>
+          <%= link_to document.title, disclosure_manage_document_path(document) %>
+          <span class="documents-panel__meta"><%= document.kind_label %></span>
+        </li>
+      <% end %>
+    </ul>
+  <% else %>
+    <p class="documents-panel__none"><%= _('No documents yet.') %></p>
+  <% end %>
+  <% if Disclosures::RequestDeletion.new(info_request, current_user).offered? %>
+    <p class="documents-panel__delete"><%= link_to _('Delete the emails, keep the documents'), request_deletion_path(url_title: info_request.url_title) %></p>
+  <% end %>
+
+  <% replies = panel.replies %>
+  <% if replies.any? %>
+    <h3 class="documents-panel__heading"><%= _('From the replies') %></h3>
+    <% replies.each do |reply| %>
+      <% message = reply.message %>
+      <section class="documents-panel__reply">
+        <h4 class="documents-panel__reply-title">
+          <%= link_to _('Reply received {{date}}', date: document_date(message.created_at)), "#incoming_message_#{message.id}" %>
+        </h4>
+        <% if reply.pending && reply.rows.empty? %>
+          <p class="documents-panel__pending" role="status"><%= _('Working out what this reply holds. Reload the page in a moment.') %></p>
+        <% else %>
+          <%= render partial: 'disclosures/request_panel_rows', locals: { rows: reply.main } %>
+          <% reply.folded.each do |label, rows| %>
+            <details class="documents-panel__aside">
+              <summary><%= label %> (<%= rows.size %>)</summary>
+              <%= render partial: 'disclosures/request_panel_rows', locals: { rows: rows } %>
+            </details>
+          <% end %>
+          <% if reply.pending %><p class="documents-panel__pending" role="status"><%= _('Checking for changes since this was worked out.') %></p><% end %>
+        <% end %>
+      </section>
+    <% end %>
+  <% end %>
+</section>

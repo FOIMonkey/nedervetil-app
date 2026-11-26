@@ -131,8 +131,6 @@ class CensorRule < ApplicationRecord
   end
 
   def censor_published_documents
-    return unless defined?(Disclosures::RuleJob)
-
     was_black = !previously_new_record? &&
                 (colour_before_last_save == 'black' ||
                  (!saved_change_to_colour? && black?))
@@ -140,8 +138,6 @@ class CensorRule < ApplicationRecord
   end
 
   def remask_after_black_delete
-    return unless defined?(Disclosures::RuleJob)
-
     Disclosures::RuleJob.deleted(self)
   end
 end

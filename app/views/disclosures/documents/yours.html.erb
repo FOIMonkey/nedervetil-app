@@ -1,0 +1,18 @@
+<%= page_band(_('Your documents'),
+              back: link_to(_('All documents'), disclosure_documents_path)) %>
+<article class="document">
+  <p class="document__lede"><%= private_note(current_user.id) %></p>
+  <% if @documents.empty? %>
+    <p><%= _('You have no documents yet.') %></p>
+  <% else %>
+    <ul class="documents-panel__documents">
+      <% @documents.each do |document| %>
+        <li class="documents-panel__document">
+          <span class="document-state document-state--<%= document.state %>"><%= document_state(document) %></span>
+          <%= link_to document.title, disclosure_manage_document_path(document) %>
+          <span class="documents-panel__meta"><%= document.kind_label %><% if (body = document.authority) %> · <%= body.name %><% end %><% if document.request_deleted? %> · <%= _('request deleted') %><% end %></span>
+        </li>
+      <% end %>
+    </ul>
+  <% end %>
+</article>

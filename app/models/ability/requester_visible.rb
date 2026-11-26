@@ -1,6 +1,6 @@
 class Ability
-  # Visibility of a request, message or file, independent of viewer:
-  # :nobody < :admins < :requester (bounded by parent visibility).
+  # Visibility of a request, message, file or document source, independent of
+  # viewer: :nobody < :admins < :requester (bounded by parent visibility).
   # Uses prominence allow-lists so unknown or missing values fail closed to
   # :admins.
   module RequesterVisible
@@ -18,6 +18,7 @@ class Ability
       when InfoRequest then own(record)
       when IncomingMessage, OutgoingMessage then message(record)
       when FoiAttachment then file(record)
+      when Disclosures::Document then source(record)
       else raise ArgumentError, "no visibility for #{record.class}"
       end
     end
@@ -40,8 +41,15 @@ class Ability
       allowed.include?(record.prominence) ? :requester : :admins
     end
 
+    # Excludes in-progress spreadsheet checks (SpreadsheetHold), which are not
+    # admin hides, so requesters can still delete the request while checks run.
     def hidden_by_admin?(record)
-      of(record) != :requester
+      level = case record
+              when FoiAttachment then file(record, checking: false)
+              when Disclosures::Document then source(record, checking: false)
+              else of(record)
+              end
+      level != :requester
     end
 
     def least(*levels)
@@ -49,7 +57,8 @@ class Ability
     end
 
     # SQL equivalent of requester? for named table aliases (outer-joined NULLs
-    # fail closed).
+    # fail closed). Omits SpreadsheetHold because spreadsheets never become
+    # documents, which are the only file callers.
     def sql(request: nil, message: nil, file: nil)
       conditions = []
       conditions << "#{request}.prominence IN (#{list(REQUEST)})" if request
@@ -70,13 +79,32 @@ class Ability
       least(own(request), own(record))
     end
 
-    def file(record)
+    def file(record, checking: true)
       return :nobody if record.erased?
 
       reply = record.incoming_message
       return :nobody unless reply&.info_request
 
-      least(message(reply), own(record))
+      held = checking && Disclosures::SpreadsheetHold.waiting?(record)
+      least(message(reply), own(record), held ? :admins : :requester)
+    end
+
+    # Document source visibility; drops to :admins if an admin moved the reply
+    # to another request, and :nobody if the source attachment is gone.
+    def source(document, checking: true)
+      attachment = document.foi_attachment
+      return :nobody unless attachment
+
+      if document.request_deleted?
+        return :nobody if attachment.erased?
+
+        return own(attachment)
+      end
+
+      moved = attachment.incoming_message&.info_request_id !=
+              document.info_request_id
+      least(file(attachment, checking: checking),
+            moved ? :admins : :requester)
     end
 
     # Values are hardcoded constants, so no DB connection is needed at boot.
@@ -84,6 +112,6 @@ class Ability
       values.map { |value| "'#{value}'" }.join(', ')
     end
 
-    private_class_method :message, :file, :list
+    private_class_method :message, :file, :source, :list
   end
 end

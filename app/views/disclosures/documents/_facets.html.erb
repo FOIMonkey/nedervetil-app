@@ -1,0 +1,24 @@
+<%# A form, not links: a crawler following links walks every combination of filters, and each one is a costly page. %>
+<%= form_tag disclosure_documents_path, method: :get, class: 'documents-facets', enforce_utf8: false do %>
+  <% filter_params(search, :page, nil).except(:request_choice, *facets.map(&:first)).each do |key, value| %>
+    <input type="hidden" name="<%= key %>" value="<%= value %>">
+  <% end %>
+  <%= request_journey_hidden_fields %>
+  <% facets.each do |key, values| %>
+    <% current = search.filters[key].to_s %>
+    <% choices = values.map { |value, label, _| [value.to_s, label] } %>
+    <% choices.unshift([current, search.label_for(key, current)]) if current.present? && choices.none? { |value, _| value == current } %>
+    <% choices.unshift(['', _('All')]) %>
+    <fieldset class="documents-facet">
+      <legend class="documents-facet__title"><%= search.title_for(key) %></legend>
+      <ul class="documents-facet__list">
+        <% choices.each do |value, label| %>
+          <li class="documents-facet__item">
+            <label><input type="radio" name="<%= key %>" value="<%= value %>"<%= ' checked' if value == current %>> <span><%= label %></span></label>
+          </li>
+        <% end %>
+      </ul>
+    </fieldset>
+  <% end %>
+  <button type="submit" class="button documents-facets__apply"><%= _('Apply filters') %></button>
+<% end %>

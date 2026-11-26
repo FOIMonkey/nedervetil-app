@@ -1,0 +1,30 @@
+<% stage = document.stage %>
+<section class="document-manage" aria-labelledby="document-manage-title">
+  <h2 id="document-manage-title"><span class="document-state document-state--<%= document.state %>"><%= document_state(document) %></span></h2>
+  <p><%= document_audience(document) %></p>
+  <% if Disclosures::ReviewSubmission.pending?(document) %>
+    <p role="status"><%= _('Awaiting admin review. It is not public yet.') %></p>
+    <% if (unwanted = Disclosures::ReviewSubmission.unwanted(document)) %>
+      <p><%= _('You told the admin on {{date}} that you no longer want it published.', date: document_date(unwanted.created_at)) %></p>
+    <% elsif can?(:mark_publication_unwanted, document) %>
+      <%= form_tag disclosure_document_unwanted_path(document), class: 'document-manage__form' do %>
+        <p><%= _('Changed your mind? The admin will see that you no longer want it published.') %></p>
+        <button type="submit" class="button"><%= _('I no longer want it published') %></button>
+      <% end %>
+    <% end %>
+  <% elsif stage.in?(%i[not_ready ready]) %>
+    <p><%= _('Not published yet.') %></p>
+  <% end %>
+  <% if document.withdrawal_reason.present? && !stage.in?(%i[erasing erased]) %>
+    <p><%= _('Why: {{reason}}', reason: document.withdrawal_reason) %></p>
+  <% end %>
+  <ul class="document-manage__facts">
+    <% if document.request_deleted? %><li><%= _('Its request was deleted {{date}}.', date: document_date(document.request_deleted_at)) %></li><% end %>
+  </ul>
+  <ul class="document-manage__actions">
+    <% if can?(:edit_document, document) %><li><%= link_to _('Edit details'), disclosure_edit_document_path(document) %></li><% end %>
+    <% if (flow = publish_flow_redact_path(document)) %><li><%= link_to _('Redact this file'), flow %></li><% end %>
+    <% if document.info_request && can?(:read, document.info_request) %><li><%= link_to _('Go to the request'), show_request_path(url_title: document.info_request.url_title) %></li><% end %>
+  </ul>
+  <%= render partial: 'disclosures/documents/take_down', locals: { document: document } %>
+</section>

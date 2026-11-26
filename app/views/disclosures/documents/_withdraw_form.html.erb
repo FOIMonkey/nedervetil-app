@@ -1,0 +1,11 @@
+<details class="document-manage__more">
+  <summary><%= can?(:publish_document, document) ? _('Withdraw') : _('Withdraw (only an admin can share it again)') %></summary>
+  <%= form_tag document_withdrawal_path(document), class: 'document-manage__form' do %>
+    <p><%= can?(:publish_document, document) ? _('It stops being public at once. It can be shared again later.') : _('It stops being public at once. Only an admin can share it again.') %></p>
+    <p>
+      <label for="withdraw-reason"><%= _('Why (kept in the document’s history)') %></label>
+      <textarea id="withdraw-reason" name="reason" rows="2" required maxlength="500"></textarea>
+    </p>
+    <button type="submit" class="button"><%= _('Withdraw') %></button>
+  <% end %>
+</details>

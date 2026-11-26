@@ -19,16 +19,17 @@ module InfoRequest::HoldingPen
           prominence: 'hidden'
         )
 
-        om = OutgoingMessage.new({
-          status: 'ready',
-          message_type: 'initial_request',
-          body: 'This is the holding pen request. It shows responses that ' \
-                'were sent to invalid addresses, and need moving to the ' \
-                'correct request by an administrator.',
-          last_sent_at: Time.zone.now,
-          what_doing: 'normal_sort'
-
-        })
+        om = OutgoingMessage.new(
+          {
+            status: 'ready',
+            message_type: 'initial_request',
+            body: 'This is the holding pen request. It shows responses that ' \
+                  'were sent to invalid addresses, and need moving to the ' \
+                  'correct request by an administrator.',
+            last_sent_at: Time.zone.now,
+            what_doing: 'normal_sort'
+          }
+        )
 
         ir.outgoing_messages << om
         om.info_request = ir
@@ -41,12 +42,18 @@ module InfoRequest::HoldingPen
           email: ir.public_body.request_email
         )
       end
+      # Its replies are mailed to an admin at once, never summarised.
+      ir.update_column(:use_notifications, false) if ir.use_notifications?
       ir
     end
   end
 
-  def holding_pen_request?
+  # Callbacks and permission checks use read_only to inspect just this record,
+  # without creating the holding pen or repairing its notification setting.
+  # Keep the inherited identity fallback for callers using the default.
+  def holding_pen_request?(read_only: false)
     return true if url_title == 'holding_pen'
+    return false if read_only
 
     self == self.class.holding_pen_request
   end

@@ -1,21 +1,15 @@
 <% redaction_tracking = redaction_tracking?(local_assigns[:info_request]) %>
 <% redaction_counts = censor_rule_redaction_counts(censor_rules, local_assigns[:info_request]) %>
+<% columns = CensorRule.content_columns_names - %w[masking_finished_at] %>
 
 <div class="row">
   <div class="span12 help-block">
     <p>
-      Each rule applies sequentially to the text after having been modified by
-      the previous rule, so the order may matter depending on what you are
-      trying to redact.
+      Rules in the same pass match against the original text, with overlapping
+      matches merged (using the longest match’s replacement) so shorter rules
+      do not break longer phrases or redact another rule’s replacement text.
+      Black rules apply on arrival before later Blue rules.
     </p>
-
-    <% if redaction_tracking && info_request.foi_attachments.locked.any? %>
-      <p>
-        <strong>This request has locked attachments.</strong>
-        Redaction tracking counts may be incorrect as their content is frozen,
-        so what is redacted can no longer be determined.
-      </p>
-    <% end %>
   </div>
 </div>
 
@@ -24,9 +18,10 @@
     <table class="table table-condensed table-hover span12 censor-rule-list">
       <tr>
         <th>Id</th>
-        <% CensorRule.content_columns_names.each do |column| %>
+        <% columns.each do |column| %>
           <th><%= column.humanize %></th>
         <% end %>
+        <th>Applied everywhere it reaches</th>
         <% if redaction_tracking %>
           <th>Records redacted</th>
         <% end %>
@@ -37,7 +32,7 @@
         <tr class="<%= cycle('odd', 'even') %>">
           <td class="id"><%=h censor_rule.id %></td>
 
-          <% CensorRule.content_columns_names.each do |column| %>
+          <% columns.each do |column| %>
             <% if column == 'censorable_type' %>
               <td class="applies-to">
                 <%=h censor_rule.send(column) || 'Global' %>
@@ -46,6 +41,8 @@
               <td class="<%= column %>"><%=h censor_rule.send(column) %></td>
             <% end %>
           <% end %>
+
+          <td class="applied"><%= censor_rule_applied(censor_rule) %></td>
 
           <% if redaction_tracking %>
             <td>

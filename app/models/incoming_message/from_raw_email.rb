@@ -114,13 +114,11 @@ module IncomingMessage::FromRawEmail
   def checking_documents_after
     yield
   ensure
-    if defined?(Disclosures::SpreadsheetHold)
-      begin
-        Disclosures::SpreadsheetHold.check_later(self)
-      rescue StandardError => e
-        Rails.logger.warn("IncomingMessage #{id}: spreadsheet check failed " \
-                          "(#{e.class})")
-      end
+    begin
+      Disclosures::SpreadsheetHold.check_later(self)
+    rescue StandardError => e
+      Rails.logger.warn("IncomingMessage #{id}: spreadsheet check failed " \
+                        "(#{e.class})")
     end
   end
 

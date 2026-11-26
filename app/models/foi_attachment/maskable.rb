@@ -83,13 +83,11 @@ module FoiAttachment::Maskable
     self.masking_failed_at = nil
     save!
     mask
-    if defined?(AttachmentManagement::Revision)
-      AttachmentManagement::Revision.
-        where(foi_attachment_id: id, status: 'applied').
-        update_all(status: 'superseded', updated_at: Time.current)
-      applied_revisions.reset
-    end
-    AttachmentManagement::Previews.clear(id) if defined?(AttachmentManagement::Previews)
+    AttachmentManagement::Revision.
+      where(foi_attachment_id: id, status: 'applied').
+      update_all(status: 'superseded', updated_at: Time.current)
+    applied_revisions.reset
+    AttachmentManagement::Previews.clear(id)
     incoming_message&.clear_in_database_caches! if main_body_part?
     true
   end

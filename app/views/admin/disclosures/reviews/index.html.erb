@@ -1,0 +1,11 @@
+<% drafts = @queue.drafts.group_by(&:waiting) %>
+<div class="admin-home">
+  <h1><%= _('Review queue') %></h1>
+  <p class="admin-lede"><%= _('Submitted changes stay private until approved. An existing public version stays available.') %></p>
+  <section class="admin-block" aria-label="<%= _('Documents awaiting review') %>">
+    <% if @queue.drafts.empty? && @queue.source_changed.empty? %>
+      <p class="admin-clear"><%= _('No documents are awaiting review.') %></p>
+    <% end %>
+    <%= render partial: 'admin/general/document_todos', locals: { queue: @queue, drafts: drafts } %>
+  </section>
+</div>

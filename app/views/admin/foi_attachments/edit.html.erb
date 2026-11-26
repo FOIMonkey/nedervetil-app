@@ -40,7 +40,15 @@
       <%= f.label :prominence, class: 'control-label' %>
 
       <div class="controls">
-        <%= f.select :prominence, FoiAttachment.prominence_states %>
+        <%= f.select :prominence,
+                     Admin::FoiAttachments::ProminenceController::ALLOWED_PROMINENCES,
+                     include_blank: @foi_attachment.is_public? %>
+        <% if !@foi_attachment.erased? && !@foi_attachment.masking_failed? && (document = @foi_attachment.disclosure_document) %>
+          <span class="help-block">
+            To make this file public, publish its document:
+            <%= link_to document.title, disclosure_manage_document_path(document) %>.
+          </span>
+        <% end %>
       </div>
     </div>
 
@@ -62,14 +70,12 @@
   <div class="row">
     <div class="span12">
       <div class="alert alert-warning">
-        <p>Cannot show the mask, lock or replacement options as this attachment has been erased.</p>
+        <p>Cannot show the mask options as this attachment has been erased.</p>
       </div>
     </div>
   </div>
 <% else %>
   <%= render partial: 'mask' %>
-  <%= render partial: 'lock' %>
-  <%= render partial: 'replace' %>
   <%= render partial: 'erase' if feature_enabled?(:foi_attachment_erase) %>
 <% end %>
 
@@ -88,10 +94,32 @@
         </div>
       </div>
     </div>
+  <% elsif !@foi_attachment.raw_email&.kept? %>
+    <div class="row">
+      <div class="span12">
+        <div class="alert alert-warning">
+          <p>
+            Cannot show the unmasked data as the original email is no longer
+            kept.
+          </p>
+        </div>
+      </div>
+    </div>
+  <% elsif @unmasked_body.nil? %>
+    <div class="row">
+      <div class="span12">
+        <div class="alert alert-warning">
+          <p>
+            Cannot show the unmasked data just now: this message’s email
+            can’t be read at the moment. Try again later.
+          </p>
+        </div>
+      </div>
+    </div>
   <% else %>
     <blockquote>
       <div class="well well-small">
-        <%= simple_format(@foi_attachment.unmasked_body) %>
+        <%= simple_format(h(@unmasked_body)) %>
       </div>
     </blockquote>
   <% end %>

@@ -1,0 +1,239 @@
+<% document = @document %>
+<% reader = @reader %>
+<% authority = document.authority %>
+<% image_pages = @pages.select { |page| page.kind == 'image' } %>
+<% stack = image_pages.first(2) %>
+<% sheet = @pages.first if stack.empty? && @pages.first&.kind == 'sheet' %>
+<% attribution = @attribution %>
+<% format = document_format_tag(document) %>
+<% page_path = ->(page) { disclosure_document_page_path(document, page: page.number) } %>
+<% view_path = ->(view, anchor = nil) { request_journey_link_path(disclosure_document_path(document, view: view, find: params[:find].presence, anchor: anchor)) } %>
+<% notes = document.render_notes || {} %>
+<% content_for :body_class, 'band-view document-view' %>
+<article class="document" aria-labelledby="document-title">
+  <header class="page-band document-band<%= ' document-band--lit' if stack.any? || sheet %>">
+    <div class="document-band__text">
+      <h1 id="document-title" class="document-band__title"><%= document.title %></h1>
+      <p class="document-band__byline">
+        <% if authority %><%= link_to authority.name, request_journey_link_path(public_body_path(authority), public_body: authority) %><% end %>
+        <% if (date = document.document_date || document.released_on) %><span><%= document_date(date) %></span><% end %>
+        <span><%= document.kind_label %></span>
+      </p>
+      <% if document.description.present? %>
+        <p class="document-band__answer"><%= document.description %></p>
+      <% end %>
+    </div>
+    <% if stack.any? || sheet %>
+      <span class="document-band__beam" aria-hidden="true"></span>
+      <% first = stack.first %>
+      <% paper = first&.width.to_i.positive? && first.height.to_i.positive? ? first.height.to_f / first.width : 340.0 / 240 %>
+      <a class="document-band__stack" href="#document-pages" style="--paper: <%= (15.625 * paper).round(3) %>rem">
+        <% if sheet %>
+          <span class="document-band__page document-band__page--1 document-band__sheet" aria-hidden="true">
+            <table><% sheet_preview(sheet.text, rows: 14, columns: 4).each do |row| %><tr><% row.each do |cell| %><td<% if numeric_cell?(cell) %> class="is-number"<% end %>><%= cell %></td><% end %></tr><% end %></table>
+          </span>
+          <span class="document-band__read"><%= document.format == 'csv' || document.page_count.to_i <= 1 ? _('See the table') : _('See the {{count}} sheets', count: document.page_count) %></span>
+        <% else %>
+          <% stack.each_with_index.reverse_each do |page, index| %>
+            <img class="document-band__page document-band__page--<%= index + 1 %>" src="<%= page_path.(page) %>" alt=""
+                 width="<%= page.width %>" height="<%= page.height %>">
+          <% end %>
+          <% count = [document.page_count.to_i, image_pages.size].max %>
+          <span class="document-band__read"><%= n_('Read the page', 'Read the {{count}} pages', count, count: count) %></span>
+        <% end %>
+      </a>
+    <% end %>
+  </header>
+  <%= band_notice %>
+
+  <%# The byline already names the authority and the first date. %>
+  <% released = document.released_on if document.released_on && document.released_on != (document.document_date || document.released_on) %>
+  <% line = attribution.text %>
+  <% converted_from = document_converted_from_note(document) %>
+  <% if released || line || converted_from %>
+    <dl class="document-ledger">
+      <% if released %>
+        <div><dt><%= _('Released') %></dt> <dd><%= document_date(released) %></dd></div>
+      <% end %>
+      <% if line %>
+        <div><dt><%= line.split(' ', 2).first %></dt> <dd><span class="document-ledger__swatch" aria-hidden="true"></span><%= line.split(' ', 2).last.upcase_first %></dd></div>
+      <% end %>
+      <% if converted_from %>
+        <div><dt><%= _('Original file') %></dt> <dd><%= converted_from %></dd></div>
+      <% end %>
+    </dl>
+  <% end %>
+
+  <% if @yours %>
+    <p class="document-yours">
+      <% links = [] %>
+      <% links << link_to(_('Redact'), @yours[:redact]) if @yours[:redact] %>
+      <% links << link_to(_('Withdraw'), "#{@yours[:manage]}#document-remove-title") if @yours[:withdraw] && @yours[:mine] %>
+      <% links << link_to(_('Manage'), @yours[:manage]) %>
+      <% if @yours[:mine] %><b><%= _('Yours') %></b> · <% end %><%= safe_join(links, ' · ') %>
+    </p>
+  <% end %>
+
+  <section class="document-desk" id="document-pages" aria-labelledby="document-desk-title" data-controller="document-views" data-action="click->document-views#swap">
+    <h2 id="document-desk-title" class="visually-hidden"><%= _('The document') %></h2>
+    <div class="document-toolbar">
+      <% if reader.any_text? %>
+        <nav class="document-views" aria-label="<%= _('View') %>">
+          <% { 'pages' => _('Pages'), 'text' => _('Text') }.each do |view, label| %>
+            <%= link_to label, view_path.(view), class: 'document-views__link', data: { document_view: view },
+                                                 'aria-current': (@view == view ? 'true' : nil) %>
+          <% end %>
+        </nav>
+        <%= form_tag disclosure_document_path(document, anchor: 'document-find-first'), method: :get, class: 'document-find', role: 'search', enforce_utf8: false do %>
+          <label for="document-find" class="visually-hidden"><%= _('Find in this document') %></label>
+          <button type="submit" class="document-find__go">
+            <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true" focusable="false"><circle cx="6.5" cy="6.5" r="4.8" fill="none" stroke="currentColor" stroke-width="2"/><path d="m10 10 4.5 4.5" stroke="currentColor" stroke-width="2.2"/></svg>
+            <span class="visually-hidden"><%= _('Find') %></span>
+          </button>
+          <input type="search" id="document-find" name="find" value="<%= params[:find].to_s.first(100) %>" maxlength="100"
+                 placeholder="<%= _('Find in this document') %>" autocomplete="off">
+          <% if reader.find? %>
+            <span class="document-find__count">
+              <% if reader.matches.zero? %><%= _('No matches') %><% else %><%= n_('{{count}} match', '{{count}} matches', reader.matches, count: reader.matches) %> · <%= _('p. {{pages}}', pages: reader.matched_pages.join(', ')) %><% end %>
+            </span>
+          <% end %>
+        <% end %>
+      <% end %>
+      <%= link_to disclosure_document_download_path(document), class: 'document-download', data: { turbo: false } do %>
+        <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true" focusable="false"><path d="M9 2v10M4.5 7.5 9 12l4.5-4.5M3 16h12" fill="none" stroke="currentColor" stroke-width="2.2"/></svg>
+        <%= _('Download {{format}}', format: format) %><% if (size = large_file_size(document.byte_size)) %> <small><%= size %></small><% end %>
+      <% end %>
+    </div>
+
+    <div class="document-reader<%= ' has-thumbs' if image_pages.size > 1 %>">
+      <% if image_pages.size > 1 %>
+        <ol class="document-thumbs" aria-label="<%= _('Pages') %>" data-controller="page-thumbs"<%= ' hidden' if @view == 'text' %>>
+          <% image_pages.each do |page| %>
+            <li><a href="#<%= page.anchor %>" data-document-thumb="<%= page.anchor %>"><img src="<%= page_path.(page) %>" alt="" loading="lazy" width="<%= page.width %>" height="<%= page.height %>"><%= page.label %></a></li>
+          <% end %>
+        </ol>
+      <% end %>
+
+      <div class="document-reader__view">
+        <div id="document-pages-view"<%= ' hidden' if @view == 'text' %>>
+          <% if @pages.empty? %>
+            <p class="document-pages__none"><%= notes['no_preview'] ? _('This kind of file can’t be shown here. Download it to read it.') : _('Nothing to show for this file.') %></p>
+          <% end %>
+          <% @pages.each do |page| %>
+            <% case page.kind %>
+            <% when 'image' %>
+              <figure class="document-page" id="<%= page.anchor %>">
+                <figcaption class="document-page__label">
+                  <h3 class="document-page__heading"><%= page.label %><% if document.page_count.to_i > 1 %> <%= _('of {{count}}', count: document.page_count) %><% end %></h3>
+                  <% if page.text.present? %><%= link_to _('Text of this page'), view_path.('text', "text-#{page.number}"), data: { document_view: 'text' } %><% end %>
+                </figcaption>
+                <div class="document-paper">
+                  <img src="<%= page_path.(page) %>" alt="<%= page.label %><% if page.text.present? %>. <%= _('Its text is in the Text view') %><% end %>"
+                       width="<%= page.width %>" height="<%= page.height %>" loading="<%= page.number > 2 ? 'lazy' : 'eager' %>">
+                  <% document_box_tags(@boxes[page.number]).each do |_x0, y0, x1, _y1, who| %>
+                    <span class="document-paper__tag" style="top: <%= (y0 * 100).round(2) %>%; right: <%= ((1 - x1) * 100).round(2) %>%" aria-hidden="true"><%= who %></span>
+                  <% end %>
+                </div>
+              </figure>
+            <% when 'sheet' %>
+              <%= render partial: 'disclosures/documents/sheet', locals: { page: page, document: document } %>
+            <% else %>
+              <section class="document-text" id="<%= page.anchor %>" aria-label="<%= _('Text') %>">
+                <%= tag.pre(page.text, tabindex: 0, class: (page.columnar? ? 'is-columns' : nil)) %>
+              </section>
+            <% end %>
+          <% end %>
+          <% if notes['pages_not_shown'].to_i.positive? %>
+            <p class="document-pages__more"><%= n_('Only the first page is shown here. Download the file to read the rest.', 'Only the first {{count}} pages are shown here. Download the file to read the rest.', @pages.size, count: @pages.size) %></p>
+          <% end %>
+        </div>
+
+        <% if reader.any_text? %>
+          <div id="document-text-view" class="document-text-view"<%= ' hidden' unless @view == 'text' %>>
+            <% if reader.ocr? %>
+              <p class="document-text-view__note"><%= _('Read from the page images by this site, leaving out blacked-out parts. It may contain mistakes.') %></p>
+            <% end %>
+            <% first_match = reader.matched_pages.first %>
+            <% reader.pages.each do |entry| %>
+              <% number = entry.page.number %>
+              <section class="document-textpage" id="text-<%= number %>" aria-labelledby="text-<%= number %>-title">
+                <% if number == first_match %><span id="document-find-first"></span><% end %>
+                <h3 id="text-<%= number %>-title" class="document-textpage__title"><%= entry.page.label %></h3>
+                <% if entry.blocks.empty? %>
+                  <p class="document-textpage__none"><%= _('No text could be read from this page.') %></p>
+                <% end %>
+                <% entry.blocks.each do |kind, content| %>
+                  <% if kind == :pre %>
+                    <pre class="is-columns" tabindex="0"><%= document_text_line(content, reader.pattern) %></pre>
+                  <% else %>
+                    <p><%= safe_join(content.map { |text| document_text_line(text, reader.pattern) }, tag.br) %></p>
+                  <% end %>
+                <% end %>
+              </section>
+            <% end %>
+          </div>
+        <% end %>
+      </div>
+    </div>
+  </section>
+
+  <section class="document-use" id="document-use" aria-labelledby="document-use-title">
+    <h2 id="document-use-title"><%= _('Use this document') %></h2>
+    <div class="document-use__grid">
+      <div class="document-use__part">
+        <h3><%= _('Cite it') %></h3>
+        <p class="document-use__cite" id="document-citation"><% if authority %><%= authority.name %>. <% end %><em><%= document.title %></em>.<% if document.document_date %> <%= document_date(document.document_date) %>.<% end %><% if document.first_published_at %> <%= _('Published on {{site_name}}, {{date}}.', site_name: site_name, date: document_date(document.first_published_at)) %><% end %> <%= disclosure_document_url(document) %></p>
+        <button type="button" class="document-use__copy" data-copy="document-citation" data-copy-done="<%= _('Copied') %>" data-controller="copy-button" data-action="click->copy-button#copy" hidden><%= _('Copy citation') %></button>
+      </div>
+      <div class="document-use__part">
+        <h3><%= _('Link to it') %></h3>
+        <div class="document-use__link">
+          <label for="document-link" class="visually-hidden"><%= _('Link to this document') %></label>
+          <input type="text" id="document-link" readonly value="<%= disclosure_document_url(document) %>">
+          <button type="button" class="document-use__copy" data-copy="document-link" data-copy-done="<%= _('Copied') %>" data-controller="copy-button" data-action="click->copy-button#copy" hidden><%= _('Copy link') %></button>
+        </div>
+        <% if image_pages.size > 1 %>
+          <p class="document-use__hint"><%= _('Add <strong>#page-2</strong> to link to a page.') %></p>
+        <% end %>
+      </div>
+    </div>
+  </section>
+
+  <% if (more = @more) %>
+    <section class="document-more" aria-labelledby="document-more-title">
+      <h2 id="document-more-title"><%= _('More from {{authority}}', authority: more[:authority].name) %></h2>
+      <ul class="document-cards">
+        <% more[:documents].each do |other| %>
+          <% other = other.public_view %>
+          <li class="document-card">
+            <span class="document-card__preview" aria-hidden="true">
+              <% if other.thumbnail.attached? %>
+                <img src="<%= disclosure_document_thumbnail_path(other) %>" alt="" loading="lazy">
+              <% elsif (rows = sheet_preview(more[:search].sheet_previews[other.id], rows: 5)).any? %>
+                <table>
+                  <tr><% rows.first.each do |cell| %><th><%= cell %></th><% end %></tr>
+                  <% rows.drop(1).each do |row| %><tr><% row.each do |cell| %><td<% if numeric_cell?(cell) %> class="is-number"<% end %>><%= cell %></td><% end %></tr><% end %>
+                </table>
+              <% else %>
+                <%= image_tag document_icon_path(other), alt: '', class: 'document-card__icon' %>
+              <% end %>
+            </span>
+            <span class="document-card__body">
+              <span class="document-card__kind"><%= other.kind_label %> · <%= document_format_tag(other) %></span>
+              <%= link_to document_display_title(other), disclosure_document_path(other), class: 'document-card__title' %>
+              <span class="document-card__meta"><%= [document_extent(other), (_('dated {{date}}', date: document_date(other.document_date)) if other.document_date)].compact.join(' · ').upcase_first %></span>
+            </span>
+          </li>
+        <% end %>
+        <li class="document-card document-card--all">
+          <%= link_to _('All documents from {{authority}}', authority: more[:authority].name), disclosure_documents_path(body: more[:authority].url_name) %>
+        </li>
+      </ul>
+    </section>
+  <% end %>
+
+  <div class="document-actionbar">
+    <%= link_to _('Download {{format}}', format: format), disclosure_document_download_path(document), class: 'document-download', data: { turbo: false } %>
+    <a href="#document-use" class="document-actionbar__cite"><%= _('Cite') %></a>
+  </div>
+</article>

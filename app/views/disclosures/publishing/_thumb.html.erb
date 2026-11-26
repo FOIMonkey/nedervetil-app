@@ -1,0 +1,26 @@
+<% pages = document.pages.to_a %>
+<% link = local_assigns[:link] %>
+<% paper = capture do %>
+  <% if (image = pages.find { |page| page.kind == 'image' }) %>
+    <div class="publish-thumb__paper">
+      <img src="<%= disclosure_document_page_path(document, page: image.number) %>" alt="<%= link ? '' : _('Page {{page}} of {{name}}', page: image.number, name: document.kind_label) %>" width="<%= image.width %>" height="<%= image.height %>" loading="<%= local_assigns[:eager] ? 'eager' : 'lazy' %>">
+    </div>
+  <% elsif (sheet = pages.find { |page| page.kind == 'sheet' }) %>
+    <div class="publish-thumb__paper">
+      <table class="publish-thumb__sheet" role="presentation"><% sheet_preview(sheet.text, rows: 14, columns: 4).each do |row| %><tr><% row.each do |cell| %><td><%= cell %></td><% end %></tr><% end %></table>
+    </div>
+  <% elsif (text = pages.first) %>
+    <div class="publish-thumb__paper">
+      <div class="publish-thumb__text"><%= text.text.to_s.lines.first(24).join %></div>
+    </div>
+  <% else %>
+    <div class="publish-thumb__paper">
+      <%= image_tag document_icon_path(document), alt: '', class: 'doc-sheet__icon' %>
+    </div>
+  <% end %>
+<% end %>
+<% if link %>
+  <%= link_to paper, link, class: 'publish-thumb', tabindex: -1, 'aria-hidden': true %>
+<% else %>
+  <div class="publish-thumb"><%= paper %></div>
+<% end %>

@@ -73,8 +73,7 @@ module FoiAttachment::Erasable
     save!
 
     delete_cached_file!
-    if defined?(Disclosures::Document) &&
-       (document = disclosure_document) && !document.erased?
+    if (document = disclosure_document) && !document.erased?
       document.purge_public_pages!
       document.update_columns(state: 'withdrawn',
                               withdrawal_kind: 'erased',

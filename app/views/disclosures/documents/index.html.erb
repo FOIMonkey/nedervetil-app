@@ -1,0 +1,134 @@
+<%# Plain links and a GET form: works without JavaScript, sets no visitor cookies. %>
+<% search = @search %>
+<% kind_labels = { 'decision_letter' => _('Decision letters'), 'released_records' => _('Released records') } %>
+<% kinds = search.facet(:kind).map(&:first) %>
+<% content_for :body_class, 'band-view has-page-search' %>
+<div class="documents">
+  <div class="documents__header page-band">
+    <% if search.query? %>
+      <h1 class="page-band__title"><%= _('Search results') %></h1>
+    <% else %>
+      <h1 class="page-band__title"><%= _('Documents') %></h1>
+      <p class="documents__lede page-band__summary"><%= _('Replies from authorities, shared by the people who asked for them.') %></p>
+    <% end %>
+    <%= form_tag disclosure_documents_path, method: :get, class: 'documents__search band-search', role: 'search', enforce_utf8: false do %>
+      <label for="documents-q" class="visually-hidden"><%= _('Search every page of every document') %></label>
+      <input type="search" id="documents-q" name="q" value="<%= search.query %>" maxlength="200" autocomplete="off" placeholder="<%= _('Search every page') %>">
+      <% filter_params(search, :q, nil).except(:request_choice).each do |key, value| %>
+        <input type="hidden" name="<%= key %>" value="<%= value %>">
+      <% end %>
+      <%= request_journey_hidden_fields %>
+      <button type="submit" class="button"><%= _('Search') %></button>
+    <% end %>
+    <% if current_user %>
+      <p class="page-band__figures"><%= link_to _('Your documents'), disclosure_your_documents_path %></p>
+    <% end %>
+  </div>
+  <%= band_notice %>
+
+  <% if search.query? && search.page == 1 %>
+    <%= render partial: 'disclosures/documents/answers', locals: { query: search.query } %>
+  <% end %>
+
+  <% if kinds.any? %>
+  <div class="documents__bar">
+    <ul class="documents-kinds" aria-label="<%= _('Type') %>">
+      <li>
+        <%= link_to _('All'), disclosure_documents_path(filter_params(search, :kind, nil)), 'aria-current': (search.filters[:kind] ? nil : 'true') %>
+      </li>
+      <% kind_labels.select { |value, _| kinds.include?(value) }.each do |value, label| %>
+        <li>
+          <%= link_to label, disclosure_documents_path(filter_params(search, :kind, value)), 'aria-current': (search.filters[:kind] == value ? 'true' : nil) %>
+        </li>
+      <% end %>
+    </ul>
+    <% unless search.query? %>
+      <p class="documents-sort">
+        <%= _('Sort:') %>
+        <% if search.sort == 'date' %>
+          <%= link_to _('Newest released'), disclosure_documents_path(filter_params(search, :sort, nil)) %> · <strong aria-current="true"><%= _('Date of the document') %></strong>
+        <% else %>
+          <strong aria-current="true"><%= _('Newest released') %></strong> · <%= link_to _('Date of the document'), disclosure_documents_path(filter_params(search, :sort, 'date')) %>
+        <% end %>
+      </p>
+    <% end %>
+  </div>
+  <% end %>
+
+  <div class="documents__layout">
+    <section class="documents__results" aria-labelledby="documents-count">
+      <h2 id="documents-count" class="documents__count<%= ' visually-hidden' unless search.filtered? %>">
+        <%= n_('{{count}} document', '{{count}} documents', search.total, count: search.total) %><% if search.query? %> <%= _('matching “{{query}}”', query: search.query) %><% end %>
+      </h2>
+      <% if search.query? %>
+        <p class="documents__clear"><%= link_to _('Clear search'), disclosure_documents_path(filter_params(search, :q, nil)), class: 'documents__remove' %></p>
+      <% end %>
+
+      <% active = search.filters.except(:kind) %>
+      <% if active.any? %>
+        <ul class="documents__active" aria-label="<%= _('Filters in use') %>">
+          <% active.each do |key, value| %>
+            <li>
+              <span class="documents__active-label"><%= search.title_for(key) %>:</span>
+              <strong><%= search.label_for(key, value) %></strong>
+              <%= link_to disclosure_documents_path(filter_params(search, key, nil)), class: 'documents__remove' do %><%= _('Remove') %><span class="visually-hidden"> <%= _('the {{filter}} filter', filter: search.title_for(key).downcase) %></span><% end %>
+            </li>
+          <% end %>
+          <li><%= link_to _('Clear everything'), request_journey_link_path(disclosure_documents_path), class: 'documents__remove' %></li>
+        </ul>
+      <% end %>
+
+      <% shown = search.shown_facets %>
+      <% if shown.any? %>
+        <details class="documents-filters-toggle">
+          <summary><%= _('Filter') %> <span><%= shown.map { |key, _| search.title_for(key).downcase }.to_sentence(last_word_connector: ', ', two_words_connector: ', ').upcase_first %></span></summary>
+          <div class="documents-filters-toggle__inner">
+            <%= render partial: 'disclosures/documents/facets', locals: { search: search, facets: shown } %>
+          </div>
+        </details>
+      <% end %>
+
+      <% if search.results.empty? && !search.filtered? %>
+        <section class="guide-card documents__empty">
+          <h2><%= _('Shared replies appear here') %></h2>
+          <p><%= _('When people share the replies they get, you’ll find them here. Until then, see who holds what.') %></p>
+          <p><%= link_to _('Browse topics'), request_journey_destination('topics') %> · <%= link_to _('Find an authority'), request_journey_destination('authorities') %></p>
+        </section>
+      <% elsif search.results.empty? %>
+        <p class="documents__empty">
+          <%= search.query? ? _('No published documents match this search.') : _('No published documents match.') %>
+          <%= link_to _('See every document'), request_journey_link_path(disclosure_documents_path) %>.
+        </p>
+        <p class="documents__next"><%= _('Try a {{topic}}, or {{find}}.', topic: link_to(_('topic'), request_journey_destination('topics')), find: link_to(_('find who holds it'), request_journey_destination('authorities'))) %></p>
+      <% else %>
+        <ol class="documents__list">
+          <% search.groups.each do |group| %>
+            <% if group.several? %>
+              <%= render partial: 'disclosures/documents/release_group', locals: { group: group, search: search } %>
+            <% else %>
+              <%= render partial: 'disclosures/documents/result', locals: { document: group.documents.first, search: search, in_batch: false } %>
+            <% end %>
+          <% end %>
+        </ol>
+
+        <% if search.pages > 1 %>
+          <nav class="documents__pager" aria-label="<%= _('Pages of results') %>">
+            <% if search.page > 1 %>
+              <%= link_to _('Previous'), disclosure_documents_path(filter_params(search, :page, search.page - 1)), rel: 'prev' %>
+            <% end %>
+            <% if search.page < search.pages %>
+              <%= link_to _('Next'), disclosure_documents_path(filter_params(search, :page, search.page + 1)), rel: 'next' %>
+            <% end %>
+          </nav>
+        <% end %>
+      <% end %>
+    </section>
+
+    <% if shown.any? %>
+      <aside class="documents__filters" aria-labelledby="documents-filters-title">
+        <h2 id="documents-filters-title" class="documents__filters-title"><%= _('Filter') %></h2>
+        <%= render partial: 'disclosures/documents/facets', locals: { search: search, facets: shown } %>
+      </aside>
+    <% end %>
+  </div>
+</div>

@@ -1,13 +1,20 @@
 # Allow admins to change the prominence of an FoiAttachment
 class Admin::FoiAttachments::ProminenceController < AdminController
+  ALLOWED_PROMINENCES = %w[requester_only hidden].freeze
+
   before_action :set_foi_attachment, :set_incoming_message, :set_info_request
   before_action :check_info_request
 
   def update
+    unless ALLOWED_PROMINENCES.include?(prominence_params[:prominence])
+      flash[:error] = 'Prominence is not included in the list'
+      return redirect_to edit_admin_foi_attachment_path(@foi_attachment)
+    end
+
     if @foi_attachment.update_and_log_event(
-        **prominence_params,
-        event: { editor: admin_current_user }
-      )
+      **prominence_params,
+      event: { editor: admin_current_user }
+    )
 
       @foi_attachment.expire
 

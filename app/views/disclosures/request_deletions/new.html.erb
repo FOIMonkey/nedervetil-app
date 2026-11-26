@@ -1,0 +1,40 @@
+<% public_now, kept = @documents.partition { _1.stage_in?(:listed) } %>
+<%= page_band(_('Delete the emails, keep the documents'),
+              back: link_to(_('Back to the request'), show_request_path(url_title: @info_request.url_title))) %>
+<article class="document">
+  <p><%= _('This deletes “{{title}}” with all its emails and attachments, for good.', title: @info_request.title) %></p>
+
+  <% if @documents.empty? %>
+    <p><%= _('No documents were made from it.') %></p>
+  <% else %>
+    <% if public_now.any? %>
+      <h2><%= _('Stay public') %></h2>
+      <ul>
+        <% public_now.each do |document| %><li><%= link_to document.title, disclosure_document_path(document) %></li><% end %>
+      </ul>
+    <% end %>
+    <% if kept.any? %>
+      <h2><%= _('Deleted with the request') %></h2>
+      <ul>
+        <% kept.each do |document| %><li><%= document.title %> <span class="document__soft"><%= document_state(document) %></span></li><% end %>
+      </ul>
+    <% end %>
+    <% if public_now.any? %>
+      <p><%= _('Public documents stay in {{your_documents}}, where you can withdraw them.', your_documents: link_to(_('your documents'), disclosure_your_documents_path)) %></p>
+    <% end %>
+  <% end %>
+
+  <% if @blockers.any? %>
+    <div class="document-manage__alert">
+      <ul><% @blockers.each do |blocker| %><li><%= blocker %></li><% end %></ul>
+    </div>
+  <% else %>
+    <%= form_tag request_deletion_path(url_title: @info_request.url_title), class: 'document-manage__form' do %>
+      <p class="document-publish__check">
+        <input type="checkbox" id="delete-confirm" name="confirm" value="1" required>
+        <label for="delete-confirm"><%= _('Delete this request and its emails.') %></label>
+      </p>
+      <button type="submit" class="button"><%= _('Delete') %></button>
+    <% end %>
+  <% end %>
+</article>

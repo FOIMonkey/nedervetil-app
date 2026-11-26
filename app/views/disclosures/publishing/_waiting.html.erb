@@ -1,0 +1,21 @@
+<%# The publish-wait controller asks the status route, changes each file's word as it's ready and moves on by itself when they all are. The link does the same job without JavaScript. %>
+<% documents = local_assigns.fetch(:documents, []) %>
+<%# The id lets publish-wait's morphing refresh keep this element. %>
+<div class="publish-wait" id="publish-wait" data-controller="publish-wait" data-publish-wait="<%= publish_reply_status_path(url_title: @info_request.url_title, message_id: @message.id, what: local_assigns[:what]) %>"<% if local_assigns[:only] %> data-publish-only="<%= local_assigns[:only] %>"<% end %><% if local_assigns[:saved] %> data-publish-saved<% end %> data-publish-word-ready="<%= _('Ready') %>" data-publish-all-ready="<%= _('All ready.') %>" data-publish-slow="<%= _('This is taking longer than usual. You can leave this page and come back.') %>" data-publish-cant-check="<%= _('Can’t check right now.') %>">
+  <% if local_assigns[:message] %><p class="publish-wait__message"><%= message %></p><% end %>
+  <% if documents.any? %>
+    <ul class="publish-files">
+      <% documents.each do |document| %>
+        <li data-publish-file="<%= document.public_id %>">
+          <span class="publish-card__sheet<%= ' publish-card__sheet--grid' if publish_sheet?(document) %>" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+          <span class="publish-files__text"><b><%= publish_file_name(document) %></b> <span class="publish-wait__word" data-publish-word><%= publish_file_ready?(document) ? _('Ready') : _('Getting it ready') %></span></span>
+        </li>
+      <% end %>
+    </ul>
+  <% end %>
+  <%# While the page checks; the status line says the rest. %>
+  <div class="publish-wait__bar" data-publish-bar aria-hidden="true" hidden><span></span></div>
+  <p class="publish-wait__status" role="status" data-publish-status></p>
+  <p class="publish-wait__again" data-publish-again hidden><%= link_to _('Check again'), request.fullpath, class: 'publish-answer' %></p>
+  <noscript><p class="publish-wait__again"><%= link_to _('Check again'), request.fullpath, class: 'publish-answer' %></p></noscript>
+</div>

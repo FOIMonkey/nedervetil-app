@@ -1,0 +1,72 @@
+<%# Each file of a reply, once per page: #attachment-N links land here. On the requester's page a file they can't read says it's hidden, and never which or why. A held spreadsheet and one still being read have their own messages. %>
+<% if attachments.present? %>
+<ul class="list-of-attachments">
+  <% attachments.each do |a| %>
+    <%= tag.li class: 'attachment', id: dom_id(a), data: { attachments_limit_target: 'item' } do %>
+      <% if cannot?(:read, a) %>
+        <%= image_tag('content_type/icon_unknown.png', class: 'attachment__image', alt: '') %>
+      <% end %>
+      <% if Disclosures::SpreadsheetHold.held?(a) %>
+        <p class="attachment__held"><%= a.prominence_reason %></p>
+      <% elsif @request_history && a.prominence != 'hidden' && !a.erased? && Disclosures::SpreadsheetHold.waiting?(a) %>
+        <p class="attachment__held"><%= a.display_filename %>: <%= _('Getting it ready') %></p>
+      <% elsif @request_history && cannot?(:read, a) && !a.erased? %>
+        <p class="attachment__held"><%= hidden_file_notice %></p>
+      <% elsif concealed_prominence?(a) %>
+        <span class="hidden_attachment"><%= render_prominence(a) %></span>
+      <% end %>
+      <% if can?(:read, a) %>
+        <% if @request_history %>
+          <%= image_tag(attachment_image(a), class: 'attachment__image', alt: '') %>
+        <% else %>
+          <%= attachment_link(incoming_message, a) %>
+        <% end %>
+
+        <p class="attachment__name">
+          <%= h a.display_filename %>
+        </p>
+
+        <%# Drawn only when there is something in it, so a small file leaves no empty line. %>
+        <% meta = capture do %>
+          <%= large_file_size(a.file.blob&.byte_size) %>
+          <% unless @request_history %>
+            <%= link_to _('Download'), attachment_path(a), data: { turbo: false } %>
+          <% end %>
+
+          <% if can?(:manage_attachment, a) && !publishes %>
+            <%= link_to _('Manage'), manage_attachment_path(a), class: 'attachment__manage' %>
+          <% end %>
+
+          <% if note = a.extra_note %>
+            <em><%= note %></em>
+          <% end %>
+
+          <% if is_admin? %>
+            <%= link_to _('Admin'), edit_admin_foi_attachment_path(a) %>
+          <% end %>
+        <% end %>
+        <% if meta.present? %><p class="attachment__meta"><%= meta %></p><% end %>
+        <% if @request_history %>
+          <%= link_to attachment_path(a), class: 'attachment__get', data: { turbo: false } do %><%= _('Download') %><span class="visually-hidden"> <%= a.display_filename %></span><% end %>
+        <% end %>
+        <%= render partial: 'request/attachment_attribution', locals: { attachment: a } %>
+        <%= render partial: 'disclosures/attachment_document', locals: { attachment: a } %>
+
+      <% elsif a.erased? %>
+        <p class="attachment__name">
+          <%= h a.display_filename %>
+        </p>
+
+        <p class="attachment__meta">
+          <em><%= _('This file has been erased.') %></em>
+
+          <% if is_admin? %>
+            <%= link_to _('Admin'), edit_admin_foi_attachment_path(a) %>
+          <% end %>
+        </p>
+
+      <% end %>
+    <% end %>
+  <% end %>
+</ul>
+<% end %>

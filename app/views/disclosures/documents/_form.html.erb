@@ -1,0 +1,36 @@
+<%= page_band(_('Edit details'),
+              back: link_to(_('Back to the document'), (params[:flow] == 'check' && publish_flow_check_path(@document)) || manage_path)) %>
+<div class="document document-form">
+  <% if @document.errors.any? %>
+    <div class="warning" role="alert">
+      <p><%= _('These details can’t be saved yet:') %></p>
+      <ul><% @document.errors.full_messages.each do |message| %><li><%= message %></li><% end %></ul>
+    </div>
+  <% end %>
+  <%= form_with model: @document, scope: :document, url: manage_path, method: :patch, local: true do |f| %>
+    <% if params[:flow] == 'check' %><%= hidden_field_tag :flow, 'check', id: nil %><% end %>
+    <fieldset class="document-form__kind">
+      <legend><%= _('Type') %></legend>
+      <% Disclosures::Document::KIND_LABELS.each do |value, label| %>
+        <p class="document-form__option">
+          <%= f.radio_button :kind, value %>
+          <%= f.label "kind_#{value}", _(label) %>
+        </p>
+      <% end %>
+    </fieldset>
+    <p>
+      <%= f.label :title, _('Title') %>
+      <%= f.text_field :title, maxlength: 200, required: true %>
+      <span class="document-form__help"><%= _('Public once published. Say what the document is; leave out names and anything personal.') %></span>
+    </p>
+    <p>
+      <%= f.label :description, _('Description (optional)') %>
+      <%= f.text_area :description, rows: 4, maxlength: 2000 %>
+    </p>
+    <p>
+      <%= f.label :document_date, _('Date of the document') %>
+      <%= f.date_field :document_date %>
+    </p>
+    <p><%= f.submit _('Save details'), class: 'button' %></p>
+  <% end %>
+</div>

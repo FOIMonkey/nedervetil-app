@@ -1,0 +1,4 @@
+<% attribution = AttachmentManagement::Attribution.new(attachment) %>
+<% if (line = attribution.text) %>
+  <p class="attachment__meta attachment__attribution"><%= line %>, <%= simple_date(attribution.changed_at) %></p>
+<% end %>

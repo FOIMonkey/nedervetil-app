@@ -1,0 +1,27 @@
+<% args = { url_title: @info_request.url_title, message_id: @message.id } %>
+<%= form_tag publish_reply_path(**args), class: 'publish-answers__form' do %>
+  <% if likely.any? %>
+    <button type="submit" name="all" value="1" class="publish-answer publish-answer--primary" data-disable-with="<%= _('Getting them ready…') %>"><%= likely.size == 1 ? _('Share it') : likely.size == 2 ? _('Share both') : _('Share all {{count}}', count: likely.size) %></button>
+  <% end %>
+  <% if likely.size + maybe.size > 0 %>
+    <details class="publish-which"<%= ' open' if likely.empty? %>>
+      <summary class="publish-answer"><%= _('Choose which') %></summary>
+      <fieldset>
+        <legend class="visually-hidden"><%= _('Files to share') %></legend>
+        <% (likely + maybe).each do |row| %>
+          <% id = row.attachment.id %>
+          <%= hidden_field_tag "files[#{id}]", 'private', id: nil %>
+          <label class="publish-which__file">
+            <%= check_box_tag "files[#{id}]", row.document ? row.document.kind : row.suggestion.kind, row.document.present?, id: nil %>
+            <span><%= name_of.(row) %><% if maybe.include?(row) && row.email_text %> <small><%= row.suggestion.reason %></small><% end %></span>
+          </label>
+        <% end %>
+        <button type="submit" class="publish-answer publish-answer--primary publish-which__go"><%= _('Share selected') %></button>
+      </fieldset>
+    </details>
+    <%= link_to _('Keep private'), show_request_path(url_title: @info_request.url_title), class: 'publish-answer' %>
+    <p class="publish-note"><%= _('You can hide things next. Your original request and messages stay private; only the files you share go public.') %></p>
+  <% else %>
+    <%= link_to _('Back to the request'), show_request_path(url_title: @info_request.url_title), class: 'publish-answer' %>
+  <% end %>
+<% end %>

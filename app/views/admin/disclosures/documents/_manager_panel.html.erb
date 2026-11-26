@@ -1,0 +1,71 @@
+<% stage = document.stage %>
+<section class="document-manage" aria-labelledby="document-manage-title">
+  <h2 id="document-manage-title">
+    <span class="document-state document-state--<%= document.state %>"><%= document_state(document) %></span>
+  </h2>
+  <p class="document-manage__who"><%= document_audience(document) %></p>
+
+  <% if stage == :erased %>
+    <div class="document-manage__alert document-manage__alert--danger">
+      <p><%= _('<strong>Erased {{date}}.</strong> Its files are gone; this record and its history stay.', date: document_date(document.erased_at)) %></p>
+    </div>
+  <% elsif stage == :taken_down %>
+    <div class="document-manage__alert">
+      <p><%= _('<strong>Taken down after a masking rule change.</strong> Check the file before publishing again.') %></p>
+    </div>
+  <% elsif stage == :unlisted %>
+    <div class="document-manage__alert">
+      <p><%= _('<strong>Not public at the moment.</strong> Check the file, then publish again.') %></p>
+    </div>
+  <% end %>
+
+  <% facts = [] %>
+  <% facts << _('Its request was deleted {{date}}.', date: document_date(document.request_deleted_at)) if document.request_deleted? %>
+  <% if stage.in?(%i[listed unlisted]) %>
+    <% pub_line = _('Public since {{date}}', date: document_date(document.first_published_at)) %>
+    <% pub_line = "#{pub_line}, #{_('published by {{name}}', name: document.published_by.name)}" if document.published_by %>
+    <% facts << "#{pub_line}." %>
+  <% elsif stage.in?(%i[erased erasing withdrawn taken_down]) %>
+    <% wd_line = _('Not public: withdrawn {{date}}', date: document_date(document.withdrawn_at)) %>
+    <% wd_line = "#{wd_line} #{_('by {{name}}', name: document.withdrawn_by.name)}" if document.withdrawn_by %>
+    <% facts << "#{wd_line}." %>
+    <% if document.withdrawal_reason.present? && !stage.in?(%i[erasing erased]) %>
+      <% facts << _('Why: {{reason}}', reason: document.withdrawal_reason) %>
+    <% end %>
+  <% end %>
+  <% if Disclosures::ReviewSubmission.pending?(document) && (reason = Disclosures::ReviewSubmission.reason(document)) %>
+    <% facts << _('Sent for review because: {{reason}}', reason: reason) %>
+  <% end %>
+  <% if Disclosures::ReviewSubmission.pending?(document) && (unwanted = Disclosures::ReviewSubmission.unwanted(document)) %>
+    <% facts << tag.strong(_('The requester said on {{date}} that they no longer want it published.', date: document_date(unwanted.created_at))) %>
+  <% end %>
+
+  <% if facts.any? %>
+    <ul class="document-manage__facts">
+      <% facts.each do |fact| %>
+        <li><%= fact %></li>
+      <% end %>
+    </ul>
+  <% end %>
+
+  <% if can?(:publish_document, document) && !stage.in?(%i[listed erasing erased]) && document.servable? %>
+    <%= form_tag disclosure_publish_document_path(document), class: 'document-manage__form' do %>
+      <button type="submit" class="button document-manage__primary"><%= _('Publish') %></button>
+    <% end %>
+  <% end %>
+
+  <ul class="document-manage__actions">
+    <% if can?(:edit_document, document) %>
+      <li><%= link_to _('Edit details'), admin_disclosure_edit_document_path(document), class: 'btn document-manage__action-btn' %></li>
+    <% end %>
+    <% if document.servable? && stage != :listed %>
+      <li><%= link_to "#{_('Download')} (#{document_format_line(document)})", disclosure_document_download_path(document), class: 'btn document-manage__action-btn', data: { turbo: false } %></li>
+    <% end %>
+    <% if stage == :listed %>
+      <li><%= link_to _('View public document'), disclosure_document_path(document), class: 'btn document-manage__action-btn' %></li>
+    <% end %>
+    <% if document.info_request %>
+      <li><%= link_to _('Go to the request'), show_request_path(url_title: document.info_request.url_title), class: 'document-manage__action-link' %></li>
+    <% end %>
+  </ul>
+</section>

@@ -1,0 +1,30 @@
+<ul class="documents-todo__list">
+  <% rows.each do |row| %>
+    <% suggestion = row.suggestion %>
+    <li class="documents-panel__file">
+      <span class="documents-todo__what">
+        <span class="documents-panel__name"><% if row.email_text %><%= _('The email') %><% else %><%= link_to row.name, "##{dom_id(row.attachment)}" %><% end %></span>
+        <span class="documents-todo__why"><%= suggestion.reason %></span>
+        <% if row.document %>
+          <span class="documents-panel__made"><%= _('Document: {{document}} ({{state}})', document: link_to(row.document.title, disclosure_manage_document_path(row.document)), state: requester_document_state(row.document).downcase) %></span>
+        <% end %>
+      </span>
+      <% if !row.document && suggestion.suggestion != 'none' && (can?(:create_document, row.attachment) || can?(:request_document_review, row.attachment)) %>
+        <% make_directly = can?(:create_document, row.attachment) %>
+        <details class="documents-todo__make">
+          <summary class="button"><%= make_directly ? _('Make a document') : _('Send for admin review') %></summary>
+          <%# data-turbo="false": making it ends on an admin page, which loads in full. %>
+          <%= form_tag make_directly ? disclosure_documents_path : disclosure_request_document_review_path, class: 'documents-panel__make', data: { turbo: false } do %>
+            <input type="hidden" name="attachment_id" value="<%= row.attachment.id %>">
+            <% if row.email_text %><input type="hidden" name="source" value="email_text"><% end %>
+            <% Disclosures::Document::KIND_LABELS.each_key do |kind| %>
+              <button type="submit" name="kind" value="<%= kind %>" class="button <%= kind == suggestion.suggestion ? 'documents-panel__primary' : 'documents-panel__plain' %>">
+                <%= _(Disclosures::Document::KIND_LABELS.fetch(kind)) %>
+              </button>
+            <% end %>
+          <% end %>
+        </details>
+      <% end %>
+    </li>
+  <% end %>
+</ul>

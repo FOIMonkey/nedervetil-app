@@ -20,7 +20,7 @@ class Admin::CensorRulesController < AdminController
       flash[:notice] = 'Censor rule was successfully created.'
       redirect_to_subject
     else
-      render action: 'new'
+      render action: 'new', status: :unprocessable_content
     end
   end
 
@@ -32,7 +32,7 @@ class Admin::CensorRulesController < AdminController
       flash[:notice] = 'Censor rule was successfully updated.'
       redirect_to_subject
     else
-      render action: 'edit'
+      render action: 'edit', status: :unprocessable_content
     end
   end
 
@@ -65,7 +65,7 @@ class Admin::CensorRulesController < AdminController
       @form_url = admin_body_censor_rules_path(@public_body)
     end
 
-    if [:request_id, :user_id, :body_id].all? { |key| params[key].nil? }
+    if [:request_id, :user_id, :body_id].all? { |key| params[key].nil? } # rubocop:disable Style/GuardClause -- matches the three ifs above
       @censor_rule = CensorRule.new(censor_rule_params)
       @form_url = admin_censor_rules_path
     end
@@ -82,7 +82,7 @@ class Admin::CensorRulesController < AdminController
   def censor_rule_params
     if params[:censor_rule]
       params.require(:censor_rule).
-        permit(:text, :replacement, :regexp,
+        permit(:colour, :text, :replacement, :regexp,
                :case_sensitive, :ignore_diacritics,
                :last_edit_comment, :last_edit_editor)
     else

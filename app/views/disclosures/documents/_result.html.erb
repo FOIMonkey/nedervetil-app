@@ -1,0 +1,38 @@
+<% document = document.public_view unless document.is_a?(Disclosures::PublicDocument) %>
+<% hits = search.hits[document.id] || [] %>
+<% body = document.authority %>
+<li class="document-result">
+  <%= render partial: 'disclosures/documents/preview', locals: { document: document, sheet_text: search.sheet_previews[document.id] } %>
+  <div class="document-result__body">
+    <%# In a batch the group's heading gives the subject. %>
+    <% name = in_batch && body ? body.name : document_display_title(document) %>
+    <h3 class="document-result__title"><%= link_to name, request_journey_link_path(disclosure_document_path(document), public_body: body) %></h3>
+    <p class="document-result__meta">
+      <% if body && !in_batch %><span class="document-result__authority"><%= body.name %></span><% end %>
+      <% if search.sort == 'date' && document.document_date %>
+        <span><%= _('Dated {{date}}', date: document_short_date(document.document_date)) %></span>
+      <% elsif document.released_on %>
+        <span><%= _('Released {{date}}', date: document_short_date(document.released_on)) %></span>
+      <% elsif document.document_date %>
+        <span><%= _('Dated {{date}}', date: document_short_date(document.document_date)) %></span>
+      <% end %>
+      <% if (extent = document_extent(document)) %><span><%= extent %></span><% end %>
+      <%# The suggested title already starts with this. %>
+      <% unless document.title.to_s.downcase.start_with?(document.kind_label.downcase) %><span class="document-result__kind"><%= document.kind_label %></span><% end %>
+    </p>
+    <% if document.description.present? %>
+      <p class="document-result__description"><%= document.description.truncate(220) %></p>
+    <% end %>
+    <% if hits.any? %>
+      <ul class="document-result__hits">
+        <% hits.each do |hit| %>
+          <% path = hit.kind == 'image' ? disclosure_document_path(document, find: search.query, anchor: "text-#{hit.number}") : disclosure_document_path(document, anchor: hit.anchor) %>
+          <li>
+            <%= link_to request_journey_link_path(path, public_body: body), class: 'document-result__hit-page' do %><%= hit.label %><span class="visually-hidden"> <%= _('of {{title}}', title: document.title) %></span><% end %>:
+            <span class="document-result__snippet"><%= hit.snippet %></span>
+          </li>
+        <% end %>
+      </ul>
+    <% end %>
+  </div>
+</li>

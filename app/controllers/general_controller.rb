@@ -12,20 +12,13 @@ class GeneralController < ApplicationController
 
   before_action :redirect_pros_to_dashboard, only: :frontpage
 
-  # New, improved front page!
   def frontpage
     medium_cache
     @locale = AlaveteliLocalization.locale
-    successful_query = InfoRequestEvent.make_query_from_params( latest_status: ['successful'] )
-    @request_events = recent_request_events
-    @track_thing = TrackThing.create_track_for_search_query(successful_query)
-    @number_of_requests = Rails.cache.fetch(
-      'frontpage/info_request_count', expires_in: 1.hour
-    ) { InfoRequest.is_searchable.count }
+    @request_events = []
+    @number_of_requests = 0
     @number_of_authorities = PublicBody.visible.count
-    @feed_autodetect = [ { url: do_track_url(@track_thing, 'feed'),
-                           title: _('Successful requests'),
-                           has_json: true } ]
+    @feed_autodetect = []
   end
 
   # Display blog entries

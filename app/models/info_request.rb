@@ -138,6 +138,7 @@ class InfoRequest < ApplicationRecord
           inverse_of: :info_request,
           class_name: 'AlaveteliPro::Embargo',
           dependent: :destroy
+  before_destroy :destroy_documents
 
   has_many :foi_attachments, through: :incoming_messages
 
@@ -1672,5 +1673,12 @@ class InfoRequest < ApplicationRecord
   def notify_associations
     public_body.info_request_count_changed
     user&.info_request_count_changed
+  end
+
+  def destroy_documents
+    Disclosures::Document.where(info_request_id: id).find_each do |document|
+      document.purge_public_pages!
+      document.destroy!
+    end
   end
 end

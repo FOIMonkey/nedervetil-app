@@ -1,0 +1,40 @@
+<% holders = defined?(Topics::Lookup) ? Topics::Lookup.holders(query) : [] %>
+<% names = defined?(AuthorityGroups::Names) ? AuthorityGroups::Names.match(query) : nil %>
+<% if holders.any? || names&.total&.positive? %>
+  <div class="search-answers">
+    <% if holders.any? %>
+      <section class="search-answer" aria-labelledby="answer-who">
+        <h2 id="answer-who" class="search-answer__label"><%= _('Who holds it') %></h2>
+        <ul class="search-answer__list">
+          <% holders.each do |holder, topic| %>
+            <li>
+              <span class="search-answer__who"><%= topic_link_to holder.who, holder.to %></span>
+              <span class="search-answer__what"><%= holder.what %><% if holder.where %>, <%= _('in {{place}}', place: holder.where) %><% end %></span>
+              <span class="search-answer__from"><%= _('In England, from {{topic}}', topic: link_to(topic.title, topic_path(topic.slug))) %></span>
+            </li>
+          <% end %>
+        </ul>
+      </section>
+    <% end %>
+    <% if names&.total&.positive? %>
+      <section class="search-answer" aria-labelledby="answer-authorities">
+        <h2 id="answer-authorities" class="search-answer__label"><%= _('Authorities') %></h2>
+        <ul class="search-answer__list">
+          <% names.bodies.each do |body| %>
+            <li><span class="search-answer__who"><%= link_to body.name, request_journey_link_path(public_body_path(body), public_body: body) %></span><% if defined?(Topics::Holds) && (line = Topics::Holds.kind(body)) %><span class="search-answer__what"><%= line %></span><% end %></li>
+          <% end %>
+          <% names.groups.each do |group, _| %>
+            <li><span class="search-answer__who"><%= link_to group.title, authority_group_path(group.tag) %></span></li>
+          <% end %>
+        </ul>
+        <% if names.bodies.empty? %>
+          <p class="search-answer__all"><%= link_to _('All {{count}} authorities', count: names.total), list_public_bodies_default_path(public_body_query: query) %></p>
+        <% end %>
+      </section>
+    <% end %>
+  </div>
+<% end %>
+
+<% if request_journey_pro? %>
+  <p class="search-request"><%= link_to _('Make request'), make_request_path %></p>
+<% end %>
