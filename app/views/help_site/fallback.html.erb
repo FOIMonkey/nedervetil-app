@@ -1,0 +1,17 @@
+<%# /help with no help pack: the older help pages, which a theme replaces. %>
+<% @title = _('Help') %>
+<div class="help-site">
+  <div class="help-wrap help-main">
+    <%= page_band %>
+    <ul class="help-rows">
+      <li><%= link_to _('About this site'), help_about_path %></li>
+      <li><%= link_to _('Making requests'), help_requesting_path %></li>
+      <li><%= link_to _('Unhappy with a reply?'), help_unhappy_path %></li>
+      <li><%= link_to _('Privacy'), help_privacy_path %></li>
+      <li><%= link_to _('For FOI officers'), help_officers_path %></li>
+      <li><%= link_to _('Documents as data'), help_api_path %></li>
+      <li><%= link_to _('Credits'), help_credits_path %></li>
+      <li><%= link_to _('Contact us'), help_contact_path %></li>
+    </ul>
+  </div>
+</div>

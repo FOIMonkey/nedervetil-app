@@ -1,0 +1,26 @@
+<div class="help-site" data-controller="help-words" data-action="click->help-words#toggle keydown->help-words#press">
+  <div class="help-wrap help-main">
+    <header class="page-band help-head">
+      <div>
+        <p class="page-band__back"><%= link_to _('Help'), help_home_path %> / <%= link_to section.title, section.path %></p>
+        <h1 class="page-band__title"><%= answer.question %></h1>
+      </div>
+      <%= help_sign(section.sign) %>
+    </header>
+    <%= help_after_band %>
+    <article class="help-answer">
+      <%= help_markdown(answer.markdown) %>
+      <%= help_extra(answer) %>
+    </article>
+    <% if answer.related.any? %>
+      <h2 class="help-next"><%= _('Related help') %></h2>
+      <ul class="help-rows help-rows--next">
+        <% answer.related.each do |id| %>
+          <% related = help_content.answers.fetch(id) %>
+          <li><%= link_to related.question, related.path %></li>
+        <% end %>
+      </ul>
+    <% end %>
+    <%= render 'help_site/stuck' %>
+  </div>
+</div>

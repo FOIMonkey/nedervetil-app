@@ -1,1 +1,65 @@
-Placeholder to be overridden by theme
+<% @title = _('Not happy with a reply?') %>
+<% regime = @info_request && Deadlines.regime(@info_request) %>
+<% show_uk = regime.nil? || !Deadlines.scottish?(regime) %>
+<% show_scotland = regime.nil? || Deadlines.scottish?(regime) %>
+<% both = show_uk && show_scotland %>
+<% step = ->(id, text) { content_tag(both ? :h3 : :h2, text, id: id) } %>
+<% review_link = ->(words) { link_to words, new_request_followup_path(@info_request.url_title, internal_review: 1, anchor: 'followup') } %>
+<% external = tag.span(" #{_('(another site)')}", class: 'visually-hidden') %>
+<% case_file = nil %>
+<% if @info_request&.is_actual_owning_user?(current_user) %>
+  <% entries = Deadlines::History.new(@info_request, current_ability).entries.select { |entry| %i[sent reply routine].include?(entry.kind) } %>
+  <% case_file = capture do %>
+    <div class="case-file">
+      <p><%= _('<b>Your case file.</b> They’ll want your request and their replies.') %></p>
+      <ol class="case-file__list">
+        <% entries.each do |entry| %>
+          <li><time datetime="<%= entry.date.iso8601 %>"><%= Deadlines::Overview.format_date(entry.date) %></time> <%= entry.title %></li>
+        <% end %>
+      </ol>
+      <p><%= link_to _('Download case file'), download_entire_request_path(url_title: @info_request.url_title), class: 'button', data: { turbo: false } %></p>
+    </div>
+  <% end %>
+<% end %>
+
+<%= page_band %>
+<%= render partial: 'sidebar' %>
+<div id="left_column_flip" class="left_column_flip">
+  <% if @info_request %>
+    <p><%= _('About your request {{request}}.', request: request_link(@info_request)) %></p>
+  <% end %>
+
+  <% if show_uk %>
+    <% if both %><h2><%= _('England, Wales and Northern Ireland') %></h2><% end %>
+    <%= step.('internal_review', _('1. Ask for an internal review')) %>
+    <p><%= _("Ask them to look at their answer again, within 40 working days of their reply. They should answer within 20 working days, or 40 if it's complicated. For environmental information the law gives them 40.") %></p>
+    <% if @info_request %><p><%= review_link.(_('Ask for an internal review')) %></p><% end %>
+
+    <%= step.('complaining', _('2. Complain to the ICO')) %>
+    <p><%= _("If you're still unhappy, or they haven't replied at all after a reminder, the ICO can decide. It's free. It asks for complaints within 6 weeks of their last reply.") %></p>
+    <% if case_file %>
+      <%= case_file %>
+      <p><%= link_to 'https://ico.org.uk/make-a-complaint/foi-and-eir-complaints/foi-and-eir-complaints/' do %><%= _('Complain on their website') %><%= external %><% end %>. <%= _('Decisions take months.') %></p>
+    <% else %>
+      <p><%= link_to 'https://ico.org.uk/make-a-complaint/foi-and-eir-complaints/foi-and-eir-complaints/' do %><%= _('Complain on their website') %><%= external %><% end %>. <%= _('Include your request and their replies: Download all on your request page has them.') %></p>
+    <% end %>
+  <% end %>
+
+  <% if show_scotland %>
+    <% if both %><h2><%= _('Scotland') %></h2><% end %>
+    <%= step.('review', _('1. Ask for a review')) %>
+    <p><%= _("In Scotland the Commissioner can only act after a review. Say what you're unhappy with. Ask within 40 working days of when their reply was due, or of their reply if it came late. If they never replied, ask for a review of that. They have 20 working days to answer.") %></p>
+    <% if @info_request %><p><%= review_link.(_('Ask for a review')) %></p><% end %>
+
+    <%= step.('appeal', _('2. Apply to the Scottish Information Commissioner')) %>
+    <p><%= _("If you're still unhappy, or they don't answer the review, apply within six months of their review answer, or of when it was due. It's free.") %></p>
+    <%= case_file %>
+    <p><%= link_to 'https://www.foi.scot/appeal' do %><%= _('Apply on their website') %><%= external %><% end %>.<% if case_file %> <%= _('Decisions take months.') %><% end %></p>
+  <% end %>
+
+  <h2 id="other_means"><%= _('Other ways to get it') %></h2>
+  <ul>
+    <li><%= _('Ask a smaller question, or ask another authority that may hold it.') %></li>
+    <li><%= _('Ask your MP, MSP or councillor for help: {{link}}.', link: link_to(safe_join(['WriteToThem', external]), 'https://www.writetothem.com')) %></li>
+  </ul>
+</div>

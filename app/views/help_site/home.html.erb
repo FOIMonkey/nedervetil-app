@@ -1,0 +1,44 @@
+<% @title = _('Help') %>
+<%= tag.div class: 'help-site', data: {
+      controller: 'help-find',
+      help_find_index_value: help_search_path,
+      help_find_contact_value: help_contact_path,
+      help_find_none_value: _('No matching answers for'),
+      help_find_try_value: _('Try different words or'),
+      help_find_contact_label_value: _('contact us')
+    } do %>
+  <div class="help-wrap help-main">
+    <header class="page-band help-head">
+      <div>
+        <h1 class="page-band__title"><%= _('How can we help?') %></h1>
+        <div class="help-find" data-help-find-target="box" hidden>
+          <label for="help-find"><%= _('Search help') %></label>
+          <%= search_field_tag 'help-find', nil, name: nil, autocomplete: 'off',
+                placeholder: _('Words to look for'),
+                data: { help_find_target: 'input',
+                        action: 'focus->help-find#load input->help-find#show' } %>
+        </div>
+      </div>
+    </header>
+    <%= help_after_band %>
+    <div id="help-found" aria-live="polite" data-help-find-target="found"></div>
+    <div id="help-browse" data-help-find-target="browse">
+      <% help_content.groups.each do |group| %>
+        <section class="help-group">
+          <h2><%= group[:title] %></h2>
+          <ul class="help-panels">
+            <% group[:sections].each do |section| %>
+              <li class="help-panel">
+                <%= help_sign(section.sign) %>
+                <h3><%= link_to section.title, section.path %></h3>
+                <p><%= section.description %></p>
+              </li>
+            <% end %>
+          </ul>
+        </section>
+      <% end %>
+      <%# The one-page guide is the theme's own, with its link. %>
+      <%= render 'help_site/guide_link' if help_content.guide %>
+    </div>
+  </div>
+<% end %>

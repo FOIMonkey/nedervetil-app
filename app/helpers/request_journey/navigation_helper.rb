@@ -52,7 +52,13 @@ module RequestJourney
                 end
       case destination
       when 'home' then alaveteli_pro_dashboard_path(options)
-      when 'about' then help_about_path(options)
+      when 'about'
+        # The theme's help pack, when it has one.
+        if HelpSite.pack?
+          help_home_path(options)
+        else
+          help_about_path(options)
+        end
       when 'topics' then topics_path(options)
       when 'documents' then disclosure_documents_path(options)
       when 'authorities' then authority_groups_path(options)

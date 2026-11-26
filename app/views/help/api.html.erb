@@ -1,1 +1,9 @@
-Placeholder to be overridden by theme
+<% @title = _('Published document data') %>
+<%= page_band %>
+<%= render partial: 'sidebar' %>
+<div id="left_column_flip" class="left_column_flip">
+  <p><%= _('The public catalogue contains deliberately published documents and their approved details. Accounts, requests and correspondence are private.') %></p>
+  <p><%= _('{{catalogue_link}} lists public documents. The same catalogue filters and page parameter apply.', catalogue_link: link_to(_('Catalogue JSON'), disclosure_documents_path(format: :json))) %></p>
+  <p><%= _('{{feed_link}} provides publication updates. Withdrawn documents are removed from the catalogue and feed.', feed_link: link_to(_('Document Atom feed'), disclosure_documents_path(feed: '1'))) %></p>
+  <p><%= _('Public document links provide their approved download and page images. No public user or request API is available.') %></p>
+</div>

@@ -1,0 +1,20 @@
+<% @title = _('Words explained') %>
+<div class="help-site">
+  <div class="help-wrap help-main">
+    <header class="page-band help-head">
+      <div>
+        <p class="page-band__back"><%= link_to _('Help'), help_home_path %></p>
+        <h1 class="page-band__title"><%= @title %></h1>
+      </div>
+      <%= help_sign('words') %>
+    </header>
+    <%= help_after_band %>
+    <dl class="help-words">
+      <% help_content.glossary.sort_by { |word, _| word.downcase }.each do |word, means| %>
+        <dt id="<%= help_word_id(word) %>"><%= help_word_title(word) %></dt>
+        <dd><%= means %></dd>
+      <% end %>
+    </dl>
+    <%= render 'help_site/stuck' %>
+  </div>
+</div>

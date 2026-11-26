@@ -15,6 +15,8 @@ def require_theme(theme_name)
   theme_main_include = theme_lib.join('alavetelitheme.rb')
 
   Rails.configuration.paths['data'].push(root.join('data'))
+  # A theme's help pack, if it has one (lib/help_site.rb).
+  Rails.configuration.paths['help_site'].push(theme_lib.join('help_site'))
 
   return unless File.exist?(theme_main_include)
 
@@ -30,6 +32,7 @@ end
 
 Rails.configuration.paths.add('config/refusal_advice', glob: '*.{yml,yml.erb}')
 Rails.configuration.paths.add('data')
+Rails.configuration.paths.add('help_site', with: [])
 
 if Rails.env == "test"
   # By setting this ALAVETELI_TEST_THEME to a theme name, theme tests can run in

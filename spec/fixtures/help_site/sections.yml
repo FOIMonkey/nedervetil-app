@@ -1,0 +1,18 @@
+groups:
+- title: Using the library
+  sections:
+  - slug: borrowing
+    title: Borrowing books
+    description: Loans, renewals and returns
+    sign: help
+    glance:
+    - title: Three weeks
+      note: How long a loan lasts
+    answers:
+    - how-long
+    - renewing
+  - slug: visiting
+    title: Visiting
+    description: Opening hours and getting in
+    answers:
+    - opening-hours

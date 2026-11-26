@@ -9,7 +9,6 @@
       <h1 class="page-band__title"><%= _('Search results') %></h1>
     <% else %>
       <h1 class="page-band__title"><%= _('Documents') %></h1>
-      <p class="documents__lede page-band__summary"><%= _('Replies from authorities, shared by the people who asked for them.') %></p>
     <% end %>
     <%= form_tag disclosure_documents_path, method: :get, class: 'documents__search band-search', role: 'search', enforce_utf8: false do %>
       <label for="documents-q" class="visually-hidden"><%= _('Search every page of every document') %></label>

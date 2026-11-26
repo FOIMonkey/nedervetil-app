@@ -4,12 +4,14 @@
 # Copyright (c) 2008 UK Citizens Online Democracy. All rights reserved.
 # Email: hello@mysociety.org; WWW: http://www.mysociety.org/
 class HelpController < ApplicationController
+  include TurnstileCheck
+
   # we don't even have a control subroutine for most help pages, just see their
   # templates
 
   before_action :long_cache
   before_action :catch_spam, only: [:contact]
-  before_action :set_recaptcha_required, only: [:contact]
+  before_action :set_turnstile_required, only: [:contact]
 
   ContactSpamError = Class.new(StandardError)
 
@@ -17,17 +19,11 @@ class HelpController < ApplicationController
     redirect_to frontpage_url
   end
 
-  def index
-    redirect_to help_about_path
-  end
-
   def unhappy
     @country_code = AlaveteliConfiguration.iso_country_code
     @info_request = nil
     if params[:url_title]
-      @info_request = InfoRequest.
-        not_embargoed.
-          find_by_url_title!(params[:url_title])
+      @info_request = InfoRequest.find_by_url_title!(params[:url_title])
     end
 
     @refusal_advice = RefusalAdvice.default(@info_request)
@@ -58,15 +54,18 @@ class HelpController < ApplicationController
     if params[:remove]
       contact_validator.errors.clear
 
-    elsif @recaptcha_required && !verify_recaptcha
-      flash.now[:error] = _('There was an error with the reCAPTCHA. ' \
-                            'Please try again.')
+    elsif @turnstile_required &&
+          (refusal = turnstile_refusal('contact'))
+      flash.now[:error] = refusal
     elsif contact_validator.valid?
       contact_mailer.deliver_now
       flash[:notice] = _("Your message has been sent. Thank you for getting " \
                          "in touch! We'll get back to you soon.")
       redirect_to frontpage_url
+      return
     end
+
+    render :contact, status: :unprocessable_content
   end
 
   private
@@ -98,7 +97,8 @@ class HelpController < ApplicationController
     raise ContactSpamError
   end
 
-  def set_recaptcha_required
-    @recaptcha_required = AlaveteliConfiguration.contact_form_recaptcha
+  # A signed-out visitor passes the person check (help/contact shows it).
+  def set_turnstile_required
+    @turnstile_required = !@user
   end
 end

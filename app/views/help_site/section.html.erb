@@ -1,0 +1,29 @@
+<div class="help-site">
+  <div class="help-wrap help-main">
+    <header class="page-band help-head">
+      <div>
+        <p class="page-band__back"><%= link_to _('Help'), help_home_path %></p>
+        <h1 class="page-band__title"><%= section.title %></h1>
+        <p class="page-band__summary"><%= section.description %></p>
+      </div>
+      <%= help_sign(section.sign) %>
+    </header>
+    <%= help_after_band %>
+    <% if section.glance %>
+      <section class="help-glance">
+        <h2><%= section.glance_title || _('At a glance') %></h2>
+        <ul>
+          <% section.glance.each do |item| %>
+            <li><b><%= item['title'] %></b><span><%= item['note'] %></span></li>
+          <% end %>
+        </ul>
+      </section>
+    <% end %>
+    <ul class="help-rows">
+      <% section.answers.each do |answer| %>
+        <li><%= link_to answer.question, answer.path %></li>
+      <% end %>
+    </ul>
+    <%= render 'help_site/stuck' %>
+  </div>
+</div>

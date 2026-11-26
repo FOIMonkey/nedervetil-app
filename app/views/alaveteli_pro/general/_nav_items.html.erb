@@ -33,8 +33,8 @@
         AnalyticsEvent::Action::PRO_NAV_VIEW_AUTHORITIES) %>
 </li>
 
-<li class="<%= 'selected' if controller?('help') %>">
-  <%= request_journey_nav _('About'), 'about',
+<li class="<%= 'selected' if controller?('help', 'help_site') %>">
+  <%= request_journey_nav HelpSite.pack? ? _('Help') : _('About'), 'about',
               :onclick => track_analytics_event(
                 AnalyticsEvent::Category::PRO_NAV_CLICK,
                 AnalyticsEvent::Action::PRO_NAV_HELP) %>

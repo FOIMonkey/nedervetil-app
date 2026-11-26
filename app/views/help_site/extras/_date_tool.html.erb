@@ -1,0 +1,55 @@
+<%# For an answer with `extra: date-tool`: when a reply is due, counted as
+    request deadlines are (Deadlines::Checker). The form sends the date to
+    this page and the frame takes only the answer, so the field in use keeps
+    the keyboard's place; without scripts the whole page comes back. %>
+<% checker = Deadlines::Checker.new(params[:received], params[:where]) %>
+<% shown = checker.asked? ? checker.received : Time.zone.today %>
+<details class="help-date" id="help-deadline" <%= 'open' if checker.asked? %>>
+  <summary><%= _('Check the reply deadline') %></summary>
+  <%= form_with url: "#{answer.path}#help-deadline", method: :get,
+                data: { controller: 'auto-submit',
+                        turbo_frame: 'help-deadline-answer' } do %>
+    <label for="help-date"><%= _('When did the authority receive your request?') %></label>
+    <%= date_field_tag :received, shown&.iso8601,
+                       id: 'help-date',
+                       data: { action: 'change->auto-submit#submit' } %>
+    <% if Deadlines::Checker.scotland? %>
+      <label for="help-date-law"><%= _('Where is the authority?') %></label>
+      <%= select_tag :where,
+                     options_for_select(
+                       [[_('England, Wales, Northern Ireland or UK-wide'), 'uk'],
+                        [_('Scotland'), 'scotland']],
+                       checker.scottish? ? 'scotland' : 'uk'
+                     ),
+                     id: 'help-date-law',
+                     data: { action: 'change->auto-submit#submit' } %>
+    <% end %>
+    <%= submit_tag _('Check'), name: nil, class: 'help-button' %>
+  <% end %>
+  <div aria-live="polite">
+    <%= turbo_frame_tag 'help-deadline-answer' do %>
+      <% if checker.asked? %>
+        <div class="help-date__result">
+          <% if !checker.received %>
+            <%= _('Choose the date the authority received your request.') %>
+          <% elsif !checker.known? %>
+            <%= _('We can’t work out this deadline yet. We don’t have bank ' \
+                  'holiday dates for the full period.') %>
+          <% else %>
+            <strong><%= l(checker.due, format: '%A') %> <%= simple_date(checker.due, format: :text) %></strong>
+            <% if !Deadlines::Checker.scotland? %>
+              <%= _('{{days}} working days from then, not counting weekends ' \
+                    'or public holidays.', days: checker.days) %>
+            <% elsif checker.scottish? %>
+              <%= _('{{days}} working days from then, not counting weekends ' \
+                    'or Scottish bank holidays.', days: checker.days) %>
+            <% else %>
+              <%= _('{{days}} working days from then, not counting weekends ' \
+                    'or UK bank holidays.', days: checker.days) %>
+            <% end %>
+          <% end %>
+        </div>
+      <% end %>
+    <% end %>
+  </div>
+</details>

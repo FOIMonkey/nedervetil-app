@@ -438,18 +438,23 @@ Rails.application.routes.draw do
         :as => :help_credits,
         :via => :get
 
-  constraints FeatureConstraint.new(:alaveteli_pro) do
-    match '/help/pro' => 'help#pro',
-          as: :help_pro,
-          via: :get
-  end
+  match '/help/pro' => 'help#pro',
+        as: :help_pro,
+        via: :get
+
+  # The theme's help pack (lib/help_site.rb): its front page, sections,
+  # answers, words and guide. Any other address goes on to the pages below.
+  get '/help' => 'help_site#show', as: :help_home
+  get '/help' => 'help_site#show', as: :help
+  get '/help/search' => 'help_site#search', defaults: { format: 'json' },
+      as: :help_search
+  get '/help/:section(/:answer)' => 'help_site#show',
+      constraints: HelpSite::PageConstraint
 
   match '/help/:template' => 'help#action',
         :as => :help_general,
         :via => :get,
         :template => /[-_a-z]+/
-  match '/help' => 'help#index',
-        :via => :get
   ####
 
   #### Holiday controller

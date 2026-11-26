@@ -1,21 +1,17 @@
-<li class="<%= 'selected' if controller?('request') && action?('new', 'select_authority') %>">
-  <%= link_to _("Make a request"), select_authority_path, :id => 'make-request-link' %>
-</li>
-
-<% if current_user %>
-  <li class="<%= 'selected' if controller_path.start_with?('alaveteli_pro/') %>">
-    <%= link_to _("My requests"), alaveteli_pro_info_requests_path %>
-  </li>
+<% if @user %>
+  <li><%= link_to _('Make request'), make_request_path, id: 'make-request-link' %></li>
 <% end %>
-
-<li class="<%= 'selected' if controller?('public_body') %>">
-  <%= link_to _("View authorities"), list_public_bodies_default_path %>
+<li class="<%= 'selected' if controller?('topics/topics') %>"><%= link_to _('Topics'), topics_path %></li>
+<li class="<%= 'selected' if controller?('disclosures/documents', 'disclosures/versions') %>">
+  <%= link_to _('Documents'), disclosure_documents_path %>
 </li>
-
-<% if Blog.enabled? %>
-  <li class="<%= 'selected' if controller?('general') && action?('blog') %>"><%= link_to _("Read blog"), blog_path %></li>
-<% end %>
-
-<li class="<%= 'selected' if controller?('help') %>">
-  <%= link_to _("Help"), help_about_path %>
+<li class="<%= 'selected' if controller?('public_body', 'authority_groups/groups') %>">
+  <%= link_to _('Authorities'), authority_groups_path %>
+</li>
+<li class="<%= 'selected' if controller?('help', 'help_site') %>">
+  <% if HelpSite.pack? %>
+    <%= link_to _('Help'), help_home_path %>
+  <% else %>
+    <%= link_to _('About'), help_about_path %>
+  <% end %>
 </li>
