@@ -2,6 +2,7 @@
 # DraftInfoRequestBatch, serving both full pages and XHR fragments.
 class AlaveteliPro::BatchRequestAuthoritySearchesController < AlaveteliPro::BaseController
   include AlaveteliPro::BatchRequest
+  include RequestLimited
 
   before_action :require_batch_permission
 

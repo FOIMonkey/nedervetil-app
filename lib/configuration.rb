@@ -70,6 +70,7 @@ module AlaveteliConfiguration
       ENABLE_TWO_FACTOR_AUTH: false,
       ENABLE_USER_TO_USER_MESSAGING: true,
       ENABLE_WIDGETS: false,
+      ENFORCE_REQUEST_LIMITS: true,
       EXCEPTION_NOTIFICATIONS_FROM: 'errors@localhost',
       EXCEPTION_NOTIFICATIONS_TO: 'user-support@localhost',
       EXTERNAL_REVIEWERS: '',

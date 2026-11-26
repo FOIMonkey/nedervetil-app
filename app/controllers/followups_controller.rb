@@ -1,4 +1,6 @@
 class FollowupsController < ApplicationController
+  include RequestLimited
+
   read_only :followups
 
   before_action :set_incoming_message,
@@ -31,6 +33,8 @@ class FollowupsController < ApplicationController
       redirect_to request_url(@info_request) and return
     end
     render action: 'new'
+  rescue RequestLimits::Exceeded => e
+    render_request_limit(e.refusal, message: @outgoing_message&.body)
   end
 
   def preview
@@ -210,7 +214,6 @@ class FollowupsController < ApplicationController
 
   def set_outgoing_message
     @outgoing_message = OutgoingMessage.new(outgoing_message_params)
-    @outgoing_message.set_signature_name(@user.name) if @user
   end
 
   def set_refusal_advice

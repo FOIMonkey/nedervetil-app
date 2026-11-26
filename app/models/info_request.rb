@@ -139,6 +139,7 @@ class InfoRequest < ApplicationRecord
           class_name: 'AlaveteliPro::Embargo',
           dependent: :destroy
   before_destroy :destroy_documents
+  after_create :request_limits_record
 
   has_many :foi_attachments, through: :incoming_messages
 
@@ -1682,5 +1683,11 @@ class InfoRequest < ApplicationRecord
       document.purge_public_pages!
       document.destroy!
     end
+  end
+
+  def request_limits_record
+    return if info_request_batch_id
+
+    RequestLimits.record!(user, :request, info_request_id: id)
   end
 end

@@ -2,6 +2,7 @@
 # is written for, saved before it is sent.
 class AlaveteliPro::DraftInfoRequestBatchesController < AlaveteliPro::BaseController
   include AlaveteliPro::BatchRequest
+  include RequestLimited
 
   read_only :requests, only: %i[create update update_bodies]
 

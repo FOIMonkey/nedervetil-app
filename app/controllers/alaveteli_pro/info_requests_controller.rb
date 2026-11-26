@@ -4,6 +4,7 @@
 # Lists a signed-in user's inbox requests and handles composing, previewing and
 # sending single FOI requests through the inbox request flow.
 class AlaveteliPro::InfoRequestsController < AlaveteliPro::BaseController
+  include RequestLimited
   include RequestJourney::ProRequestSteps
   include NewRequestChecks
 
@@ -95,6 +96,8 @@ class AlaveteliPro::InfoRequestsController < AlaveteliPro::BaseController
     else
       show_errors
     end
+  rescue RequestLimits::Exceeded => e
+    render_request_limit(e.refusal, draft: true)
   end
 
   private

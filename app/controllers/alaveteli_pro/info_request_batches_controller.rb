@@ -4,6 +4,8 @@
 # Composes, previews and queues an InfoRequestBatch from a trusted user's
 # DraftInfoRequestBatch, checking request limits and duplicate batches.
 class AlaveteliPro::InfoRequestBatchesController < AlaveteliPro::BaseController
+  include RequestLimited
+
   read_only :requests, only: %i[new preview create]
 
   # Full load preserves typed text on Back (see doc/FORK.md).
@@ -46,6 +48,10 @@ class AlaveteliPro::InfoRequestBatchesController < AlaveteliPro::BaseController
       remove_duplicate_errors
       render 'alaveteli_pro/info_requests/new', status: :unprocessable_content
     end
+  rescue RequestLimits::Exceeded => e
+    render_request_limit(e.refusal, draft: true)
+  rescue RequestLimits::BatchesOff
+    raise ActiveRecord::RecordNotFound
   end
 
   private

@@ -2,13 +2,12 @@ module AlaveteliPro
   # Helper methods for the batch builder
   module BatchRequestAuthoritySearchesHelper
     def batch_authority_count
-      count = @draft_batch_request.public_bodies.count
-
       tag_attributes = {
         class: %w[batch-builder__actions__count],
         data: {
+          batch_builder_target: 'count',
           message_template_zero: authority_count(count_override: 0),
-          message_template_one:  authority_count(count_override: 1),
+          message_template_one: authority_count(count_override: 1),
           message_template_many: authority_count(count_override: 2)
         }
       }
@@ -19,7 +18,7 @@ module AlaveteliPro
     private
 
     def authority_count(count_override: nil)
-      limit = AlaveteliConfiguration.pro_batch_authority_limit
+      limit = RequestLimits.batch_authority_limit
 
       count = count_override || @draft_batch_request.public_bodies.count
       count_text = '{{count}}' if count_override

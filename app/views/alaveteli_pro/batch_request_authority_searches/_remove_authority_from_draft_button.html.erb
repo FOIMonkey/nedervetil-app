@@ -3,7 +3,8 @@
              method: :put,
              html: { class: 'batch-builder__list__list__action
                              js-remove-authority-from-batch-form',
-                     data: { body_id: authority_id } }) do |f| %>
+                     data: { body_id: authority_id,
+                             action: 'batch-builder#updateDraft' } }) do |f| %>
   <%= hidden_field_tag(:authority_query, query) unless query.blank? %>
   <%= hidden_field_tag(:page, page) unless page.blank? %>
   <%= hidden_field_tag(:mode, mode) %>

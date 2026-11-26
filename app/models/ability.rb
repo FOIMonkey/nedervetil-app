@@ -56,8 +56,7 @@ class Ability
       may_act? && requester_of?(request) && can?(:read, request)
     end
 
-    return unless may_act? &&
-                  (defined?(RequestLimits) ? RequestLimits.batches_allowed?(user) : user.trusted?)
+    return unless may_act? && RequestLimits.batches_allowed?(user)
 
     can :create, InfoRequestBatch
   end

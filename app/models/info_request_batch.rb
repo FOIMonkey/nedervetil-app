@@ -48,8 +48,11 @@ class InfoRequestBatch < ApplicationRecord
 
   def self.send_batches
     where(sent_at: nil).find_each do |info_request_batch|
+      next unless info_request_batch.user_may_send?
+
       AlaveteliLocalization.with_locale(info_request_batch.user.locale) do
         info_request_batch.create_batch!
+        next unless info_request_batch.all_requests_created?
 
         InfoRequestBatchMailer.batch_sent(
           info_request_batch,
@@ -110,9 +113,11 @@ class InfoRequestBatch < ApplicationRecord
     self.class.find_existing(user, title, body, public_body_ids, id: id)
   end
 
-  # Create a batch of information requests and sends them to public bodies
+  # Creates and sends requests until done or user_may_send? becomes false.
   def create_batch!
     requestable_public_bodies.each do |public_body|
+      break unless user_may_send?
+
       info_request = transaction do
         create_request!(public_body)
       end
@@ -332,7 +337,24 @@ class InfoRequestBatch < ApplicationRecord
     user.id == user_id || user.owns_every_request?
   end
 
+  # Reloads user so suspension, closure or untrust takes effect mid-batch.
+  def user_may_send?
+    user.reload
+    Ability.new(user).can?(:create, InfoRequestBatch)
+  end
+
   def prominence
     'normal'
+  end
+
+  before_create :request_limits_check
+
+  private
+
+  def request_limits_check
+    raise RequestLimits::BatchesOff unless RequestLimits.batches_allowed?(user)
+
+    refused = RequestLimits.batch_size_refusal(public_bodies.size)
+    raise RequestLimits::Exceeded, refused if refused
   end
 end

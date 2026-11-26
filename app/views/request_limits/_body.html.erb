@@ -1,0 +1,39 @@
+<%= page_band %>
+
+<% if refusal %>
+  <p>
+    <%= RequestLimits::Text.reason(refusal) %>
+    <% if (at = RequestLimits::Text.available_at(refusal)) %>
+      <%= _('You can send another from <time datetime="{{datetime}}">{{when}}</time>.', datetime: at.iso8601, when: RequestLimits::Text.when_label(at)) %>
+    <% end %>
+  </p>
+<% else %>
+  <p><%= _('You’ve reached the limit on new requests. Please try again later.') %></p>
+<% end %>
+
+<% if draft %>
+  <p>
+    <%= _('Your draft is saved. You can find it in
+    {{drafts_link}}.', drafts_link: link_to(_('your drafts'), alaveteli_pro_info_requests_path('alaveteli_pro_request_filter[filter]' => 'draft'))) %>
+  </p>
+<% end %>
+
+<% if message.present? %>
+  <h2><%= _('Your message') %></h2>
+  <p><%= _('Your message hasn’t been sent. You can copy it to send later.') %></p>
+  <label for="request-limit-message"><%= _('Message text') %></label>
+  <textarea id="request-limit-message" readonly rows="8"><%= message %></textarea>
+<% end %>
+
+<h2><%= _('Why there are limits') %></h2>
+<p>
+  <%= _('Limits stop public bodies being flooded with requests, so they can answer
+  everyone’s fairly.') %>
+</p>
+
+<h2><%= _('If you need to send more') %></h2>
+<p>
+  <%= _('If you’re a journalist, researcher or campaign organiser, or the limit is
+  stopping you meeting a deadline, we can raise it for your account.') %>
+</p>
+<p><%= link_to _('Contact us about your limit'), help_contact_path %></p>

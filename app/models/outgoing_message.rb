@@ -443,7 +443,6 @@ class OutgoingMessage < ApplicationRecord
   end
 
   def request_limits_record
-    return unless defined?(RequestLimits)
     return unless message_type == 'followup'
     return if request_limits_exempt
 
