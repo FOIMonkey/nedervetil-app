@@ -2,35 +2,35 @@
 
 # Handle email responses sent to us.
 #
-# This script is invoked as a pipe command, i.e. with the raw email message on stdin.
-# - If a message is identified as a permanent bounce, the user is marked as having a
-#   bounced address, and will not be sent any more messages.
+# This script is invoked as a pipe command, i.e. with the raw email message on
+# stdin.
+# - If a message is identified as a permanent bounce, the user is marked as
+#   having a bounced address, and will not be sent any more messages.
 # - If a message is identified as an out-of-office autoreply, it is discarded.
-# - Any other messages are forwarded to config.get("FORWARD_NONBOUNCE_RESPONSES_TO")
-#   or config.get("FORWARD_PRO_NONBOUNCE_RESPONSES_TO") depending on whether
-#   they were sent from the normal contact address or the pro one initially.
+# - Any other messages are forwarded to
+#   config.get("FORWARD_NONBOUNCE_RESPONSES_TO").
 
-# We want to avoid loading rails unless we need it, so we start by just loading the
-# config file ourselves.
+# We want to avoid loading rails unless we need it, so we start by just loading
+# the config file ourselves.
 require 'active_support/all'
 
 $stdin.binmode
 
-$alaveteli_dir = File.expand_path(File.join(File.dirname(__FILE__), '..'))
+ALAVETELI_DIR = File.expand_path(File.join(File.dirname(__FILE__), '..'))
 
-$LOAD_PATH.push(File.join($alaveteli_dir, 'commonlib', 'rblib'))
+$LOAD_PATH.push(File.join(ALAVETELI_DIR, 'vendor', 'mysociety', 'rblib'))
 load 'validate.rb'
 load 'config.rb'
-MySociety::Config.set_file(File.join($alaveteli_dir, 'config', 'general'), true)
+MySociety::Config.set_file(File.join(ALAVETELI_DIR, 'config', 'general'), true)
 MySociety::Config.load_default
 
-$LOAD_PATH.push(File.join($alaveteli_dir, 'lib'))
+$LOAD_PATH.push(File.join(ALAVETELI_DIR, 'lib'))
 load 'configuration.rb'
 
-$LOAD_PATH.push(File.join($alaveteli_dir, 'app', 'helpers'))
+$LOAD_PATH.push(File.join(ALAVETELI_DIR, 'app', 'helpers'))
 require 'config_helper'
 
-$LOAD_PATH.push(File.join($alaveteli_dir, 'lib', 'mail_handler'))
+$LOAD_PATH.push(File.join(ALAVETELI_DIR, 'lib', 'mail_handler'))
 require 'mail_handler'
 require 'mail_handler/reply_handler'
 
@@ -68,7 +68,7 @@ def record_permanently_failed(message, raw_message, in_test_mode)
 end
 
 def main(in_test_mode)
-  Dir.chdir($alaveteli_dir) do
+  Dir.chdir(ALAVETELI_DIR) do
     raw_message = $stdin.read
 
     begin

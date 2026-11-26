@@ -1,4 +1,6 @@
 module HealthChecks
+  # Shared interface mixed into health check classes, storing success and
+  # failure messages and selecting between them from #ok?.
   module HealthCheckable
     attr_accessor :failure_message, :success_message
 

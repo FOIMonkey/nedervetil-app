@@ -13,8 +13,8 @@ require 'tmpdir'
 # files in the theme repository.
 #
 class ThemeReconciler
-  THEME_VIEW_PATH = 'lib/views'
-  CORE_VIEW_PATH = 'app/views'
+  THEME_VIEW_PATH = 'lib/views'.freeze
+  CORE_VIEW_PATH = 'app/views'.freeze
 
   def initialize(start_ref, end_ref, theme_repo_path)
     @core_repo_path = Dir.pwd
@@ -84,12 +84,12 @@ class ThemeReconciler
 
   def get_theme_path(core_path)
     # Convert app/views/path/to/file.erb to lib/views/path/to/file.erb
-    core_path.sub(%r{^#{CORE_VIEW_PATH}/}, "#{THEME_VIEW_PATH}/")
+    core_path.sub(%r{^#{CORE_VIEW_PATH}/}o, "#{THEME_VIEW_PATH}/")
   end
 
   def get_corresponding_core_path(theme_path)
     # Convert lib/views/path/to/file.erb to app/views/path/to/file.erb
-    theme_path.sub(%r{^#{THEME_VIEW_PATH}/}, "#{CORE_VIEW_PATH}/")
+    theme_path.sub(%r{^#{THEME_VIEW_PATH}/}o, "#{CORE_VIEW_PATH}/")
   end
 
   def setup_temp_directory
@@ -110,7 +110,8 @@ class ThemeReconciler
 
     # Skip if core file contains placeholder text
     if File.read(core_file).strip.include?(placeholder)
-      puts "Skipping #{theme_relative_path} - core file contains placeholder text"
+      puts "Skipping #{theme_relative_path} - core file contains " \
+           "placeholder text"
       return
     else
       puts "\nProcessing: #{theme_relative_path}"
@@ -129,7 +130,7 @@ class ThemeReconciler
 
     begin
       # Try to apply the patch
-      success = apply_patch(theme_file, core_diff)
+      success = apply_patch(theme_file, core_diff).success?
 
       if success
         puts "Successfully updated #{theme_relative_path}"
@@ -167,7 +168,7 @@ class ThemeReconciler
 
     _, status = Open3.capture2e("patch -f --no-backup-if-mismatch " \
                                 "#{theme_file} #{patch_file}")
-    status.success?
+    status
   end
 
   def handle_conflict(theme_file, core_file)

@@ -1,12 +1,8 @@
 require Rails.root.join('vendor', 'mysociety', 'rblib', 'git')
 
 namespace :themes do
-
-  # Alias the module so we don't need the MySociety prefix here
-  Git = MySociety::Git
-
   def all_themes_dir
-    File.join(Rails.root,"lib","themes")
+    File.join(Rails.root, "lib", "themes")
   end
 
   def theme_dir(theme_name)
@@ -29,26 +25,26 @@ namespace :themes do
     "use-with-alaveteli-#{version}"
   end
 
-  def uninstall(theme_name, verbose=false)
+  def uninstall(theme_name, verbose = false)
     possible_theme_dirs(theme_name).each do |dir|
       run_hook(theme_name, 'uninstall', verbose) if File.directory?(dir)
     end
   end
 
-  def run_hook(theme_name, hook_name, verbose=false)
+  def run_hook(theme_name, hook_name, verbose = false)
     directory = theme_dir(theme_name)
     hook_file = File.join(directory, "#{hook_name}.rb")
-    if File.exist? hook_file
-      puts "Running #{hook_name} hook in #{directory}" if verbose
-      load hook_file
-    end
+    return unless File.exist? hook_file
+
+    puts "Running #{hook_name} hook in #{directory}" if verbose
+    load hook_file
   end
 
   def move_old_theme(old_theme_directory)
     puts "There was an old-style theme at #{old_theme_directory}" if verbose
 
     # remove trailing slashes
-    old_theme_directory.gsub!(/\/\z/, '')
+    old_theme_directory.delete_suffix!('/')
 
     moved_directory = "#{ old_theme_directory }-moved"
     begin
@@ -75,9 +71,9 @@ namespace :themes do
     theme_directory = theme_dir theme_name
     all_failed = true
     committishes_to_try.each do |committish|
-      if Git.committish_exists? theme_directory, committish
+      if MySociety::Git.committish_exists? theme_directory, committish
         puts "Checking out #{committish}" if verbose
-        Git.checkout theme_directory, committish
+        MySociety::Git.checkout theme_directory, committish
         all_failed = false
         break
       elsif verbose
@@ -87,7 +83,7 @@ namespace :themes do
     puts "Falling to using HEAD instead" if all_failed && verbose
   end
 
-  def install_theme(theme_url, verbose, deprecated=false)
+  def install_theme(theme_url, verbose, deprecated = false)
     FileUtils.mkdir_p all_themes_dir
     deprecation_string = deprecated ? " using deprecated THEME_URL" : ""
     theme_name = theme_url_to_theme_name theme_url
@@ -98,7 +94,7 @@ namespace :themes do
     # Is there an old-style theme directory there?  If so, move it
     # out of the way so that there's no risk that work is lost:
     if File.directory? theme_directory
-      unless Git.non_bare_repository? theme_directory
+      unless MySociety::Git.non_bare_repository? theme_directory
         move_old_theme theme_directory
       end
     end
@@ -109,15 +105,16 @@ namespace :themes do
       end
     end
     # Set the URL for origin in case it has changed, and fetch from there:
-    Git.remote_set_url theme_directory, 'origin', theme_url
-    Git.fetch theme_directory, 'origin'
+    MySociety::Git.remote_set_url theme_directory, 'origin', theme_url
+    MySociety::Git.fetch theme_directory, 'origin'
     # Check that checking-out a new commit will be safe:
-    unless Git.status_clean theme_directory
+    unless MySociety::Git.status_clean theme_directory
       raise "There were uncommitted changes in #{theme_directory}"
     end
-    unless Git.is_HEAD_pushed? theme_directory
+    unless MySociety::Git.is_HEAD_pushed? theme_directory
       raise "The current work in #{theme_directory} is unpushed"
     end
+
     # Now try to checkout various commits in order of preference:
     checkout_best_option theme_name
     # Finally run the install hooks:
@@ -140,17 +137,16 @@ namespace :themes do
     end
     # Old version of the above, for backwards compatibility
     unless AlaveteliConfiguration.theme_url.blank?
-      install_theme(AlaveteliConfiguration.theme_url, verbose, deprecated=true)
+      install_theme(AlaveteliConfiguration.theme_url, verbose, true)
     end
   end
 
-
   def locale_extensions(locale)
     locale_extensions = if AlaveteliLocalization.default_locale?(locale)
-      ['']
-    else
-      [".#{locale}"]
-    end
+                          ['']
+                        else
+                          [".#{locale}"]
+                        end
     if !AlaveteliLocalization.default_locale?(locale) &&
        locale.to_s.include?('_')
       locale_extensions << ".#{locale.to_s.split('_').first}"
@@ -179,7 +175,8 @@ namespace :themes do
       help_template_info[:sections].each do |section|
         unless contents.include?("##{section}")
           missing_sections << section
-          puts "Missing section: #{section} in template #{help_template_info[:name]}"
+          puts "Missing section: #{section} in template " \
+               "#{help_template_info[:name]}"
         end
       end
     end
@@ -190,9 +187,9 @@ namespace :themes do
     end
   end
 
-  desc "Check that all help sections referred to in the application are present in theme"
+  desc "Check that all help sections referred to in the application are " \
+       "present in theme"
   task check_help_sections: :environment do
-
     intro_message = <<-EOF
 
 Checking that all help templates linked to from Alaveteli are present in the theme,
@@ -213,35 +210,35 @@ EOF
     end
 
     help_templates_info = [{ name: 'about',
-                            sections: %w[whybother_them
-                                            reporting
-                                            reporting_unavailable] },
+                             sections: %w[whybother_them
+                                          reporting
+                                          reporting_unavailable] },
                            { name: 'alaveteli',
-                            sections: [] },
+                             sections: [] },
                            { name: 'api',
-                            sections: [] },
+                             sections: [] },
                            { name: 'contact',
-                            sections: [] },
+                             sections: [] },
                            { name: 'credits',
-                            sections: ['helpus'] },
+                             sections: ['helpus'] },
                            { name: 'officers',
-                            sections: ['copyright'] },
+                             sections: ['copyright'] },
                            { name: 'privacy',
-                            sections: %w[email_address
-                                            full_address
-                                            postal_answer
-                                            public_request
-                                            real_name] },
+                             sections: %w[email_address
+                                          full_address
+                                          postal_answer
+                                          public_request
+                                          real_name] },
                            { name: 'requesting',
-                            sections: %w[focused
-                                            data_protection
-                                            missing_body
-                                            quickly_response] },
+                             sections: %w[focused
+                                          data_protection
+                                          missing_body
+                                          quickly_response] },
                            { name: 'unhappy',
-                            sections: %w[internal_review
-                                            other_means] },
+                             sections: %w[internal_review
+                                          other_means] },
                            { name: '_why_they_should_reply_by_email',
-                            sections: [] }]
+                             sections: [] }]
 
     theme_names.each do |theme_name|
       AlaveteliLocalization.available_locales.each do |locale|
@@ -257,7 +254,5 @@ EOF
         puts "No missing templates or sections" unless missing
       end
     end
-
   end
-
 end

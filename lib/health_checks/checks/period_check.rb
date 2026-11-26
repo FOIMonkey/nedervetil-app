@@ -1,5 +1,7 @@
 module HealthChecks
   module Checks
+    # Passes while the timestamp returned by its block falls within the
+    # configured period (default 1 day).
     class PeriodCheck
       include HealthChecks::HealthCheckable
 
@@ -12,15 +14,23 @@ module HealthChecks
       end
 
       def failure_message
-        "#{ super }: #{ subject.call }"
+        "#{ super }: #{ value || 'never' }"
       end
 
       def success_message
-        "#{ super }: #{ subject.call }"
+        "#{ super }: #{ value }"
       end
 
+      # A subject with no time yet (an empty table) fails instead of raising.
       def ok?
-        subject.call >= period.ago
+        time = value
+        time.present? && time >= period.ago
+      end
+
+      private
+
+      def value
+        subject.call
       end
     end
   end

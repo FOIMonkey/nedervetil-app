@@ -16,9 +16,10 @@ partials:
   "alaveteli_pro/draft_info_requests/draft_info_request": render of a DraftInfoRequest
   "alaveteli_pro/info_request_batches/info_request_batch": render of an InfoRequestBatch
   "admin/topic_(holders|questions|routes|sources)/form": admin/topic_rows/new and edit render 'form', which Rails finds in each subclass of Admin::TopicRowsController's own view folder
+  "help_site/extras/.+": rendered dynamically from HelpSite page extra blocks
 
 stimulus:
-  "modal": no markup in core, the themes or the add-on attaches it, but responsive/modal.scss styles it and both themes load that file; remove the three together with a theme change
+  "modal": no markup in core attaches it, but responsive/modal.scss styles it and themes may load that file; remove together with a theme change
 
 methods:
   ".+#(.+_transition_label)": InfoRequest::State::Transitions sends "#{user}_#{state}_transition_label"
@@ -42,6 +43,7 @@ methods:
   "lib/configuration.rb#(method_missing|respond_to_missing\\?)": configuration readers
   "lib/core_ext/.+": overrides of Rails internals
   "lib/custom_cops/.+": RuboCop callbacks
+  "lib/help_site.rb#(answer_at|matches\\?|block_quote)": HelpSite route constraint, Redcarpet renderer callback, and pack helper
   "lib/routing_filters.rb#optimize_helper\\?": Rails routing override
 
 routes:

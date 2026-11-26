@@ -25,6 +25,11 @@ RSpec.describe HealthChecks::Checks::PeriodCheck do
       check = HealthChecks::Checks::PeriodCheck.new { 2.days.ago }
       expect(check.ok?).to be false
     end
+
+    it 'fails, without raising, if the subject has no time yet' do
+      check = HealthChecks::Checks::PeriodCheck.new { nil }
+      expect(check.ok?).to be false
+    end
   end
 
   describe :failure_message do
@@ -39,6 +44,11 @@ RSpec.describe HealthChecks::Checks::PeriodCheck do
       subject = 2.days.ago
       check = HealthChecks::Checks::PeriodCheck.new(params) { subject }
       expect(check.failure_message).to include(subject.to_s)
+    end
+
+    it 'says never when the subject has no time yet' do
+      check = HealthChecks::Checks::PeriodCheck.new { nil }
+      expect(check.failure_message).to include('never')
     end
   end
 

@@ -2,9 +2,7 @@ require 'spec_helper'
 
 RSpec.describe HealthChecks::HealthCheckable do
   before(:each) do
-    class MockCheck
-      include HealthChecks::HealthCheckable
-    end
+    stub_const('MockCheck', Class.new { include HealthChecks::HealthCheckable })
     @subject = MockCheck.new
   end
 

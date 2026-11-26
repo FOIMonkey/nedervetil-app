@@ -1,7 +1,7 @@
 namespace :gettext do
   def locale
     # Handle when LOCALE is set to an empty string
-    locale = ENV['LOCALE']
+    locale = ENV.fetch('LOCALE', nil)
     locale.present? ? locale : '*'
   end
 
@@ -108,21 +108,22 @@ namespace :gettext do
     end
   end
 
-  desc 'Update locale files with slightly changed English msgids using a csv file of old to new strings'
+  desc 'Update locale files with slightly changed English msgids using a ' \
+       'csv file of old to new strings'
   task :update_msgids_from_csv do
-    mapping_file = find_mapping_file(ENV['MAPPING_FILE'])
+    mapping_file = find_mapping_file(ENV.fetch('MAPPING_FILE', nil))
     mappings = {}
     CSV.parse(clean_csv_mapping_file(mapping_file)) do |csv_line|
-      from,to = csv_line
+      from, to = csv_line
       mappings[from] = to
     end
     Dir.glob("locale/**/app.po").each do |po_file|
       lang_mappings = mappings.clone
       lines = []
       File.read(po_file).each_line do |line|
-        /^msgid "(.*)"/ =~ line
-        if $1 && mappings[$1]
-          lines << "msgid \"#{lang_mappings.delete($1)}\""
+        msgid = line[/^msgid "(.*)"/, 1]
+        if msgid && mappings[msgid]
+          lines << "msgid \"#{lang_mappings.delete(msgid)}\""
         else
           lines << line
         end
@@ -134,7 +135,8 @@ namespace :gettext do
     end
   end
 
-  # Use a quote for quote-escaping as CSV errors on the \" with "Missing or stray quote"
+  # Use a quote for quote-escaping as CSV errors on the \" with "Missing or
+  # stray quote"
   def clean_csv_mapping_file(file)
     data = ''
     File.foreach(file) do |line|
@@ -145,7 +147,8 @@ namespace :gettext do
 
   def find_mapping_file(file)
     unless file
-      puts "Usage: Specify a csv file mapping old to new strings with MAPPING_FILE=[file name]"
+      puts "Usage: Specify a csv file mapping old to new strings with " \
+           "MAPPING_FILE=[file name]"
       exit(1)
     end
     unless File.exist?(file)
@@ -156,7 +159,9 @@ namespace :gettext do
   end
 
   def files_to_translate
-    files = FileList.new("{app,lib,config,#{locale_path}}/**/*.{rb,erb}") do |fl|
+    files = FileList.new(
+      "{app,lib,config,#{locale_path}}/**/*.{rb,erb}"
+    ) do |fl|
       fl.exclude(/\balaveteli_pro\b/)
     end
     files
@@ -164,7 +169,9 @@ namespace :gettext do
 
   def pro_files_to_translate
     files = FileList.new do |fl|
-      fl.include('app/{models,views,helpers,controllers}/alaveteli_pro/**/*.{rb,erb}')
+      fl.include(
+        'app/{models,views,helpers,controllers}/alaveteli_pro/**/*.{rb,erb}'
+      )
       fl.include('lib/alaveteli_pro/**/*.{rb,erb}')
     end
     files
@@ -183,12 +190,12 @@ namespace :gettext do
   end
 
   def theme_files_to_translate
-    theme = find_theme(ENV['THEME'])
+    theme = find_theme(ENV.fetch('THEME', nil))
     Dir.glob("{lib/themes/#{theme}/{app,config,lib}}/**/*.{rb,erb,yml.erb}")
   end
 
   def theme_locale_path
-    theme = find_theme(ENV['THEME'])
+    theme = find_theme(ENV.fetch('THEME', nil))
     Rails.root.join "lib", "themes", theme, "locale-theme"
   end
 end

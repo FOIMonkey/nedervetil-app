@@ -1,3 +1,5 @@
+# Mixed into rake namespaces to check required environment variables and print
+# usage messages before exiting.
 module Usage
   def usage_message(message)
     puts ''
@@ -11,10 +13,11 @@ module Usage
     env_vars.each do |env_var|
       missing << env_var unless ENV[env_var]
     end
-    unless missing.empty?
-      usage = "Usage: This task requires #{env_vars.to_sentence} - missing #{missing.to_sentence}"
-      usage += "\nExample: #{example}" if example
-      usage_message usage
-    end
+    return if missing.empty?
+
+    usage = "Usage: This task requires #{env_vars.to_sentence} - " \
+            "missing #{missing.to_sentence}"
+    usage += "\nExample: #{example}" if example
+    usage_message usage
   end
 end

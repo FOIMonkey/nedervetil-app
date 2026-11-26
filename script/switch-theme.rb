@@ -31,8 +31,8 @@
 require 'tempfile'
 require 'pathname'
 
-$no_theme_name = 'none'
-theme_directory = ENV['ALAVETELI_THEMES_DIR']
+NO_THEME_NAME = 'none'.freeze
+theme_directory = ENV.fetch('ALAVETELI_THEMES_DIR', nil)
 alaveteli_directory = File.expand_path(File.join(File.dirname(__FILE__),
                                                  ".."))
 unless theme_directory
@@ -47,14 +47,15 @@ unless File.exist? theme_directory
 end
 
 def show_themes
-  $available_themes.each do |theme_name|
+  AVAILABLE_THEMES.each do |theme_name|
     STDERR.puts "  #{theme_name}"
   end
 end
 
 # Assume that any directory directly under theme_directory is a theme:
-$available_themes = Dir.entries(theme_directory).find_all do |local_theme_name|
-  next if [".", ".."].index local_theme_name
+ignored_entries = %w[. ..]
+AVAILABLE_THEMES = Dir.entries(theme_directory).find_all do |local_theme_name|
+  next if ignored_entries.index local_theme_name
   next unless local_theme_name
 
   full_path = File.join theme_directory, local_theme_name
@@ -64,9 +65,9 @@ $available_themes = Dir.entries(theme_directory).find_all do |local_theme_name|
   local_theme_name
 end.sort
 
-$available_themes.unshift $no_theme_name
+AVAILABLE_THEMES.unshift NO_THEME_NAME
 
-if $available_themes.empty?
+if AVAILABLE_THEMES.empty?
   STDERR.puts "There were no theme directories found in '#{theme_directory}'"
   exit
 end
@@ -79,7 +80,7 @@ else
   exit 1
 end
 
-unless $available_themes.include? requested_theme
+unless AVAILABLE_THEMES.include? requested_theme
   STDERR.puts "Theme '#{requested_theme}' not found in '#{theme_directory}'"
   STDERR.puts "Available themes:"
   show_themes
@@ -92,13 +93,22 @@ config_directory = File.join alaveteli_directory, 'config'
 general_filename = File.join config_directory, "general.yml"
 theme_filename = File.join config_directory, "general-#{requested_theme}.yml"
 
-if File.exist?(general_filename) && ! (File.symlink? general_filename)
+if File.exist?(general_filename) && !(File.symlink? general_filename)
   STDERR.puts "'#{general_filename}' exists, but isn't a symlink"
   exit 1
 end
 
-unless requested_theme == $no_theme_name || File.exist?(theme_filename)
+unless requested_theme == NO_THEME_NAME || File.exist?(theme_filename)
   STDERR.puts "'#{theme_filename}' didn't exist"
+  exit 1
+end
+
+public_directory = File.join(alaveteli_directory, 'public')
+public_theme_link = File.join(public_directory, 'alavetelitheme')
+
+if requested_theme == NO_THEME_NAME &&
+   File.exist?(public_theme_link) && !File.symlink?(public_theme_link)
+  STDERR.puts "Couldn't remove #{public_theme_link} since it's not a symlink"
   exit 1
 end
 
@@ -123,11 +133,8 @@ symlink(File.join(alaveteli_directory, 'config', File.basename(theme_filename)),
         config_directory,
         "general.yml")
 
-public_directory = File.join(alaveteli_directory, 'public')
-
-if requested_theme == $no_theme_name
-  link = File.join(public_directory, 'alavetelitheme')
-  File.unlink(link) if Dir.exist?(link)
+if requested_theme == NO_THEME_NAME
+  File.unlink(public_theme_link) if File.symlink?(public_theme_link)
 else
   symlink(File.join(full_theme_path, 'public'),
           public_directory,
@@ -138,10 +145,11 @@ else
           requested_theme)
 end
 
-STDERR.puts """Switched to #{requested_theme}!
-You will need to:
-  1. restart any development server you have running.
-  2. run: bundle exec rake assets:clean
-  3. run: bundle exec rake assets:precompile (if running in production mode)
-  4. run: bundle exec rake assets:link_non_digest (if running in production mode)
-"""
+STDERR.puts <<~MESSAGE
+  Switched to #{requested_theme}!
+  You will need to:
+    1. restart any development server you have running (bin/dev builds the
+       stylesheets for the new theme as it starts).
+    2. run: bundle exec rake assets:precompile (in production)
+    3. run: bundle exec rake assets:link_non_digest (in production)
+MESSAGE

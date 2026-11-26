@@ -17,7 +17,15 @@ then
 fi
 
 # Load in last three days worth of logs (if they've been modified)
-LATEST=$( ls $(bin/config MTA_LOG_PATH) 2>/dev/null | sort | tail -3 )
+# Stop if the setting can't be read or is blank: ls with no pattern lists
+# this directory, and its last three entries were loaded as mail logs.
+LOG_PATH=$(bin/config MTA_LOG_PATH) || exit 1
+if [ -z "$LOG_PATH" ]
+then
+    echo "MTA_LOG_PATH is blank" >&2
+    exit 1
+fi
+LATEST=$( ls $LOG_PATH 2>/dev/null | sort | tail -3 )
 for X in $LATEST
 do
     bundle exec rails runner 'MailServerLog.load_file("'$X'")'

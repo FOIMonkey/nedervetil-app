@@ -4,6 +4,8 @@ Dir[File.dirname(__FILE__) + '/health_checks/checks/*.rb'].each do |file|
   require file
 end
 
+# Registry of runtime health checks populated at boot and queried by the
+# health checks controller (Health::ChecksController).
 module HealthChecks
   extend self
 
@@ -12,7 +14,7 @@ module HealthChecks
   end
 
   def add(check)
-    if assert_valid_check(check)
+    if valid_check?(check)
       all << check
       check
     else
@@ -30,7 +32,7 @@ module HealthChecks
 
   private
 
-  def assert_valid_check(check)
+  def valid_check?(check)
     check.respond_to?(:ok?)
   end
 end

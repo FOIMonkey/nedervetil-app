@@ -1,9 +1,4 @@
 #!/bin/bash
 TOP_DIR="$(dirname "$BASH_SOURCE")/.."
 cd "$TOP_DIR"
-if [ "$1" == "--loop" ]
-then
-  bundle exec rails runner 'NotificationMailer.send_notifications_loop'
-else
-  bundle exec rails runner 'NotificationMailer.send_notifications'
-fi
+bundle exec rails runner 'NotificationMailer.send_notifications'

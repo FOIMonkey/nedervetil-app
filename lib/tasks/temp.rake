@@ -22,27 +22,6 @@ namespace :temp do
     puts "Populating User#status_update_count completed."
   end
 
-  desc "Encrypt users' existing plaintext otp_secret_key"
-  task encrypt_user_otp_secret_keys: :environment do
-    # otp_secret_key predates Active Record Encryption, so existing rows hold
-    # the secret in plaintext. #encrypt re-saves each user's encrypted columns
-    # in place. support_unencrypted_data keeps unencrypted rows readable until
-    # this has run, so it can be run out of band after deploying and re-run
-    # safely.
-    scope = User.where.not(otp_secret_key: nil)
-    count = scope.count
-
-    scope.find_each.with_index do |user, index|
-      user.encrypt
-
-      erase_line
-      print "Encrypting otp_secret_key #{index + 1}/#{count}"
-    end
-
-    erase_line
-    puts "Encrypting otp_secret_key completed."
-  end
-
   desc 'Record redactions made to existing content by current CensorRules'
   task record_censor_rule_redactions: :environment do
     # CensorRule::Redaction rows are only written as a rule is applied, so
@@ -116,15 +95,10 @@ namespace :temp do
           attachment.redacted_filename
           attachment.body
 
-          # The zip download and the HTML view mask their own representation
-          # of the attachment, each tracked under its own attribute, so a rule
-          # can match content the body mask couldn't reach.
+          # The zip download masks its own representation of the attachment,
+          # tracked under its own attribute, so a rule can match content the
+          # body mask couldn't reach.
           attachment.masked_default_body
-
-          # Guarded as the HTML view is, so we only render what the app would.
-          # The URL and chrome the controller passes don't affect what a rule
-          # matches, so they're omitted here.
-          attachment.masked_body_to_html if attachment.html_viewer?
         end
       end
 

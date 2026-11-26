@@ -1,12 +1,5 @@
-##
-# Helper class to:
-#   1. migrate file into ActiveStorage
-#   2. mirror ActiveStorage blobs between secondary mirrors
-#   3. promote ActiveStorage secondary mirrors to serve blobs data
-#
-# Require a ActiveRecord class and symbol representing the has_one_attached
-# association.
-#
+# Migrates, mirrors and promotes ActiveStorage files for an ActiveRecord class
+# and its named has_one_attached association.
 class Storage
   def initialize(klass, association, setter: :data=, getter: :data,
                  condition: nil)

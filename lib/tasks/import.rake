@@ -15,11 +15,10 @@ namespace :import do
 
     number_of_rows = 0
 
-    STDERR.puts 'Preliminary check for ambiguous names or slugs...'
+    STDERR.puts 'Preliminary check for ambiguous names...'
 
-    # Check that the name and slugified version of the name are
-    # unique:
-    url_part_count = Hash.new { 0 }
+    # Check that each name is unique. Two names that give the same slug are
+    # fine: the second body's slug gets a number.
     name_count = Hash.new { 0 }
     reader = CSV.open(tmp_csv.path, 'r')
     header_line = reader.shift
@@ -27,23 +26,17 @@ namespace :import do
 
     reader.each do |row_array|
       row = Hash[headers.zip row_array]
-      name = row['name']
-      url_part = MySociety::Format.simplify_url_part(name, 'body')
-      name_count[name] += 1
-      url_part_count[url_part] += 1
+      name_count[row['name']] += 1
       number_of_rows += 1
     end
 
     non_unique_error = false
 
-    [[name_count, 'name'],
-    [url_part_count, 'url_part']].each do |counter, field|
-      counter.sort.map do |name, count|
-        if count > 1
-          non_unique_error = true
-          STDERR.puts "The #{field} #{name} was found #{count} times."
-        end
-      end
+    name_count.sort.each do |name, count|
+      next unless count > 1
+
+      non_unique_error = true
+      STDERR.puts "The name #{name} was found #{count} times."
     end
 
     next if non_unique_error
@@ -53,12 +46,12 @@ namespace :import do
     # Now it's (probably) safe to try to import:
     tag = ''
     tag_behaviour = 'replace'
-    editor = "#{ ENV['USER'] } (Unix user)"
+    editor = "#{ ENV.fetch('USER', nil) } (Unix user)"
     locales = AlaveteliLocalization.available_locales
 
     import_args = [tmp_csv.path, tag, tag_behaviour, dryrun, editor, locales]
 
-    errors, notes =
+    errors, _notes =
       PublicBody.import_csv_from_file(*import_args) do |row_number, _fields|
         percent_complete = (100 * row_number.to_f / number_of_rows).to_i
         STDERR.print "#{row_number} out of #{number_of_rows} "

@@ -1,6 +1,5 @@
 require File.join(File.dirname(__FILE__), 'usage')
 namespace :translation do
-
   include Usage
 
   def write_email(email, email_description, output_file)
@@ -30,23 +29,24 @@ namespace :translation do
     check_for_env_vars(%w[INFO_REQUEST_ID
                           FOLLOW_UP_ID
                           INCOMING_MESSAGE_ID
-                          COMMENT_ID
-                          TRACK_THING_ID
                           DIR], nil)
-    info_request = InfoRequest.find(ENV['INFO_REQUEST_ID'])
+    info_request = InfoRequest.find(ENV.fetch('INFO_REQUEST_ID', nil))
     if info_request.outgoing_messages.empty?
-      raise "Info request #{info_request.id} does not have any outgoing messages"
+      raise "Info request #{info_request.id} does not have any " \
+            "outgoing messages"
     end
-    initial_request = info_request.outgoing_messages.first
-    follow_up = OutgoingMessage.find(ENV['FOLLOW_UP_ID'])
-    incoming_message = IncomingMessage.find(ENV['INCOMING_MESSAGE_ID'])
-    comment = Comment.find(ENV['COMMENT_ID'])
-    track_thing = TrackThing.find(ENV['TRACK_THING_ID'])
 
-    output_file = File.open(File.join(ENV['DIR'], 'message_preview.txt'), 'w')
+    initial_request = info_request.outgoing_messages.first
+    follow_up = OutgoingMessage.find(ENV.fetch('FOLLOW_UP_ID', nil))
+    incoming_message =
+      IncomingMessage.find(ENV.fetch('INCOMING_MESSAGE_ID', nil))
+
+    output_path = File.join(ENV.fetch('DIR', nil), 'message_preview.txt')
+    output_file = File.open(output_path, 'w')
 
     # outgoing mailer
-    request_email = OutgoingMailer.initial_request(info_request, initial_request)
+    request_email = OutgoingMailer.initial_request(info_request,
+                                                   initial_request)
     write_email(request_email, 'Initial Request', output_file)
 
     followup_email = OutgoingMailer.followup(info_request, follow_up, nil)
@@ -63,18 +63,15 @@ namespace :translation do
 
     write_email(contact_email, 'Contact email (to admin)', output_file)
 
-    user_contact_email = ContactMailer.user_message(info_request.user,
-                                                    info_request.user,
-                                                    'http://www.example.com/user',
-                                                    'A test message',
-                                                    'Hello!')
-    write_email(user_contact_email, 'Contact email (user to user)', output_file)
-
-    admin_contact_email = ContactMailer.from_admin_message(info_request.user.name,
-                                                           info_request.user.email,
-                                                           'A test message',
-                                                           'Hello!')
-    write_email(admin_contact_email, 'Contact email (admin to user)', output_file)
+    admin_contact_email = ContactMailer.from_admin_message(
+      info_request.user.name,
+      info_request.user.email,
+      'A test message',
+      'Hello!'
+    )
+    write_email(admin_contact_email,
+                'Contact email (admin to user)',
+                output_file)
 
     # request mailer
     fake_response_email = RequestMailer.fake_response(info_request,
@@ -97,90 +94,62 @@ namespace :translation do
     stopped_responses_email = RequestMailer.stopped_responses(info_request,
                                                               response_mail)
     write_email(stopped_responses_email,
-                'Bounce if someone sends email to a request that has had responses stopped',
+                'Bounce if someone sends email to a request that has had ' \
+                'responses stopped',
                 output_file)
 
     requires_admin_email = RequestMailer.requires_admin(info_request)
-    write_email(requires_admin_email, 'Drawing admin attention to a response', output_file)
+    write_email(requires_admin_email,
+                'Drawing admin attention to a response',
+                output_file)
 
-
-    new_response_email = RequestMailer.new_response(info_request, incoming_message)
+    new_response_email = RequestMailer.new_response(info_request,
+                                                    incoming_message)
     write_email(new_response_email,
                 'Telling the requester that a new response has arrived',
                 output_file)
-
-    overdue_alert_email = RequestMailer.overdue_alert(info_request, info_request.user)
-    write_email(overdue_alert_email,
-                'Telling the requester that the public body is late in replying',
-                output_file)
-
-    very_overdue_alert_email = RequestMailer.very_overdue_alert(info_request, info_request.user)
-    write_email(very_overdue_alert_email,
-                'Telling the requester that the public body is very late in replying',
-                output_file)
-
-    response_reminder_alert_email = RequestMailer.new_response_reminder_alert(info_request,
-                                                                              incoming_message)
-    write_email(response_reminder_alert_email,
-                'Telling the requester that they need to say if the new response contains info or not',
-                output_file)
-
-    not_clarified_alert_email = RequestMailer.not_clarified_alert(info_request, incoming_message)
-    write_email(not_clarified_alert_email,
-                'Telling the requester that they need to clarify their request',
-                output_file)
-
-    comment_on_alert_email = RequestMailer.comment_on_alert(info_request, comment)
-    write_email(comment_on_alert_email,
-                'Telling requester that somebody added an annotation to their request',
-                output_file)
-
-    comment_on_alert_plural_email = RequestMailer.comment_on_alert_plural(info_request, 2, comment)
-    write_email(comment_on_alert_plural_email,
-                'Telling requester that somebody added multiple annotations to their request',
-                output_file)
-
-    # track mailer
-    search_results = track_thing.matches(sort_by: 'described_at', limit: 100)
-    highlight_words = search_results.highlight_words
-    alert_events = search_results.events
-    event_digest_email = TrackMailer.event_digest(
-      info_request.user, [[track_thing, alert_events, highlight_words]]
-    )
-    write_email(event_digest_email, 'Alerts on things the user is tracking', output_file)
 
     # user mailer
     site_name = AlaveteliConfiguration.site_name
     reasons = {
       web: "",
       email: _("Then you can sign in to {{site_name}}", site_name: site_name),
-      email_subject: _("Confirm your account on {{site_name}}", site_name: site_name)
+      email_subject: _("Confirm your account on {{site_name}}",
+                       site_name: site_name)
     }
     confirm_login_email = UserMailer.confirm_login(info_request.user,
                                                    reasons,
                                                    'http://www.example.com')
     write_email(confirm_login_email, 'Confirm a user login', output_file)
 
-    already_registered_email = UserMailer.already_registered(info_request.user,
-                                                             reasons,
-                                                             'http://www.example.com')
-    write_email(already_registered_email, 'Tell a user they are already registered', output_file)
+    already_registered_email = UserMailer.already_registered(
+      info_request.user,
+      reasons,
+      'http://www.example.com'
+    )
+    write_email(already_registered_email,
+                'Tell a user they are already registered',
+                output_file)
 
     new_email = 'new_email@example.com'
-    changeemail_confirm_email = UserMailer.changeemail_confirm(info_request.user,
-                                                               new_email,
-                                                               'http://www.example.com')
+    changeemail_confirm_email = UserMailer.changeemail_confirm(
+      info_request.user,
+      new_email,
+      'http://www.example.com'
+    )
     write_email(changeemail_confirm_email,
                 'Confirm that the user wants to change their email',
                 output_file)
 
-    changeemail_already_used = UserMailer.changeemail_already_used('old_email@example.com',
-                                                                   new_email)
+    changeemail_already_used = UserMailer.changeemail_already_used(
+      'old_email@example.com',
+      new_email
+    )
     write_email(changeemail_already_used,
-                'Tell a user that the email they want to change to is already used',
+                'Tell a user that the email they want to change to is ' \
+                'already used',
                 output_file)
 
     output_file.close
   end
-
 end
