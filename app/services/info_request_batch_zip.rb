@@ -32,9 +32,9 @@ class InfoRequestBatchZip
   end
 
   def stream(&chunks)
-    block_writer = ZipTricks::BlockWrite.new(&chunks)
+    block_writer = ZipKit::BlockWrite.new(&chunks)
 
-    ZipTricks::Streamer.open(
+    ZipKit::Streamer.open(
       block_writer,
       auto_rename_duplicate_filenames: true
     ) do |zip|

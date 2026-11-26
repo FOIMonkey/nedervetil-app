@@ -1,4 +1,4 @@
-require Rails.root.join('commonlib', 'rblib', 'git')
+require Rails.root.join('vendor', 'mysociety', 'rblib', 'git')
 
 namespace :themes do
 

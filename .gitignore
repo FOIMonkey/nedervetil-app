@@ -1,6 +1,5 @@
 !/lib/themes/.keep
 /.bundle/
-/.ruby-version
 /.sass-cache/
 /.vagrant.yml
 /.vagrant/

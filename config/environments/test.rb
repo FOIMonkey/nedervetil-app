@@ -98,4 +98,8 @@ Rails.application.configure do
   end
 
   config.active_job.queue_adapter = :test
+
+  # Rails leaves YJIT off in test, but the suite is mostly Ruby work and runs
+  # about 10% faster with it.
+  config.yjit = true
 end

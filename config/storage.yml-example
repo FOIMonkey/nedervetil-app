@@ -7,12 +7,6 @@
 #   secret_access_key: ''
 #   region: ''
 #   bucket: ''
-#
-# google:
-#   service: GCS
-#   credentials:
-#   project: ''
-#   bucket: ''
 
 local:
   service: Disk
@@ -20,11 +14,11 @@ local:
 
 test:
   service: Disk
-  root: <%= Rails.root.join('tmp/storage') %>
+  root: <%= Rails.root.join("tmp/storage#{ENV['TEST_ENV_NUMBER']}") %>
 
 test_fixtures:
   service: Disk
-  root: <%= Rails.root.join("tmp/storage_fixtures") %>
+  root: <%= Rails.root.join("tmp/storage_fixtures#{ENV['TEST_ENV_NUMBER']}") %>
 
 ## Inbound Emails ##
 
@@ -40,7 +34,7 @@ inbound_emails_development: &inbound_emails_development
 
 inbound_emails_test: &inbound_emails_test
   service: Disk
-  root: <%= Rails.root.join('tmp/storage/inbound_emails') %>
+  root: <%= Rails.root.join("tmp/storage#{ENV['TEST_ENV_NUMBER']}/inbound_emails") %>
 
 inbound_emails:
   <<: *inbound_emails_<%= Rails.env %>
@@ -59,7 +53,7 @@ raw_emails_development: &raw_emails_development
 
 raw_emails_test: &raw_emails_test
   service: Disk
-  root: <%= Rails.root.join('tmp/storage/raw_emails') %>
+  root: <%= Rails.root.join("tmp/storage#{ENV['TEST_ENV_NUMBER']}/raw_emails") %>
 
 raw_emails:
   <<: *raw_emails_<%= Rails.env %>
@@ -78,7 +72,7 @@ attachments_development: &attachments_development
 
 attachments_test: &attachments_test
   service: Disk
-  root: <%= Rails.root.join('tmp/storage/attachments') %>
+  root: <%= Rails.root.join("tmp/storage#{ENV['TEST_ENV_NUMBER']}/attachments") %>
 
 attachments:
   <<: *attachments_<%= Rails.env %>

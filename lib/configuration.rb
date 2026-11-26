@@ -1,4 +1,4 @@
-require File.dirname(__FILE__) + '/../commonlib/rblib/config'
+require File.dirname(__FILE__) + '/../vendor/mysociety/rblib/config'
 
 # Load initial mySociety config
 if ENV["RAILS_ENV"] == "test"

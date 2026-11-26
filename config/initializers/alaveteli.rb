@@ -1,7 +1,5 @@
-# MySociety specific helper functions
-$LOAD_PATH.push(File.join(File.dirname(__FILE__), '../../commonlib/rblib'))
-# ... if these fail to include, you need the commonlib submodule from git
-# (type "git submodule update --init" in the whatdotheyknow directory)
+# Helpers from commonlib; see vendor/mysociety/README.md.
+$LOAD_PATH.push(File.expand_path('../../vendor/mysociety/rblib', __dir__))
 
 load "validate.rb"
 load "config.rb"
