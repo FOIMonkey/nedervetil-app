@@ -21,28 +21,43 @@ if [ "$(printf '%s\n' "$required_docker" "$current_docker" | sort -V | head -n1)
   exit 1
 fi
 
-themes_dir="$(dirname $(pwd))/alaveteli-themes"
-if [ ! -d $themes_dir ]; then
-  error_msg "Can't find $themes_dir directory. Please create and rerun."
-  exit 1
-fi
+themes_dir="$(dirname "$(pwd)")/alaveteli-themes"
+mkdir -p "$themes_dir"
 success_msg 'done'
 
 notice_msg "Copying example files..."
 [ ! -f config/database.yml ] && cp config/database.yml-example config/database.yml
 [ ! -f config/sidekiq.yml ] && cp config/sidekiq.yml-example config/sidekiq.yml
 [ ! -f config/storage.yml ] && cp config/storage.yml-example config/storage.yml
-[ ! -f config/general-alavetelitheme.yml ] && cp config/general.yml-example config/general-alavetelitheme.yml
-[ ! -L config/general.yml ] && [ ! -f config/general.yml ] && ln -s config/general-alavetelitheme.yml config/general.yml
+# The demo theme, or no theme with NO_THEME set. Either way the site is named Nedervetil, with
+# two-factor auth, AI reading and its outcomes on so the sample accounts and sample data work
+# straight away; general.yml-example keeps production's defaults.
+if [ -n "$NO_THEME" ]; then
+  demo_theme=none
+  theme_urls='THEME_URLS: []'
+else
+  demo_theme_url="${DEMO_THEME_URL:-https://github.com/FOIMonkey/nedervetil-test-theme.git}"
+  demo_theme="$(basename "$demo_theme_url" .git)"
+  theme_urls="THEME_URLS: ['$demo_theme_url']"
+fi
+[ ! -f "config/general-$demo_theme.yml" ] && sed \
+  -e "s|^THEME_URLS: \[\]\$|$theme_urls|" \
+  -e 's/^ENABLE_TWO_FACTOR_AUTH: false$/ENABLE_TWO_FACTOR_AUTH: true/' \
+  -e 's/^INCOMING_ATTENTION_ENABLED: false$/INCOMING_ATTENTION_ENABLED: true/' \
+  -e "s/^INCOMING_OUTCOME_MODE: 'off'\$/INCOMING_OUTCOME_MODE: 'apply'/" \
+  -e "s/^SITE_NAME: 'Alaveteli'\$/SITE_NAME: 'Nedervetil'/" \
+  -e "s/^CONTACT_NAME: 'Alaveteli'\$/CONTACT_NAME: 'Nedervetil'/" \
+  config/general.yml-example > "config/general-$demo_theme.yml"
+if [ ! -L config/general.yml ] && [ ! -f config/general.yml ]; then
+  ln -s "general-$demo_theme.yml" config/general.yml
+fi
 success_msg 'done'
 
-notice_msg "Syncing git submodules..."
-git submodule update --init
-success_msg 'done'
+[ -n "$NO_THEME" ] && exit 0
 
-notice_msg "Getting latest alavetelitheme commits..."
-alaveteli=`pwd`
-alavetelitheme="$themes_dir/alavetelitheme"
-[ ! -d $alavetelitheme ] && git clone https://github.com/mysociety/alavetelitheme.git $alavetelitheme >/dev/null
-cd $alavetelitheme && git pull --quiet && cd $alaveteli
+notice_msg "Getting latest $demo_theme commits..."
+alaveteli="$(pwd)"
+theme_dir="$themes_dir/$demo_theme"
+[ ! -d "$theme_dir" ] && git clone "$demo_theme_url" "$theme_dir" >/dev/null
+cd "$theme_dir" && git pull --quiet && cd "$alaveteli"
 success_msg 'done'

@@ -1,5 +1,7 @@
 #!/bin/sh
 
+set -e
+
 cd "$(dirname "$0")/.."
 
 if [ -z "$DOCKER" ]; then
@@ -18,17 +20,26 @@ bundle check >/dev/null || bundle install
 success_msg 'done'
 
 if [ -L config/general.yml ]; then
-  THEME=$(basename -s .yml $(readlink config/general.yml) | sed 's/^general-//')
+  THEME=$(basename -s .yml "$(readlink config/general.yml)" | sed 's/^general-//')
   notice_msg "Switching to $THEME..."
-  bundle exec script/switch-theme.rb $THEME 2>/dev/null
-  bin/rails assets:clean >/dev/null
-  success_msg 'done'
+  if output=$(bundle exec script/switch-theme.rb "$THEME" 2>&1); then
+    bin/rails assets:clean >/dev/null
+    success_msg 'done'
+  else
+    error_msg 'failed'
+    printf '%s\n' "$output"
+    exit 1
+  fi
 fi
 
 # check to see if the database has ever been seeded, if not then set the
-# RESET_DATA_FLAG regardless of arguments passed to the script
-bin/rails runner 'User.find(1)' 2>/dev/null
-RESET_DATA_FLAG=$?
+# RESET_DATA_FLAG regardless of arguments passed to the script. It asks what
+# the sample data loader asks, so the two agree.
+if bin/rails runner 'exit(SampleData.data? ? 0 : 1)' 2>/dev/null; then
+  RESET_DATA_FLAG=0
+else
+  RESET_DATA_FLAG=1
+fi
 for arg in "$@"; do
   case $arg in
     --reset-data)
@@ -41,8 +52,8 @@ done
 
 notice_msg 'Migrating development and test databases...'
 if [ $RESET_DATA_FLAG -eq 1 ]; then
-  bin/rails db:migrate db:seed >/dev/null
-  bin/rails db:migrate RAILS_ENV=test >/dev/null
+  ANNOTATERB_SKIP_ON_DB_TASKS=1 bin/rails db:migrate db:seed >/dev/null
+  ANNOTATERB_SKIP_ON_DB_TASKS=1 bin/rails db:migrate RAILS_ENV=test >/dev/null
   success_msg 'done'
 else
   error_msg 'skipped'
@@ -50,26 +61,22 @@ fi
 
 notice_msg 'Loading sample data...'
 if [ $RESET_DATA_FLAG -eq 1 ]; then
-  bundle exec script/load-sample-data > /dev/null
-  success_msg 'done'
+  if output=$(bin/rails sample_data:load 2>&1); then
+    success_msg 'done'
+  else
+    error_msg 'failed'
+    printf '%s\n' "$output"
+    exit 1
+  fi
 else
   error_msg 'skipped'
 fi
 
-notice_msg 'Removing external requests...'
-if [ $RESET_DATA_FLAG -eq 1 ]; then
-  bin/rails runner 'InfoRequest.external.destroy_all'
-  success_msg 'done'
-else
-  error_msg 'skipped'
-fi
-
-notice_msg 'Rebuilding Xapian index...'
-if [ $RESET_DATA_FLAG -eq 1 ]; then
-  bundle exec script/destroy-and-rebuild-xapian-index > /dev/null
-  success_msg 'done'
-else
-  error_msg 'skipped'
-fi
 
 success_msg 'Setup finished'
+echo 'Sign in with:'
+bin/rails sample_data:accounts
+echo
+echo 'Start the app and background workers with: docker/server'
+echo 'Or run them in the background with: docker/server -d'
+echo 'App: http://localhost:3000 | Captured mail: http://localhost:1080'

@@ -1,4 +1,4 @@
-ARG RUBY_VERSION=3.4
+ARG RUBY_VERSION=3.4.13
 FROM ruby:${RUBY_VERSION}-trixie
 
 ENV DOCKER=1
@@ -10,18 +10,26 @@ RUN apt-get update -y && \
 
 RUN apt-get update -y && \
     apt-get install -y \
+    bubblewrap \
+    chromium \
     elinks \
     ghostscript \
+    imagemagick \
+    libemail-address-perl \
+    libemail-outlook-message-perl \
     libmagic-dev \
     libreoffice-calc-nogui \
     libreoffice-impress-nogui \
     libreoffice-writer-nogui \
-    pdftk \
+    pdftk-java \
     poppler-utils \
-    postgresql-client-15 \
+    postgresql-client-18 \
+    qpdf \
     sendmail \
+    tesseract-ocr \
+    tesseract-ocr-eng \
+    tesseract-ocr-osd \
     tnef \
-    unrtf \
     mutt
 
 # Wait-for-it

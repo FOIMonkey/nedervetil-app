@@ -1,18 +1,22 @@
 version: 2
 updates:
-  - package-ecosystem: bundler
+  - package-ecosystem: "bundler"
     directory: "/"
     schedule:
-      interval: weekly
-    open-pull-requests-limit: 99
-    rebase-strategy: "disabled"
-    ignore:
-      # capistrano 3 is a major API change that we're unlikely to support
-      - dependency-name: capistrano
-        versions:
-        - ">= 3.0.0"
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "Europe/London"
+    open-pull-requests-limit: 5
+    # Include gems resolved through local gemspecs and other dependencies.
+    allow:
+      - dependency-type: "all"
 
-  - package-ecosystem: gitsubmodule
+  # Keeps the pinned actions in .github/workflows up to date.
+  - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
-      interval: daily
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "Europe/London"

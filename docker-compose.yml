@@ -1,10 +1,11 @@
 services:
   app:
+    init: true
     build:
       context: .
       dockerfile: docker/Dockerfile
       args:
-        RUBY_VERSION: '${RUBY_VERSION:-3.4}'
+        RUBY_VERSION: '${APP_RUBY_VERSION:-3.4.13}'
     tty: true
     stdin_open: true
     environment:
@@ -13,7 +14,9 @@ services:
       - REDIS_URL=redis://redis:6379
       - SMTP_URL=smtp://smtp:1025
     ports:
-      - 3000:3000
+      - 127.0.0.1:3000:3000
+    tmpfs:
+      - /run/alaveteli-convert:mode=0700,nosuid,nodev,noexec
     volumes:
       - ./:/alaveteli
       - ../alaveteli-themes:/alaveteli-themes
@@ -24,12 +27,16 @@ services:
       - smtp
 
   sidekiq:
+    init: true
     build:
       context: .
       dockerfile: docker/Dockerfile
       args:
-        RUBY_VERSION: '${RUBY_VERSION:-3.4}'
-    command: bundle exec sidekiq
+        RUBY_VERSION: '${APP_RUBY_VERSION:-3.4.13}'
+    # Every queue the app enqueues to (config/sidekiq.yml-example, doc/FORK.md).
+    command: bundle exec sidekiq -q default -q low -q documents -q incoming_attention
+    tmpfs:
+      - /run/alaveteli-convert:mode=0700,nosuid,nodev,noexec
     volumes:
       - ./:/alaveteli
       - ../alaveteli-themes:/alaveteli-themes
@@ -44,6 +51,67 @@ services:
       - redis
       - smtp
 
+  # The spec suite as several processes at once: docker/specs. These three
+  # start only for it, and development's database and Redis are not used.
+  specs:
+    profiles: [specs]
+    init: true
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+      args:
+        RUBY_VERSION: '${APP_RUBY_VERSION:-3.4.13}'
+    # bubblewrap mounts /proc for each sandboxed job; without this the
+    # sandbox specs skip.
+    privileged: true
+    environment:
+      - BUNDLE_PATH=/bundle/vendor
+      - DATABASE_URL=postgres://postgres:password@specs-db/
+      - REDIS_URL=redis://specs-redis:6379
+    tmpfs:
+      # Each process's storage folders and working files, in memory.
+      - /alaveteli-specs/tmp:exec
+      # A private sandbox folder for each process, up to sixteen.
+      - /run/alaveteli-convert1:mode=0700,nosuid,nodev,noexec
+      - /run/alaveteli-convert2:mode=0700,nosuid,nodev,noexec
+      - /run/alaveteli-convert3:mode=0700,nosuid,nodev,noexec
+      - /run/alaveteli-convert4:mode=0700,nosuid,nodev,noexec
+      - /run/alaveteli-convert5:mode=0700,nosuid,nodev,noexec
+      - /run/alaveteli-convert6:mode=0700,nosuid,nodev,noexec
+      - /run/alaveteli-convert7:mode=0700,nosuid,nodev,noexec
+      - /run/alaveteli-convert8:mode=0700,nosuid,nodev,noexec
+      - /run/alaveteli-convert9:mode=0700,nosuid,nodev,noexec
+      - /run/alaveteli-convert10:mode=0700,nosuid,nodev,noexec
+      - /run/alaveteli-convert11:mode=0700,nosuid,nodev,noexec
+      - /run/alaveteli-convert12:mode=0700,nosuid,nodev,noexec
+      - /run/alaveteli-convert13:mode=0700,nosuid,nodev,noexec
+      - /run/alaveteli-convert14:mode=0700,nosuid,nodev,noexec
+      - /run/alaveteli-convert15:mode=0700,nosuid,nodev,noexec
+      - /run/alaveteli-convert16:mode=0700,nosuid,nodev,noexec
+    volumes:
+      - ./:/alaveteli
+      - bundle:/bundle
+    depends_on:
+      - specs-db
+      - specs-redis
+
+  specs-db:
+    profiles: [specs]
+    build:
+      context: .
+      dockerfile: docker/Dockerfile-postgres
+    # Test data need not survive a crash, so nothing waits for the disk.
+    command: postgres -c fsync=off -c synchronous_commit=off -c full_page_writes=off
+    environment:
+      - POSTGRES_PASSWORD=password
+    volumes:
+      - specs-postgres:/var/lib/postgresql
+
+  specs-redis:
+    profiles: [specs]
+    image: library/redis
+    command: redis-server
+
   db:
     build:
       context: .
@@ -51,9 +119,9 @@ services:
     environment:
       - POSTGRES_PASSWORD=password
     ports:
-      - 6432:5432
+      - 127.0.0.1:6432:5432
     volumes:
-      - postgres:/var/lib/postgresql/data
+      - postgres:/var/lib/postgresql
 
   redis:
     image: library/redis
@@ -64,9 +132,10 @@ services:
   smtp:
     image: mailhog/mailhog
     ports:
-      - 1080:8025
+      - 127.0.0.1:1080:8025
 
 volumes:
   bundle: {}
   postgres: {}
+  specs-postgres: {}
   redis: {}

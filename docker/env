@@ -5,5 +5,5 @@ set -e
 cd "$(dirname "$0")/.."
 
 if [ -e .ruby-version ]; then
-  export RUBY_VERSION="$(cat .ruby-version)"
+  export APP_RUBY_VERSION="$(cat .ruby-version)"
 fi

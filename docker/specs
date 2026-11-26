@@ -1,0 +1,60 @@
+#!/bin/sh
+
+# The whole spec suite as several processes at once (bin/parallel_specs), in
+# its own services: a database server and Redis that development does not
+# use, so a run never touches development's data.
+#
+#   docker/specs                 every spec, one process per core
+#   docker/specs -n 4            four processes
+#   docker/specs spec/models     only these files or folders
+#   docker/specs --record        also save how long each file took
+#
+# Inside the container the suite runs from a copy of the checkout on the
+# container's own disk: a folder shared with the host is several times slower
+# to read. The copy takes the example configuration, so the checkout's own
+# config files are neither needed nor changed.
+
+set -e
+
+cd "$(dirname "$0")/.."
+
+if [ -z "$DOCKER" ]; then
+  . docker/env
+  docker compose --profile specs run --rm \
+    ${COVERAGE:+-e COVERAGE="$COVERAGE"} specs ./docker/specs "$@"
+  exit
+fi
+
+copy=/alaveteli-specs
+
+tar -C /alaveteli \
+  --exclude=./.git --exclude=./tmp --exclude=./log --exclude=./storage \
+  --exclude=./coverage --exclude=./node_modules \
+  -cf - . | tar -C "$copy" -xf -
+ln -sfn /alaveteli/.git "$copy/.git"
+git config --global --add safe.directory "$copy"
+cd "$copy"
+
+mkdir -p log
+ln -sf /dev/null log/test.log
+cp config/storage.yml-example config/storage.yml
+[ -f config/database.yml ] || cp config/database.yml-example config/database.yml
+[ -f config/general.yml ] || cp config/general.yml-example config/general.yml
+
+bundle check >/dev/null || bundle install
+wait-for-it specs-db:5432 --strict --quiet
+RAILS_ENV=test ANNOTATERB_SKIP_ON_DB_TASKS=1 bin/rails db:migrate >/dev/null
+
+status=0
+bin/parallel_specs "$@" || status=$?
+
+# What a run leaves for the checkout: the timings --record saves, and the
+# coverage report when coverage was on.
+if ! cmp -s spec/parallel_runtime.json /alaveteli/spec/parallel_runtime.json; then
+  cp spec/parallel_runtime.json /alaveteli/spec/parallel_runtime.json
+fi
+if [ -d coverage ]; then
+  rm -rf /alaveteli/coverage
+  cp -R coverage /alaveteli/coverage
+fi
+exit $status

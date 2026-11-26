@@ -1,81 +1,107 @@
-# Welcome to Alaveteli!
+# Nedervetil
 
-[![CI](https://img.shields.io/github/actions/workflow/status/mysociety/alaveteli/ci.yml?label=CI)](http://github.com/mysociety/alaveteli/actions?query=workflow%3ACI)
-[![RuboCop](https://img.shields.io/github/actions/workflow/status/mysociety/alaveteli/rubocop.yml?label=RuboCop)](https://github.com/mysociety/alaveteli/actions?query=workflow%3ARuboCop)
-[![Coverage Status](https://img.shields.io/coveralls/github/mysociety/alaveteli/develop)](https://coveralls.io/r/mysociety/alaveteli)
-[![Code Climate](https://img.shields.io/codeclimate/maintainability-percentage/mysociety/alaveteli)](https://codeclimate.com/github/mysociety/alaveteli)
-[![Installability: Gold](http://img.shields.io/badge/installability-gold-ffd700.svg "Installability: Gold")](http://mysociety.github.io/installation-standards.html)
+Nedervetil is an AGPL-3.0 fork of [Alaveteli](https://alaveteli.org) built around
+**private-by-default Freedom of Information requests** and a **separate, reviewed
+public documents catalogue**.
 
-This is an open source project to create a standard, internationalised
-platform for making Freedom of Information (FOI) requests in different
-countries around the world. The software started off life as
-[WhatDoTheyKnow](https://www.whatdotheyknow.com), a website produced by
-[mySociety](http://mysociety.org) for making FOI requests in the UK.
+Request correspondence stays private to the requester and authorised
+administrators. Documents selected from replies can be inspected, redacted,
+reviewed, and published independently.
 
-We hope that by joining forces between teams across the world, we can
-all work together on producing the best possible software, and help
-move towards a world where governments approach transparency as the
-norm, rather than the exception.
+## Key Capabilities
 
-Please join our [developers mailing list](https://groups.google.com/group/alaveteli-dev)
-and introduce yourself, or drop a line to hello@alaveteli.org to let us know
-that you're using Alaveteli.
+- **Private-by-default archive:** Requests are `requester_only` (or `hidden`);
+  public search indexes authorities, topics, and published documents rather than
+  private request threads or user profiles.
+- **Public documents & redaction workflow:** Requesters nominate reply
+  attachments, edit or redact PDFs and Office files, and submit them to an admin
+  review queue before publication.
+- **Sandboxed document conversion:** PDF, Office, and mail converters run inside
+  bubblewrap + seccomp-BPF converter cells (`pdf`, `office`, `mail`) with
+  strict timeouts and memory limits. See [doc/SANDBOX.md](doc/SANDBOX.md).
+- **Requester inbox & deadlines:** Statutory working-day deadlines, overdue
+  reminders, EIR extensions, regulator packs, refusal-advice guidance, and
+  voluntary classification.
+- **Topics, authority groups & feeds:** Database-managed topic pages and
+  datasets, authority groups, FOI statistics, and regulator decision feeds.
+- **Core help engine & theming:** Theme-optional neutral UI (Propshaft, Dart
+  Sass, Stimulus, Turbo Drive — no jQuery or Bootstrap) plus a Markdown/YAML
+  help-pack engine served at `/help`.
+- **Optional external integrations:** Reply reading (`IncomingAttention`) and
+  hidden-content name checking (`Disclosures::PiiCheck`, e.g. with the open
+  [HMC83/name-detector-32m-cells](https://huggingface.co/HMC83/name-detector-32m-cells)
+  model or Presidio) are optional contracts disabled by default.
 
-There's lots of useful information and documentation (including a blog)
-on [the project website](http://alaveteli.org). There's background
-information and notes on [our
-wiki](https://github.com/mysociety/alaveteli/wiki/Home/), and upgrade
-notes in the [`doc/`
-folder](https://github.com/mysociety/alaveteli/tree/master/doc/CHANGES.md).
+## Quick Start (Docker)
 
-## Installing
+The quickest way to explore Nedervetil locally is with Docker Compose and the
+companion MIT-licensed demo theme
+([FOIMonkey/nedervetil-test-theme](https://github.com/FOIMonkey/nedervetil-test-theme)):
 
-We've been working hard to make Alaveteli easy to install and re-use anywhere. Please
-see [the project website](http://alaveteli.org) for instructions on installing Alaveteli.
+```sh
+git clone https://github.com/FOIMonkey/nedervetil-app.git
+cd nedervetil-app
+./docker/setup
+./docker/server -d
+```
 
-## Compatibility
+Then open:
 
-Every Alaveteli commit is tested by GitHub Actions on the [following Ruby platforms](https://github.com/mysociety/alaveteli/blob/develop/.github/workflows/ci.yml#L27-L29):
+- **App:** http://localhost:3000
+- **Captured mail (MailHog):** http://localhost:1080
 
-* `ruby-3.4`
+To run with core's neutral theme and no external theme repository:
 
-If you use a ruby version management tool (such as RVM or `.rbenv`) and want to use the default development version used by the Alaveteli team (currently 3.4.7), you can create a `.ruby-version` symlink with a target of `.ruby-version.example` to switch to that automatically in the project directory.
+```sh
+NO_THEME=1 ./docker/setup
+./docker/server -d
+```
 
-## How to contribute
+See [docker/README.md](docker/README.md) for sample accounts, two-factor setup
+for admin accounts, resetting the database, and running the parallel spec suite
+(`docker/specs`).
 
-If you find what looks like a bug:
+## Documentation
 
-* Check the [GitHub issue tracker](http://github.com/mysociety/alaveteli/issues/)
-  to see if anyone else has reported issue.
-* If you don't see anything, create an issue with information on how to reproduce it.
+- [doc/STACK.md](doc/STACK.md) — runtime, database, queues, auth, and asset stack
+- [doc/FORK.md](doc/FORK.md) — fork design notes and inherited file contracts
+- [doc/SANDBOX.md](doc/SANDBOX.md) — bubblewrap + seccomp-BPF converter sandbox
+- [doc/THEME-ASSETS-UPGRADE.md](doc/THEME-ASSETS-UPGRADE.md) — building themes with Propshaft and Dart Sass
+- [docker/README.md](docker/README.md) — local Docker quick start and spec runner
 
-If you want to contribute an enhancement or a fix:
+## Checks & Tests
 
-* Fork the project on GitHub.
-* Make a topic branch from the develop branch.
-* Make your changes with tests.
-* Commit the changes without making changes to any files that aren't related to your enhancement or fix.
-* Send a pull request against the develop branch.
+```sh
+bin/ci           # RuboCop (Lint/Metrics/Rails/Security/Performance), Zeitwerk, dead_code, bundler-audit, importmap audit, Brakeman
+docker/specs     # Parallel RSpec suite in isolated test containers
+```
 
-Looking for the latest stable release? It's on the
-[master branch](https://github.com/mysociety/alaveteli/tree/master).
+## Licence & Attribution
 
-We have some more notes for developers [on the project site](http://alaveteli.org/docs/developers/).
+Nedervetil is licensed under the **GNU Affero General Public License v3.0**
+([LICENSE.txt](LICENSE.txt)). It is derived from
+[Alaveteli](https://github.com/mysociety/alaveteli) by
+[mySociety](https://www.mysociety.org/).
 
-## Examples
+### Upstream Acknowledgements
 
-* [WhatDoTheyKnow](https://www.whatdotheyknow.com)
-* [KiMitTud](http://kimittud.atlatszo.hu)
-* [Informace Pro Všechny](http://www.infoprovsechny.cz)
-* [fyi.org.nz](https://fyi.org.nz)
-* [RightToKnow](https://www.righttoknow.org.au)
+Full upstream Alaveteli git history and commit authorship are preserved up to
+commit `6f671199e` (30 September 2026). This fork also incorporates later
+upstream fixes from `mysociety/alaveteli`, with credit to their original
+authors:
 
-See more at [alaveteli.org](http://alaveteli.org/deployments/).
-
-## Acknowledgements
-
-Thanks to [Browserstack](https://www.browserstack.com/) who let us use their
-web-based cross-browser testing tools for this project.
-
-This product includes GeoLite data created by MaxMind, available from
-<a href="http://www.maxmind.com">http://www.maxmind.com</a>.
+- **Graeme Porteous** — `0.46.8.0` `fetch_url!` / `Net::HTTP` holiday feed
+  import fixes (`Icalendar::Parser::ParseError` handling and removal of
+  `URI.open`), fixing attachment text extraction skipping later attachments,
+  the `pstore 0.3.0` path spec fix, fixing orphaned mail-server-log search
+  documents (`9716`), and immediate purging of unattached blobs stripped from
+  ActionText fields (`0.47.0.0`).
+- **Gareth Rees** — `0.46.8.0` holiday import HTTP/HTTPS URL validation, POST
+  preview, and `fetch_url!` redirect handling; masking incoming message
+  subjects in quoted-only body fallbacks (`IncomingMessage#safe_subject`); and
+  upstream `develop` refinements to reverting a reported request (`eeeb055bb`).
+- **Laurent Savaëte** — preventing attachment unlocking when the underlying raw
+  email is absent (`15f1820b9`, incorporated prior to the move to one-file
+  storage), the upstream `develop` design for reverting a reported request
+  (`69ed931b1`), and upstream `pg_trgm` trigram similarity search branch work
+  used for authority name typo fallback.

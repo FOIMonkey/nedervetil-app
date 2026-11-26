@@ -7,6 +7,6 @@ cd "$(dirname "$0")/.."
 if [ -z "$DOCKER" ]; then
   . docker/env
   export COMPOSE_MENU=${COMPOSE_MENU:-0}
-  docker compose up
+  docker compose up "$@"
   exit
 fi

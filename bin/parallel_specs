@@ -1,0 +1,242 @@
+#!/usr/bin/env ruby
+# Runs the spec suite as several rspec processes at once.
+#
+#   bin/parallel_specs                 every spec file, one process per core
+#   bin/parallel_specs -n 4            four processes
+#   bin/parallel_specs --shard 2/6     the second of six shares of the suite
+#   bin/parallel_specs --record        also save how long each file took
+#   bin/parallel_specs spec/models     only these files or folders
+#
+# Each process is numbered through TEST_ENV_NUMBER ("" for the first, then
+# "2", "3", ...) and gets, from that number, its own:
+#
+#   - database, a copy of the test database made before the run
+#   - storage folders (config/storage.yml)
+#   - Redis database
+#   - sandbox folder, when one exists for it (see sandbox_volume below)
+#
+# Files are shared out by the time each took last time
+# (spec/parallel_runtime.json), so the processes finish together. A file
+# that fails is run once more, alone: an example that passes then is
+# reported as unsteady, and the run still passes.
+#
+# Coverage (COVERAGE=local or CI set) is merged across the processes by
+# SimpleCov, which reads TEST_ENV_NUMBER and PARALLEL_TEST_GROUPS.
+require 'etc'
+require 'fileutils'
+require 'json'
+require 'open3'
+require 'optparse'
+require 'uri'
+
+ROOT = File.expand_path('..', __dir__)
+RUNTIME_LOG = File.join(ROOT, 'spec/parallel_runtime.json')
+OUT = File.join(ROOT, 'tmp/parallel_specs')
+Dir.chdir(ROOT)
+
+options = { processes: Etc.nprocessors, shard: [1, 1], record: false }
+OptionParser.new do |parser|
+  parser.on('-n', '--processes N', Integer) { |n| options[:processes] = n }
+  parser.on('--shard I/K') do |value|
+    options[:shard] = value.split('/').map { |part| Integer(part) }
+  end
+  parser.on('--record') { options[:record] = true }
+end.parse!
+
+def spec_files(paths)
+  paths = ['spec'] if paths.empty?
+  files = paths.flat_map do |path|
+    File.directory?(path) ? Dir[File.join(path, '**/*_spec.rb')] : [path]
+  end
+  files.map { |file| file.delete_prefix('./') }.uniq.sort
+end
+
+# Shares files between `count` groups so each group's recorded time is as
+# even as it can be: longest file first, each to the lightest group so far.
+# A file with no recorded time is weighed by its size.
+def share(files, count, times)
+  groups = Array.new(count) { { files: [], weight: 0.0 } }
+  weighed = files.map do |file|
+    [file, times[file] || (File.size(file) / 20_000.0)]
+  end
+  weighed.sort_by { |file, weight| [-weight, file] }.each do |file, weight|
+    lightest = groups.min_by { |group| group[:weight] }
+    lightest[:files] << file
+    lightest[:weight] += weight
+  end
+  groups.map { |group| group[:files].sort }
+end
+
+def suffix(index)
+  index.zero? ? '' : (index + 1).to_s
+end
+
+# The test database's settings, and a copy of it for every process after the
+# first. The copies are made anew each run, so they always have the test
+# database's current tables.
+def prepare_databases(count)
+  script = <<~RUBY
+    config = ActiveRecord::Base.connection_db_config.configuration_hash
+    base = config.fetch(:database)
+    ActiveRecord::Base.connection.disconnect!
+    ActiveRecord::Base.establish_connection(config.merge(database: 'postgres'))
+    connection = ActiveRecord::Base.connection
+    (2..#{count}).each do |number|
+      copy = connection.quote_table_name(base + number.to_s)
+      connection.execute("DROP DATABASE IF EXISTS \#{copy}")
+      connection.execute(
+        "CREATE DATABASE \#{copy} TEMPLATE \#{connection.quote_table_name(base)}"
+      )
+    end
+    puts 'DATABASE=' + config.slice(:adapter, :host, :port, :username, :password, :database).to_json
+  RUBY
+  output, status = Open3.capture2e(
+    { 'RAILS_ENV' => 'test' }, 'bin/rails', 'runner', script
+  )
+  line = output[/^DATABASE=(.*)$/, 1]
+  unless status.success? && line
+    abort "Could not prepare the test databases:\n#{output}"
+  end
+  JSON.parse(line)
+end
+
+def database_url(config, index)
+  URI::Generic.build(
+    scheme: 'postgres',
+    userinfo: [config['username'], config['password']].compact.
+      map { |part| URI.encode_www_form_component(part) }.join(':'),
+    host: config['host'] || 'localhost',
+    port: config['port'],
+    path: "/#{config['database']}#{suffix(index)}"
+  ).to_s
+end
+
+# Redis database 0 is left for development; process 1 takes 1, and so on.
+def redis_url(index)
+  url = ENV.fetch('REDIS_URL', nil)
+  return unless url
+
+  uri = URI(url)
+  uri.path = "/#{index + 1}"
+  uri.to_s
+end
+
+# The sandbox wants a private folder. Where the machine has one per process
+# (the usual folder with the process's number on the end, 1 upwards), each
+# process takes its own; otherwise they share the usual one, and specs that
+# need it to themselves may skip.
+def sandbox_volume(index)
+  base = ENV.fetch('ALAVETELI_SANDBOX_VOLUME', '/run/alaveteli-convert')
+  own = "#{base}#{index + 1}"
+  own if File.directory?(own)
+end
+
+def environment(config, index, count)
+  {
+    'RAILS_ENV' => 'test',
+    'TEST_ENV_NUMBER' => suffix(index),
+    'PARALLEL_TEST_GROUPS' => count.to_s,
+    'DATABASE_URL' => database_url(config, index),
+    'REDIS_URL' => redis_url(index),
+    'ALAVETELI_SANDBOX_VOLUME' => sandbox_volume(index)
+  }.compact
+end
+
+def rspec(env, files, name)
+  result = File.join(OUT, "#{name}.json")
+  log = File.join(OUT, "#{name}.log")
+  pid = spawn(
+    env, 'bundle', 'exec', 'rspec',
+    '-r', './spec/spec_helper', '-r', './spec/integration/alaveteli_dsl',
+    *files, '--format', 'progress', '--format', 'json', '--out', result,
+    out: log, err: log
+  )
+  [pid, result, log]
+end
+
+def read_result(path)
+  JSON.parse(File.read(path, encoding: 'UTF-8'))
+rescue Errno::ENOENT, JSON::ParserError
+  nil
+end
+
+def failures(result)
+  result['examples'].select { |example| example['status'] == 'failed' }
+end
+
+unless File.read('config/storage.yml').include?('TEST_ENV_NUMBER')
+  abort 'config/storage.yml gives every process the same test folders. ' \
+        'Copy the test entries from config/storage.yml-example.'
+end
+
+times = File.exist?(RUNTIME_LOG) ? JSON.parse(File.read(RUNTIME_LOG)) : {}
+shard, shards = options[:shard]
+files = share(spec_files(ARGV), shards, times).fetch(shard - 1)
+count = options[:processes].clamp(1, [files.size, 1].max)
+abort 'No spec files to run.' if files.empty?
+
+FileUtils.rm_rf(OUT)
+FileUtils.mkdir_p(OUT)
+started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+config = prepare_databases(count)
+puts "#{files.size} spec files in #{count} processes" \
+     "#{" (share #{shard} of #{shards})" if shards > 1}"
+
+runs = share(files, count, times).each_with_index.map do |group, index|
+  rspec(environment(config, index, count), group, "process#{index + 1}")
+end
+statuses = runs.to_h { |pid, _, _| [pid, Process.wait2(pid).last] }
+
+results = runs.map { |_, result, _| read_result(result) }
+broken = runs.each_with_index.select do |(pid, _, _), index|
+  results[index].nil? ||
+    results[index]['summary']['errors_outside_of_examples_count'].positive? ||
+    (!statuses[pid].success? && failures(results[index]).empty?)
+end
+unless broken.empty?
+  broken.each do |(_, _, log), _|
+    puts "\nA process did not finish cleanly. See #{log}"
+  end
+  exit 1
+end
+
+examples = results.flat_map { |result| result['examples'] }
+failed = examples.select { |example| example['status'] == 'failed' }
+pending = examples.count { |example| example['status'] == 'pending' }
+
+if options[:record]
+  recorded = examples.
+    group_by { |example| example['file_path'].delete_prefix('./') }.
+    transform_values { |list| list.sum { |one| one['run_time'] }.round(2) }
+  log = JSON.pretty_generate(times.merge(recorded).sort.to_h)
+  File.write(RUNTIME_LOG, "#{log}\n")
+end
+
+still_failing = failed
+unsteady = []
+unless failed.empty?
+  again = failed.map { |example| example['file_path'] }.uniq
+  puts "\n#{failed.size} failed. " \
+       "Running #{again.size} file(s) once more, alone."
+  alone = environment(config, 0, 1).except('PARALLEL_TEST_GROUPS')
+  pid, result, = rspec(alone, again, 'rerun')
+  Process.wait(pid)
+  rerun = read_result(result)
+  loaded = rerun && rerun['summary']['errors_outside_of_examples_count'].zero?
+  still_failing = loaded ? failures(rerun) : failed
+  still = still_failing.map { |example| example['id'] }
+  unsteady = failed.reject { |example| still.include?(example['id']) }
+end
+
+seconds = (Process.clock_gettime(Process::CLOCK_MONOTONIC) - started).round
+puts "\n#{examples.size} examples, #{still_failing.size} failures, " \
+     "#{pending} pending, in #{seconds / 60} min #{seconds % 60} s"
+unsteady.each do |example|
+  puts "Unsteady (failed, then passed alone): #{example['id']} " \
+       "#{example['full_description']}"
+end
+still_failing.each do |example|
+  puts "\nFailed: #{example['id']} #{example['full_description']}"
+  puts example.dig('exception', 'message').to_s.lines.first(8).join
+end
+exit(still_failing.empty? ? 0 : 1)

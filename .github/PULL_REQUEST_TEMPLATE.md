@@ -1,15 +1,7 @@
-## Relevant issue(s)
+## Summary
 
-## What does this do?
+## Why
 
-## Why was this needed?
-
-## Implementation notes
-
-## Screenshots
-
-## Notes to reviewer
-
-<hr>
-
-Have you updated the changelog? If this is not necessary, put square brackets around this: skip changelog
+## Verification
+- [ ] Relevant RSpec specs pass
+- [ ] `bin/ci` passes (RuboCop, Zeitwerk, dead code, Brakeman, bundler-audit)

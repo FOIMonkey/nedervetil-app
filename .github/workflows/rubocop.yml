@@ -2,29 +2,47 @@ name: RuboCop
 
 on:
   pull_request:
-    types:
-      - opened
-      - synchronize
+  push:
+    branches: [main]
 
 permissions:
   contents: read
 
+concurrency:
+  group: rubocop-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  build:
+  rubocop:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
-    - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
-    - name: Install Ruby
-      uses: ruby/setup-ruby@v1
-      with:
-        ruby-version: 3.2
+      # Ruby comes from .ruby-version. The full bundle is not installed: it
+      # needs the app's system libraries, and RuboCop needs none of it.
+      - uses: ruby/setup-ruby@be3c7df29b3349ec6bcfc6b4792f1cf9f5237d18 # v1.343.0
 
-    - name: Run RuboCop linter
-      uses: reviewdog/action-rubocop@v2.14.0
-      with:
-        github_token: ${{ secrets.github_token }}
-        rubocop_flags: -DES
-        rubocop_version: gemfile
-        rubocop_extensions: rubocop-performance:gemfile rubocop-rails:gemfile
-        level: warning
+      # The RuboCop gems at the versions in Gemfile.lock, so CI checks with
+      # what developers run and moves when Dependabot updates the lock.
+      - name: Install RuboCop from Gemfile.lock
+        run: |
+          gems=$(ruby -rbundler -e '
+            # rubocop-ast before rubocop, so rubocop does not pull in a newer one
+            names = %w[rubocop-ast rubocop rubocop-capybara rubocop-factory_bot rubocop-performance rubocop-rails]
+            specs = Bundler::LockfileParser.new(File.read("Gemfile.lock")).specs
+            pins = names.map do |name|
+              spec = specs.find { |s| s.name == name } or abort "#{name} is not in Gemfile.lock"
+              "#{name}:#{spec.version}"
+            end
+            puts pins.join(" ")
+          ')
+          echo "Installing $gems"
+          gem install --no-document $gems
+          version=$(echo "$gems" | tr ' ' '\n' | sed -n 's/^rubocop:\(.*\)$/\1/p')
+          echo "RUBOCOP_VERSION=$version" >> "$GITHUB_ENV"
+
+      - name: Run RuboCop
+        run: rubocop "_${RUBOCOP_VERSION}_" --format github --format offenses

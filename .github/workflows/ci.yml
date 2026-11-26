@@ -1,155 +1,101 @@
 name: CI
 
 on:
-  push:
-    branches: [master, develop]
   pull_request:
-    types:
-      - opened
-      - synchronize
-
-concurrency:
-  group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
-  cancel-in-progress: true
+  push:
+    branches: [main]
 
 permissions:
   contents: read
 
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  check:
+  checks:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
 
-    outputs:
-      skip_rspec: ${{ steps.skip.outputs.skip_rspec }}
+    services:
+      postgres:
+        image: postgres:17-trixie
+        env:
+          POSTGRES_HOST_AUTH_METHOD: trust
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
 
     env:
-      GH_TOKEN: ${{ github.token }}
-
-    steps:
-    - name: Check for [skip rspec]
-      id: skip
-      env:
-        PR_DESCRIPTION: ${{ github.event.pull_request.body }}
-      run: |
-        if [ "${{ github.event_name }}" = "pull_request" ]; then
-          if echo "$PR_DESCRIPTION" | grep -q "\[skip rspec\]"; then
-            echo "Skip RSpec found in PR description. Passing the action."
-            echo "skip_rspec=true" >> $GITHUB_OUTPUT
-            exit
-          fi
-        fi
-        echo "skip_rspec=false" >> $GITHUB_OUTPUT
-
-  rspec:
-    name: Ruby ${{ matrix.ruby }} / PostgreSQL ${{ matrix.postgres }}
-    runs-on: ubuntu-latest
-
-    needs: check
-    if: needs.check.outputs.skip_rspec == 'false'
-
-    permissions:
-      contents: read
-      checks: write # for coverallsapp/github-action to create new checks
-
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-        - { ruby: '3.4', postgres: 15.19 }
-
-    env:
-      DATABASE_URL: postgres://postgres:postgres@localhost:5432/alaveteli_test
       RAILS_ENV: test
+      PGHOST: 127.0.0.1
+      PGUSER: postgres
+      REDIS_URL: redis://127.0.0.1:6379/0
 
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
-      with:
-        submodules: true
-
-    - name: Start PostgreSQL
-      run: |
-        docker build \
-          --build-arg POSTGRES_VERSION=${{ matrix.postgres }} \
-          --file docker/Dockerfile-postgres --tag alaveteli-postgres .
-        docker run --detach --name postgres \
-          --env POSTGRES_PASSWORD=postgres --publish 5432:5432 \
-          alaveteli-postgres
-        for _ in $(seq 60); do
-          if docker exec postgres \
-               pg_isready -q -h 127.0.0.1 -U postgres -d alaveteli_test; then
-            exit 0
-          fi
-          sleep 2
-        done
-        docker logs postgres
-        exit 1
-
-    - name: Cache apt packages
-      uses: actions/cache@v4
-      with:
-        path: /var/cache/apt/archives
-        key: apt-${{ runner.os }}-${{ hashFiles('config/packages') }}
-
-    - name: Install packages
-      env:
-        DEBIAN_FRONTEND: noninteractive
-      run: |
-        sudo apt-get -y update
-        sudo apt-get -y install --no-install-recommends \
-          exim4-daemon-light \
-          $(cut -d ' ' -f 1 config/packages | grep -Ev '(^#|wkhtml|bundler|^ruby|^rake)')
-
-    - name: Install Ruby ${{ matrix.ruby }}
-      uses: ruby/setup-ruby@v1
-      with:
-        ruby-version: ${{ matrix.ruby }}
-        bundler-cache: true
-
-    - name: Configure application and storage
-      run: |
-        cp config/general.yml-example config/general.yml
-        cp config/storage.yml-example config/storage.yml
-
-    - name: Install theme
-      run: |
-        bundle exec rake themes:install
-
-    - name: Migrate database
-      run: |
-        bundle exec rails db:migrate
-
-    - name: Run core tests
-      run: |
-        bundle exec rspec --format Fivemat
-
-    - name: Run nested gems tests
-      run: |
-        bundle exec rspec gems/*/spec --format Fivemat
-
-    - name: Coveralls Parallel
-      uses: coverallsapp/github-action@v2
-      continue-on-error: true
-      with:
-        github-token: ${{ secrets.github_token }}
-        flag-name: run-${{ matrix.ruby }}-${{ matrix.gemfile || 'Gemfile' }}
-        parallel: true
-        fail-on-error: false
-
-  coveralls:
-    name: Coveralls
-    runs-on: ubuntu-latest
-
-    needs: rspec
-
-    permissions:
-      contents: read
-      checks: write
-
-    steps:
-      - name: Coveralls Finished
-        uses: coverallsapp/github-action@v2
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          github-token: ${{ secrets.github_token }}
-          parallel-finished: true
-          fail-on-error: false
+          persist-credentials: false
+
+      - name: Install system packages
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y --no-install-recommends \
+            libpq-dev libmagic-dev libyaml-dev libffi-dev \
+            poppler-utils qpdf ghostscript imagemagick \
+            elinks tnef libemail-address-perl libemail-outlook-message-perl
+
+      - uses: ruby/setup-ruby@be3c7df29b3349ec6bcfc6b4792f1cf9f5237d18 # v1.343.0
+        with:
+          bundler-cache: true
+
+      - name: Configure test environment
+        run: |
+          cat > config/database.yml <<'YAML'
+          test:
+            adapter: postgresql
+            encoding: unicode
+            database: alaveteli_test
+            host: 127.0.0.1
+            username: postgres
+            pool: 5
+          YAML
+          cp config/storage.yml-example config/storage.yml
+          cp config/general.yml-example config/general.yml
+          bundle exec rails db:create db:migrate
+
+      - name: Zeitwerk autoload check
+        run: bundle exec rails zeitwerk:check
+
+      - name: Dead code check
+        run: bundle exec rails dead_code
+
+      - name: Brakeman security scan
+        run: bundle exec brakeman --quiet --no-pager --exit-on-warn --exit-on-error
+
+      - name: Bundler audit
+        run: bundle exec bundle-audit check --update
+
+      - name: Build stylesheets
+        run: bundle exec rails dartsass:build
+
+      - name: Core smoke specs
+        run: |
+          bundle exec rspec \
+            spec/integration/private_archive_spec.rb \
+            spec/integration/sample_data_spec.rb \
+            spec/integration/health_checks_spec.rb \
+            spec/lib/configuration_spec.rb
