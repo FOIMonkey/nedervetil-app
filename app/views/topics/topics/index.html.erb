@@ -1,0 +1,12 @@
+<% content_for :body_class, 'band-view' %>
+<% step = params[:step].to_s.presence_in(%w[own fix]).to_s %>
+<div class="topic-page triage">
+  <header class="page-band">
+    <div>
+      <h1 class="page-band__title"><%= _('What do you want to know?') %></h1>
+      <%= render 'topics/topics/nations', path: ->(key) { topics_path(step: step.presence, nation: topic_place(key)) } %>
+    </div>
+  </header>
+  <%= band_notice %>
+  <div class="triage-screen"><%= render 'topics/topics/front', step: step %></div>
+</div>

@@ -1,0 +1,5 @@
+<%# Escape closes it. %>
+<details class="ask-elsewhere" data-controller="details-escape" data-action="keydown@document->details-escape#close">
+  <summary class="<%= local_assigns.fetch(:summary_class, 'topic-questions__ask') %>"><%= local_assigns.fetch(:label, _('Make request')) %><% if about %><span class="visually-hidden">: <%= about %></span><% end %></summary>
+  <p class="ask-elsewhere__note"><%= _('Accounts here are invite-only.') %><% if url %><% ask_link = capture do %><%= link_to url, class: 'topic-out' do %><%= _('ask on {{other_site_name}}', other_site_name: Topics::OtherSite.name) %><span class="visually-hidden"> <%= _('(another site)') %></span><% end %><% end %> <%= _('You can {{ask_link}} instead. Your request and any replies there will be public.', ask_link: ask_link) %><% end %></p>
+</details>

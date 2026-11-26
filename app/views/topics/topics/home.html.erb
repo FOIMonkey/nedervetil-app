@@ -1,0 +1,69 @@
+<% content_for :body_class, 'band-view has-page-search' %>
+<div class="topics">
+  <section class="page-band page-band--topics" aria-labelledby="topics-title">
+    <h1 id="topics-title" class="page-band__title page-band__title--huge"><%= _('What do you want to know?') %></h1>
+    <p class="page-band__summary topics__pitch"><%= current_user ? _('Find who holds it, see what’s already released, and ask in private.') : _('Find who holds it and see what’s already released.') %></p>
+    <%# Rows the beam can point at (CSS :has): the search box, each topic, then the row for all of them. %>
+    <% more = @topic_count.to_i > @topics.size %>
+    <% rows = 1 + @topics.size + (more ? 1 : 0) %>
+    <div class="torch" style="<%= torch_style(rows) %>">
+      <%= render 'topics/topics/torch_image' %>
+      <div class="torch__beam" aria-hidden="true"></div>
+      <div class="torch__find">
+        <%= form_tag disclosure_documents_path, method: :get, role: 'search', enforce_utf8: false, class: 'torch__search' do %>
+          <label for="topics-q" class="visually-hidden"><%= _('Search the documents') %></label>
+          <input type="search" id="topics-q" name="q" placeholder="<%= _('Bin collections') %>" maxlength="200" autocomplete="off">
+          <button type="submit" class="button"><%= _('Search') %></button>
+        <% end %>
+      </div>
+      <ul class="torch__topics">
+        <% @topics.each_with_index do |topic, index| %>
+          <li class="torch__row torch__row--<%= index + 1 %>">
+            <a href="<%= topic_path(topic.slug) %>">
+              <span class="torch__title"><%= topic.title %></span>
+              <span class="torch__summary"><%= topic.summary %></span>
+            </a>
+          </li>
+        <% end %>
+        <% if more %>
+          <li class="torch__row torch__row--<%= rows - 1 %> torch__row--all">
+            <%= link_to topics_path do %><span class="torch__title"><%= _('All topics') %></span><% end %>
+          </li>
+        <% end %>
+      </ul>
+    </div>
+  </section>
+  <%= band_notice %>
+
+  <section class="asked" aria-labelledby="topics-asked">
+    <h2 id="topics-asked"><%= _('Questions people ask') %></h2>
+    <ul class="asked__list">
+      <% @topics.each do |topic| %>
+        <li>
+          <%= link_to topic.title, topic_path(topic.slug), class: 'asked__topic' %>
+          <ul class="asked__questions">
+            <% topic.questions.select { |question| question.useful_for?('england') }.first(2).each do |question| %>
+              <li>
+                <%= link_to question.text, topic_question_path(topic.slug, question.slug), class: 'asked__question' %>
+              </li>
+            <% end %>
+          </ul>
+        </li>
+      <% end %>
+    </ul>
+  </section>
+
+  <% if @latest.any? %>
+    <section class="papers-section" aria-labelledby="topics-latest">
+      <h2 id="topics-latest"><%= _('Recently published here') %></h2>
+      <ul class="papers">
+        <%= render partial: 'topics/topics/paper', collection: @latest, as: :document, locals: { sheets: @latest_sheets } %>
+      </ul>
+    </section>
+  <% end %>
+
+  <p class="topics__other">
+    <%= _('Something else?') %> <%= link_to _('Search documents'), disclosure_documents_path %>
+    <%= _('or {{browse_authorities}}.', browse_authorities: link_to(_('browse authorities'), authority_groups_path)) %>
+  </p>
+</div>

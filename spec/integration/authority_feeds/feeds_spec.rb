@@ -94,7 +94,6 @@ RSpec.describe 'Authority pages fed by data' do
 
   describe 'the Overview' do
     it 'puts up-to-date figures at the top, with tabs, and leaves the panel out' do
-      skip 'Topics arrives in B12' unless defined?(Topics::Topic)
       statistics(glenmoor, %w[2024-25 2025-26])
       decisions(glenmoor, 'sic_decisions',
                 [['003/2026', Date.new(2026, 1, 13), 'For applicant',
@@ -138,7 +137,6 @@ RSpec.describe 'Authority pages fed by data' do
     end
 
     it 'shows no figures for too few requests, and no tab row for an authority with nothing but tags' do
-      skip 'Topics arrives in B12' unless defined?(Topics::Topic)
       counts['requests'] = FoiStatistics::MIN_REQUESTS - 1
       statistics(glenmoor, %w[2025-26])
       get "/body/#{glenmoor.url_name}"
@@ -159,7 +157,6 @@ RSpec.describe 'Authority pages fed by data' do
     end
 
     it 'leaves out what an admin unticked, and places notes by colour' do
-      skip 'Topics arrives in B12' unless defined?(Topics::Topic)
       note('Roads and social care are run by {county}.',
            style: 'yellow', tag: 'district_council')
       note('<h1>20 working days</h1>' \
@@ -294,7 +291,6 @@ RSpec.describe 'Authority pages fed by data' do
     end
 
     it 'leaves the comparison out when no member reports its timings, and copes with a stray comma' do
-      skip 'Topics arrives in B12' unless defined?(Topics::Topic)
       counts.merge!('on_time' => 0, 'late' => 0, 'no_reply' => 0)
       [glenmoor, kirkhaven].each { |body| statistics(body, %w[2025-26]) }
       get '/groups/scotland'
@@ -338,7 +334,6 @@ RSpec.describe 'Authority pages fed by data' do
     end
 
     it 'says who does what, by name and by kind (in an admin’s words), and points to its nation’s topics' do
-      skip 'Topics arrives in B12' unless defined?(Topics::Topic)
       glenmoor
       police
       note('<div><h1>Asking in Scotland</h1><p>Twenty working days.</p></div>',
@@ -709,7 +704,7 @@ RSpec.describe 'Authority pages fed by data' do
     end
 
     it 'save a named authority’s Who does what line, refuse one too long, and clear it with a blank one' do
-      skip 'Topics/Admin summary arrive in B12/B15' unless defined?(Topics::Topic)
+      skip 'Admin public body summary arrives in B15'
       police = FactoryBot.create(:public_body, name: 'Caledon Police',
                                                tag_string: 'police scotland')
       sign_in(admin)
@@ -733,7 +728,7 @@ RSpec.describe 'Authority pages fed by data' do
     end
 
     it 'save the What they hold checklist as holds_not tags, leaving other tags alone' do
-      skip 'Topics/Admin summary arrive in B12/B15' unless defined?(Topics::Topic)
+      skip 'Admin public body summary arrives in B15'
       sign_in(admin)
       get admin_body_path(ashdown)
       boxes = page.css('#body-holds input[type=checkbox]').

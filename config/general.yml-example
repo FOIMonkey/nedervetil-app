@@ -734,6 +734,13 @@ GA_CODE: ''
 # ---
 OVERRIDE_ALL_PUBLIC_BODY_REQUEST_EMAILS: ''
 
+# Optional link to another Alaveteli site shown when sign-ups are closed.
+# OTHER_FOI_SITE_NAME - String (default: '')
+# OTHER_FOI_SITE_URL - String (default: '')
+# ---
+OTHER_FOI_SITE_NAME: ''
+OTHER_FOI_SITE_URL: ''
+
 # Reading replies with an AI service at INCOMING_ATTENTION_ENDPOINT, which
 # flags the ones that need the requester. Off unless INCOMING_ATTENTION_ENABLED
 # is true. The service's token comes from the INCOMING_ATTENTION_AUTH_TOKEN

@@ -40,14 +40,12 @@ RSpec.describe 'Check and send under the request limits', feature: :alaveteli_pr
   end
 
   it 'sends from Check and send through the Pro limit, which refuses a second send within the minute' do
-    if defined?(Topics::Suggestions)
-      get new_alaveteli_pro_info_request_path(public_body: council.url_name,
-                                              question: 'How many abandoned ' \
-                                                        'vehicles in 2025?',
-                                              check: 1)
-      expect(Nokogiri::HTML(response.body).at_css('.request-suggestions').text).
-        to include('How many abandoned vehicles were removed?')
-    end
+    get new_alaveteli_pro_info_request_path(public_body: council.url_name,
+                                            question: 'How many abandoned ' \
+                                                      'vehicles in 2025?',
+                                            check: 1)
+    expect(Nokogiri::HTML(response.body).at_css('.request-suggestions').text).
+      to include('How many abandoned vehicles were removed?')
     first = check('Fly-tipping 2025',
                   'Please provide the number of fly-tipping incidents in 2025.')
     send_from(first)

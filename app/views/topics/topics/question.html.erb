@@ -1,0 +1,76 @@
+<% content_for :body_class, 'band-view' %>
+<% entry = @entry %>
+<% question = entry.question %>
+<% related = @guide.entries.reject { |other| other.slug == entry.slug }.first(3) %>
+<%# One question: what's published, how to find it, then who to ask. The address names the question, so it stays the same in every nation. %>
+<div class="topic-page topic-question triage">
+  <header class="page-band">
+    <div>
+      <p class="page-band__back"><%= link_to @topic.title_for(@nation), topic_page_path(@topic, @nation) %></p>
+      <h1 class="page-band__title"><%= question.text %></h1>
+      <% if question.note %><p class="page-band__summary"><%= question.note %></p><% end %>
+      <%= render 'topics/topics/nations', path: lambda { |key|
+            if @topic.questions.any? { |each| each.slug == question.slug && each.useful_for?(key) }
+              topic_question_path(@topic.slug, question.slug, nation: topic_place(key))
+            else
+              topic_path(@topic.slug, nation: topic_place(key))
+            end
+          } %>
+    </div>
+  </header>
+  <%= band_notice %>
+
+  <div class="topic-question__layout">
+    <div class="topic-question__main">
+      <% if entry.url %>
+        <h2 class="topic-question__lead"><%= question.heading || (question.partial ? _('Some of this is already published') : _('It’s already published')) %></h2>
+        <% unless question.partial %><p class="topic-question__body"><%= _('You can look this up now.') %></p><% end %>
+        <div class="triage-card"><%= render 'topics/topics/published', entry: entry %></div>
+      <% else %>
+        <h2 class="topic-question__lead"><%= _('Someone may have asked already') %></h2>
+        <p class="topic-question__body"><%= _('We don’t know of anywhere that publishes this. Check past answers first.') %></p>
+        <div class="triage-card"><%= render 'topics/topics/search', guide: @guide, words: entry.search_words %></div>
+      <% end %>
+      <%= render 'topics/topics/guides', guides: TopicGuide.for(@topic, entry, drafts: can?(:access, :admin)) %>
+
+      <h2 class="topic-question__then"><%= entry.url ? _('Need more than this?') : _('Still looking?') %></h2>
+      <% if entry.ask? %>
+        <div class="triage-card">
+          <%= render 'topics/topics/who', entry: entry %>
+          <% if question.warning_title %>
+            <p class="triage-warning"><strong><%= question.warning_title %></strong> <%= question.warning_text %></p>
+          <% elsif question.warning %>
+            <p class="triage-warning"><strong><%= _('Usually refused:') %></strong> <%= question.warning %></p>
+          <% end %>
+          <div class="triage-actions"><%= render 'topics/topics/ask', to: entry.ask_to, question: question %></div>
+          <p class="topic-page__note"><%= _('They usually have 20 working days to reply.') %></p>
+        </div>
+      <% else %>
+        <div class="triage-replies"><%= topic_row _('See who holds it'), topic_holders_page_path(@topic, @nation) %></div>
+      <% end %>
+
+      <% if related.any? %>
+        <h2 class="topic-question__then"><%= _('Related questions') %></h2>
+        <div class="triage-replies topic-rows topic-rows--small">
+          <% related.each do |other| %>
+            <%= topic_row other.question.text, topic_question_page_path(@topic, other.question, @nation) %>
+          <% end %>
+        </div>
+      <% end %>
+    </div>
+
+    <nav class="topic-question__side" aria-labelledby="topic-on-this">
+      <h2 id="topic-on-this"><%= _('On this topic') %></h2>
+      <ul class="topic-toc">
+        <% @guide.entries.each do |other| %>
+          <% if other.slug == entry.slug %>
+            <li aria-current="page"><%= other.question.text %></li>
+          <% else %>
+            <li><%= link_to other.question.text, topic_question_page_path(@topic, other.question, @nation) %></li>
+          <% end %>
+        <% end %>
+        <li><%= link_to _('Something not listed'), topic_holders_page_path(@topic, @nation) %></li>
+      </ul>
+    </nav>
+  </div>
+</div>

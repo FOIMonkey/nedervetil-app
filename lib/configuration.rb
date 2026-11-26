@@ -104,6 +104,8 @@ module AlaveteliConfiguration
       MTA_LOG_TYPE: 'exim',
       NEW_REQUEST_RECAPTCHA: false,
       NEW_RESPONSE_REMINDER_AFTER_DAYS: [3, 10, 24],
+      OTHER_FOI_SITE_NAME: '',
+      OTHER_FOI_SITE_URL: '',
       OVERRIDE_ALL_PUBLIC_BODY_REQUEST_EMAILS: '',
       POP_MAILER_ADDRESS: 'localhost',
       POP_MAILER_ENABLE_SSL: true,

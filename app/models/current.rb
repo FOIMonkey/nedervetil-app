@@ -4,6 +4,14 @@ class Current < ActiveSupport::CurrentAttributes
   attribute :page_memo
   # True while the app, not a person, sets a request's status.
   attribute :automatic_classification
+  # Requests with a source check queued for commit.
+  attribute :source_checks_queued
+  # Acting user for TopicChange audit records; nil unless set by controller.
+  attribute :user
+  # Re-entrancy guard during reference-checked topic writes.
+  attribute :topic_write
+  # Cached Topics::Content for this request/job; cleared on TopicChange.
+  attribute :topic_content
 
   # Stops further email reads on this page once one is refused.
   attribute :mail_read_refused

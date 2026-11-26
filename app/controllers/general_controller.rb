@@ -13,12 +13,13 @@ class GeneralController < ApplicationController
   before_action :redirect_pros_to_dashboard, only: :frontpage
 
   def frontpage
-    medium_cache
-    @locale = AlaveteliLocalization.locale
-    @request_events = []
-    @number_of_requests = 0
-    @number_of_authorities = PublicBody.visible.count
-    @feed_autodetect = []
+    @topics = Topics::Topic.home
+    @topic_count = Topics::Topic.all.size
+    latest = Disclosures::Search.new({})
+    @latest = latest.results.first(Topics::TopicsController::LATEST)
+    @latest_sheets = latest.sheet_previews
+    @title = site_name
+    render template: 'topics/topics/home'
   end
 
   # Display blog entries

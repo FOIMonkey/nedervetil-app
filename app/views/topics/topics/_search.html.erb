@@ -1,0 +1,17 @@
+<%# Day zero, before anyone writes a request. %>
+<% past = Topics::OtherSite.search_url(words) %>
+<% if past %>
+  <div class="triage-actions">
+    <%= link_to past, class: 'triage-btn topic-out' do %><%= _('Search past requests') %><span class="visually-hidden"> <%= _('(another site)') %></span><% end %>
+  </div>
+  <p class="topic-page__note"><%= _('Past requests are on {{other_site_name}}.', other_site_name: Topics::OtherSite.name) %> <%= link_to _('Search documents here'), request_journey_link_path(disclosure_documents_path(q: words)) %></p>
+<% else %>
+  <div class="triage-actions"><%= link_to _('Search documents'), request_journey_link_path(disclosure_documents_path(q: words)), class: 'triage-btn' %></div>
+<% end %>
+<% if guide.logs.any? %>
+  <ul class="topic-published">
+    <% guide.logs.each do |item| %>
+      <li><%= topic_link_to item.label, { 'url' => item.url } %><% if item.note %><span class="topic-page__note"><%= item.note %></span><% end %></li>
+    <% end %>
+  </ul>
+<% end %>

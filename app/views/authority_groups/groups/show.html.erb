@@ -6,7 +6,7 @@
 <% decisions = page.decisions(limit: 4).to_a %>
 <% nation = page.nation %>
 <% type_groups = (heading = AuthorityGroups::Group.headings['type']) ? AuthorityGroups::Group.listing(heading).index_by(&:category_tag) : {} %>
-<% datasets = nation && defined?(Topics::Topic) ? Topics::Topic.all.flat_map(&:questions).filter_map { |q| q.dataset_for(nation) }.uniq.select { |d| d.geography == 'la' }.first(5) : [] %>
+<% datasets = nation ? Topics::Topic.all.flat_map(&:questions).filter_map { |q| q.dataset_for(nation) }.uniq.select { |d| d.geography == 'la' }.first(5) : [] %>
 <% cards = Note.with_translations.where(notable_tag: group.tag, style: %w[blue green]).to_a %>
 <%= render 'authority_groups/groups/band', group: group, page: page, current: 'overview', here: documents.any?, elsewhere: releases.any? %>
 <% if page.spotlights.any? %>

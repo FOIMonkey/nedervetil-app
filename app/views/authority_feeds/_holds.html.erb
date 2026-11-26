@@ -2,7 +2,7 @@
 <% items = holdings.items %>
 <% caveats = page.notes.for(:caveat) %>
 <% if items.any? || caveats.any? %>
-  <% nation = defined?(Topics::Holds) ? Topics::Holds.nation(body) : 'england' %>
+  <% nation = Topics::Holds.nation(body) %>
   <% shown = 5 %>
   <section class="body-holds" aria-labelledby="body-holds">
     <h2 id="body-holds"><%= _('What they hold') %></h2>

@@ -1,0 +1,10 @@
+<% holder = entry.holder %>
+<% to = entry.question.ask %>
+<p class="triage-who">
+  <span class="triage-who__label"><%= _('Who to ask') %></span>
+  <%= topic_link_to topic_who(entry) || _('Find who holds it'), holder&.to || to %>
+</p>
+<% if holder&.note %><p class="topic-page__note"><%= holder.note %></p><% end %>
+<% if to['tag'].to_s.end_with?('council') %>
+  <p class="topic-page__note"><%= link_to _('Find your council'), request_journey_link_path(authority_groups_path(anchor: 'groups-place')) %></p>
+<% end %>

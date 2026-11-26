@@ -1,0 +1,1 @@
+<%= link_to entry.url, class: 'triage-btn topic-out' do %><%= entry.question.published_label || (entry.dataset&.kind == 'lookup' ? _('Look it up') : _('View figures')) %><span class="visually-hidden"> <%= _('(another site)') %>: <%= entry.question.text %></span><% end %>

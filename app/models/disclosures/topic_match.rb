@@ -28,8 +28,6 @@ module Disclosures
     end
 
     def self.insert_matches(sql, binds = {})
-      return unless defined?(Topics::Topic)
-
       Topics::Topic.all.select(&:search).each do |topic|
         connection.execute(
           sanitize_sql_array(

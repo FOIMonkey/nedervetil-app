@@ -1,0 +1,50 @@
+<% content_for :body_class, 'band-view' %>
+<% guide = @guide %>
+<% look_up = guide.look_up %>
+<% papers = topic_documents(@topic, 3, @nation) %>
+<%# What can be looked up now, beside what can only be asked for. Each question opens its own page. %>
+<div class="topic-page topic-sorted triage">
+  <header class="page-band">
+    <div>
+      <h1 class="page-band__title"><%= @topic.title_for(@nation) %></h1>
+      <p class="page-band__summary"><%= @topic.summary %></p>
+      <%= render 'topics/topics/nations', path: ->(key) { topic_path(@topic.slug, nation: topic_place(key)) } %>
+    </div>
+  </header>
+  <%= band_notice %>
+
+  <div class="topic-sorted__layout<%= ' topic-sorted__layout--ask-only' if look_up.empty? %>">
+    <% if look_up.any? %>
+      <section class="topic-sorted__look" aria-labelledby="topic-look">
+        <div class="topic-group-head"><%= render 'topics/topics/sign', name: 'read' %><h2 id="topic-look"><%= _('Look it up') %></h2></div>
+        <div class="triage-replies topic-rows">
+          <% look_up.each do |entry| %>
+            <%= topic_row entry.question.text, topic_question_page_path(@topic, entry.question, @nation) %>
+          <% end %>
+        </div>
+      </section>
+    <% end %>
+    <section class="topic-sorted__ask" aria-labelledby="topic-ask">
+      <div class="topic-group-head"><%= render 'topics/topics/sign', name: 'ask' %><h2 id="topic-ask"><%= _('Ask for it') %></h2></div>
+      <div class="triage-replies topic-rows topic-rows--small">
+        <% guide.ask_for.each do |entry| %>
+          <%= topic_row entry.question.text, topic_question_page_path(@topic, entry.question, @nation) %>
+        <% end %>
+        <%= topic_row _('Something not listed'), topic_holders_page_path(@topic, @nation), quiet: true %>
+      </div>
+    </section>
+  </div>
+
+  <% if papers.any? %>
+    <section class="topic-sorted__papers" aria-labelledby="topic-papers">
+      <h2 id="topic-papers"><%= _('Published here') %></h2>
+      <ul class="papers papers--three">
+        <%= render partial: 'topics/topics/paper', collection: papers, as: :document,
+                   locals: { sheets: Disclosures::Search.sheet_previews(papers) } %>
+      </ul>
+      <% if @topic.search %>
+        <p><%= link_to _('View all documents'), request_journey_link_path(disclosure_documents_path(topic_documents_filter(@topic, @nation))) %></p>
+      <% end %>
+    </section>
+  <% end %>
+</div>

@@ -137,8 +137,7 @@ module RequestJourney
                               current_user.name) || old
         else
           # Carry over a topic question if given; never prefill from subject.
-          max_q = defined?(Topics::Suggestions) ? Topics::Suggestions::MAX_TEXT : 2_000
-          params[:question].to_s.strip.first(max_q)
+          params[:question].to_s.strip.first(Topics::Suggestions::MAX_TEXT)
         end
       @outgoing_message.body = RequestLetter.join(
         middle,
@@ -223,10 +222,9 @@ module RequestJourney
       case destination
       when 'home' then alaveteli_pro_dashboard_path(options)
       when 'about' then help_about_path(options)
-      when 'topics' then respond_to?(:topics_path) ? topics_path(options) : frontpage_path(options)
+      when 'topics' then topics_path(options)
       when 'documents' then disclosure_documents_path(options)
-      when 'authorities'
-        respond_to?(:authority_groups_path) ? authority_groups_path(options) : list_public_bodies_default_path(options)
+      when 'authorities' then authority_groups_path(options)
       end
     end
 
@@ -251,13 +249,13 @@ module RequestJourney
         scope = scope.where(id: PublicBody.with_tag(holder).select(:id))
       end
       nation = @journey_context['nation']
-      if nation == 'england' && defined?(Topics::Topic)
+      if nation == 'england'
         (Topics::Topic::NATIONS.keys - ['england']).
           flat_map { |other| Topics::Holds.nation_tags(other) }.
           each do |tag|
             scope = scope.where.not(id: PublicBody.with_tag(tag).select(:id))
           end
-      elsif nation && defined?(Topics::Holds)
+      elsif nation
         scope = scope.where(
           id: Topics::Holds.nation_tags(nation).
             map { |tag| PublicBody.with_tag(tag) }.reduce(:or).select(:id)

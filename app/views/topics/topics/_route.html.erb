@@ -1,0 +1,7 @@
+<li class="triage-row">
+  <div class="triage-row__text">
+    <span class="triage-row__title"><%= row.what %></span>
+    <span class="triage-row__meta"><%= topic_link_to row.route, row.to %></span>
+    <% if row.note %><span class="topic-page__note"><%= row.note %></span><% end %>
+  </div>
+</li>

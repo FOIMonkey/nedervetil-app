@@ -118,7 +118,6 @@ RSpec.describe AuthorityGroups::AdminSummary do
     end
 
     it 'lists each thing its kind of authority holds once, with what an admin unticked' do
-      skip 'Topics arrives in B12' unless defined?(Topics::Topic)
       keys = summary.holdings.map { |holder, _topic| holder.key }
       expect(keys).to include('bins_street', 'food_hygiene')
       expect(keys.uniq).to eq(keys)
@@ -136,7 +135,6 @@ RSpec.describe AuthorityGroups::AdminSummary do
     end
 
     it 'finds the holders that name it, and the words they give by default' do
-      skip 'Topics arrives in B12' unless defined?(Topics::Topic)
       expect(summary.named_holders.map(&:who)).to eq(['Caledon Police'])
       expect(summary.default_who_line).to start_with('Crime, stop and search')
     end

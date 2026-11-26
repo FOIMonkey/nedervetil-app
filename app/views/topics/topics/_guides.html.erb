@@ -1,0 +1,8 @@
+<%# Admin-written guides to using the source, then to this question (TopicGuide). A draft shows only to admins, marked as one. Rich text's headings come down to sit under the page's. %>
+<% guides.each do |guide| %>
+  <section class="topic-guide<%= ' topic-guide--draft' unless guide.published? %>" aria-labelledby="topic-guide-<%= guide.id %>">
+    <h2 id="topic-guide-<%= guide.id %>" class="topic-question__then"><%= guide.title.presence || _('How it works') %></h2>
+    <% unless guide.published? %><p class="topic-guide__draft"><%= _('Draft: only admins can see this.') %> <%= link_to _('Edit guide'), edit_admin_topic_guide_path(guide) %></p><% end %>
+    <div class="topic-guide__body"><%= guide.body.to_s.gsub(%r{<(/?)h1\b}, '<\1h3').html_safe %></div>
+  </section>
+<% end %>

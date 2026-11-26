@@ -2,4 +2,4 @@
 <% type = type_groups[target] if target.is_a?(String) %>
 <% link = type ? authority_group_path(target) : (public_body_path(target) unless target.is_a?(String)) %>
 <li><span class="who-does__who"><%= link ? link_to(type&.title || label, request_journey_link_path(link)) : label %></span>
-  <span class="who-does__what"><%= type&.description.presence || (lines[target.id] unless target.is_a?(String)) || (defined?(Topics::Holds) ? Topics::Holds.brief(whats) : nil) %></span></li>
+  <span class="who-does__what"><%= type&.description.presence || (lines[target.id] unless target.is_a?(String)) || Topics::Holds.brief(whats) %></span></li>

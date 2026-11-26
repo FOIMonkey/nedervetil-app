@@ -1,0 +1,9 @@
+<%# One nation at a time, folded to a line until someone wants another. `path` gives each nation's address on this page. A native disclosure, so it needs no script. %>
+<details class="nation-pick">
+  <summary class="nation-pick__summary"><%= _('Showing {{nation}}', nation: _(Topics::Topic::NATIONS[@nation])) %> <span class="nation-pick__change"><%= _('Change') %><span class="visually-hidden"> <%= _('nation') %></span></span></summary>
+  <nav class="nation-tabs triage-nations" aria-label="<%= _('Where you are') %>">
+    <% Topics::Topic::NATIONS.each do |key, name| %>
+      <%= link_to _(name), request_journey_link_path(path.call(key)), class: 'nation-tabs__tab', 'aria-current': (key == @nation ? 'page' : nil) %>
+    <% end %>
+  </nav>
+</details>

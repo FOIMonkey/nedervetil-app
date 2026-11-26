@@ -97,9 +97,7 @@ RSpec.describe 'Reviewing a finished request', feature: :alaveteli_pro do
     follow_redirect!
     expect(page.at_css('.request-check__nudge').text).to include('About you?')
     expect(response.body).not_to include('all correspondence')
-    if defined?(Topics::Topic)
-      expect(draft.reload.journey_context).to include('topic' => 'streets')
-    end
+    expect(draft.reload.journey_context).to include('topic' => 'streets')
   end
 
   it 'requires a review and refuses a send from an older reviewed version' do
@@ -124,8 +122,6 @@ RSpec.describe 'Reviewing a finished request', feature: :alaveteli_pro do
   end
 
   it 'makes the results action carry the search words, authority and nation without lookups' do
-    skip 'Topics arrives in B12' unless defined?(Topics::Topic)
-
     heading = Category.create!(title: 'Place',
                                description: '',
                                parent_ids: [PublicBody.category_root.id])
@@ -165,8 +161,6 @@ RSpec.describe 'Reviewing a finished request', feature: :alaveteli_pro do
   end
 
   it 'keeps a saved request through secondary topic links and a document search' do
-    skip 'Topics arrives in B12' unless defined?(Topics::Topic)
-
     write('Please provide the edited grants register.',
           journey_destination: 'topics')
     follow_redirect!
@@ -188,8 +182,6 @@ RSpec.describe 'Reviewing a finished request', feature: :alaveteli_pro do
   end
 
   it 'starts a separate letter for an explicit topic question and preserves the earlier saved draft' do
-    skip 'Topics arrives in B12' unless defined?(Topics::Topic)
-
     write('Please provide the sports grants register.',
           journey_destination: 'topics')
     draft = owner.draft_info_requests.last

@@ -36,8 +36,6 @@ module RequestJourney
               raw.to_h
             end
       @values = {}
-      return unless defined?(Topics::Topic)
-
       topic = Topics::Topic.find(raw_value(raw, 'topic'))
       @values['topic'] = topic.slug if topic
       nation = raw_value(raw, 'nation').to_s
@@ -77,11 +75,7 @@ module RequestJourney
     end
 
     def questions
-      @questions ||= if defined?(Topics::Suggestions)
-                       Topics::Suggestions.questions(body, subject, subject: true)
-                     else
-                       []
-                     end
+      @questions ||= Topics::Suggestions.questions(body, subject, subject: true)
     end
 
     def documents
@@ -135,21 +129,9 @@ module RequestJourney
 
     # Require all non-boilerplate words (up to 12) to avoid weak matches.
     def query
-      @query ||= begin
-        words = if defined?(Topics::Suggestions)
-                  Topics::Suggestions.words(subject, body)
-                else
-                  sql = ActiveRecord::Base.sanitize_sql_array([
-                    "SELECT lexeme FROM unnest(to_tsvector('english', :text)) " \
-                    "WHERE length(lexeme) > 1 AND lexeme !~ '^[0-9]+$'",
-                    { text: subject.to_s.first(2_000) }
-                  ])
-                  ActiveRecord::Base.connection.select_values(sql)
-                end
-        words.first(12).
-          map { |word| "'#{word.gsub(/['\\]/) { |char| char * 2 }}'" }.
-          join(' & ')
-      end
+      @query ||= Topics::Suggestions.words(subject, body).first(12).
+        map { |word| "'#{word.gsub(/['\\]/) { |char| char * 2 }}'" }.
+        join(' & ')
     end
 
     def page_hits(document_ids)

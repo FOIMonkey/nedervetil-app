@@ -38,7 +38,7 @@
   <% when :who %>
     <div class="request-flow">
       <% if subject.present? %><p class="request-flow__quiet"><%= _('About <b>{{subject}}</b>', subject: subject) %></p><% end %>
-      <% if (context['nation'] || context['holder']) && defined?(Topics::Topic) %>
+      <% if context['nation'] || context['holder'] %>
         <p><%= [Topics::Topic::NATIONS[context['nation']], Topics::Suggestions::HOLDERS[context['holder']]].compact.map { |label| _(label) }.join(' · ') %></p>
       <% end %>
       <% if @authority_results %>
@@ -46,14 +46,13 @@
           <% @authority_results.each do |result| %>
             <li>
               <%= link_to result.name, new_alaveteli_pro_info_request_path(carry.merge(public_body: result.url_name, step: (@copied ? 'write' : 'subject'))), class: 'authority-results__name' %>
-              <% if defined?(Topics::Holds) && (line = Topics::Holds.line(result)) %><span class="authority-results__meta"><%= line %></span><% end %>
+              <% if (line = Topics::Holds.line(result)) %><span class="authority-results__meta"><%= line %></span><% end %>
               <span class="authority-results__pick" aria-hidden="true"><%= _('Choose') %></span>
             </li>
           <% end %>
           <li class="authority-results__none"><%= @authority_results.empty? ? _('Nothing found. Try another name.') : _('Choose the authority that holds the information.') %></li>
         </ul>
       <% end %>
-      <% if defined?(Topics::Topic) %>
       <div class="request-flow__unsure">
         <h2><%= _('Not sure who holds it?') %></h2>
         <p><%= _('Each topic says who usually does.') %></p>
@@ -66,7 +65,6 @@
           <p><%= link_to _('Search all authorities'), new_alaveteli_pro_info_request_path(carry.merge(step: 'who', journey: context.except('holder', 'nation').presence)) %></p>
         <% end %>
       </div>
-      <% end %>
     </div>
   <% when :subject %>
     <div class="request-flow">

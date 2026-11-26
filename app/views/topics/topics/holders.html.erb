@@ -1,0 +1,105 @@
+<% content_for :body_class, 'band-view' %>
+<% guide = @guide %>
+<% holders = guide.holders %>
+<% holder_urls = holders.filter_map { |holder| topic_url(holder.to) } %>
+<% elsewhere = @topic.elsewhere.select { |row| row.for?(@nation) && !(row.to && holder_urls.include?(topic_url(row.to))) } %>
+<%# For anything a topic doesn't list: who holds what, what they usually refuse, and what's published already. %>
+<div class="topic-page topic-holders-page triage">
+  <header class="page-band">
+    <div>
+      <p class="page-band__back"><%= link_to @topic.title_for(@nation), topic_page_path(@topic, @nation) %></p>
+      <h1 class="page-band__title"><%= _('Who holds it') %></h1>
+      <p class="page-band__summary"><%= _('You can ask for information a public body already holds. They may not be able to share everything.') %></p>
+      <%= render 'topics/topics/nations', path: ->(key) { topic_holders_path(@topic.slug, nation: topic_place(key)) } %>
+    </div>
+  </header>
+  <%= band_notice %>
+
+  <div class="topic-question__layout">
+    <div class="topic-question__main">
+      <section aria-labelledby="topic-who">
+        <h2 id="topic-who" class="visually-hidden"><%= _('Who holds it') %></h2>
+        <ul class="topic-holders">
+          <% holders.each do |holder| %>
+            <li>
+              <p class="topic-holders__what"><%= holder.what %><% if holder.where %><%= _(', in {{where}}', where: holder.where) %><% end %></p>
+              <p class="topic-holders__who"><%= topic_link_to holder.who, holder.to %><% if topic_other_site_url?(holder.to) %><span class="topic-holders__site"><%= _(', on&nbsp;{{other_site_name}}', other_site_name: Topics::OtherSite.name) %></span><% end %></p>
+              <% if holder.note %><p class="topic-page__note"><%= holder.note %></p><% end %>
+              <% if !topic_council?(holder) && (groups = topic_groups(holder.groups, @nation)).any? %>
+                <ul class="topic-groups" aria-label="<%= _('Authorities here') %>">
+                  <% groups.each do |label, path| %>
+                    <li><%= link_to label, path %></li>
+                  <% end %>
+                </ul>
+              <% end %>
+              <div class="triage-actions triage-actions--quiet"><%= render 'topics/topics/ask', to: holder.to, about: holder.what %></div>
+            </li>
+          <% end %>
+        </ul>
+        <% if holders.any? { |holder| topic_council?(holder) && topic_groups(holder.groups, @nation).any? } %>
+          <p class="topic-page__find"><%= _('Not sure which council is yours?') %> <%= link_to _('Find it by place'), request_journey_link_path(authority_groups_path(anchor: 'groups-place')) %></p>
+        <% end %>
+      </section>
+
+      <% if elsewhere.any? %>
+        <section aria-labelledby="topic-elsewhere">
+          <h2 id="topic-elsewhere" class="topic-question__then"><%= @topic.elsewhere_heading %></h2>
+          <ul class="topic-elsewhere">
+            <% elsewhere.each do |row| %>
+              <li>
+                <span class="topic-elsewhere__what"><%= row.what %></span>
+                <%= topic_link_to row.route, row.to %>
+                <% if row.note %><span class="topic-page__note"><%= row.note %></span><% end %>
+              </li>
+            <% end %>
+          </ul>
+          <% if topic_other_site?(elsewhere) %>
+            <p class="topic-page__note"><%= _('Requests on {{other_site_name}} are published.', other_site_name: Topics::OtherSite.name) %></p>
+          <% end %>
+        </section>
+      <% end %>
+
+      <% if @topic.refused.any? %>
+        <section aria-labelledby="topic-refused" class="topic-refused">
+          <h2 id="topic-refused"><%= _('Usually refused') %></h2>
+          <ul>
+            <% @topic.refused.each do |line| %>
+              <li><%= line %></li>
+            <% end %>
+          </ul>
+        </section>
+      <% end %>
+
+      <section aria-labelledby="topic-past">
+        <h2 id="topic-past" class="topic-question__then"><%= _('Asked before?') %></h2>
+        <div class="triage-card"><%= render 'topics/topics/search', guide: guide, words: @topic.search.presence || @topic.title %></div>
+      </section>
+    </div>
+
+    <aside class="topic-question__side">
+      <% if guide.look_up.any? %>
+        <section aria-labelledby="topic-first">
+          <h2 id="topic-first"><%= _('Check these first') %></h2>
+          <ul class="topic-toc">
+            <% guide.look_up.each do |entry| %>
+              <li><%= link_to entry.question.text, topic_question_page_path(@topic, entry.question, @nation) %></li>
+            <% end %>
+          </ul>
+        </section>
+      <% end %>
+      <% if (published = guide.published).any? %>
+        <section aria-labelledby="topic-published">
+          <h2 id="topic-published"><%= _('Already published') %></h2>
+          <ul class="topic-published">
+            <% published.each do |item| %>
+              <li>
+                <%= topic_link_to item.label, { 'url' => item.url } %>
+                <% if item.note %><span class="topic-page__note"><%= item.note %></span><% end %>
+              </li>
+            <% end %>
+          </ul>
+        </section>
+      <% end %>
+    </aside>
+  </div>
+</div>

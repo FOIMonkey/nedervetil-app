@@ -162,8 +162,7 @@ module Disclosures
     # Omit nil values so existing URL params are preserved.
     def search_journey_choices
       filters = @search.filters
-      nation = filters[:group] if defined?(Topics::Topic) &&
-                                  Topics::Topic::NATIONS.key?(filters[:group])
+      nation = filters[:group] if Topics::Topic::NATIONS.key?(filters[:group])
       { subject: @search.query.presence,
         public_body: filters[:body],
         journey: { 'topic' => filters[:topic], 'nation' => nation }.compact }.

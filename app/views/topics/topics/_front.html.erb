@@ -1,0 +1,33 @@
+<%# The topics first, then the two routes that aren't FOI, each with a page of its own. %>
+<% guides = @topics.map { |topic| Topics::Guide.new(topic, @nation) } %>
+<% if step.present? %>
+  <p class="triage-screen__back"><%= link_to _('Topics'), topic_front_path(nil, @nation) %></p>
+<% end %>
+<% if step == 'own' %>
+  <h2 class="triage-screen__title"><%= _('For your own records, go direct') %></h2>
+  <p class="triage-screen__body"><%= _('Ask the organisation that holds your records. You can’t make a subject access request through this site.') %></p>
+  <div class="triage-card"><ul class="triage-rows"><%= render partial: 'topics/topics/route', collection: guides.flat_map(&:own).uniq(&:what), as: :row %></ul></div>
+<% elsif step == 'fix' %>
+  <h2 class="triage-screen__title"><%= _('Report or challenge') %></h2>
+  <p class="triage-screen__body"><%= _('Freedom of information (FOI) is for finding things out. To report a problem or challenge a decision, try the options below.') %></p>
+  <% guides.select { |guide| guide.instead.any? }.each do |guide| %>
+    <h3 class="triage-screen__group"><%= guide.topic.title_for(@nation) %></h3>
+    <div class="triage-card"><ul class="triage-rows"><%= render partial: 'topics/topics/route', collection: guide.instead, as: :row %></ul></div>
+  <% end %>
+<% else %>
+  <h2 class="triage-screen__title"><%= _('Find something out') %></h2>
+  <div class="triage-replies triage-replies--topics">
+    <% @topics.each do |topic| %>
+      <%= topic_row topic.title_for(@nation), topic_page_path(topic, @nation), note: topic.summary %>
+    <% end %>
+  </div>
+  <h2 class="triage-screen__then"><%= _('Not for FOI') %></h2>
+  <div class="triage-replies">
+    <%= topic_row _('Records about you'), topic_front_path('own', @nation), note: _('Ask the organisation directly') %>
+    <%= topic_row _('Report or challenge'), topic_front_path('fix', @nation), note: _('A problem, a fine or a decision') %>
+  </div>
+  <p class="topics__other triage-other">
+    <%= _('Something else?') %> <%= link_to _('Search documents'), request_journey_destination('documents') %>
+    <%= _('or {{browse_authorities}}.', browse_authorities: link_to(_('browse authorities'), request_journey_destination('authorities'))) %>
+  </p>
+<% end %>

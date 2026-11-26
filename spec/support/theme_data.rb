@@ -6,8 +6,6 @@ Rails.configuration.paths.add('data', with: 'spec/fixtures/data')
 # first, so they hold the sample as it is now, not as an earlier run left it.
 RSpec.configure do |config|
   config.before(:suite) do
-    next unless defined?(TopicPage)
-
     [TopicHolder, TopicQuestion, TopicSource, TopicRoute, TopicPage,
      TopicDataset, TopicChange].each(&:delete_all)
     SampleData::Topics.load!

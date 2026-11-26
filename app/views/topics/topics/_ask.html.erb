@@ -1,0 +1,11 @@
+<% question = local_assigns[:question] %>
+<% about = local_assigns.fetch(:about, question&.text) %>
+<% ask = to && topic_ask_path(to, topic: @topic, question: question, nation: @nation) %>
+<% other_query = to && topic_ask_elsewhere(@topic, to, @nation) %>
+<% if to && !current_user && ReadOnly.feature?(:signups) %>
+  <%= render partial: 'topics/topics/ask_elsewhere', locals: { url: Topics::OtherSite.url(other_query), about: about, summary_class: 'triage-btn' } %>
+<% elsif ask %>
+  <%= link_to ask, class: 'triage-btn', data: { ask: true } do %><%= _('Make request') %><span class="visually-hidden">: <%= about %></span><% end %>
+<% elsif other_query && (other_url = Topics::OtherSite.url(other_query)) %>
+  <%= link_to other_url, class: 'triage-btn topic-out', data: { ask: true } do %><%= _('Ask on {{other_site_name}}', other_site_name: Topics::OtherSite.name) %><span class="visually-hidden"> <%= _('(another site)') %>: <%= about %></span><% end %>
+<% end %>

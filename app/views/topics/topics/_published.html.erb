@@ -1,0 +1,8 @@
+<% dataset = entry.dataset %>
+<% if dataset %>
+  <p class="triage-lede"><%= dataset.answers %></p>
+  <p class="topic-page__note"><%= _('From {{publisher}}', publisher: dataset.publisher) %> · <%= topic_dataset_note(dataset) %></p>
+  <% if dataset.table %><p class="topic-page__note"><%= _('Look for: {{table}}', table: dataset.table) %></p><% end %>
+  <% unless dataset.direct? %><p class="topic-page__note"><%= dataset.table ? _('Follow the link, then look for the table named above.') : _('This gets you to the right place, not the exact table.') %></p><% end %>
+<% end %>
+<div class="triage-actions"><%= render 'topics/topics/view_figures', entry: entry %></div>

@@ -11,7 +11,7 @@ module AuthorityFeeds
     end
 
     def all
-      @all ||= defined?(Topics::Holds) ? Topics::Holds.held(@body).uniq { |holder, _| holder.what } : []
+      @all ||= Topics::Holds.held(@body).uniq { |holder, _| holder.what }
     end
 
     def unticked
@@ -34,12 +34,12 @@ module AuthorityFeeds
     end
 
     def kind
-      @kind ||= type_group&.title&.singularize || (defined?(Topics::Holds) ? Topics::Holds.kind(@body) : nil)
+      @kind ||= type_group&.title&.singularize || Topics::Holds.kind(@body)
     end
 
     def kind_phrase
       kind = self.kind or return nil
-      nation = defined?(Topics::Topic) ? _(Topics::Topic::NATIONS.fetch(Topics::Holds.nation(@body))) : _('England')
+      nation = _(Topics::Topic::NATIONS.fetch(Topics::Holds.nation(@body)))
       text = if PROPER.include?(kind.split.first)
                kind
              else

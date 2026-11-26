@@ -1,7 +1,7 @@
 <% type_group = page.holdings.type_group %>
 <% kind = page.holdings.kind %>
-<% nation_key = defined?(Topics::Holds) ? Topics::Holds.nation(body) : 'england' %>
-<% nation = defined?(Topics::Topic) ? _(Topics::Topic::NATIONS.fetch(nation_key)) : _('England') %>
+<% nation_key = Topics::Holds.nation(body) %>
+<% nation = _(Topics::Topic::NATIONS.fetch(nation_key)) %>
 <% about = if kind then kind.match?(/Scottish|Welsh|Northern Ireland/) ? kind : _('{{kind}} in {{nation}}', kind: kind, nation: nation)
            elsif nation_key != 'england' then _('In {{nation}}', nation: nation)
            end %>

@@ -16,7 +16,7 @@ module AuthorityGroups
     end
 
     def nation
-      defined?(Topics::Topic) && Topics::Topic::NATIONS.key?(group.tag) ? group.tag : nil
+      Topics::Topic::NATIONS.key?(group.tag) ? group.tag : nil
     end
 
     def feeds
@@ -136,7 +136,7 @@ module AuthorityGroups
     end
 
     def who_does_what
-      @who_does_what ||= defined?(Topics::Holds) ? Topics::Holds.for_group(ids, nation) : []
+      @who_does_what ||= Topics::Holds.for_group(ids, nation)
     end
 
     def tabs(documents:)

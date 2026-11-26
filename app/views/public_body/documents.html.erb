@@ -33,7 +33,7 @@
     <% if page.foi_record && !page.record_at_top? %>
       <%= render 'authority_feeds/foi_record', body: body, record: page.foi_record %>
     <% end %>
-    <% figures = defined?(Topics::Holds) ? Topics::Holds.figures(body) : [] %>
+    <% figures = Topics::Holds.figures(body) %>
     <% if figures.any? %>
       <section class="body-figures" aria-labelledby="body-figures">
         <h2 id="body-figures"><%= _('Area statistics') %></h2>

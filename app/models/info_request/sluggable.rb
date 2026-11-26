@@ -11,7 +11,15 @@ module InfoRequest::Sluggable
   end
 
   # When title is changed, also change the URL title
+  # A new request gets its URL title when it is saved. Working it out here
+  # runs a regex over every request's url_title, which no index serves, each
+  # time an unsaved request is shown.
   def title=(title)
+    if new_record?
+      self[:title] = title
+      return
+    end
+
     super.tap do
       update_url_title if title_changed?
     end
@@ -25,10 +33,10 @@ module InfoRequest::Sluggable
   #
   # Returns a String
   def url_title(opts = {})
-    _url_title = super()
-    return _url_title.gsub(/[_0-9]+$/, "") if opts[:collapse]
+    url_title = super()
+    return url_title.gsub(/[_0-9]+$/, "") if opts[:collapse]
 
-    _url_title
+    url_title
   end
 
   private

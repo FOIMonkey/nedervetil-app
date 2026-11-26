@@ -53,10 +53,9 @@ module RequestJourney
       case destination
       when 'home' then alaveteli_pro_dashboard_path(options)
       when 'about' then help_about_path(options)
-      when 'topics' then defined?(topics_path) ? topics_path(options) : frontpage_path(options)
+      when 'topics' then topics_path(options)
       when 'documents' then disclosure_documents_path(options)
-      when 'authorities'
-        defined?(authority_groups_path) ? authority_groups_path(options) : list_public_bodies_default_path(options)
+      when 'authorities' then authority_groups_path(options)
       end
     end
 
@@ -118,8 +117,7 @@ module RequestJourney
     def request_journey_address_choices
       raw = request_journey_address_params
       choices = {}
-      max_question = defined?(Topics::Suggestions) ? Topics::Suggestions::MAX_TEXT : 2_000
-      { 'subject' => 200, 'question' => max_question }.
+      { 'subject' => 200, 'question' => Topics::Suggestions::MAX_TEXT }.
         each do |key, length|
           next unless raw[key].is_a?(String)
 

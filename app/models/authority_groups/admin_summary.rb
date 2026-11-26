@@ -43,7 +43,7 @@ module AuthorityGroups
     end
 
     def named_holders
-      @named_holders ||= (defined?(Topics::Topic) ? Topics::Topic.all : []).flat_map(&:holders).
+      @named_holders ||= Topics::Topic.all.flat_map(&:holders).
                          select { |holder| holder.to&.dig('body') == body.name }
     end
 
@@ -52,7 +52,7 @@ module AuthorityGroups
     end
 
     def default_who_line
-      defined?(Topics::Holds) ? Topics::Holds.brief(named_holders.map(&:what)) : nil
+      Topics::Holds.brief(named_holders.map(&:what))
     end
 
     def request_count

@@ -86,6 +86,19 @@ scope 'admin', module: 'admin/authority_feeds', as: 'admin' do
                            constraints: { id: /\d+/ }
 end
 
+# Topics, one per topic page, and a page for each question.
+get 'topics', to: 'topics/topics#index', as: :topics
+get 'topics/:slug', to: 'topics/topics#show',
+                    as: :topic,
+                    constraints: { slug: /[a-z0-9-]+/ }
+get 'topics/:slug/who-holds-it', to: 'topics/topics#holders',
+                                 as: :topic_holders,
+                                 constraints: { slug: /[a-z0-9-]+/ }
+get 'topics/:slug/:question', to: 'topics/topics#question',
+                              as: :topic_question,
+                              constraints: { slug: /[a-z0-9-]+/,
+                                             question: /[a-z0-9-]+/ }
+
 get 'request/:url_title/delete', to: 'disclosures/request_deletions#new',
                                  as: :request_deletion
 post 'request/:url_title/delete', to: 'disclosures/request_deletions#create'

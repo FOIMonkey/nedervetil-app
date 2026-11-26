@@ -1,0 +1,14 @@
+<% document = document.public_view unless document.is_a?(Disclosures::PublicDocument) %>
+<li class="paper">
+  <span class="paper__sheet" aria-hidden="true">
+    <% if document.thumbnail.attached? %>
+      <img src="<%= disclosure_document_thumbnail_path(document) %>" alt="" loading="lazy">
+    <% elsif (rows = sheet_preview(sheets[document.id])).any? %>
+      <%= render partial: 'disclosures/documents/sheet_grid', locals: { rows: rows } %>
+    <% else %>
+      <%= image_tag document_icon_path(document), alt: '', class: 'paper__icon' %>
+    <% end %>
+  </span>
+  <%= link_to document.title, disclosure_document_path(document), class: 'paper__title' %>
+  <% if (body = document.authority) %><span class="paper__meta"><%= body.name %></span><% end %>
+</li>

@@ -219,9 +219,7 @@ module Disclosures
       return entry[1] if entry
       return topic.title if key == :topic && topic
       return group_titles[value] if key == :group && group_titles[value]
-      if key == :group && defined?(Topics::Topic) && nation?(value)
-        return _(Topics::Topic::NATIONS[value])
-      end
+      return _(Topics::Topic::NATIONS[value]) if key == :group && nation?(value)
 
       value
     end
@@ -297,7 +295,7 @@ module Disclosures
     end
 
     def nation?(value)
-      defined?(Topics::Topic) && value != 'england' && Topics::Topic::NATIONS.key?(value)
+      value != 'england' && Topics::Topic::NATIONS.key?(value)
     end
 
     def matches_sql
@@ -411,8 +409,6 @@ module Disclosures
     end
 
     def topic_counts
-      return [] unless defined?(Topics::Topic)
-
       topics = Topics::Topic.all.select(&:search)
       return [] if topics.empty?
 
@@ -426,7 +422,6 @@ module Disclosures
     end
 
     def topic
-      return nil unless defined?(Topics::Topic)
       return @topic if defined?(@topic)
 
       found = filters[:topic] && Topics::Topic.find(filters[:topic])
