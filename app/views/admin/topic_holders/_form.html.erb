@@ -1,0 +1,44 @@
+<%= topic_errors(f.object) %>
+
+<fieldset class="admin-form-section">
+  <legend>Identity &amp; scope</legend>
+  <%= topic_text_field f, :what, 'What they hold', 'The records they hold.' %>
+  <%= topic_text_field f, :who, 'Who' %>
+
+  <div class="admin-form-grid admin-form-grid--meta">
+    <% if f.object.key_was.present? %>
+      <div class="admin-field">
+        <span class="admin-field__label">Key</span>
+        <div class="admin-field__input">
+          <code><%= f.object.key_was %></code>
+          <span class="help-block">Fixed: authorities and questions name it.</span>
+        </div>
+      </div>
+    <% else %>
+      <%= topic_text_field f, :key, 'Key', 'Optional. Can’t change once given.' %>
+    <% end %>
+    <%= topic_control(f, :position, 'Position', 'Lower comes first.', compact: true) { f.number_field :position, class: 'input-mini' } %>
+  </div>
+
+  <%= topic_nations_field f %>
+</fieldset>
+
+<fieldset class="admin-form-section">
+  <legend>Where to ask</legend>
+  <%= topic_link_field f, :to, 'Link' %>
+  <%= topic_text_field f, :where, 'Where', 'Optional geographical or scope clarification.' %>
+</fieldset>
+
+<% extra_open = f.object.note.present? || f.object.groups.any? || f.object.errors[:note].any? || f.object.errors[:groups].any? %>
+<details class="admin-drawer admin-drawer--form"<% if extra_open %> open<% end %>>
+  <summary>
+    Notes &amp; authority groups
+    <% if f.object.groups.any? %>
+      <span class="admin-drawer__meta muted"><%= pluralize(f.object.groups.size, 'group') %></span>
+    <% end %>
+  </summary>
+  <div class="admin-drawer__body">
+    <%= topic_text_field f, :note, 'Note', nil, area: true, rows: 3 %>
+    <%= topic_groups_field f %>
+  </div>
+</details>

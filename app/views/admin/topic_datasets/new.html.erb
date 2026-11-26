@@ -1,0 +1,14 @@
+<div class="page-header admin-list-head">
+  <div>
+    <p class="admin-summary__back"><%= link_to '← Back to datasets', admin_topic_datasets_path %></p>
+    <h1><%= @title = 'New dataset' %></h1>
+  </div>
+</div>
+
+<%= form_for [:admin, @topic_dataset], html: { class: 'admin-topic-form' } do |f| %>
+  <%= render partial: 'form', locals: { f: f } %>
+  <div class="form-actions">
+    <%= submit_tag 'Save', class: 'btn btn-primary' %>
+    <%= link_to 'Back to datasets', admin_topic_datasets_path, class: 'btn' %>
+  </div>
+<% end %>

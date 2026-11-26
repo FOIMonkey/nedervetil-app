@@ -1,0 +1,84 @@
+<% both = @guides.values.select { |guide| guide.dataset_id && guide.question_slug } %>
+<% published_count = @guides.values.count(&:published?) %>
+<% draft_count = @guides.size - published_count %>
+
+<div class="page-header admin-list-head">
+  <h1><%= @title = 'Topic guides' %></h1>
+  <div class="admin-summary__tools">
+    <%= link_to 'Add guide', new_admin_topic_guide_path, class: 'btn btn-small btn-primary' %>
+  </div>
+</div>
+
+<p class="admin-lede">Guidance shown on question pages underneath published answers. Guides stay drafts, visible only to admins, until published.</p>
+
+<details class="admin-drawer admin-drawer--tight">
+  <summary>How guide matching works</summary>
+  <p class="muted">A guide for a source shows on every question it answers. A guide for a question shows on that question only. Pick both, and it shows only where that source answers that question.</p>
+</details>
+
+<nav class="admin-filter-pills" aria-label="Jump to section">
+  <a class="admin-filter-pill" href="#guide-sources">Sources <span class="admin-filter-pill__count"><%= @sources.size %></span></a>
+  <a class="admin-filter-pill" href="#guide-questions">Questions <span class="admin-filter-pill__count"><%= @questions.size %></span></a>
+  <% if both.any? %>
+    <a class="admin-filter-pill" href="#guide-both">Source on one question <span class="admin-filter-pill__count"><%= both.size %></span></a>
+  <% end %>
+  <span class="admin-filter-pills__summary muted"><%= pluralize(published_count, 'published') %> · <%= pluralize(draft_count, 'draft') %></span>
+</nav>
+
+<section id="guide-sources" class="admin-block admin-topic-section">
+  <h2>Sources <span class="admin-block__count"><%= @sources.size %></span></h2>
+  <table class="table table-condensed table-striped">
+    <thead><tr><th>Source</th><th>Answers</th><th class="admin-guides-col">Guide</th></tr></thead>
+    <tbody>
+      <% @sources.each do |dataset, uses| %>
+        <tr id="source-<%= dataset.id %>">
+          <td>
+            <strong><%= dataset.title %></strong>
+            <div class="admin-table-sub muted"><%= dataset.publisher %> · <code><%= dataset.id %></code></div>
+          </td>
+          <td>
+            <ul class="unstyled">
+              <% uses.each do |topic, question| %>
+                <li><%= link_to question.text, question_page_path(topic, question.slug, dataset.id) %></li>
+              <% end %>
+            </ul>
+          </td>
+          <td class="admin-guides-col"><%= render 'guide_cell', guide: @guides[[dataset.id, nil, nil]], link_params: { dataset_id: dataset.id } %></td>
+        </tr>
+      <% end %>
+    </tbody>
+  </table>
+</section>
+
+<section id="guide-questions" class="admin-block admin-topic-section">
+  <h2>Questions <span class="admin-block__count"><%= @questions.size %></span></h2>
+  <table class="table table-condensed table-striped">
+    <thead><tr><th>Topic</th><th>Question</th><th class="admin-guides-col">Guide</th></tr></thead>
+    <tbody>
+      <% @questions.each do |topic, question| %>
+        <tr id="question-<%= topic.slug %>-<%= question.slug %>">
+          <td class="muted"><%= topic.title %></td>
+          <td><%= link_to question.text, question_page_path(topic, question.slug) %></td>
+          <td class="admin-guides-col"><%= render 'guide_cell', guide: @guides[[nil, topic.slug, question.slug]], link_params: { question_key: "#{topic.slug}/#{question.slug}" } %></td>
+        </tr>
+      <% end %>
+    </tbody>
+  </table>
+</section>
+
+<% if both.any? %>
+  <section id="guide-both" class="admin-block admin-topic-section">
+    <h2>A source on one question <span class="admin-block__count"><%= both.size %></span></h2>
+    <table class="table table-condensed table-striped">
+      <thead><tr><th>For</th><th class="admin-guides-col">Guide</th></tr></thead>
+      <tbody>
+        <% both.each do |guide| %>
+          <tr>
+            <td><%= guide.applies_to %></td>
+            <td class="admin-guides-col"><%= render 'guide_cell', guide: guide, link_params: {} %></td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  </section>
+<% end %>

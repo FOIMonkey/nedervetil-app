@@ -1,0 +1,43 @@
+<div class="page-header admin-list-head">
+  <h1><%= @title = 'Datasets' %></h1>
+  <div class="admin-summary__tools">
+    <%= link_to 'Add dataset', new_admin_topic_dataset_path, class: 'btn btn-small btn-primary' %>
+  </div>
+</div>
+
+<p class="admin-lede">Published tables and registers that answer topic questions. Every save is live on the site at once.</p>
+
+<%= form_tag admin_topic_datasets_path, method: :get, class: 'admin-search-bar' do %>
+  <label for="query" class="visually-hidden">Filter datasets</label>
+  <%= search_field_tag :query, @query, id: 'query', placeholder: 'Title, publisher or key', 'aria-label': 'Words' %>
+  <%= submit_tag 'Filter', name: nil, class: 'btn btn-primary' %>
+  <% if @query.present? %>
+    <%= link_to 'Show all', admin_topic_datasets_path, class: 'btn' %>
+  <% end %>
+<% end %>
+
+<table class="table table-condensed table-striped">
+  <thead>
+    <tr>
+      <th>Title</th>
+      <th>Publisher</th>
+      <th>Key</th>
+      <th>Nations</th>
+      <th class="admin-num">Questions</th>
+      <th></th>
+    </tr>
+  </thead>
+  <tbody>
+    <% @topic_datasets.each do |dataset| %>
+      <% count = @uses.fetch(dataset.key, 0) %>
+      <tr id="dataset-<%= dataset.key %>">
+        <td><strong><%= link_to dataset.title, edit_admin_topic_dataset_path(dataset), class: 'admin-table-primary-link' %></strong></td>
+        <td><%= dataset.publisher %></td>
+        <td><code><%= dataset.key %></code></td>
+        <td><%= topic_nations_text(dataset.nations) %></td>
+        <td class="admin-num<%= ' muted' if count.zero? %>"><%= count %></td>
+        <td class="text-right"><%= link_to 'Edit', edit_admin_topic_dataset_path(dataset), class: 'btn btn-mini' %></td>
+      </tr>
+    <% end %>
+  </tbody>
+</table>

@@ -1,0 +1,42 @@
+<div class="page-header admin-list-head">
+  <div>
+    <p class="admin-summary__back"><%= link_to '← Back to datasets', admin_topic_datasets_path %></p>
+    <h1><%= @title = 'Edit dataset' %> <code class="admin-title-code"><%= @topic_dataset.key %></code></h1>
+  </div>
+</div>
+
+<div class="admin-edit-split">
+  <div class="admin-edit-split__main">
+    <%= form_for [:admin, @topic_dataset], html: { class: 'admin-topic-form' } do |f| %>
+      <%= render partial: 'form', locals: { f: f } %>
+      <div class="form-actions">
+        <%= submit_tag 'Save', class: 'btn btn-primary' %>
+        <%= link_to 'Back to datasets', admin_topic_datasets_path, class: 'btn' %>
+      </div>
+    <% end %>
+
+    <section class="admin-danger-zone">
+      <h2>Danger zone</h2>
+      <p class="muted">Deleting this dataset removes it from the site at once. Datasets referenced by a question or guide cannot be deleted until unlinked.</p>
+      <%= form_tag [:admin, @topic_dataset], class: 'form form-inline', method: 'delete' do %>
+        <%= submit_tag 'Delete dataset', class: 'btn btn-danger', data: { confirm: 'Delete this dataset? It goes from the site at once.' } %>
+      <% end %>
+    </section>
+  </div>
+
+  <aside class="admin-edit-split__aside">
+    <h3>Used by questions (<%= @used_by_questions.size %>)</h3>
+    <% if @used_by_questions.any? %>
+      <ul class="admin-aside-list">
+        <% @used_by_questions.each do |q| %>
+          <li>
+            <%= link_to q.text, edit_admin_topic_page_topic_question_path(q.topic_page, q) %>
+            <span class="muted"><%= q.topic_page.title %></span>
+          </li>
+        <% end %>
+      </ul>
+    <% else %>
+      <p class="muted">Not linked to any topic question yet.</p>
+    <% end %>
+  </aside>
+</div>

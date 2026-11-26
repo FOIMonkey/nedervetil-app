@@ -1,0 +1,39 @@
+<%= topic_errors(f.object) %>
+
+<fieldset class="admin-form-section">
+  <legend>Identity &amp; source</legend>
+  <% unless f.object.persisted? %>
+    <%= topic_text_field f, :key, 'Key', 'Such as northmoor-recorded-crime. It can’t change later.' %>
+  <% end %>
+  <div class="admin-form-grid admin-form-grid--two">
+    <%= topic_text_field f, :title, 'Title' %>
+    <%= topic_text_field f, :publisher, 'Publisher' %>
+  </div>
+  <%= topic_text_field f, :url, 'Web address' %>
+  <%= topic_text_field f, :answers, 'Answers', 'What this dataset answers.', area: true, rows: 2 %>
+</fieldset>
+
+<fieldset class="admin-form-section">
+  <legend>Classification &amp; coverage</legend>
+  <div class="admin-form-grid admin-form-grid--three">
+    <%= topic_control(f, :kind, 'Kind') { f.select :kind, Topics::Dataset::KINDS, { include_blank: true } } %>
+    <%= topic_control(f, :status, 'Status') { f.select :status, Topics::Dataset::STATUSES, { include_blank: true } } %>
+    <%= topic_text_field f, :geography, 'Geography' %>
+  </div>
+  <div class="admin-form-grid admin-form-grid--three">
+    <%= topic_text_field f, :coverage, 'Coverage' %>
+    <%= topic_text_field f, :frequency, 'Frequency' %>
+    <%= topic_text_field f, :table_title, 'Table title', 'Where the table’s own title differs.' %>
+  </div>
+  <%= topic_nations_field f %>
+</fieldset>
+
+<% area_open = f.object.area_url.present? || f.object.area_codes.any? || f.object.api.present? || %i[area_url area_codes api].any? { |a| f.object.errors[a].any? } %>
+<details class="admin-drawer admin-drawer--form"<% if area_open %> open<% end %>>
+  <summary>Area lookup &amp; API</summary>
+  <div class="admin-drawer__body">
+    <%= topic_text_field f, :area_url, 'Area address', 'A web address with {gss} where an area’s code goes.' %>
+    <%= topic_lines_field f, :area_codes, 'Area codes', 'The area codes the area address takes, one per line.' %>
+    <%= topic_text_field f, :api, 'API' %>
+  </div>
+</details>

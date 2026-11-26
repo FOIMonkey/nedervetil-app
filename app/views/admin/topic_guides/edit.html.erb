@@ -1,0 +1,27 @@
+<div class="page-header admin-list-head">
+  <div>
+    <p class="admin-summary__back"><%= link_to '← Back to topic guides', admin_topic_guides_path %></p>
+    <h1><%= @title = 'Edit topic guide' %></h1>
+  </div>
+  <% if (question = @topic_guide.question) %>
+    <div class="admin-summary__tools">
+      <%= link_to 'See it on the question’s page', question_page_path(@topic_guide.topic, question.slug, @topic_guide.dataset_id), class: 'btn btn-small' %>
+    </div>
+  <% end %>
+</div>
+
+<%= translated_form_for [:admin, @topic_guide], html: { class: 'admin-topic-form' } do |f| %>
+  <%= render partial: 'form', locals: { f: f } %>
+  <div class="form-actions">
+    <%= submit_tag 'Save', class: 'btn btn-primary' %>
+    <%= link_to 'Back to topic guides', admin_topic_guides_path, class: 'btn' %>
+  </div>
+<% end %>
+
+<section class="admin-danger-zone admin-topic-form__danger">
+  <h2>Danger zone</h2>
+  <p class="muted">Deleting this guide removes it permanently.</p>
+  <%= form_tag [:admin, @topic_guide], class: 'form form-inline', method: 'delete' do %>
+    <%= submit_tag 'Delete guide', class: 'btn btn-danger', data: { confirm: 'Delete this guide? This can’t be undone.' } %>
+  <% end %>
+</section>

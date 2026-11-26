@@ -1,0 +1,12 @@
+<%= topic_errors(f.object) %>
+
+<fieldset class="admin-form-section">
+  <legend>Published source</legend>
+  <%= topic_text_field f, :label, 'Label' %>
+  <%= topic_text_field f, :url, 'Web address' %>
+  <%= topic_text_field f, :note, 'Note', nil, area: true, rows: 2 %>
+  <div class="admin-form-grid admin-form-grid--meta">
+    <%= topic_nations_field f %>
+    <%= topic_control(f, :position, 'Position', 'Lower comes first.', compact: true) { f.number_field :position, class: 'input-mini' } %>
+  </div>
+</fieldset>

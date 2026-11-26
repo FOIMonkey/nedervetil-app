@@ -1,0 +1,13 @@
+<%= topic_errors(f.object) %>
+
+<fieldset class="admin-form-section">
+  <legend>Other route</legend>
+  <%= topic_text_field f, :what, 'What', 'What someone wants, such as “Complain about an officer”.' %>
+  <%= topic_text_field f, :route, 'Route', 'Where to go instead of a request.', area: true, rows: 2 %>
+  <%= topic_link_field f, :to, 'Link' %>
+  <%= topic_text_field f, :note, 'Note', nil, area: true, rows: 2 %>
+  <div class="admin-form-grid admin-form-grid--meta">
+    <%= topic_nations_field f %>
+    <%= topic_control(f, :position, 'Position', 'Lower comes first.', compact: true) { f.number_field :position, class: 'input-mini' } %>
+  </div>
+</fieldset>

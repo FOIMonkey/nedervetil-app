@@ -1,0 +1,37 @@
+<%= topic_errors(f.object) %>
+
+<div class="admin-form-grid admin-form-grid--topic-head">
+  <%= topic_text_field f, :title, 'Title' %>
+  <%= topic_control(f, :position, 'Position', '1–6 show on home page.', compact: true) { f.number_field :position, class: 'input-mini' } %>
+  <%= topic_text_field f, :search, 'Search words', 'Matches documents to this topic.' %>
+</div>
+
+<% unless f.object.persisted? %>
+  <%= topic_text_field f, :slug, 'Slug', 'The end of the page’s address, such as policing. It can’t change later.' %>
+<% end %>
+
+<%= topic_text_field f, :summary, 'Summary', nil, area: true, rows: 2 %>
+
+<% advanced_errors = %i[titles elsewhere_heading documents refused].any? { |attr| f.object.errors[attr].any? } %>
+<% advanced_notes = [] %>
+<% advanced_notes << pluralize(f.object.titles.values.compact_blank.size, 'nation title') if f.object.titles.values.compact_blank.any? %>
+<% advanced_notes << pluralize(f.object.documents.size, 'document') if f.object.documents.any? %>
+<% advanced_notes << pluralize(f.object.refused.size, 'refusal line') if f.object.refused.any? %>
+<% advanced_notes << 'custom heading' if f.object.elsewhere_heading.present? %>
+
+<details class="admin-drawer admin-drawer--form"<% if advanced_errors %> open<% end %>>
+  <summary>
+    Nation titles, featured documents &amp; refusal lines
+    <% if advanced_notes.any? %>
+      <span class="admin-drawer__meta muted"><%= advanced_notes.join(' · ') %></span>
+    <% end %>
+  </summary>
+  <div class="admin-drawer__body">
+    <%= topic_nation_inputs f, :titles, 'Title in a nation', 'Only where a nation calls the topic something else.' %>
+    <%= topic_text_field f, :elsewhere_heading, 'Other routes heading', 'Blank for “Other routes”.' %>
+    <div class="admin-form-grid admin-form-grid--two">
+      <%= topic_lines_field f, :documents, 'Documents', 'Public ids of documents to show on the page, one per line, in order.' %>
+      <%= topic_lines_field f, :refused, 'Refused lines', 'Reasons requests on this topic are refused, one per line. A question can show one as its warning.' %>
+    </div>
+  </div>
+</details>

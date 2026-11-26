@@ -1,0 +1,101 @@
+<div class="page-header admin-list-head">
+  <h1><%= @title = 'Topic history' %></h1>
+</div>
+<p class="admin-lede">Changes to topics and datasets, newest first. Filter to edits or admin changes to cut out initial imports.</p>
+
+<%= form_tag admin_topic_changes_path, method: :get, class: 'admin-search-bar' do %>
+  <%= label_tag :topic, 'Topic', class: 'admin-search-bar__label' %>
+  <%= select_tag :topic, options_from_collection_for_select(@topic_pages, :id, :title, @topic_page&.id), include_blank: 'All topics and datasets' %>
+
+  <%= label_tag :action_kind, 'Action', class: 'admin-search-bar__label' %>
+  <%= select_tag :action_kind,
+                 options_for_select([['All actions', ''], ['Edits only', 'update'], ['Created', 'create'], ['Deleted', 'destroy']], @action_kind) %>
+
+  <%= label_tag :source, 'By', class: 'admin-search-bar__label' %>
+  <%= select_tag :source,
+                 options_for_select([['Everyone', ''], ['Admins only', 'admin'], ['Import & CLI', 'system']], @source) %>
+
+  <%= submit_tag 'Filter', name: nil, class: 'btn btn-primary' %>
+  <% if @topic_page || @action_kind || @source %>
+    <%= link_to 'Reset', admin_topic_changes_path, class: 'btn' %>
+  <% end %>
+<% end %>
+
+<% if @topic_changes.empty? %>
+  <p class="muted">No matching topic changes.</p>
+<% else %>
+  <table class="table table-condensed admin-history-table">
+    <thead>
+      <tr>
+        <th class="admin-history-table__when">When</th>
+        <th class="admin-history-table__who">Who</th>
+        <th class="admin-history-table__what">What</th>
+        <th class="admin-history-table__action">Action</th>
+        <th>Changes</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% @topic_changes.each do |change| %>
+        <% entries = topic_change_entries(change) %>
+        <tr id="topic-change-<%= change.id %>">
+          <td class="admin-history-table__when muted" title="<%= change.created_at %>">
+            <%= change.created_at.to_fs(:short) %>
+          </td>
+          <td class="admin-history-table__who"><%= topic_change_by(change) %></td>
+          <td class="admin-history-table__what">
+            <span class="admin-history__kind muted"><%= topic_record_kind(change.record_type) %></span>
+            <% if (path = topic_change_path(change)) %>
+              <%= link_to topic_change_label(change), path, class: 'admin-history__record' %>
+            <% else %>
+              <span class="admin-history__record"><%= topic_change_label(change) %></span>
+            <% end %>
+            <% if change.record.is_a?(TopicPage::Row) && change.record.topic_page %>
+              <span class="admin-history__topic muted">in <%= change.record.topic_page.title %></span>
+            <% end %>
+          </td>
+          <td class="admin-history-table__action">
+            <% badge_class = case change.action
+                             when 'update' then 'label label-success'
+                             when 'destroy' then 'label label-warning'
+                             else 'label'
+                             end %>
+            <span class="<%= badge_class %>"><%= change.action.capitalize %></span>
+          </td>
+          <td class="admin-history-table__changes">
+            <% if entries.empty? %>
+              <span class="muted">No field changes recorded</span>
+            <% elsif change.action == 'update' %>
+              <dl class="admin-diff">
+                <% entries.each do |label, field, before, after| %>
+                  <div class="admin-diff__row">
+                    <dt><%= label %></dt>
+                    <dd>
+                      <span class="admin-diff__before"><%= topic_change_value(before, field: field) %></span>
+                      <span class="admin-diff__arrow" aria-hidden="true">→</span>
+                      <span class="admin-diff__after"><%= topic_change_value(after, field: field) %></span>
+                    </dd>
+                  </div>
+                <% end %>
+              </dl>
+            <% else %>
+              <details class="admin-diff-drawer">
+                <summary><%= topic_change_summary(change, entries) %></summary>
+                <dl class="admin-diff admin-diff--snapshot">
+                  <% entries.each do |label, field, before, after| %>
+                    <% val = change.action == 'destroy' ? before : after %>
+                    <div class="admin-diff__row">
+                      <dt><%= label %></dt>
+                      <dd><%= topic_change_value(val, field: field) %></dd>
+                    </div>
+                  <% end %>
+                </dl>
+              </details>
+            <% end %>
+          </td>
+        </tr>
+      <% end %>
+    </tbody>
+  </table>
+
+  <%= will_paginate(@topic_changes) %>
+<% end %>

@@ -1,0 +1,14 @@
+<div class="page-header admin-list-head">
+  <div>
+    <p class="admin-summary__back"><%= link_to '← Back to topics', admin_topic_pages_path %></p>
+    <h1><%= @title = 'New topic' %></h1>
+  </div>
+</div>
+
+<%= form_for [:admin, @topic_page], html: { class: 'admin-topic-form' } do |f| %>
+  <%= render partial: 'form', locals: { f: f } %>
+  <div class="form-actions">
+    <%= submit_tag 'Save', class: 'btn btn-primary' %>
+    <%= link_to 'Cancel', admin_topic_pages_path, class: 'btn' %>
+  </div>
+<% end %>

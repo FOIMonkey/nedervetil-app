@@ -1,0 +1,194 @@
+<% holders = @topic_page.holders.select(&:persisted?) %>
+<% questions = @topic_page.questions.select(&:persisted?) %>
+<% sources = @topic_page.sources.select(&:persisted?) %>
+<% routes = @topic_page.routes.select(&:persisted?) %>
+
+<div class="page-header admin-list-head">
+  <div>
+    <p class="admin-summary__back"><%= link_to '← Back to topics', admin_topic_pages_path %></p>
+    <h1><%= @title = "Topic: #{@topic_page.title_was}" %> <code class="admin-title-code"><%= @topic_page.slug %></code></h1>
+  </div>
+  <div class="admin-summary__tools">
+    <%= link_to 'See the live topic page', topic_path(@topic_page.slug), class: 'btn btn-small' %>
+    <%= link_to 'This topic’s history', admin_topic_changes_path(topic: @topic_page.id), class: 'btn btn-small' %>
+  </div>
+</div>
+
+<nav class="admin-filter-pills" aria-label="Jump to section">
+  <a class="admin-filter-pill" href="#topic-details">Page details</a>
+  <a class="admin-filter-pill" href="#holders">Holders <span class="admin-filter-pill__count"><%= holders.size %></span></a>
+  <a class="admin-filter-pill" href="#questions">Questions <span class="admin-filter-pill__count"><%= questions.size %></span></a>
+  <a class="admin-filter-pill" href="#sources">Published sources <span class="admin-filter-pill__count"><%= sources.size %></span></a>
+  <a class="admin-filter-pill" href="#routes">Other routes <span class="admin-filter-pill__count"><%= routes.size %></span></a>
+</nav>
+
+<section id="topic-details" class="admin-topic-card">
+  <%= form_for [:admin, @topic_page], html: { class: 'admin-topic-form' } do |f| %>
+    <%= render partial: 'form', locals: { f: f } %>
+    <div class="form-actions">
+      <%= submit_tag 'Save topic', class: 'btn btn-primary' %>
+    </div>
+  <% end %>
+</section>
+
+<section id="holders" class="admin-block admin-topic-section">
+  <h2>
+    Holders <span class="admin-block__count"><%= holders.size %></span>
+    <%= link_to 'Add holder', new_admin_topic_page_topic_holder_path(@topic_page), class: 'btn btn-small admin-block__more' %>
+  </h2>
+  <% if holders.empty? %>
+    <p class="muted">No holders yet.</p>
+  <% else %>
+    <table class="table table-condensed table-striped">
+      <thead>
+        <tr>
+          <th class="admin-num">Pos</th>
+          <th>What they hold &amp; who</th>
+          <th>Key</th>
+          <th>Nations</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        <% holders.each do |row| %>
+          <tr>
+            <td class="admin-num muted"><%= row.position %></td>
+            <td>
+              <strong><%= link_to row.what.presence || row.who, [:edit, :admin, @topic_page, row], class: 'admin-table-primary-link' %></strong>
+              <div class="admin-table-sub muted"><%= row.who %><% if row.to.present? %> · <%= topic_link_preview(row.to) %><% end %></div>
+            </td>
+            <td><% if row.key.present? %><code><%= row.key %></code><% else %><span class="muted">—</span><% end %></td>
+            <td><%= topic_nations_text(row.nations) %></td>
+            <td class="text-right"><%= link_to 'Edit', [:edit, :admin, @topic_page, row], class: 'btn btn-mini' %></td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  <% end %>
+</section>
+
+<section id="questions" class="admin-block admin-topic-section">
+  <h2>
+    Questions <span class="admin-block__count"><%= questions.size %></span>
+    <%= link_to 'Add question', new_admin_topic_page_topic_question_path(@topic_page), class: 'btn btn-small admin-block__more' %>
+  </h2>
+  <% if questions.empty? %>
+    <p class="muted">No questions yet.</p>
+  <% else %>
+    <table class="table table-condensed table-striped">
+      <thead>
+        <tr>
+          <th class="admin-num">Pos</th>
+          <th>Question</th>
+          <th>Answers</th>
+          <th>Nations</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        <% questions.each do |row| %>
+          <tr>
+            <td class="admin-num muted"><%= row.position %></td>
+            <td>
+              <strong><%= link_to row.text, [:edit, :admin, @topic_page, row], class: 'admin-table-primary-link' %></strong>
+              <div class="admin-table-sub muted"><code><%= row.slug %></code></div>
+            </td>
+            <td class="admin-table-badges">
+              <% ds_count = row.dataset.values.compact_blank.uniq.size %>
+              <% if ds_count.positive? %>
+                <span class="admin-status-pill"><%= pluralize(ds_count, 'dataset') %></span>
+              <% elsif row.published.present? %>
+                <span class="admin-status-pill">Published link</span>
+              <% end %>
+              <% if row.warning.present? %>
+                <span class="admin-status-pill admin-status-pill--warn">Warning</span>
+              <% end %>
+            </td>
+            <td><%= topic_nations_text(row.nations) %></td>
+            <td class="text-right"><%= link_to 'Edit', [:edit, :admin, @topic_page, row], class: 'btn btn-mini' %></td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  <% end %>
+</section>
+
+<section id="sources" class="admin-block admin-topic-section">
+  <h2>
+    Published sources <span class="admin-block__count"><%= sources.size %></span>
+    <%= link_to 'Add published source', new_admin_topic_page_topic_source_path(@topic_page), class: 'btn btn-small admin-block__more' %>
+  </h2>
+  <% if sources.empty? %>
+    <p class="muted">No published sources yet.</p>
+  <% else %>
+    <table class="table table-condensed table-striped">
+      <thead>
+        <tr>
+          <th class="admin-num">Pos</th>
+          <th>Published source</th>
+          <th>Nations</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        <% sources.each do |row| %>
+          <tr>
+            <td class="admin-num muted"><%= row.position %></td>
+            <td>
+              <strong><%= link_to row.label, [:edit, :admin, @topic_page, row], class: 'admin-table-primary-link' %></strong>
+              <% if row.url.present? %>
+                <div class="admin-table-sub muted"><%= truncate(row.url, length: 80) %></div>
+              <% end %>
+            </td>
+            <td><%= topic_nations_text(row.nations) %></td>
+            <td class="text-right"><%= link_to 'Edit', [:edit, :admin, @topic_page, row], class: 'btn btn-mini' %></td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  <% end %>
+</section>
+
+<section id="routes" class="admin-block admin-topic-section">
+  <h2>
+    Other routes <span class="admin-block__count"><%= routes.size %></span>
+    <%= link_to 'Add other route', new_admin_topic_page_topic_route_path(@topic_page), class: 'btn btn-small admin-block__more' %>
+  </h2>
+  <% if routes.empty? %>
+    <p class="muted">No other routes yet.</p>
+  <% else %>
+    <table class="table table-condensed table-striped">
+      <thead>
+        <tr>
+          <th class="admin-num">Pos</th>
+          <th>What &amp; route</th>
+          <th>Nations</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        <% routes.each do |row| %>
+          <tr>
+            <td class="admin-num muted"><%= row.position %></td>
+            <td>
+              <strong><%= link_to row.what, [:edit, :admin, @topic_page, row], class: 'admin-table-primary-link' %></strong>
+              <% if row.route.present? %>
+                <div class="admin-table-sub muted"><%= truncate(row.route, length: 90) %></div>
+              <% end %>
+            </td>
+            <td><%= topic_nations_text(row.nations) %></td>
+            <td class="text-right"><%= link_to 'Edit', [:edit, :admin, @topic_page, row], class: 'btn btn-mini' %></td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  <% end %>
+</section>
+
+<section class="admin-danger-zone">
+  <h2>Danger zone</h2>
+  <p class="muted">Deleting this topic removes all its holders, questions, published sources, and other routes from the site at once.</p>
+  <%= form_tag [:admin, @topic_page], class: 'form form-inline', method: 'delete' do %>
+    <%= submit_tag 'Delete topic', class: 'btn btn-danger', data: { confirm: 'Delete this topic, with all its holders, questions, published sources and other routes? It goes from the site at once.' } %>
+  <% end %>
+</section>

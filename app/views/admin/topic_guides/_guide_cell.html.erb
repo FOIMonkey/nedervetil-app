@@ -1,0 +1,6 @@
+<% if guide %>
+  <span class="label<%= ' label-success' if guide.published? %>"><%= guide.published? ? 'Published' : 'Draft' %></span>
+  <%= link_to 'Edit', edit_admin_topic_guide_path(guide) %>
+<% else %>
+  <%= link_to 'Add guide', new_admin_topic_guide_path(link_params) %>
+<% end %>

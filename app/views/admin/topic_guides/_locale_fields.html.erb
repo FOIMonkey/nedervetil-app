@@ -1,0 +1,14 @@
+<div class="admin-field">
+  <%= t.label :title, 'Heading', class: 'admin-field__label' %>
+  <div class="admin-field__input">
+    <%= t.text_field :title %>
+    <span class="help-block">Three words or fewer. Leave it blank for “How it works”.</span>
+  </div>
+</div>
+
+<div class="admin-field">
+  <%= t.label :body, 'Guide', class: 'admin-field__label' %>
+  <div class="admin-field__input">
+    <%= t.rich_text_area :body %>
+  </div>
+</div>

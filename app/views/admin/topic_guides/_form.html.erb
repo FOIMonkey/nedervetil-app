@@ -1,0 +1,39 @@
+<%# Long lists, grouped so they can be scanned: sources by publisher, questions by topic. %>
+<% sources = Topics::Dataset.all.group_by(&:publisher).sort_by { |publisher, _| publisher.to_s.downcase }.map { |publisher, datasets| [publisher, datasets.sort_by { |dataset| dataset.title.downcase }.map { |dataset| [dataset.title, dataset.id] }] } %>
+<% questions = Topics::Topic.all.map { |topic| [topic.title, topic.questions.uniq(&:slug).map { |question| [question.text, "#{topic.slug}/#{question.slug}"] }] } %>
+<%= f.error_messages %>
+
+<fieldset class="admin-form-section">
+  <legend>Applies to</legend>
+  <div class="admin-form-grid admin-form-grid--two">
+    <div class="admin-field">
+      <%= f.label :dataset_id, 'Source', class: 'admin-field__label' %>
+      <div class="admin-field__input">
+        <%= f.select :dataset_id, grouped_options_for_select(sources, f.object.dataset_id), { include_blank: 'None' } %>
+        <span class="help-block">The published table or register this guide is about.</span>
+      </div>
+    </div>
+
+    <div class="admin-field">
+      <%= f.label :question_key, 'Question', class: 'admin-field__label' %>
+      <div class="admin-field__input">
+        <%= f.select :question_key, grouped_options_for_select(questions, f.object.question_key), { include_blank: 'None' } %>
+        <span class="help-block">Pick a question, or both for a source on one question.</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="admin-field">
+    <label class="checkbox-inline">
+      <%= f.check_box :published %>
+      <span>Published, so visitors see it</span>
+    </label>
+  </div>
+</fieldset>
+
+<fieldset class="admin-form-section">
+  <legend>Guide text</legend>
+  <% f.translated_fields do |t| %>
+    <%= render partial: 'locale_fields', locals: { t: t } %>
+  <% end %>
+</fieldset>

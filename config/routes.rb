@@ -856,4 +856,17 @@ Rails.application.routes.draw do
           :defaults => { :pro => '1' }
   end
   ####
+
+  #### Admin topic guides and topic content controllers
+  namespace :admin do
+    resources :topic_guides, except: [:show]
+    resources :topic_pages, path: 'topics', except: [:show] do
+      resources :topic_holders, path: 'holders', except: %i[index show]
+      resources :topic_questions, path: 'questions', except: %i[index show]
+      resources :topic_sources, path: 'sources', except: %i[index show]
+      resources :topic_routes, path: 'routes', except: %i[index show]
+    end
+    resources :topic_datasets, path: 'datasets', except: [:show]
+    resources :topic_changes, path: 'topic_history', only: [:index]
+  end
 end

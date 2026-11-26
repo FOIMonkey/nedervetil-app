@@ -1,0 +1,90 @@
+<% question = f.object %>
+<% warnings = (@topic_page.refused | [question.warning]).compact %>
+<%= topic_errors(f.object) %>
+
+<fieldset class="admin-form-section">
+  <legend>Question &amp; scope</legend>
+  <%= topic_text_field f, :text, 'Question', nil, area: true, rows: 2 %>
+
+  <div class="admin-form-grid admin-form-grid--meta">
+    <% if question.persisted? %>
+      <div class="admin-field">
+        <span class="admin-field__label">Slug</span>
+        <div class="admin-field__input">
+          <code><%= question.slug_was %></code>
+          <span class="help-block">Fixed: it’s in the question’s address.</span>
+        </div>
+      </div>
+    <% else %>
+      <%= topic_text_field f, :slug, 'Slug', 'End of the question’s address, e.g. burglaries. Can’t change later.' %>
+    <% end %>
+    <%= topic_control(f, :position, 'Position', 'Lower comes first.', compact: true) { f.number_field :position, class: 'input-mini' } %>
+  </div>
+
+  <%= topic_nations_field f %>
+</fieldset>
+
+<fieldset class="admin-form-section<%= ' error' if question.errors[:dataset].any? || question.errors[:holder].any? %>">
+  <legend>Answer by nation</legend>
+  <table class="table table-condensed admin-nation-table">
+    <thead>
+      <tr>
+        <th class="admin-nation-table__nation">Nation</th>
+        <th class="admin-nation-table__dataset">Dataset that answers it</th>
+        <th class="admin-nation-table__holder">Holder to ask</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% Topics::Topic::NATIONS.each do |key, nation| %>
+        <% inactive = question.nations.any? && !question.nations.include?(key) %>
+        <tr class="<%= 'admin-nation-table__inactive' if inactive %>">
+          <th scope="row"><%= nation %></th>
+          <td><%= select_tag "topic_question[dataset][#{key}]", topic_dataset_options(question.dataset[key]), include_blank: 'None', id: "topic_question_dataset_#{key}", 'aria-label': "Dataset in #{nation}" %></td>
+          <td><%= select_tag "topic_question[holder][#{key}]", topic_holder_options(@topic_page, question.holder[key]), include_blank: 'None', id: "topic_question_holder_#{key}", 'aria-label': "Holder in #{nation}" %></td>
+        </tr>
+      <% end %>
+    </tbody>
+  </table>
+  <p class="help-block">The holder to ask is needed only where the ask link’s tag fits several holders.</p>
+
+  <div class="admin-field">
+    <label class="checkbox-inline">
+      <%= f.check_box :partial %>
+      <span>The dataset answers only part of the question</span>
+    </label>
+  </div>
+
+  <%= topic_link_field f, :ask, 'Ask link' %>
+</fieldset>
+
+<% warning_open = question.warning.present? || question.warning_title.present? || question.warning_text.present? || question.keywords.any? || %i[warning warning_title warning_text keywords].any? { |a| question.errors[a].any? } %>
+<% warning_notes = [] %>
+<% warning_notes << pluralize(question.keywords.size, 'keyword') if question.keywords.any? %>
+<% warning_notes << 'warning set' if question.warning.present? || question.warning_text.present? %>
+<details class="admin-drawer admin-drawer--form"<% if warning_open %> open<% end %>>
+  <summary>
+    Refusal warning &amp; letter matching
+    <% if warning_notes.any? %>
+      <span class="admin-drawer__meta muted"><%= warning_notes.join(' · ') %></span>
+    <% end %>
+  </summary>
+  <div class="admin-drawer__body">
+    <%= topic_lines_field f, :keywords, 'Keywords', 'Phrases that suggest this question when a letter uses one, one per line.' %>
+    <%= topic_control(f, :warning, 'Warning', 'A refused line from the topic that applies to this question.') { f.select :warning, warnings, { include_blank: 'None' } } %>
+    <%= topic_text_field f, :warning_title, 'Warning title', 'Puts the warning in the question’s own words.' %>
+    <%= topic_text_field f, :warning_text, 'Warning text', nil, area: true, rows: 3 %>
+  </div>
+</details>
+
+<% display_open = question.heading.present? || question.note.present? || question.published.present? || question.published_label.present? || %i[heading note published published_label].any? { |a| question.errors[a].any? } %>
+<details class="admin-drawer admin-drawer--form"<% if display_open %> open<% end %>>
+  <summary>Display overrides &amp; non-dataset published link</summary>
+  <div class="admin-drawer__body">
+    <%= topic_text_field f, :heading, 'Heading', 'Replaces the answer’s usual heading, for a dataset only related to the question.' %>
+    <%= topic_text_field f, :note, 'Note', 'Explains a term in the question.', area: true, rows: 2 %>
+    <div class="admin-form-grid admin-form-grid--two">
+      <%= topic_text_field f, :published, 'Published at', 'A web address, for a question no dataset answers.' %>
+      <%= topic_text_field f, :published_label, 'Published label', 'Where “Already published” isn’t specific enough.' %>
+    </div>
+  </div>
+</details>

@@ -1,0 +1,41 @@
+<% @title = 'Topics' %>
+
+<div class="admin-list-head">
+  <h1><%= @title %></h1>
+  <div class="admin-summary__tools">
+    <%= link_to 'Add topic', new_admin_topic_page_path, class: 'btn btn-small btn-primary' %>
+  </div>
+</div>
+<p class="admin-lede">Each topic’s page, with who holds its records, its questions, where they’re published and other routes. The first six appear on the home page. Every save is live at once and logged in <%= link_to 'topic history', admin_topic_changes_path %>.</p>
+
+<table class="table table-condensed table-striped admin-topics-table">
+  <thead>
+    <tr>
+      <th class="admin-num">Pos</th>
+      <th>Title</th>
+      <th>Slug</th>
+      <th class="admin-num">Holders</th>
+      <th class="admin-num">Questions</th>
+      <th class="admin-num">Sources</th>
+      <th class="admin-num">Routes</th>
+      <th></th>
+    </tr>
+  </thead>
+  <tbody>
+    <% @topic_pages.each_with_index do |page, idx| %>
+      <tr id="topic-<%= page.slug %>" class="<%= 'admin-topics-table__cutoff' if idx == 5 %>">
+        <td class="admin-num muted"><%= page.position %><% if idx < 6 %> <span class="admin-status-pill" title="Shown on the home page">Home</span><% end %></td>
+        <td><strong><%= link_to page.title, edit_admin_topic_page_path(page), class: 'admin-table-primary-link' %></strong></td>
+        <td><code><%= page.slug %></code></td>
+        <td class="admin-num<%= ' muted' if page.holders.size.zero? %>"><%= page.holders.size %></td>
+        <td class="admin-num<%= ' muted' if page.questions.size.zero? %>"><%= page.questions.size %></td>
+        <td class="admin-num<%= ' muted' if page.sources.size.zero? %>"><%= page.sources.size %></td>
+        <td class="admin-num<%= ' muted' if page.routes.size.zero? %>"><%= page.routes.size %></td>
+        <td class="text-right admin-table-actions">
+          <%= link_to 'Edit', edit_admin_topic_page_path(page), class: 'btn btn-mini' %>
+          <%= link_to 'Live', topic_path(page.slug), class: 'admin-rows__open' %>
+        </td>
+      </tr>
+    <% end %>
+  </tbody>
+</table>
