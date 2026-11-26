@@ -1,0 +1,484 @@
+// The help pages, the contact form, the request form's preview and advice,
+// sign-in, the account pages and the error page. Core's own stylesheet does
+// not load this file; a theme lists it in its custom.scss (doc/FORK.md,
+// Frontend).
+
+@use "responsive/foundation" as *;
+@use "responsive/utils" as *;
+
+#help_about,
+#help_alaveteli,
+#help_api,
+#help_contact,
+#help_credits,
+#help_officers,
+#help_privacy,
+#help_requesting,
+#help_unhappy,
+.controller_help {
+  margin: 0;
+  // With the row's pull undone, a band has nothing to step back from.
+  --nested-row-gutter: 0;
+
+  // The side menu's first heading reads on the page's first heading's line;
+  // its rule sits above that line.
+  @include respond-min($main_menu-mobile_menu_cutoff) {
+    display: grid;
+    grid-template-columns: minmax(0, 14rem) minmax(0, var(--measure));
+    column-gap: var(--space-7);
+    align-items: baseline;
+  }
+
+  #left_column_flip,
+  #right_column_flip {
+    float: none;
+    width: auto;
+    margin: 0;
+    padding: 0;
+  }
+
+  // A page that opens with the band has it, and any notice, above both
+  // columns.
+  > .page-band,
+  > .band-flash {
+    grid-column: 1 / -1;
+  }
+
+  > .page-band {
+    grid-row: 1;
+  }
+
+  > .band-flash {
+    grid-row: 2;
+  }
+
+  > .page-band ~ #left_column_flip,
+  > .page-band ~ #right_column_flip {
+    grid-row: 3;
+  }
+
+  // Under the band the page's first heading starts level with the side
+  // column, not a heading's margin below it.
+  > .page-band ~ #left_column_flip > :first-child,
+  > .page-band ~ #left_column_flip > dl:first-child > dt:first-child {
+    margin-top: 0;
+  }
+
+  #left_column_flip {
+    grid-column: 2;
+    grid-row: 1;
+    font-size: var(--text-body);
+
+    h1 {
+      margin-bottom: var(--space-5);
+    }
+
+    h2 {
+      margin: var(--space-6) 0 var(--space-2);
+      font-size: var(--text-xl);
+    }
+
+    dt {
+      margin: var(--space-5) 0 var(--space-1);
+      font-size: var(--text-lg);
+      font-weight: var(--weight-bold);
+      line-height: var(--leading-snug);
+    }
+
+    dd {
+      margin: 0 0 var(--space-3);
+    }
+
+    h1 a[href^="#"],
+    h2 a[href^="#"],
+    dt a[href^="#"] {
+      color: var(--color-text-soft);
+      font-weight: var(--weight-regular);
+      text-decoration: none;
+    }
+  }
+
+  #right_column_flip {
+    grid-column: 1;
+    grid-row: 1;
+    margin: 0 0 var(--space-5);
+    padding-top: var(--space-3);
+    border-top: var(--border-rule) solid var(--color-rule);
+    font-size: var(--text-md);
+
+    @include respond-min($main_menu-mobile_menu_cutoff) {
+      margin-bottom: 0;
+    }
+
+    @media (max-width: 57.99em) {
+      padding: 0 0 var(--space-3);
+      border-top: 0;
+      border-bottom: var(--border-hair) solid var(--color-line);
+
+      h2 {
+        display: none;
+      }
+
+      ul {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0 var(--space-4);
+      }
+    }
+
+    h2 {
+      margin: 0 0 var(--space-2);
+      font-size: var(--text-body);
+    }
+
+    h2 ~ h2 {
+      margin-top: var(--space-5);
+    }
+
+    ul {
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    li {
+      margin: 0;
+      padding: var(--space-1) 0;
+    }
+  }
+}
+
+.status-key {
+  margin: 0;
+  padding: 0;
+  border-top: var(--border-hair) solid var(--color-line);
+  list-style: none;
+
+  li {
+    position: relative;
+    margin: 0;
+    padding: var(--space-3) 0 var(--space-3) 2.25rem;
+    border-bottom: var(--border-hair) solid var(--color-line);
+  }
+
+  .icon-standalone {
+    position: absolute;
+    top: 0.85rem;
+    left: 0;
+  }
+
+  strong {
+    display: block;
+  }
+}
+
+// A gap in the copy that only the site owner can fill, meant to be seen.
+.owner-note {
+  padding: var(--space-2) var(--space-3);
+  border: var(--border) dashed var(--color-text);
+  font-size: var(--text-md);
+
+  &::before {
+    content: "Placeholder. ";
+    font-weight: var(--weight-bold);
+  }
+}
+
+#help_contact,
+.contact_preamble {
+  max-width: var(--measure);
+}
+
+#help_contact {
+  display: block; // no list of pages beside it, so none of the help grid
+
+  form p {
+    margin: 0 0 var(--space-4);
+  }
+
+  .form_label {
+    display: block;
+    margin-bottom: var(--space-1);
+  }
+
+  input[type="text"],
+  textarea {
+    width: 100%;
+    margin: 0;
+  }
+}
+
+// The sign-in and sign-up pages: one narrow form, then a line that leads to
+// the other page.
+// In the sign-in dialog the page's plain title comes before the form.
+h1:has(+ .sign-page) {
+  margin: 0 0 var(--space-5);
+}
+
+.sign-page {
+  max-width: 24rem;
+
+  // Shown to someone who wrote a request before signing in. Core sets it as
+  // large as a heading, which a column this narrow can't hold.
+  #sign_in_reason {
+    margin: 0 0 var(--space-5);
+    font-size: var(--text-lg);
+    line-height: var(--leading-snug);
+  }
+
+  .form_item_note,
+  .form_note {
+    color: var(--color-text-soft);
+    font-size: var(--text-sm);
+  }
+
+  input[type="text"],
+  input[type="password"],
+  input[type="email"] {
+    width: 100%;
+    margin: var(--space-1) 0 var(--space-4);
+  }
+
+  p {
+    margin: 0 0 var(--space-3);
+  }
+
+  .sign-page__other {
+    margin: var(--space-6) 0 0;
+    padding-top: var(--space-3);
+    border-top: var(--border-rule) solid var(--color-rule);
+    color: var(--color-text-soft);
+    font-size: var(--text-md);
+  }
+}
+
+// "What are you doing?" on the follow-up form: each radio button sits beside
+// its label, rather than on a line of its own above it on a phone.
+#followup_form div:has(> input[type="radio"] + label) {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+}
+
+#followup_form input[type="radio"] + label {
+  margin: 0;
+}
+
+#followup_form input[type="radio"] {
+  flex: none;
+  margin: 0.3em 0 0;
+}
+
+// Core makes this button look like a link, in a blue of its own that turns
+// near-black when pointed at. Here it looks like the site's links.
+input#reedit_button {
+  margin-right: var(--space-4);
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--color-link);
+  font-weight: var(--weight-regular);
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 0.15em;
+
+  &:hover,
+  &:active {
+    background: var(--color-highlight);
+    color: var(--color-on-highlight);
+  }
+
+  &:focus {
+    background: var(--color-highlight);
+    color: var(--color-on-highlight);
+  }
+}
+
+// The older stylesheet sets these labels and notes in greys (#777, #999) that
+// fall just short of 4.5:1 on white. They take the tokens' soft text colour.
+.to_public_body_label,
+.from_user_label,
+.preview_subject strong,
+.preview_to strong,
+.preview_from strong,
+.action-menu__menu__item,
+.copyright-notice a,
+.copyright-notice a:link,
+.copyright-notice a:visited,
+.vertical-navigation-menu__item {
+  color: var(--color-text-soft);
+}
+
+// Its sidebar section already draws a rule above it.
+.copyright-notice {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: 0;
+
+  a,
+  a:link,
+  a:visited {
+    text-decoration: underline;
+  }
+}
+
+// advice beside the new request form; core tints the last panel yellow
+.advice-panel,
+.advice-panel--warning {
+  margin: 0 0 var(--space-4);
+  padding: 0;
+  border: 0;
+  background: none;
+  font-size: var(--text-md);
+
+  h4 {
+    margin: 0 0 var(--space-2);
+    font-size: var(--text-base);
+  }
+
+  ul {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  li {
+    margin: 0 0 var(--space-2);
+  }
+}
+
+// (core's rule for this is two classes deep, hence the longer selector)
+.request_advice .advice-panel.advice-panel--warning,
+.advice-panel.advice-panel--warning {
+  padding: var(--space-3) var(--space-4);
+  border: var(--border) solid var(--color-text);
+  border-radius: var(--radius);
+  background: var(--color-panel);
+}
+
+.error-page {
+  max-width: var(--measure);
+
+  ul {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  li {
+    margin: 0 0 var(--space-3);
+  }
+
+  #search_form {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+    margin-top: var(--space-2);
+
+    input[type="text"] {
+      flex: 1 1 12rem;
+      max-width: 20rem;
+      margin: 0;
+    }
+  }
+}
+
+textarea {
+  width: 100%;
+  max-width: 46rem;
+}
+
+.errorExplanation h2 {
+  margin-top: 0;
+  font-size: var(--text-lg);
+}
+
+.fieldWithErrors input,
+.fieldWithErrors textarea,
+.fieldWithErrors select {
+  border-width: var(--border-band);
+}
+
+#request_details table {
+  border-collapse: collapse;
+  font-size: var(--text-md);
+}
+
+#request_details {
+  td,
+  th {
+    padding: var(--space-2) var(--space-3);
+    border: var(--border-hair) solid var(--color-text);
+    text-align: left;
+    vertical-align: top;
+  }
+
+  th {
+    background: var(--color-panel);
+    font-weight: var(--weight-bold);
+  }
+
+  tr.odd,
+  tr.even,
+  tr:nth-child(odd),
+  tr:nth-child(even) {
+    background: var(--color-page);
+  }
+}
+
+.account-band__sub {
+  margin: var(--space-2) 0 0;
+  font-size: var(--text-lg);
+}
+
+.account-page {
+  max-width: 48rem;
+  margin-bottom: var(--space-7);
+}
+
+.account-settings {
+  margin: 0;
+  padding: 0;
+  border-top: var(--border-rule) solid var(--color-rule);
+  list-style: none;
+
+  li {
+    display: grid;
+    grid-template-columns: 16rem minmax(0, 1fr) auto;
+    gap: var(--space-1) var(--space-4);
+    align-items: baseline;
+    margin: 0;
+    padding: var(--space-3) 0;
+    border-bottom: var(--border-hair) solid var(--color-line);
+
+    @media (max-width: 40em) {
+      grid-template-columns: minmax(0, 1fr) auto;
+    }
+  }
+}
+
+.account-settings__name {
+  font-weight: var(--weight-medium);
+}
+
+.account-settings__value {
+  min-width: 0;
+  overflow-wrap: anywhere;
+
+  @media (max-width: 40em) {
+    grid-row: 2;
+    color: var(--color-text-soft);
+  }
+}
+
+.account-settings__change {
+  @media (max-width: 40em) {
+    grid-row: 1;
+    grid-column: 2;
+  }
+}
+
+.account-settings__value:empty {
+  display: none;
+}

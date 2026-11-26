@@ -1,3 +1,6 @@
+@use "responsive/foundation" as *;
+@use "responsive/utils" as *;
+
 .icon {
   background-size: 13px 13px;
   background-position: center;
@@ -11,23 +14,23 @@
   @include image-replacement();
 
   &.icon__download {
-    background-image: image-url("alaveteli-pro/download.png");
+    background-image: url("/alaveteli-pro/download.png");
     @media (-webkit-min-device-pixel-ratio: 1.5), (min-resolution: 144dpi) {
-      background-image: image-url("alaveteli-pro/download@2.png");
+      background-image: url("/alaveteli-pro/download@2.png");
     }
   }
 
   &.icon__add {
-    background-image: image-url("alaveteli-pro/add.png");
+    background-image: url("/alaveteli-pro/add.png");
     @media (-webkit-min-device-pixel-ratio: 1.5), (min-resolution: 144dpi) {
-      background-image: image-url("alaveteli-pro/add@2.png");
+      background-image: url("/alaveteli-pro/add@2.png");
     }
   }
 
   &.icon__remove {
-    background-image: image-url("alaveteli-pro/remove.png");
+    background-image: url("/alaveteli-pro/remove.png");
     @media (-webkit-min-device-pixel-ratio: 1.5), (min-resolution: 144dpi) {
-      background-image: image-url("alaveteli-pro/remove@2.png");
+      background-image: url("/alaveteli-pro/remove@2.png");
     }
   }
 }

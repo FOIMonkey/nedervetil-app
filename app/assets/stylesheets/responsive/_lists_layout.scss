@@ -1,3 +1,6 @@
+@use "responsive/foundation" as *;
+@use "responsive/utils" as *;
+
 /* Layout for lists of requests, authorities, users */
 .request_listing,.body_listing,.user_listing {
   overflow:hidden;

@@ -1,0 +1,32 @@
+@use "responsive/utils" as *;
+
+// Hide content visually, but keep it available to screen readers
+// source: http://a11yproject.com/posts/how-to-hide-content/
+.visually-hidden {
+  // http://developer.yahoo.com/blogs/ydn/posts/2012/10/clip-your-hidden-content-for-better-accessibility/
+  position: absolute !important;
+  clip: rect(1px 1px 1px 1px); /* IE6, IE7 */
+  clip: rect(1px, 1px, 1px, 1px);
+  padding:0 !important;
+  border:0 !important;
+  height: 1px !important;
+  width: 1px !important;
+  overflow: hidden;
+  display: block;
+}
+body:hover .visually-hidden a, body:hover .visually-hidden input, body:hover .visually-hidden button { display: none !important; }
+
+.only-show-for-print {
+  display: none;
+  visibility: hidden;
+}
+
+.show-with-keyboard-focus-only {
+  position: absolute;
+  left: -9999999px;
+  top: 0;
+  &:focus {
+    left: 0;
+    z-index: 100;
+  }
+}

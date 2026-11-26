@@ -1,0 +1,30 @@
+// How things move. One place, so every opening reads the same.
+
+// A <details> that slides open over a quarter of a second rather than
+// snapping in. Browsers without ::details-content or interpolate-size open
+// it at once, and so does anyone who asks for reduced motion.
+@mixin details-opening($duration: 250ms) {
+  interpolate-size: allow-keywords;
+
+  &::details-content {
+    block-size: 0;
+    overflow-y: clip;
+    transition: block-size $duration ease-out, content-visibility $duration allow-discrete;
+  }
+
+  &[open]::details-content {
+    block-size: auto;
+  }
+
+  // Opened by the page to show where it landed (helpers/open_details): at
+  // once, because focus can't go into content that is still opening.
+  &[data-opened-by-page]::details-content {
+    transition: none;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    &::details-content {
+      transition: none;
+    }
+  }
+}

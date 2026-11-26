@@ -1,3 +1,6 @@
+@use "responsive/foundation" as *;
+@use "responsive/utils" as *;
+
 /* Layout for the new request page */
 .request-to-header {
   @include grid-column(12);
@@ -7,12 +10,6 @@
   }
 }
 
-.request_embargo {
+.request_privacy {
   margin-top: 2em;
-}
-
-.pro_batch_link {
-  display: block;
-  margin-top: 0.25em;
-  margin-bottom: -1em;
 }

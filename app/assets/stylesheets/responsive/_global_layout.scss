@@ -1,12 +1,9 @@
+@use "responsive/foundation" as *;
+@use "responsive/utils" as *;
+
 /* Layout across the site */
 .wrapper {
   @include wrapper();
-}
-
-.wrapper--wide {
-  // used in alaveteli-pro for wide outside gutters of the layout container
-  // the rest of the grid remains the same
-  @include wrapper($max-width: 72em);
 }
 
 /* Legacy ID-based wrapper */
@@ -42,21 +39,21 @@ textarea{
   }
 }
 
-
 /* Container grid-rows for pages that use these generic headers and columns */
 #public_body_list,
 #user_profile_header,
-#general_blog,
 #request_show,
 #info_request_batch_show,
 #reports_new {
   @include grid-row($behavior: nest);
+  // A band and its notice are not columns of the row. They read this to stay at
+  // the page's edges (features/_band.scss).
+  --nested-row-gutter: #{$column-gutter * 0.5};
 }
 
 /* Column headers */
 #header_right {
   @include grid-column(12);
-
 
   @include respond-min( $main_menu-mobile_menu_cutoff ){
     @include grid-column($columns:4, $float:right);
@@ -209,17 +206,6 @@ textarea{
  }
 }
 
-.action-bar__follow,
-.action-bar__follow-button,
-.action-bar__follower-count {
-  display: inline-block;
-  margin-right: 0;
-}
-
-.action-bar__follower-count {
-  font-size: 0.875em;
-}
-
 /*
  *  Drop-down style action button
  */
@@ -318,7 +304,6 @@ textarea{
   }
 }
 
-
 .inner-canvas {
   padding-bottom: 3em;
 }
@@ -340,6 +325,11 @@ textarea{
 
 .inner-canvas-body {
   padding-top: 2em;
+}
+
+// A band already leaves room under it.
+.page-band ~ .inner-canvas > .inner-canvas-body {
+  padding-top: 0;
 }
 
 //Houdini customisations

@@ -1,0 +1,407 @@
+// Lists of requests and authorities, search results, paging, and the pages
+// for one authority and one person. Core's own stylesheet does not load this
+// file; a theme lists it in its custom.scss (doc/FORK.md, Frontend).
+
+@use "responsive/foundation" as *;
+@use "responsive/utils" as *;
+@use "responsive/features/buttons" as *;
+
+// The older stylesheet gives a page's wrapper a negative margin and each child
+// matching padding (a nested grid row). These pages are laid out with a grid of
+// their own, so both are set to zero and the edges line up with the masthead.
+#request_list {
+  margin: 0;
+
+  @include respond-min($main_menu-mobile_menu_cutoff) {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 13rem);
+    column-gap: var(--space-7);
+    align-items: start;
+
+    > #header_left {
+      grid-column: 1;
+      grid-row: 1;
+    }
+
+    > .results_section {
+      grid-column: 1 / -1;
+      grid-row: 2;
+    }
+
+    // core's empty float-clearing elements
+    > div[style] {
+      display: none;
+    }
+  }
+
+  @media (max-width: 57.99em) {
+    display: flex;
+    flex-direction: column;
+
+    > .results_section {
+      order: 2;
+    }
+  }
+
+  .results_section {
+    float: none;
+    width: auto;
+    padding: 0;
+  }
+}
+
+#header_left {
+  float: none;
+  width: auto;
+  padding: 0;
+}
+
+.feed_link {
+  a,
+  & {
+    text-decoration: underline;
+  }
+}
+
+.results_block {
+  border-top: var(--border-rule) solid var(--color-rule);
+}
+
+.request_listing,
+.body_listing {
+  margin: 0;
+  padding: var(--space-4) 0 var(--space-5);
+  border-bottom: var(--border-hair) solid var(--color-line);
+  overflow: visible;
+
+  .head {
+    display: block;
+    margin: 0;
+    font-size: var(--text-lg);
+    font-weight: var(--weight-medium);
+    line-height: 1.3;
+  }
+
+  a,
+  a:link,
+  a:visited {
+    text-decoration: underline;
+  }
+}
+
+.request_listing {
+  // undo core's two floated columns
+  .request_left,
+  .request_right {
+    float: none;
+    width: auto;
+    padding: 0;
+  }
+
+  .request_left {
+    @include respond-min($main_menu-mobile_menu_cutoff) {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      column-gap: var(--space-5);
+      align-items: start;
+
+      .head,
+      .requester {
+        grid-column: 1;
+      }
+
+      p {
+        grid-column: 2;
+        grid-row: 1 / span 2;
+      }
+    }
+
+    p {
+      margin-top: var(--space-2);
+
+      @include respond-min($main_menu-mobile_menu_cutoff) {
+        margin-top: 0.15rem;
+        white-space: nowrap;
+      }
+    }
+  }
+
+  .requester {
+    margin: var(--space-1) 0 0;
+    color: var(--color-text-soft);
+    font-size: var(--text-md);
+
+    a,
+    a:link,
+    a:visited {
+      color: var(--color-text-soft);
+      text-decoration-thickness: 1px;
+    }
+  }
+
+  // the excerpt: two lines at most, upright (core sets it in italics)
+  .desc {
+    display: -webkit-box;
+    float: none;
+    width: auto;
+    max-width: 46rem;
+    margin: var(--space-2) 0 0;
+    padding: 0;
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    color: var(--color-text-soft);
+    font-size: var(--text-md);
+    font-style: normal;
+  }
+}
+
+.publicbody_results {
+  margin: var(--space-5) 0 var(--space-3);
+  color: var(--color-text-soft);
+  font-size: var(--text-base);
+  font-weight: var(--weight-regular);
+  letter-spacing: 0;
+}
+
+.pagination {
+  margin: var(--space-5) 0 0;
+  font-size: var(--text-base);
+
+  a,
+  em,
+  span {
+    display: inline-block;
+    min-width: 2.25rem;
+    padding: var(--space-1) var(--space-2);
+    text-align: center;
+  }
+
+  em.current {
+    background: var(--color-highlight);
+    color: var(--color-on-highlight);
+    font-style: normal;
+    font-weight: var(--weight-bold);
+  }
+}
+
+// A matched word: bold as well, as yellow on white is too faint to be the
+// only sign.
+.highlight {
+  background: var(--color-highlight);
+  color: var(--color-on-highlight);
+  font-weight: var(--weight-bold);
+}
+
+#public_body_list {
+  margin: 0;
+  // With the row's pull undone, a band has nothing to step back from.
+  --nested-row-gutter: 0;
+
+  // The side's first heading reads on the search's line.
+  @include respond-min($main_menu-mobile_menu_cutoff) {
+    display: grid;
+    grid-template-columns: minmax(0, 15rem) minmax(0, 46rem);
+    justify-content: space-between;
+    column-gap: var(--space-7);
+    align-items: baseline;
+  }
+
+  #left_column_flip,
+  #right_column_flip {
+    float: none;
+    width: auto;
+    margin: 0;
+    padding: 0;
+  }
+
+  // A page that opens with the band has it, and any notice, above both
+  // columns.
+  > .page-band,
+  > .band-flash {
+    grid-column: 1 / -1;
+  }
+
+  > .page-band {
+    grid-row: 1;
+  }
+
+  > .band-flash {
+    grid-row: 2;
+  }
+
+  > .page-band ~ #left_column_flip,
+  > .page-band ~ #right_column_flip {
+    grid-row: 3;
+  }
+
+  #left_column_flip {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  #right_column_flip {
+    grid-column: 1;
+    grid-row: 1;
+    font-size: var(--text-md);
+
+    @include respond-min($main_menu-mobile_menu_cutoff) {
+      margin-top: 0;
+    }
+
+    h2 {
+      margin: 0 0 var(--space-2);
+      font-size: var(--text-body);
+    }
+
+    h3 {
+      margin: var(--space-4) 0 var(--space-1);
+      padding-top: var(--space-3);
+      border-top: var(--border-hair) solid var(--color-line);
+      font-size: var(--text-md);
+    }
+
+    h3:has(+ ul:not(:has(li))) {
+      display: none;
+    }
+
+    li {
+      margin: 0;
+      line-height: 1.7;
+    }
+  }
+
+  #search_form div {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-2) var(--space-3);
+    margin: var(--space-4) 0 0;
+
+    label,
+    input {
+      margin: 0;
+    }
+
+    input[type="text"] {
+      flex: 1 1 12rem;
+      max-width: 20rem;
+      @include button-field-height($button-standard); // level with Search beside it
+    }
+  }
+
+}
+
+// Core sets the letters as a run of single characters, too small and too close
+// to tap: each gets a 24px box (WCAG 2.2 target size). The letter being shown
+// keeps its box, so the row does not shift.
+.alphabet__letter,
+a.alphabet__letter:link,
+a.alphabet__letter:visited {
+  display: inline-block;
+  min-width: 1.5rem;
+  margin: 0 0.125rem 0.25rem 0;
+  padding: 0.1rem 0;
+  border: var(--border-hair) solid var(--color-text);
+  text-align: center;
+  text-decoration: none;
+}
+
+.alphabet__letter--current {
+  border-color: var(--color-highlight-edge);
+  background: var(--color-highlight);
+  color: var(--color-on-highlight);
+  font-weight: var(--weight-bold);
+}
+
+.list-sidebar-extra {
+  margin: var(--space-5) 0 0;
+  padding-top: var(--space-3);
+  border-top: var(--border-rule) solid var(--color-rule);
+
+  p {
+    margin: 0 0 var(--space-1);
+  }
+}
+
+.body_listing {
+  .desc {
+    float: none;
+    margin: var(--space-1) 0 0;
+    padding: 0;
+    color: var(--color-text-soft);
+    font-size: var(--text-md);
+    font-style: normal;
+  }
+}
+
+.body-listing__header,
+.body-listing__description {
+  margin-right: 0;
+}
+
+// "Make request" beside a search result. On a wide screen it sits to the
+// right of the result, whose lines keep clear of it. On a phone it sits under
+// them; the older stylesheet pulls it up by half an em, onto the last line.
+.body_listing:has(.body_listing__request-button) {
+  .body-listing__header,
+  .body-listing__description {
+    @include respond-min($main_menu-mobile_menu_cutoff) {
+      margin-right: 11.25em;
+    }
+  }
+}
+
+.make-request-quick-button {
+  @media (max-width: 57.99em) {
+    margin-top: var(--space-2);
+  }
+}
+
+#public_body_show {
+  margin: 0;
+  // With the row's pull undone, a band has nothing to step back from.
+  --nested-row-gutter: 0;
+}
+
+#user_profile_header {
+  margin: 0;
+  // With the row's pull undone, a band has nothing to step back from.
+  --nested-row-gutter: 0;
+
+  @media (max-width: 57.99em) {
+    display: flex;
+    flex-direction: column;
+
+    #header_left { order: 1; }
+  }
+
+  @include respond-min($main_menu-mobile_menu_cutoff) {
+    display: grid;
+    grid-template-columns: minmax(0, 46rem) minmax(0, 17rem);
+    justify-content: space-between;
+    column-gap: var(--space-7);
+
+    #header_left {
+      grid-column: 1;
+      grid-row: 1;
+    }
+  }
+
+  h1 {
+    margin: 0;
+  }
+
+  .subtitle {
+    margin: var(--space-2) 0 0;
+    color: var(--color-text-soft);
+    font-size: var(--text-body);
+  }
+}
+
+#user_change_password_email,
+.user_profile_header .user_not_logged_in {
+  clear: both;
+  margin-top: var(--space-3);
+  font-size: var(--text-md);
+}

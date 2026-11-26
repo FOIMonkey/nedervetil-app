@@ -1,0 +1,56 @@
+// The three button sizes. Every button-shaped control on the site takes its
+// size from one of these, chosen by what it does; colours and borders stay
+// with each button's own rule.
+//
+// Large: the main action of a page or a step (send, find, share, reply).
+// Standard: form submits, searches beside a field, secondary actions.
+// Small: tabs, chips and actions inside a list row.
+//
+// Not with the tokens, because a theme replaces that file. A field that sits
+// against a button takes the same height with button-field-height.
+
+$button-large: 3.25rem;    // 52px
+$button-standard: 2.75rem; // 44px
+$button-small: 2.25rem;    // 36px
+
+@mixin button-box($height) {
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  min-height: $height;
+  padding-block: 0;
+  line-height: 1.2;
+}
+
+@mixin button-size-large {
+  @include button-box($button-large);
+  padding-inline: var(--space-5);
+  font-size: var(--text-lg);
+  font-weight: var(--weight-bold);
+}
+
+@mixin button-size-standard {
+  @include button-box($button-standard);
+  padding-inline: var(--space-4);
+  font-size: var(--text-base);
+}
+
+@mixin button-size-small {
+  @include button-box($button-small);
+  padding-inline: var(--space-3);
+  font-size: var(--text-md);
+}
+
+// For a submit input, which can't be a flex box, and the base rule that also
+// covers plain links: padding that makes the same height around one line.
+@mixin input-button-size-standard {
+  min-height: $button-standard;
+  padding: calc((#{$button-standard} - 2 * var(--border) - 1.2em) / 2) var(--space-4);
+  font-size: var(--text-base);
+  line-height: 1.2;
+}
+
+@mixin button-field-height($height) {
+  height: $height;
+  min-height: $height;
+}

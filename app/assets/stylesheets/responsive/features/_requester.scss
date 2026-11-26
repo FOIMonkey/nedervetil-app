@@ -1,0 +1,2816 @@
+@use "responsive/foundation" as *;
+@use "responsive/utils" as *;
+@use "responsive/features/tokens" as *;
+@use "responsive/features/buttons" as *;
+@use "responsive/features/motion" as *;
+
+.request-band__crumb {
+  margin: 0 0 var(--space-3);
+  color: var(--color-header-soft);
+  font-size: var(--text-md);
+
+  a,
+  a:link,
+  a:visited {
+    color: var(--color-header-soft);
+  }
+
+  a:focus-visible {
+    color: var(--color-on-highlight);
+  }
+
+  b {
+    color: var(--color-header-text);
+    font-weight: var(--weight-medium);
+  }
+}
+
+.request-band__stamp {
+  @include highlighted;
+  display: inline-flex;
+  gap: var(--space-2);
+  align-items: center;
+  margin: 0 0 var(--space-3);
+  padding: var(--space-1) var(--space-3);
+  font-weight: var(--weight-bold);
+
+  &::before {
+    content: "";
+    width: 0.9em;
+    height: 0.45em;
+    margin-top: -0.2em;
+    border: solid var(--ink);
+    border-width: 0 0 3px 3px;
+    transform: rotate(-45deg);
+  }
+}
+
+.request-band__title {
+  max-width: 22ch;
+
+  @include respond-min($main_menu-mobile_menu_cutoff) {
+    font-size: 2.75rem;
+  }
+}
+
+.request-band__facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-4);
+  align-items: center;
+  margin: 0;
+  color: var(--color-header-soft);
+
+  .page-band__label {
+    margin: 0;
+  }
+}
+
+.deadline-track {
+  max-width: 52rem;
+  margin-top: var(--space-6);
+}
+
+.deadline-track__head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-4);
+  justify-content: space-between;
+  align-items: baseline;
+}
+
+.deadline-track__left {
+  margin: 0;
+  color: var(--color-header-text);
+  font-size: var(--text-lg);
+  font-weight: var(--weight-bold);
+  line-height: 1.25;
+
+  span {
+    margin-left: var(--space-1);
+    color: var(--color-header-soft);
+    font-size: var(--text-base);
+    font-weight: var(--weight-regular);
+    white-space: nowrap;
+  }
+}
+
+.page-band a.deadline-track__change {
+  color: var(--color-header-soft);
+  font-size: var(--text-md);
+}
+
+.deadline-track__track {
+  position: relative;
+  height: 3.9rem;
+  margin-top: var(--space-2);
+}
+
+.deadline-track__bar {
+  position: absolute;
+  top: 1.55rem;
+  right: 0;
+  left: 0;
+  height: 0.75rem;
+  border: var(--border) solid var(--color-header-soft);
+}
+
+.deadline-track__fill,
+.deadline-track__overrun {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+}
+
+.deadline-track__fill {
+  left: 0;
+  background: var(--color-highlight);
+}
+
+.deadline-track__overrun {
+  right: 0;
+  background: repeating-linear-gradient(-45deg, var(--color-highlight) 0 6px, var(--color-header-bg) 6px 11px);
+}
+
+.deadline-track__stop {
+  position: absolute;
+  top: 0;
+  color: var(--color-header-soft);
+  font-size: var(--text-xs);
+  white-space: nowrap;
+  transform: translateX(-50%);
+
+  &::after {
+    content: "";
+    position: absolute;
+    top: 1.3rem;
+    left: 50%;
+    width: 2px;
+    height: 1.3rem;
+    background: var(--color-header-soft);
+  }
+
+  b {
+    color: var(--color-header-text);
+    font-weight: var(--weight-medium);
+  }
+}
+
+.deadline-track__stop--first {
+  left: 0;
+  transform: none;
+
+  &::after {
+    left: 0;
+  }
+}
+
+.deadline-track__stop--last {
+  right: 0;
+  transform: none;
+
+  &::after {
+    right: 0;
+    left: auto;
+  }
+}
+
+// A late due date near the right edge: the label ends at its mark, so it stays on a phone screen.
+.deadline-track__stop--end {
+  transform: translateX(-100%);
+
+  &::after {
+    right: 0;
+    left: auto;
+  }
+}
+
+.deadline-track__stop--met {
+  text-decoration: line-through;
+}
+
+.deadline-track__today {
+  position: absolute;
+  top: 2.65rem;
+  color: var(--color-highlight);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-bold);
+  white-space: nowrap;
+  transform: translateX(-50%);
+
+  &::before {
+    content: "";
+    position: absolute;
+    top: -1.4rem;
+    left: 50%;
+    width: 4px;
+    height: 1.45rem;
+    margin-left: -2px;
+    background: var(--color-header-text);
+  }
+}
+
+.deadline-track__today--end {
+  transform: translateX(-100%);
+
+  &::before {
+    right: 0;
+    left: auto;
+  }
+}
+
+.deadline-track__today--start {
+  transform: none;
+
+  &::before {
+    left: 0;
+    margin-left: 0;
+  }
+}
+
+@media (max-width: 35em) {
+  .deadline-track__stop--mid {
+    display: none;
+  }
+
+  .deadline-track__left span {
+    display: block;
+    margin-left: 0;
+  }
+}
+
+// One column: no sidebar on the requester's own page, and every block on it,
+// the band's deadline track and any notice included, is the same width.
+$request-column: 46rem;
+
+.requester-view #request_show {
+  display: block;
+}
+
+.requester-page {
+  max-width: $request-column;
+  padding-bottom: var(--space-7);
+
+  .button,
+  a.button,
+  a.button:link,
+  a.button:visited,
+  summary.button {
+    @include button-size-standard;
+    margin: 0;
+    border: var(--border) solid var(--color-text);
+    border-radius: var(--radius);
+    background: var(--color-text);
+    color: var(--color-page);
+    font-weight: var(--weight-medium);
+    text-decoration: none;
+    cursor: pointer;
+
+    &:hover,
+    &:focus-visible {
+      background: var(--color-highlight);
+      border-color: var(--color-highlight-edge);
+      color: var(--color-on-highlight);
+    }
+  }
+
+  summary.button {
+    list-style: none;
+
+    &::-webkit-details-marker {
+      display: none;
+    }
+  }
+
+  // The folded forms: full-size targets for a finger.
+  .input-label-aligned,
+  .deadlines-complete__option {
+    display: flex;
+    gap: var(--space-2);
+    align-items: center;
+    min-height: 2.75rem;
+    margin: 0;
+
+    input[type="radio"] {
+      flex: none;
+      width: 1.25rem;
+      height: 1.25rem;
+      margin: 0;
+    }
+
+    label {
+      margin: 0;
+    }
+  }
+
+  .deadlines-panel__change > summary {
+    display: flex;
+    gap: var(--space-2);
+    align-items: center;
+    min-height: 2.75rem;
+  }
+
+  .deadlines-panel__form input,
+  .deadlines-panel__form select {
+    min-height: 2.75rem;
+  }
+}
+
+.requester-view .deadline-track {
+  max-width: $request-column;
+}
+
+.requester-view .band-flash {
+  max-width: $request-column;
+}
+
+// The page's buttons: all one height, a fill that says they're real, and the
+// one yellow button is the thing we'd do next.
+// One size for a step's answers and the page's buttons, one for a row. Here, not
+// with the tokens, because a theme replaces that file.
+:root {
+  --action-large: 3.25rem;
+  --action-row: 2.75rem;
+}
+
+@mixin request-action {
+  @include button-size-large;
+  margin: 0;
+  border: var(--border) solid var(--color-text);
+  border-radius: 0;
+  background: var(--color-panel);
+  color: var(--color-text);
+  text-align: center;
+  text-decoration: none;
+  cursor: pointer;
+
+  &:hover {
+    background: var(--color-text);
+    color: var(--color-page);
+  }
+}
+
+@mixin request-action-primary {
+  @include highlighted;
+  border-color: var(--color-highlight-edge);
+
+  &:hover {
+    background: var(--ink);
+    color: var(--white);
+  }
+}
+
+// A small action that sits in a list: a line of text with a full-size target.
+@mixin request-quiet-action {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-height: 2.75rem;
+  margin: 0;
+  padding: var(--space-2) 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  color: var(--color-text);
+  font-size: var(--text-body);
+  font-weight: var(--weight-medium);
+  line-height: 1.3;
+  text-align: left;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+// What the page is about: the latest reply, or what it's waiting for. Plain on
+// the page, with no box round it; only the question gets a fill.
+.receipt,
+.next-step {
+  > * + * {
+    margin-top: var(--space-4);
+  }
+
+  h2 {
+    margin: 0;
+    font-size: var(--text-3xl);
+    font-weight: var(--weight-bold);
+    line-height: 1.1;
+    letter-spacing: -0.015em;
+
+    @media (max-width: 35em) {
+      font-size: var(--text-2xl);
+    }
+  }
+
+  > p {
+    margin-bottom: 0;
+    font-size: var(--text-lg);
+    line-height: var(--leading-snug);
+  }
+}
+
+// One plain sentence says what happened: smaller than the band's title, so the
+// two don't compete.
+.receipt h2.receipt__head {
+  font-size: var(--text-2xl);
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+}
+
+.receipt__date {
+  color: var(--color-text-soft);
+  font-weight: var(--weight-regular);
+  white-space: nowrap;
+}
+
+// Sits tight on the heading it introduces.
+.requester-page .receipt__kicker {
+  margin: 0;
+  color: var(--color-text-soft);
+  font-size: var(--text-md);
+
+  & + h2 {
+    margin-top: var(--space-1);
+  }
+}
+
+.receipt .request-outcome,
+.feed__body .request-outcome {
+  margin: var(--space-4) 0 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  font-size: var(--text-base);
+
+  p {
+    margin: 0;
+  }
+
+  .request-outcome__confirm {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2) var(--space-4);
+    align-items: center;
+    margin-top: var(--space-2);
+  }
+
+  button {
+    @include request-action;
+    min-height: 2.75rem;
+    padding: var(--space-1) var(--space-4);
+    font-size: var(--text-base);
+  }
+}
+
+// Their own words. .followup-page shows the same quote above a reply.
+// Two lines on a phone: the question matters more, and the letter is a tap away.
+@media (max-width: 35em) {
+  .receipt__said blockquote p {
+    display: -webkit-box;
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+}
+
+.receipt__said {
+  margin: var(--space-4) 0 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--color-text);
+  font-size: var(--text-body);
+  font-weight: var(--weight-regular);
+  font-style: normal;
+  line-height: var(--leading-body);
+  overflow-wrap: anywhere;
+
+  blockquote {
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: inherit;
+    font: inherit;
+  }
+
+  p {
+    margin: 0;
+  }
+}
+
+// The one thing being asked: yellow with a black edge, and white buttons.
+.receipt__ask {
+  @include highlighted;
+  margin: var(--space-5) 0 0;
+  padding: var(--space-4) var(--space-5) var(--space-5);
+  border: var(--border) solid var(--color-highlight-edge);
+
+  @media (max-width: 35em) {
+    padding: var(--space-3) var(--space-4) var(--space-4);
+  }
+
+  fieldset {
+    margin: 0;
+    padding: 0;
+    border: 0;
+  }
+
+  legend {
+    margin: 0 0 var(--space-3);
+    padding: 0;
+    color: var(--ink);
+    font-size: var(--text-xl);
+    font-weight: var(--weight-bold);
+    line-height: 1.2;
+  }
+}
+
+// Three across at any width, so all the answers are in view together.
+.receipt__chips {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-2);
+}
+
+.receipt__ask button.receipt__chip {
+  width: 100%;
+  min-height: var(--action-large);
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  border: var(--border) solid var(--ink);
+  border-radius: 0;
+  background: var(--white);
+  color: var(--ink);
+  font-size: var(--text-lg);
+  font-weight: var(--weight-bold);
+  line-height: 1.2;
+  cursor: pointer;
+
+  // Core and the theme turn a focused button yellow, which would lose it here.
+  &:focus {
+    background: var(--white);
+    color: var(--ink);
+  }
+
+  &:hover {
+    background: var(--ink);
+    color: var(--white);
+  }
+
+  &:focus-visible {
+    outline: 3px solid var(--ink);
+    outline-offset: 2px;
+    box-shadow: none;
+  }
+
+  @media (max-width: 35em) {
+    min-height: 3rem;
+    padding: var(--space-1);
+    font-size: var(--text-base);
+  }
+}
+
+.requester-page .receipt__answer {
+  margin: var(--space-5) 0 0;
+  font-size: var(--text-lg);
+  font-weight: var(--weight-medium);
+  scroll-margin-top: 6rem;
+
+  &:focus {
+    outline: 0;
+  }
+}
+
+.receipt__change {
+  margin-left: var(--space-1);
+  font-size: var(--text-base);
+  font-weight: var(--weight-regular);
+  white-space: nowrap;
+}
+
+.receipt__answer-next {
+  display: block;
+  margin-top: var(--space-1);
+  font-size: var(--text-base);
+  font-weight: var(--weight-regular);
+}
+
+.requester-page .receipt__earlier {
+  margin: var(--space-4) 0 0;
+  font-size: var(--text-base);
+  font-weight: var(--weight-medium);
+}
+
+// The first thing asked of them is the review, and the sharing comes after it.
+.receipt__acts--review-first > a.receipt__act--primary {
+  order: -1;
+}
+
+.requester-page .receipt__by {
+  margin: var(--space-4) 0 0;
+  color: var(--color-text-soft);
+  font-size: var(--text-base);
+}
+
+// A reply's files: hairlines on the page, at the top or on a letter's sheet.
+.requester-page .list-of-attachments {
+  margin: 0;
+  padding: 0;
+  border-top: var(--border-hair) solid var(--color-line);
+  list-style: none;
+
+  .attachment {
+    display: grid;
+    grid-template-columns: 2.25rem minmax(0, 1fr) auto;
+    gap: 0 var(--space-3);
+    align-items: center;
+    margin: 0;
+    padding: var(--space-3) 0;
+    border: 0;
+    border-bottom: var(--border-hair) solid var(--color-line);
+    scroll-margin-top: var(--space-4);
+  }
+
+  .attachment__image {
+    grid-row: 1 / span 2;
+    grid-column: 1;
+    align-self: start;
+  }
+
+  p {
+    grid-column: 2 / -1;
+    min-width: 0;
+    margin: 0;
+    overflow-wrap: anywhere;
+  }
+
+  .attachment__name,
+  .attachment__meta {
+    grid-column: 2;
+  }
+
+  .attachment__name {
+    align-self: baseline;
+    font-size: var(--text-base);
+    font-weight: var(--weight-bold);
+  }
+
+  .attachment__meta {
+    color: var(--color-text-soft);
+    font-size: var(--text-md);
+    line-height: var(--leading-snug);
+
+    a {
+      margin-left: var(--space-2);
+    }
+  }
+
+  a.attachment__get,
+  a.attachment__get:link,
+  // On the file name's line. The full-size target reaches above and below
+  // the line without making the row taller.
+  a.attachment__get:visited {
+    display: inline-flex;
+    grid-row: 1;
+    grid-column: 3;
+    align-items: center;
+    align-self: baseline;
+    min-height: 2.75rem;
+    margin-block: calc((1.35em - 2.75rem) / 2);
+    color: var(--color-text);
+    font-weight: var(--weight-medium);
+
+    &:focus-visible {
+      color: var(--color-on-highlight);
+    }
+  }
+
+  .attachment__attribution,
+  .attachment__document {
+    margin-top: var(--space-1);
+    color: var(--color-text-soft);
+    font-size: var(--text-md);
+  }
+
+  .attachment__document a {
+    color: var(--color-text);
+    font-weight: var(--weight-medium);
+  }
+
+  .attachment__document a,
+  .attachment__attribution a {
+    display: inline-block;
+    padding-block: var(--space-1);
+  }
+
+  .attachment__held {
+    grid-row: 1 / span 2;
+    grid-column: 2 / -1;
+    align-self: center;
+    font-size: var(--text-base);
+  }
+}
+
+.receipt__files:not(:empty) {
+  margin-top: var(--space-5);
+}
+
+// Buttons in a line. "More" stays in that line when it opens, and what it holds
+// takes a full row under the buttons, so nothing moves from under the pointer.
+.receipt__bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: flex-start;
+  margin-top: var(--space-5);
+}
+
+.receipt__acts {
+  display: contents;
+}
+
+a.receipt__act,
+a.receipt__act:link,
+a.receipt__act:visited {
+  @include request-action;
+}
+
+a.receipt__act--primary,
+a.receipt__act--primary:link,
+a.receipt__act--primary:visited {
+  @include request-action-primary;
+}
+
+@media (max-width: 35em) {
+  .receipt__bar {
+    a.receipt__act,
+    .receipt__more {
+      flex: 1 1 auto;
+    }
+
+    a.receipt__act--primary {
+      flex-basis: 100%;
+    }
+
+    .receipt__more > summary {
+      display: flex;
+    }
+  }
+}
+
+.receipt__more {
+  > summary {
+    @include request-action;
+    gap: var(--space-2);
+    list-style: none;
+
+    &::-webkit-details-marker {
+      display: none;
+    }
+
+    // A chevron, pointing the way it opens.
+    &::after {
+      content: "";
+      width: 0.5em;
+      height: 0.5em;
+      margin-top: -0.2em;
+      border: solid currentColor;
+      border-width: 0 2px 2px 0;
+      transform: rotate(45deg);
+    }
+  }
+
+  &[open] > summary::after {
+    margin-top: 0.2em;
+    transform: rotate(-135deg);
+  }
+
+  // Open, it isn't a button to press again so much as a label for what's under it.
+  &[open] > summary,
+  &[open] > summary:hover {
+    background: var(--color-panel);
+    color: var(--color-text);
+  }
+
+  // The panel is its own flex item, on a row of its own.
+  display: contents;
+
+  &::details-content {
+    flex-basis: 100%;
+    min-width: 0;
+  }
+}
+
+// What a line in More does; elsewhere the same control stands for itself.
+.receipt__hint {
+  display: none;
+
+  .receipt__rest & {
+    display: inline-block;
+    color: var(--color-text-soft);
+    font-size: var(--text-md);
+    font-weight: var(--weight-regular);
+  }
+}
+
+// Each line of More: what it does, then what that means, in the same columns as
+// the lines above it.
+.receipt__next li,
+.receipt__rest .incoming-attention-choice,
+.requester-page .receipt__rest .deadlines-complete > summary,
+.requester-page .receipt__rest #describe_state_form_1.next-step__status > summary {
+  display: grid;
+  grid-template-columns: 11rem minmax(0, 1fr);
+  column-gap: var(--space-4);
+  align-items: center;
+  text-decoration: none;
+
+  @media (max-width: 35em) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.receipt__next,
+.receipt__rest {
+  > * {
+    margin: 0;
+    border-bottom: var(--border-hair) solid var(--color-line);
+  }
+}
+
+.receipt__next {
+  margin: var(--space-3) 0 0;
+  padding: 0;
+  border-top: var(--border-hair) solid var(--color-line);
+  list-style: none;
+
+  li {
+    padding: var(--space-1) 0;
+  }
+
+  a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 2.75rem;
+    font-size: var(--text-body);
+    font-weight: var(--weight-medium);
+  }
+
+  span {
+    color: var(--color-text-soft);
+    font-size: var(--text-md);
+  }
+}
+
+.receipt__more > summary + .receipt__rest {
+  margin-top: var(--space-3);
+  border-top: var(--border-hair) solid var(--color-line);
+}
+
+.receipt__rest {
+  > * {
+    padding: var(--space-1) 0;
+  }
+
+  .deadlines-complete > summary,
+  #describe_state_form_1.next-step__status > summary,
+  .incoming-attention-choice button {
+    @include request-quiet-action;
+  }
+
+  .deadlines-complete > summary,
+  #describe_state_form_1.next-step__status > summary {
+    list-style: none;
+
+    .receipt__label {
+      text-decoration: underline;
+    }
+
+    &::-webkit-details-marker {
+      display: none;
+    }
+  }
+
+  .deadlines-complete {
+    display: block;
+    font-size: var(--text-base);
+  }
+
+  .deadlines-complete__form {
+    margin: var(--space-2) 0 var(--space-4);
+    padding: var(--space-4);
+    background: var(--color-panel);
+  }
+}
+
+.requester-page .receipt__letter {
+  margin: var(--space-1) 0 0;
+  font-size: var(--text-base);
+
+  a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 2.75rem;
+    font-weight: var(--weight-medium);
+  }
+}
+
+// The other states of the same section: late, closed, waiting.
+.next-step--act {
+  .deadlines-complete {
+    margin: 0;
+
+    > summary {
+      @include request-action;
+      list-style: none;
+
+      &::-webkit-details-marker {
+        display: none;
+      }
+    }
+
+    &[open] {
+      flex-basis: 100%;
+    }
+  }
+
+  .deadlines-complete__form {
+    margin-top: var(--space-3);
+    padding: var(--space-4);
+    background: var(--color-panel);
+  }
+}
+
+.next-step__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: center;
+  margin-top: var(--space-5);
+}
+
+.requester-page .next-step__actions {
+  a.button,
+  a.button:link,
+  a.button:visited,
+  button.button {
+    @include request-action;
+    @include request-action-primary;
+  }
+
+  a.next-step__minor,
+  a.next-step__minor:link,
+  a.next-step__minor:visited,
+  button.next-step__link {
+    @include request-action;
+  }
+}
+
+span.next-step__minor {
+  color: var(--color-text-soft);
+  font-size: var(--text-base);
+}
+
+.next-step__form {
+  margin: 0;
+}
+
+// A notice or letter that a link or a redirect moved focus to isn't a control,
+// so it shows no ring.
+.requester-view [tabindex="-1"]:focus {
+  outline: 0;
+  box-shadow: none;
+}
+
+// Change status: the describe-state form, shown once, folded under the actions.
+.requester-page #describe_state_form_1.next-step__status {
+  flex-basis: 100%;
+  margin: var(--space-3) 0 0;
+
+  input[type="radio"] {
+    flex: none;
+    width: 1.25rem;
+    height: 1.25rem;
+    margin: 0;
+  }
+
+  > summary {
+    display: inline-flex;
+    align-items: center;
+    min-height: 2.75rem;
+    font-weight: var(--weight-medium);
+    text-decoration: underline;
+    cursor: pointer;
+  }
+
+  form {
+    margin-top: var(--space-2);
+    padding: var(--space-4);
+    border: 0;
+    background: var(--color-panel);
+  }
+
+  h2 {
+    font-size: var(--text-xl);
+    letter-spacing: 0;
+  }
+
+  h3 {
+    margin: var(--space-3) 0 var(--space-2);
+    font-size: var(--text-base);
+  }
+
+  hr {
+    display: none;
+  }
+
+  .icon-standalone {
+    display: none;
+  }
+
+  input[type="submit"] {
+    @include input-button-size-standard;
+    border: var(--border) solid var(--color-text);
+    border-radius: 0;
+    background: var(--color-text);
+    color: var(--color-page);
+    font-weight: var(--weight-medium);
+  }
+}
+
+.receipt__rest #describe_state_form_1.next-step__status {
+  margin: 0;
+}
+
+.request-section {
+  margin-top: var(--space-7);
+
+  > h2 {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-3);
+    align-items: baseline;
+    margin: 0;
+    padding-bottom: var(--space-2);
+    border-bottom: var(--border-rule) solid var(--color-rule);
+    font-size: var(--text-2xl);
+    line-height: var(--leading-tight);
+  }
+}
+
+.request-section__count {
+  color: var(--color-text-soft);
+  font-size: var(--text-md);
+  font-weight: var(--weight-medium);
+}
+
+.request-section__aside {
+  margin-left: auto;
+  font-size: var(--text-md);
+  font-weight: var(--weight-regular);
+}
+
+a.document-tile__title,
+a.document-tile__title:link,
+a.document-tile__title:visited {
+  margin-top: var(--space-1);
+  font-size: var(--text-lg);
+  font-weight: var(--weight-bold);
+  line-height: 1.25;
+  text-decoration: none;
+
+  // The whole tile is the link.
+  &::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+  }
+
+  &:hover {
+    background: none;
+    color: inherit;
+    text-decoration: underline;
+  }
+}
+
+.documents-todo {
+  margin-top: var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-panel);
+
+  h3 {
+    margin: 0;
+    font-size: var(--text-base);
+  }
+}
+
+.documents-todo__list {
+  margin: var(--space-1) 0 0;
+  padding: 0;
+  list-style: none;
+
+  > li {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2) var(--space-4);
+    justify-content: space-between;
+    align-items: center;
+    margin: 0;
+    padding: var(--space-2) 0;
+    border-top: var(--border-hair) solid var(--color-line);
+
+    &:first-child {
+      border-top: 0;
+    }
+  }
+}
+
+.documents-todo__what {
+  min-width: 0;
+
+  .documents-panel__name {
+    display: block;
+    font-weight: var(--weight-medium);
+  }
+}
+
+.documents-todo__why,
+.documents-panel__made {
+  display: block;
+  color: var(--color-text-soft);
+  font-size: var(--text-md);
+}
+
+.documents-todo__make {
+  > summary.button {
+    padding: 0.5rem 0.75rem;
+    border-color: var(--color-text);
+    background: transparent;
+    color: var(--color-text);
+    font-size: var(--text-md);
+    white-space: nowrap;
+  }
+
+  &[open] {
+    flex-basis: 100%;
+  }
+
+  .documents-panel__make {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+    margin-top: var(--space-2);
+  }
+
+  button.documents-panel__plain {
+    background: var(--color-page);
+    border-color: var(--color-text);
+    color: var(--color-text);
+  }
+}
+
+.documents-todo__fold {
+  margin-top: var(--space-2);
+  font-size: var(--text-md);
+
+  > summary {
+    cursor: pointer;
+  }
+}
+
+.history {
+  position: relative;
+  margin: var(--space-4) 0 0;
+  padding: 0;
+  list-style: none;
+
+  &::before {
+    content: "";
+    position: absolute;
+    top: 0.6rem;
+    bottom: 0.6rem;
+    left: 5.5rem;
+    width: 2px;
+    background: var(--color-line);
+  }
+}
+
+.request-history .request-outcome {
+  margin: var(--space-2) 0 0;
+  padding: var(--space-3) var(--space-4);
+  border: 0;
+  border-left: var(--border-band) solid var(--color-highlight);
+  background: var(--color-panel);
+  font-size: var(--text-md);
+
+  p {
+    margin: 0;
+  }
+
+  .request-outcome__confirm {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-4);
+    align-items: center;
+    margin-top: var(--space-2);
+  }
+
+  button {
+    padding: 0.3rem 0.7rem;
+    border: var(--border) solid var(--color-text);
+    background: transparent;
+    color: var(--color-text);
+    font-size: var(--text-md);
+    font-weight: var(--weight-medium);
+  }
+}
+
+@media (max-width: 35em) {
+  .history::before {
+    left: 0.45rem;
+  }
+}
+
+.request-letters > h2 {
+  border-bottom: 0;
+}
+
+.requester-page .deadlines-panel {
+  h2 {
+    font-size: var(--text-2xl);
+  }
+}
+
+// One quiet line, as wide as everything else.
+.request-foot {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-4);
+  align-items: center;
+  margin-top: var(--space-5);
+  color: var(--color-text-soft);
+  font-size: var(--text-sm);
+
+  p {
+    margin: 0;
+  }
+}
+
+.request-foot p.request-foot__links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 var(--space-4);
+  color: var(--color-text);
+
+  a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 2.75rem;
+  }
+}
+
+.home-spots {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-3);
+  max-width: 40rem;
+  margin: var(--space-5) 0 0;
+  padding: 0;
+  list-style: none;
+
+  a,
+  a:link,
+  a:visited {
+    display: block;
+    height: 100%;
+    // A step less below: the last line's own leading makes up the difference.
+    padding: var(--space-3) var(--space-3) var(--space-2);
+    border-top: var(--border-band) solid var(--grey-700);
+    background: var(--grey-900);
+    color: var(--color-header-text);
+    text-decoration: none;
+  }
+
+  a:hover,
+  a:focus-visible {
+    background: var(--color-highlight);
+    color: var(--color-on-highlight);
+  }
+}
+
+.home-spots__urgent a,
+.home-spots__urgent a:link,
+.home-spots__urgent a:visited {
+  border-top-color: var(--color-highlight);
+}
+
+.home-spots__figure {
+  display: block;
+  font-size: var(--text-2xl);
+  font-weight: var(--weight-bold);
+  line-height: 1.05;
+  font-variant-numeric: tabular-nums;
+}
+
+.home-spots__label {
+  display: block;
+  margin-top: var(--space-1);
+  font-weight: var(--weight-medium);
+}
+
+.home-spots__extra {
+  display: block;
+  margin-top: var(--space-1);
+  font-size: var(--text-sm);
+  opacity: 0.85;
+}
+
+.pile__remind {
+  margin: var(--space-2) 0 0;
+
+  .button {
+    @include button-size-small;
+  }
+}
+
+.pile__delete {
+  margin-top: var(--space-1);
+
+  summary {
+    color: var(--color-text-soft);
+    cursor: pointer;
+    text-decoration: underline;
+  }
+
+  .button {
+    @include button-size-small;
+    margin: var(--space-2) 0 0;
+  }
+}
+
+.home-empty p {
+  margin: var(--space-2) 0 0;
+}
+
+.home-empty a.button,
+.home-empty a.button:link,
+.home-empty a.button:visited {
+  @include button-size-large;
+  margin: 0;
+  border: var(--border) solid var(--color-highlight-edge);
+  border-radius: var(--radius);
+  background: var(--color-highlight);
+  color: var(--color-on-highlight);
+  text-decoration: none;
+
+  &:hover,
+  &:focus-visible {
+    border-color: var(--ink);
+    background: var(--white);
+    color: var(--ink);
+  }
+}
+
+.ai-reading__note {
+  display: block;
+  margin: var(--space-1) 0 0 1.6rem;
+  color: var(--color-text-soft);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-regular);
+}
+
+.dashboard-page {
+  max-width: 56rem;
+  padding-bottom: var(--space-7);
+
+  .request-section:first-of-type {
+    margin-top: var(--space-5);
+  }
+}
+
+.dashboard-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: center;
+  margin: var(--space-6) 0 0;
+}
+
+a.dashboard-chip,
+a.dashboard-chip:link,
+a.dashboard-chip:visited {
+  @include button-size-small;
+  border: var(--border) solid var(--color-text);
+  font-weight: var(--weight-medium);
+  text-decoration: none;
+}
+
+.dashboard-search {
+  display: flex;
+  margin: 0 0 0 auto;
+
+  input[type=search] {
+    width: 15rem;
+    min-width: 0;
+    @include button-field-height($button-small);
+    margin: 0;
+    padding: 0 0.6rem;
+    border: var(--border) solid var(--color-text);
+    border-right: 0;
+    border-radius: 0;
+    font-size: var(--text-md);
+  }
+
+  button {
+    @include button-size-small;
+    margin: 0;
+  }
+
+  @media (max-width: 47.5em) {
+    width: 100%;
+    margin-left: 0;
+
+    input[type=search] {
+      flex: 1;
+      width: auto;
+    }
+  }
+}
+
+.requests-piles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: var(--space-4) 0 0;
+
+  a,
+  a:link,
+  a:visited {
+    @include button-size-small;
+    gap: 0.3em;
+    border: var(--border-hair) solid var(--color-header-soft);
+    font-weight: var(--weight-medium);
+    text-decoration: none;
+  }
+
+  a[aria-current="page"] {
+    @include highlighted;
+    border-color: var(--color-highlight-edge);
+  }
+}
+
+.requests-search {
+  margin: 0 0 var(--space-5);
+}
+
+.requests-page__none {
+  margin: var(--space-5) 0;
+}
+
+.pile {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.pile__row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 12.5rem;
+  gap: 0.15rem var(--space-6);
+  align-items: start;
+  margin: 0;
+  padding: var(--space-3) 0;
+  border-bottom: var(--border-hair) solid var(--color-line);
+
+  @media (max-width: 40em) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+a.pile__title,
+a.pile__title:link,
+a.pile__title:visited {
+  font-size: var(--text-lg);
+  font-weight: var(--weight-bold);
+  line-height: 1.3;
+}
+
+.pile__authority {
+  display: block;
+  color: var(--color-text-soft);
+  font-size: var(--text-md);
+}
+
+.pile__reason {
+  display: block;
+  margin-top: 0.2rem;
+  font-size: var(--text-md);
+
+  mark {
+    @include highlighted;
+    padding: 0 0.3rem;
+    font-weight: var(--weight-bold);
+  }
+}
+
+.pile__reason--quiet {
+  color: var(--color-text-soft);
+}
+
+.pile__when {
+  padding-top: 0.2rem;
+  font-size: var(--text-md);
+
+  b {
+    font-weight: var(--weight-bold);
+  }
+
+  @media (max-width: 40em) {
+    max-width: 16rem;
+    padding-top: var(--space-2);
+  }
+}
+
+.pile__meter {
+  display: flex;
+  height: 0.65rem;
+  margin-bottom: 0.3rem;
+  border: var(--border) solid var(--color-text);
+
+  i {
+    display: block;
+    height: 100%;
+  }
+}
+
+.pile__used {
+  background: var(--color-text);
+}
+
+.pile__over {
+  background: repeating-linear-gradient(-45deg, var(--color-highlight) 0 4px, var(--ink) 4px 7px);
+}
+
+.pile__more {
+  @include details-opening;
+  padding: var(--space-3) 0;
+  font-size: var(--text-md);
+
+  > summary {
+    cursor: pointer;
+  }
+}
+
+.request-flow-band {
+  padding-bottom: 0;
+
+  @include respond-min($main_menu-mobile_menu_cutoff) {
+    padding-bottom: 0;
+  }
+
+  .page-band__title {
+    max-width: 22ch;
+
+    @include respond-min($main_menu-mobile_menu_cutoff) {
+      font-size: 2.75rem;
+    }
+  }
+}
+
+.flow-rail {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin: var(--space-6) 0 0;
+  padding: 0;
+  list-style: none;
+
+  @media (max-width: 35em) {
+    grid-template-columns: repeat(4, auto);
+    justify-content: start;
+    gap: 0 var(--space-4);
+    margin-top: var(--space-5);
+  }
+}
+
+.flow-rail__step {
+  min-width: 0;
+  margin: 0;
+  padding: var(--space-3) var(--space-4) var(--space-4) 0;
+  border-top: var(--border) solid var(--grey-700);
+  color: var(--grey-400);
+  font-size: var(--text-md);
+
+  @media (max-width: 35em) {
+    width: 2.75rem;
+    padding-right: 0;
+
+    .flow-rail__name,
+    .flow-rail__value {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip-path: inset(50%);
+      white-space: nowrap;
+    }
+  }
+}
+
+.flow-rail__value {
+  display: block;
+  overflow: hidden;
+  color: var(--color-header-text);
+  font-weight: var(--weight-medium);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.flow-rail__step--done {
+  border-top-color: var(--color-header-text);
+  color: var(--color-header-soft);
+}
+
+.flow-rail__step--now {
+  padding-top: 0.55rem;
+  border-top: 6px solid var(--color-highlight);
+  color: var(--color-header-text);
+  font-weight: var(--weight-bold);
+
+  @media (max-width: 35em) {
+    width: auto;
+    padding-right: var(--space-2);
+
+    .flow-rail__name {
+      position: static;
+      width: auto;
+      height: auto;
+      overflow: visible;
+      clip-path: none;
+      white-space: normal;
+    }
+  }
+}
+
+.request-flow-find {
+  display: flex;
+  max-width: 46rem;
+  margin: var(--space-5) 0 0;
+  padding: var(--space-2);
+  background: var(--color-highlight);
+
+  // White on the highlight in both colour schemes; the light palette keeps the
+  // shared focus style, which reads it, from turning the field dark.
+  input[type=search] {
+    @include palette-light;
+    flex: 1;
+    min-width: 0;
+    @include button-field-height($button-large);
+    margin: 0;
+    padding: 0 var(--space-3);
+    border: var(--border) solid var(--ink);
+    border-radius: 0;
+    background: var(--white);
+    color: var(--ink);
+    font-size: var(--text-xl);
+  }
+
+  button {
+    @include button-size-large;
+    margin: 0;
+    border: var(--border) solid var(--ink);
+    border-left: 0;
+    border-radius: 0;
+    background: var(--ink);
+    color: var(--white);
+    cursor: pointer;
+  }
+}
+
+.request-flow {
+  max-width: 48rem;
+  padding-bottom: var(--space-7);
+}
+
+.request-flow--two {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 20rem;
+  gap: var(--space-7);
+  align-items: start;
+  max-width: none;
+
+  @media (max-width: 56em) {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-5);
+  }
+}
+
+.authority-results {
+  margin: 0;
+  padding: 0;
+  border-top: var(--border) solid var(--color-text);
+  list-style: none;
+
+  > li {
+    position: relative;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 0.1rem var(--space-4);
+    align-items: center;
+    margin: 0;
+    padding: var(--space-3) var(--space-3) var(--space-3) 0;
+    border-bottom: var(--border-hair) solid var(--color-line);
+
+    &:hover {
+      background: var(--color-panel);
+      box-shadow: inset 4px 0 0 var(--color-highlight);
+    }
+  }
+}
+
+a.authority-results__name,
+a.authority-results__name:link,
+a.authority-results__name:visited {
+  padding-left: var(--space-3);
+  font-size: var(--text-lg);
+  font-weight: var(--weight-bold);
+  text-decoration: none;
+
+  // The whole row is the link.
+  &::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+  }
+
+  &:hover,
+  &:focus-visible {
+    background: none;
+    color: inherit;
+    text-decoration: underline;
+  }
+}
+
+.authority-results__meta {
+  grid-column: 1;
+  padding-left: var(--space-3);
+  color: var(--color-text-soft);
+  font-size: var(--text-md);
+}
+
+.authority-results__pick {
+  grid-row: 1 / span 2;
+  grid-column: 2;
+  font-size: var(--text-md);
+  font-weight: var(--weight-medium);
+  text-decoration: underline;
+
+  @media (max-width: 35em) {
+    display: none;
+  }
+}
+
+li.authority-results__none {
+  display: block;
+  padding-left: var(--space-3);
+  color: var(--color-text-soft);
+  font-size: var(--text-md);
+
+  &:hover {
+    background: none;
+    box-shadow: none;
+  }
+}
+
+.request-flow__unsure {
+  margin-top: var(--space-6);
+
+  h2 {
+    margin: 0;
+    font-size: var(--text-base);
+  }
+
+  p {
+    margin: var(--space-1) 0 0;
+    color: var(--color-text-soft);
+    font-size: var(--text-md);
+  }
+}
+
+.request-flow__topics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: var(--space-3) 0 0;
+  padding: 0;
+  list-style: none;
+
+  li {
+    margin: 0;
+  }
+
+  a,
+  a:link,
+  a:visited {
+    @include button-size-small;
+    border: var(--border) solid var(--color-text);
+    font-weight: var(--weight-medium);
+    text-decoration: none;
+  }
+}
+
+.request-to {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.1rem var(--space-3);
+  align-items: baseline;
+  margin: 0 0 var(--space-4);
+}
+
+.request-to__name {
+  font-size: var(--text-xl);
+}
+
+.request-to__change {
+  font-size: var(--text-md);
+}
+
+.request-to__meta {
+  flex-basis: 100%;
+}
+
+.request-to__notes {
+  margin: 0 0 var(--space-4);
+  padding: var(--space-2) var(--space-4);
+  border-left: var(--border-band) solid var(--color-text);
+  font-size: var(--text-md);
+}
+
+.request-sheet {
+  border: var(--border) solid var(--color-text);
+  background: var(--color-field);
+}
+
+.request-sheet__subject {
+  padding: var(--space-3) var(--space-5) var(--space-4);
+  border-bottom: var(--border) solid var(--color-text);
+
+  label {
+    display: block;
+    font-weight: var(--weight-medium);
+  }
+
+  input[type=text] {
+    display: block;
+    width: 100%;
+    height: auto;
+    margin: 0;
+    padding: var(--space-1) 0 0.35rem;
+    border: 0;
+    border-bottom: var(--border) dashed var(--color-line);
+    border-radius: 0;
+    background: transparent;
+    color: var(--color-text);
+    font-size: 1.75rem;
+    font-weight: var(--weight-bold);
+    line-height: 1.2;
+
+    &:focus {
+      border-bottom-color: var(--color-highlight);
+      outline: none;
+      box-shadow: none;
+    }
+  }
+
+  @media (max-width: 35em) {
+    padding: var(--space-3);
+
+    input[type=text] {
+      font-size: var(--text-xl);
+    }
+  }
+}
+
+.request-sheet__hint {
+  margin: var(--space-2) 0 0;
+  color: var(--color-text-soft);
+  font-size: var(--text-sm);
+}
+
+.request-sheet__letter {
+  padding: var(--space-4) var(--space-5) var(--space-5);
+
+  @media (max-width: 35em) {
+    padding: var(--space-3);
+  }
+}
+
+.request-sheet__fixed {
+  margin: 0;
+  color: var(--color-text-soft);
+
+  b {
+    color: var(--color-text);
+    font-weight: var(--weight-medium);
+  }
+}
+
+.request-sheet__label {
+  display: block;
+  margin-bottom: var(--space-2);
+  font-weight: var(--weight-medium);
+}
+
+textarea.request-sheet__text {
+  display: block;
+  width: 100%;
+  min-height: 15rem;
+  margin: var(--space-3) 0;
+  padding: var(--space-2) var(--space-3);
+  border: 0;
+  border-left: var(--border-band) solid var(--color-highlight);
+  border-radius: 0;
+  background: var(--color-panel);
+  color: var(--color-text);
+  font-size: var(--text-body);
+  line-height: 1.6;
+  resize: vertical;
+}
+
+.request-flow__bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3) var(--space-5);
+  align-items: center;
+  margin-top: var(--space-5);
+  padding-top: var(--space-4);
+  border-top: var(--border-rule) solid var(--color-rule);
+}
+
+.request-flow__private {
+  order: 0;
+  margin: 0 auto 0 0;
+  font-weight: var(--weight-medium);
+}
+
+// The step's buttons share a row, so they share the Large height.
+.request-flow__bar button.button {
+  @include button-size-large;
+}
+
+.request-flow__bar .request-flow__ghost {
+  order: 1;
+}
+
+.request-flow__bar .request-flow__next {
+  order: 2;
+}
+
+.request-flow__bar button.request-flow__ghost {
+  border-color: var(--color-text);
+  background: transparent;
+  color: var(--color-text);
+}
+
+@media (max-width: 35em) {
+  .request-flow__bar button.button {
+    flex: 1 1 100%;
+  }
+
+  .request-flow__bar .request-flow__next {
+    order: 1;
+  }
+
+  .request-flow__bar .request-flow__ghost {
+    order: 2;
+  }
+
+  .request-flow__private {
+    margin-right: 0;
+  }
+}
+
+.request-flow__side-title {
+  margin: 0;
+  padding-bottom: var(--space-2);
+  border-bottom: var(--border-rule) solid var(--color-rule);
+  font-size: var(--text-lg);
+}
+
+.request-tips {
+  margin: var(--space-5) 0 0;
+  padding: 0;
+  font-size: var(--text-md);
+  list-style: none;
+
+  li {
+    position: relative;
+    margin: 0;
+    padding: var(--space-2) 0 var(--space-2) 1.4rem;
+    border-bottom: var(--border-hair) solid var(--color-line);
+
+    &::before {
+      content: "";
+      position: absolute;
+      top: 0.95rem;
+      left: 0;
+      width: 0.6rem;
+      height: 0.6rem;
+      background: var(--color-text);
+    }
+  }
+}
+
+@media (max-width: 56em) {
+  .request-flow--two .request-tips {
+    display: none;
+  }
+}
+
+.request-suggestions {
+  margin: 0 0 var(--space-5);
+  padding: var(--space-3) var(--space-4);
+  border-left: var(--border-band) solid var(--color-highlight-edge);
+  background: var(--color-highlight);
+  color: var(--color-on-highlight);
+
+  h2 {
+    margin: 0 0 var(--space-1);
+    color: inherit;
+    font-size: var(--text-lg);
+  }
+
+  ul {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  li {
+    padding: var(--space-2) 0;
+  }
+
+  li + li {
+    border-top: var(--border-hair) solid currentColor;
+  }
+
+  a,
+  a:visited {
+    color: inherit;
+    font-weight: var(--weight-medium);
+  }
+}
+
+.request-suggestions__note {
+  display: block;
+  font-size: var(--text-md);
+}
+
+.flow-facts {
+  margin: 0 0 var(--space-5);
+  padding: 0;
+  list-style: none;
+
+  li {
+    margin: 0;
+    padding: var(--space-3) 0;
+    border-bottom: var(--border-hair) solid var(--color-line);
+  }
+}
+
+.flow-facts__value {
+  display: block;
+  font-size: var(--text-lg);
+  line-height: 1.3;
+}
+
+.flow-facts__note {
+  display: block;
+}
+
+.request-flow__check {
+  position: sticky;
+  top: var(--space-4);
+}
+
+// Save draft comes first in the form, so Enter never sends; Send shows first.
+.request-check__actions {
+  display: flex;
+  flex-direction: column-reverse;
+  gap: var(--space-3);
+
+  button {
+    width: 100%;
+    margin: 0;
+  }
+
+  button.request-flow__send {
+    @include button-size-large;
+  }
+
+  button.request-flow__ghost {
+    @include button-size-standard;
+    border-color: var(--color-text);
+    background: transparent;
+    color: var(--color-text);
+  }
+}
+
+.request-check__nudge {
+  margin: 0 0 var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  border-left: var(--border-band) solid var(--color-highlight-edge);
+  background: var(--color-panel);
+
+  b {
+    display: block;
+    font-size: var(--text-lg);
+  }
+}
+
+.request-sheet__to {
+  margin: 0;
+  padding: var(--space-3) var(--space-5) 0;
+
+  @media (max-width: 35em) {
+    padding: var(--space-3) var(--space-3) 0;
+  }
+}
+
+.request-question__field {
+  margin: 0 0 var(--space-5);
+
+  label {
+    display: block;
+    margin: 0 0 var(--space-3);
+    font-size: var(--text-2xl);
+    font-weight: var(--weight-bold);
+    line-height: 1.2;
+  }
+
+  textarea, input[type="text"] {
+    display: block;
+    width: 100%;
+    min-height: 3rem;
+    margin: 0;
+    padding: var(--space-3);
+    border: var(--border) solid var(--color-text);
+    border-left: var(--border-band) solid var(--color-highlight);
+    border-radius: 0;
+    background: var(--color-field);
+    color: var(--color-text);
+    font-size: var(--text-lg);
+    line-height: 1.5;
+    resize: vertical;
+  }
+}
+
+.request-question__field--error textarea,
+.request-question__field--error input[type="text"] {
+  border-width: var(--border-rule);
+}
+
+.request-question__error {
+  margin: 0 0 var(--space-2);
+
+  b {
+    margin-right: var(--space-2);
+  }
+}
+
+.request-flow__soft {
+  color: var(--color-text-soft);
+}
+
+.request-flow__quiet {
+  margin: 0 0 var(--space-4);
+  font-size: var(--text-lg);
+}
+
+.page-band__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin: var(--space-5) 0 0;
+}
+
+.page-band a.page-band__button,
+.page-band a.page-band__button:link,
+.page-band a.page-band__button:visited,
+.page-band summary.page-band__button {
+  @include button-size-large;
+  border: var(--border) solid var(--color-highlight);
+  background: var(--color-highlight);
+  color: var(--color-on-highlight);
+  text-decoration: none;
+
+  &:hover,
+  &:focus-visible {
+    background: var(--white);
+    border-color: var(--white);
+    color: var(--ink);
+  }
+}
+
+.page-band a.page-band__button--ghost,
+.page-band a.page-band__button--ghost:link,
+.page-band a.page-band__button--ghost:visited {
+  border-color: var(--color-header-text);
+  background: transparent;
+  color: var(--color-header-text);
+}
+
+.deadline-count {
+  max-width: 52rem;
+  margin-top: var(--space-6);
+}
+
+.deadline-count__head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+  align-items: flex-end;
+  margin: 0;
+}
+
+.deadline-count__big {
+  color: var(--color-highlight);
+  font-size: 5.5rem;
+  font-weight: 800;
+  line-height: 0.85;
+  letter-spacing: -0.04em;
+
+  @media (max-width: 35em) {
+    font-size: 4rem;
+  }
+}
+
+.deadline-count__label {
+  padding-bottom: 0.2rem;
+  color: var(--color-header-soft);
+  font-size: var(--text-lg);
+  line-height: 1.3;
+
+  b {
+    display: block;
+    color: var(--color-header-text);
+    font-size: var(--text-xl);
+  }
+}
+
+.deadline-count__cells {
+  display: grid;
+  gap: 3px;
+  margin-top: var(--space-4);
+
+  i {
+    height: 1.1rem;
+    border: var(--border) solid var(--color-header-soft);
+  }
+
+  .deadline-count__gone {
+    border-color: var(--color-header-text);
+    background: var(--color-header-text);
+  }
+
+  @media (max-width: 35em) {
+    gap: 2px;
+
+    i {
+      height: 0.9rem;
+    }
+  }
+}
+
+.deadline-count__key {
+  display: flex;
+  justify-content: space-between;
+  margin: var(--space-2) 0 0;
+  color: var(--color-header-soft);
+  font-size: var(--text-xs);
+
+  b {
+    color: var(--color-header-text);
+    font-weight: var(--weight-medium);
+  }
+}
+
+.request-band__stamp + .request-band__title {
+  margin-top: var(--space-2);
+}
+
+.next-step__after {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-top: var(--space-2);
+
+  div {
+    padding: var(--space-4) var(--space-5) var(--space-2) 0;
+  }
+
+  h3 {
+    margin: 0;
+    font-size: var(--text-body);
+  }
+
+  p {
+    margin: var(--space-1) 0 0;
+    color: var(--color-text-soft);
+    font-size: var(--text-md);
+  }
+
+  @media (max-width: 47.5em) {
+    grid-template-columns: minmax(0, 1fr);
+
+    div {
+      padding: var(--space-3) 0;
+      border-bottom: var(--border-hair) solid var(--color-line);
+    }
+  }
+}
+
+.followup-page {
+  padding-bottom: var(--space-7);
+
+  h2 {
+    margin: 0 0 var(--space-3);
+    font-size: var(--text-xl);
+  }
+
+  .receipt__said {
+    margin: 0 0 var(--space-4);
+    font-size: var(--text-body);
+  }
+
+  .receipt__said footer {
+    margin-top: var(--space-1);
+    color: var(--color-text-soft);
+    font-size: var(--text-md);
+  }
+}
+
+.followup-to {
+  margin: 0 0 var(--space-3);
+  color: var(--color-text-soft);
+}
+
+.followup-note {
+  margin: var(--space-3) 0 0;
+  color: var(--color-text-soft);
+}
+
+.followup-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3) var(--space-5);
+  align-items: center;
+  margin-top: var(--space-4);
+
+  button.button {
+    @include button-size-large;
+    margin: 0;
+  }
+}
+
+.followup-choices {
+  margin: 0 0 var(--space-4);
+  padding: 0;
+  border: 0;
+
+  legend {
+    margin: 0 0 var(--space-2);
+    font-size: var(--text-xl);
+    font-weight: var(--weight-bold);
+  }
+}
+
+.followup-choice {
+  display: flex;
+  gap: var(--space-3);
+  align-items: center;
+  margin: 0;
+  padding: var(--space-3) 0;
+  border-bottom: var(--border-hair) solid var(--color-line);
+  font-size: var(--text-lg);
+  cursor: pointer;
+
+  input {
+    flex: none;
+    width: 1.25rem;
+    height: 1.25rem;
+    margin: 0;
+  }
+}
+
+.followup-more {
+  margin: 0 0 var(--space-5);
+
+  label {
+    display: block;
+    margin: 0 0 var(--space-2);
+    font-weight: var(--weight-medium);
+  }
+
+  textarea {
+    display: block;
+    width: 100%;
+    margin: 0;
+    padding: var(--space-2) var(--space-3);
+    border: var(--border) solid var(--color-text);
+    border-radius: 0;
+    background: var(--color-field);
+    color: var(--color-text);
+    font-size: var(--text-body);
+  }
+}
+
+.followup-letter p {
+  margin: 0 0 var(--space-3);
+}
+
+.followup-letter__gap {
+  color: var(--color-text-soft);
+  font-style: italic;
+}
+
+.case-file {
+  margin: var(--space-4) 0;
+  padding: var(--space-4);
+  border: var(--border) solid var(--color-text);
+
+  p {
+    margin: 0 0 var(--space-3);
+  }
+
+  p:last-child {
+    margin-bottom: 0;
+  }
+}
+
+.case-file__list {
+  margin: 0 0 var(--space-4);
+  padding: 0;
+  list-style: none;
+
+  li {
+    display: flex;
+    gap: var(--space-3);
+    margin: 0;
+    padding: var(--space-2) 0;
+    border-bottom: var(--border-hair) solid var(--color-line);
+  }
+
+  time {
+    flex: none;
+    min-width: 4.5rem;
+    color: var(--color-text-soft);
+  }
+}
+
+// The help page has no button style of its own for a link.
+.case-file a.button {
+  display: inline-block;
+  padding: 0.5rem 1.1rem;
+  border: var(--border) solid var(--color-highlight-edge);
+  border-radius: var(--radius);
+  background: var(--color-highlight);
+  color: var(--color-on-highlight);
+  font-weight: var(--weight-medium);
+  text-decoration: none;
+
+  &:hover,
+  &:focus {
+    background: var(--color-text);
+    color: var(--color-page);
+  }
+}
+
+.request-suggestions__excerpt {
+  margin: var(--space-2) 0 0;
+  overflow-wrap: anywhere;
+}
+
+button.request-to__change {
+  appearance: none;
+  margin-left: var(--space-2);
+  padding: var(--space-2) 0;
+  border: 0;
+  background: transparent;
+  color: var(--color-link);
+  font: inherit;
+  font-size: var(--text-md);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.request-sheet__review {
+  overflow-wrap: anywhere;
+  p { white-space: pre-wrap; }
+}
+
+.request-review__actions button {
+  width: 100%;
+  margin: 0;
+  padding: 1.1rem 1.5rem;
+  font-size: var(--text-xl);
+}
+
+// The history: one row per event, newest first. A row with something to open
+// says so in words.
+.request-feed {
+  margin-top: var(--space-7);
+}
+
+.request-feed--next + .request-feed {
+  margin-top: var(--space-6);
+}
+
+.requester-page h2.feed__heading {
+  margin: 0;
+  padding-bottom: var(--space-2);
+  border-bottom: var(--border-rule) solid var(--color-rule);
+  font-size: var(--text-xl);
+  font-weight: var(--weight-bold);
+  line-height: var(--leading-tight);
+}
+
+.feed__row,
+.feed__letter > summary,
+.feed__dates > summary {
+  display: grid;
+  grid-template-columns: 4rem minmax(0, 1fr);
+  gap: var(--space-1) var(--space-3);
+  align-items: baseline;
+  min-height: 2.75rem;
+  margin: 0;
+  padding: var(--space-3) 0;
+  border-bottom: var(--border-hair) solid var(--color-line);
+}
+
+.feed__letter,
+.feed__dates {
+  @include details-opening;
+  scroll-margin-top: var(--space-4);
+
+  // A row that opens fills on hover. Side shadows carry the fill a step past
+  // the text, so the text and the dividing lines keep their places.
+  > summary {
+    grid-template-columns: 4rem minmax(0, 1fr) auto;
+    cursor: pointer;
+    list-style: none;
+    transition: background-color 150ms ease-out, box-shadow 150ms ease-out;
+
+    &::-webkit-details-marker {
+      display: none;
+    }
+
+    @media (hover: hover) {
+      &:hover {
+        background-color: var(--color-panel);
+        box-shadow: calc(-1 * var(--space-3)) 0 0 var(--color-panel), var(--space-3) 0 0 var(--color-panel);
+      }
+
+      &:hover .feed__title {
+        text-decoration: underline;
+      }
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    > summary {
+      transition: none;
+    }
+  }
+
+  // A focused row keeps its focus ring over the fill.
+  > summary:focus-visible {
+    box-shadow: 0 0 0 6px var(--color-focus);
+  }
+
+  &[open] > summary {
+    border-bottom: 0;
+  }
+}
+
+.feed__dates > summary .feed__what {
+  grid-column: 2;
+}
+
+// On the title's line, like the date, rather than floating in the row.
+.feed__open {
+  display: inline-flex;
+  gap: var(--space-2);
+  align-items: baseline;
+  font-size: var(--text-md);
+  font-weight: var(--weight-medium);
+  text-decoration: underline;
+
+  // Pointing the way the row opens, centred on the word's height.
+  &::after {
+    content: "";
+    align-self: center;
+    width: 0.5em;
+    height: 0.5em;
+    margin-top: -0.2em;
+    margin-right: 0.15em;
+    border: solid currentColor;
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
+  }
+}
+
+.feed__opened {
+  display: none;
+}
+
+details[open] > summary {
+  > .feed__open {
+    .feed__closed {
+      display: none;
+    }
+
+    .feed__opened {
+      display: inline;
+    }
+
+    &::after {
+      margin-top: 0.2em;
+      transform: rotate(-135deg);
+    }
+  }
+}
+
+.feed__date {
+  color: var(--color-text-soft);
+  font-size: var(--text-md);
+}
+
+.feed__what {
+  display: grid;
+  min-width: 0;
+  line-height: var(--leading-snug);
+}
+
+.feed__title {
+  font-weight: var(--weight-bold);
+}
+
+.feed__new {
+  margin-left: var(--space-2);
+  padding: 0 var(--space-2);
+  border: var(--border-hair) solid var(--color-text);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-bold);
+}
+
+.feed__files {
+  margin: 0;
+  color: var(--color-text-soft);
+  font-size: var(--text-md);
+}
+
+.feed__meta {
+  color: var(--color-text-soft);
+  font-size: var(--text-md);
+}
+
+.feed__line {
+  font-size: var(--text-md);
+  overflow-wrap: anywhere;
+}
+
+.feed__documents {
+  grid-column: 2;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+
+  li {
+    margin: 0;
+  }
+
+  a {
+    display: inline-block;
+    padding-block: var(--space-2);
+  }
+}
+
+// A letter hidden from the requester. features/_request.scss, where a theme
+// loads it, hides .hidden_message, which also marks their own private letters,
+// so only this row brings it back.
+.feed__hidden {
+  grid-column: 2;
+  max-width: var(--measure);
+  font-size: var(--text-md);
+  line-height: var(--leading-snug);
+  overflow-wrap: anywhere;
+
+  .hidden_message {
+    display: block;
+    margin: 0;
+    padding: 0;
+  }
+}
+
+// An open row: the letter on the page, on the column of the row's title, at a
+// comfortable measure.
+.feed__sheet {
+  padding: 0 0 var(--space-5) calc(4rem + var(--space-3));
+  border-bottom: var(--border-hair) solid var(--color-line);
+
+  @media (max-width: 35em) {
+    padding-left: 0;
+  }
+}
+
+.feed__body {
+  display: grid;
+  gap: var(--space-3);
+  min-width: 0;
+
+  .correspondence,
+  .correspondence.collapsed {
+    margin: 0;
+    padding: 0;
+    border: 0;
+  }
+
+  // The row is what opens and closes a letter here, so the folding of routine
+  // replies (collapsible_controller.js) has no way back: keep the letter showing.
+  .correspondence.collapsed > * {
+    display: block;
+  }
+
+  // The row already says who and when. Only a failed send adds anything.
+  .event_actions:empty,
+  .outgoing .correspondence__header:not(.correspondence__header--with-delivery-status),
+  .correspondence__header__author,
+  .correspondence__header__date {
+    display: none;
+  }
+
+  .correspondence__header {
+    padding: 0 0 var(--space-2);
+
+    &::before {
+      display: none;
+    }
+  }
+
+  // The letter keeps to a measure; its files run the width of the row.
+  .correspondence_text {
+    padding: 0;
+
+    > div {
+      max-width: var(--measure);
+    }
+  }
+
+  .list-of-attachments {
+    margin-bottom: var(--space-4);
+  }
+
+  // The routine-update choice: small, left-aligned, at the foot of the letter.
+  .incoming-attention-choice {
+    margin: var(--space-3) 0 0;
+    font-size: var(--text-md);
+
+    button {
+      min-height: 2.75rem;
+      padding: 0;
+      border: 0;
+      background: none;
+      color: var(--color-text);
+      font-size: var(--text-md);
+      font-weight: var(--weight-regular);
+      text-decoration: underline;
+    }
+  }
+}
+
+.feed__share {
+  margin: 0;
+}
+
+.feed__dates {
+  .feed__sheet {
+    padding-top: var(--space-2);
+  }
+
+  .deadlines-panel {
+    margin: 0;
+  }
+
+  #deadlines-panel-title {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+}
+
+// features/_request.scss, where a theme loads it, hides .hidden_attachment, so
+// this message has its own class.
+.attachment__held {
+  margin: 0;
+  font-weight: var(--weight-medium);
+}

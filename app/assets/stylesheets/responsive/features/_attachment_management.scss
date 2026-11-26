@@ -1,0 +1,793 @@
+@use "responsive/features/tokens" as *;
+
+@mixin redaction-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2.25rem;
+  min-height: 2.25rem;
+  margin: 0; // Foundation gives every button a bottom margin
+  padding: 0 var(--space-2);
+  border: var(--border) solid var(--color-text);
+  border-radius: 0;
+  background: var(--color-page);
+  color: var(--color-text);
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  line-height: var(--leading-snug);
+  text-align: center;
+  cursor: pointer;
+  transition: none;
+
+  &[hidden] {
+    display: none;
+  }
+
+  // The base styles make a focused button in a form see-through.
+  &:focus {
+    background: var(--color-page);
+    color: var(--color-text);
+  }
+
+  // Joined or close together, a neighbour would cover part of the focus halo.
+  &:focus-visible {
+    position: relative;
+    z-index: 1;
+  }
+
+  // Only with a real pointer: on touch, hover stays on what was last tapped.
+  @media (hover: hover) {
+    &:hover:not(:disabled) {
+      @include highlighted;
+    }
+  }
+
+  // The base styles and Foundation recolour a hovered disabled button.
+  &:disabled {
+    background: var(--color-page);
+    color: var(--color-text);
+    opacity: 0.5;
+    cursor: default;
+  }
+
+  svg {
+    width: 1rem;
+    height: 1rem;
+  }
+}
+
+
+// Kept as a mixin so scoped admin uses preserve parent-selector semantics.
+@mixin styles {
+
+
+// The redaction boxes are hatched, see-through marks: they are instructions,
+// not redactions. The real result is the review screen's page images,
+// rendered from the generated file.
+
+.attachment__meta a.attachment__manage {
+  font-weight: var(--weight-medium);
+}
+
+.attachment-management-body-link {
+  margin: var(--space-3) 0 0;
+  font-size: var(--text-md);
+}
+
+.attachment-management {
+  max-width: 60rem;
+  margin-bottom: var(--space-7);
+
+  h1 {
+    margin-bottom: var(--space-3);
+  }
+
+  h2 {
+    margin: 0 0 var(--space-3);
+    font-size: var(--text-xl);
+  }
+
+  h3 {
+    margin: 0 0 var(--space-2);
+    font-size: var(--text-lg);
+  }
+
+  p,
+  li,
+  dd {
+    max-width: var(--measure);
+  }
+}
+
+.attachment-management__back {
+  margin: 0 0 var(--space-4);
+  font-size: var(--text-md);
+}
+
+.attachment-management__lede {
+  font-size: var(--text-body);
+}
+
+.attachment-management__soft {
+  color: var(--color-text-soft);
+}
+
+.attachment-management__facts {
+  display: grid;
+  grid-template-columns: minmax(8rem, max-content) minmax(0, 1fr);
+  gap: var(--space-2) var(--space-4);
+  margin: 0 0 var(--space-5);
+
+  dt,
+  dd {
+    margin: 0;
+    font-size: var(--text-body);
+    line-height: var(--leading-body);
+  }
+
+  dt {
+    font-weight: var(--weight-medium);
+  }
+}
+
+@media (max-width: 40em) {
+  .attachment-management__facts {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0;
+
+    dd {
+      margin-bottom: var(--space-3);
+    }
+  }
+}
+
+.attachment-management__section {
+  margin: 0 0 var(--space-6);
+  padding-top: var(--space-4);
+  border-top: var(--border-rule) solid var(--color-rule);
+}
+
+.attachment-management__links {
+  margin: 0 0 var(--space-4);
+  padding-left: var(--space-5);
+}
+
+.attachment-management__findings {
+  padding: var(--space-3) var(--space-4);
+  border: var(--border) solid var(--color-text);
+
+  ul {
+    margin: 0;
+    padding-left: var(--space-5);
+  }
+}
+
+.attachment-management__action {
+  margin: 0 0 var(--space-5);
+  padding: var(--space-4);
+  background: var(--color-panel);
+
+  p:last-child {
+    margin-bottom: 0;
+  }
+}
+
+a.attachment-management__button,
+a.attachment-management__button:link,
+a.attachment-management__button:visited {
+  display: inline-block;
+  padding: 0.5rem 1.1rem;
+  border: var(--border) solid var(--color-on-highlight);
+  background: var(--color-highlight);
+  color: var(--color-on-highlight);
+  font-weight: var(--weight-medium);
+  text-decoration: none;
+
+  &:hover,
+  &:active {
+    background: var(--color-text);
+    color: var(--color-page);
+  }
+}
+
+.attachment-management__inline-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+
+  label {
+    margin: 0;
+    font-weight: var(--weight-medium);
+  }
+
+  input[type="file"] {
+    max-width: 100%;
+  }
+}
+
+form input[type="submit"].attachment-management__secondary {
+  border-color: var(--color-text);
+  background: var(--color-page);
+  color: var(--color-text);
+
+  &:focus {
+    background: var(--color-page);
+    color: var(--color-text);
+  }
+}
+
+.attachment-management__drafts {
+  width: 100%;
+  border-collapse: collapse;
+
+  th,
+  td {
+    padding: var(--space-2) var(--space-3) var(--space-2) 0;
+    border-bottom: var(--border-hair) solid var(--color-line);
+    text-align: left;
+    vertical-align: top;
+  }
+}
+
+.attachment-management__checks {
+  padding-left: var(--space-5);
+}
+
+.attachment-management__pages {
+  display: grid;
+  gap: var(--space-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.attachment-management__page-image {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border: var(--border-hair) solid var(--color-text);
+}
+
+.attachment-management__text {
+  max-height: 32rem;
+  overflow: auto;
+  padding: var(--space-3);
+  border: var(--border-hair) solid var(--color-text);
+  background: var(--color-panel);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.attachment-management__confirm {
+  @include highlighted;
+  padding: var(--space-4);
+  border: var(--border) solid var(--color-highlight-edge);
+  background: var(--color-highlight);
+  color: var(--color-on-highlight);
+
+  input[type="submit"] {
+    background: var(--color-page);
+  }
+}
+
+.attachment-management__reason {
+  display: block;
+  width: 100%;
+  max-width: var(--measure);
+}
+
+.attachment-management__check {
+  display: flex;
+  gap: var(--space-2);
+  align-items: baseline;
+
+  label {
+    margin: 0;
+  }
+}
+
+.attachment-management__fingerprint code {
+  font-size: var(--text-sm);
+}
+
+.attachment-management__discard {
+  margin-top: var(--space-4);
+}
+
+.redaction-editor__pages {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.redaction-page {
+  margin: 0 0 var(--space-6);
+}
+
+.redaction-page__bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1) var(--space-3);
+  margin-bottom: var(--space-2);
+  font-size: var(--text-sm);
+
+  button {
+    @include redaction-button;
+  }
+
+  .redaction-page__add {
+    margin-left: auto;
+  }
+
+  // It undoes work, so it doesn't draw the eye.
+  .redaction-page__clear,
+  .redaction-page__clear:focus,
+  .redaction-page__clear:hover:not(:disabled) {
+    min-width: 0;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: inherit;
+    font-weight: var(--weight-regular);
+    text-decoration: underline;
+  }
+
+  .redaction-page__clear:hover:not(:disabled) {
+    text-decoration-thickness: var(--border);
+  }
+}
+
+.redaction-page__label {
+  font-weight: var(--weight-bold);
+}
+
+.redaction-page__count {
+  color: var(--color-text-soft);
+}
+
+// Without the script there is nothing to draw with: hide the controls.
+.redaction-editor:not(.is-ready) {
+  .redaction-page__bar button,
+  .redaction-editor__submit {
+    display: none;
+  }
+}
+
+.redaction-page__sheet {
+  position: relative;
+  display: inline-block;
+  max-width: 100%;
+  border: var(--border-hair) solid var(--color-text);
+  line-height: 0;
+  cursor: crosshair;
+  user-select: none;
+  touch-action: pan-y pinch-zoom;
+}
+
+.redaction-page__image {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  // The page is white in the light and dark palettes.
+  background: var(--white);
+  pointer-events: none;
+}
+
+.redaction-box {
+  position: absolute;
+  margin: 0;
+  padding: 0;
+  border: var(--border) solid var(--ink);
+  background: repeating-linear-gradient(
+    -45deg,
+    rgba(0, 0, 0, 0.55),
+    rgba(0, 0, 0, 0.55) 6px,
+    rgba(0, 0, 0, 0.35) 6px,
+    rgba(0, 0, 0, 0.35) 12px
+  );
+  cursor: move;
+  touch-action: none;
+
+  // The chosen box is the one "Remove this box" removes.
+  &:focus,
+  &.is-chosen {
+    outline: var(--border) solid var(--color-focus);
+    outline-offset: 1px;
+  }
+
+  &.is-drawing {
+    border-style: dashed;
+  }
+}
+
+// The paper stays white in both palettes, so the ring that says which box the
+// keyboard is on is black, with the halo outside it.
+.redaction-editor .redaction-box:focus-visible {
+  outline: 3px solid #000;
+  outline-offset: 2px;
+  box-shadow: 0 0 0 2px #fff, 0 0 0 5px #000, 0 0 0 9px var(--color-focus);
+}
+
+// Above the boxes and the toolbar, which can reach the foot of the window. Only
+// where it leaves room: zoomed in, it would cover what it's about.
+.redaction-editor__submit {
+  z-index: 4;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) 0;
+  border-top: var(--border) solid var(--color-rule);
+  background: var(--color-page);
+
+  p {
+    margin: 0;
+  }
+
+  @media (min-height: 50em) {
+    position: sticky;
+    bottom: 0;
+  }
+}
+
+.text-editor__field {
+  display: block;
+  width: 100%;
+  min-height: 20rem;
+  font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  font-size: var(--text-md);
+}
+
+.attachment-management__conflict p:last-child {
+  margin-bottom: 0;
+}
+
+.attachment-management__conflict-lines {
+  padding-left: var(--space-5);
+
+  code {
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+}
+
+.text-editor__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  align-items: center;
+
+  // The base styles give form buttons outer margins; the gap spaces them.
+  input[type="submit"] {
+    margin: 0;
+  }
+
+  button {
+    @include redaction-button;
+  }
+}
+
+.attachment__attribution {
+  grid-column: 2;
+}
+
+.redaction-editor__tools,
+.redaction-editor__find,
+.redaction-editor > .redaction-personal {
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  border-bottom: var(--border-hair) solid var(--color-line);
+  background: var(--color-desk);
+  color: var(--color-text);
+
+  // In line with the pages, whose desk edge is narrower on a phone.
+  @media (max-width: 40em) {
+    padding-right: var(--space-2);
+    padding-left: var(--space-2);
+  }
+}
+
+// Soft text on the desk falls short of 7:1 in the light palette.
+.redaction-editor > .redaction-personal [data-personal-status],
+.redaction-editor > .redaction-personal [data-personal-item-status],
+.redaction-editor.is-ready .redaction-page__count {
+  color: var(--color-text);
+}
+
+.redaction-editor__tools {
+  display: grid;
+  gap: var(--space-2);
+
+  @media (min-width: 40em) and (min-height: 50em) {
+    position: sticky;
+    top: 0;
+    z-index: 3;
+  }
+
+  button {
+    @include redaction-button;
+  }
+
+  select {
+    width: auto;
+    height: 2.25rem;
+    margin: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+    background-color: var(--color-field);
+    font-weight: var(--weight-medium);
+
+    // Button-sized where there is a mouse; touch screens keep 16px, below
+    // which phones zoom in on a field.
+    @media (hover: hover) and (pointer: fine) {
+      font-size: var(--text-sm);
+    }
+  }
+
+  [hidden] {
+    display: none;
+  }
+}
+
+.redaction-editor__more button {
+  @include redaction-button;
+}
+
+.redaction-editor:not(.is-ready) .redaction-editor__tools,
+.redaction-editor:not(.is-ready) .redaction-editor__more {
+  display: none;
+}
+
+.redaction-editor__tool-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-4);
+}
+
+.redaction-editor__group {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.redaction-editor__modes {
+  display: flex;
+
+  button + button {
+    margin-left: calc(-1 * var(--border));
+  }
+
+  button[aria-pressed="true"] {
+    background: var(--color-text);
+    color: var(--color-page);
+  }
+}
+
+.redaction-editor__zoom {
+  min-width: 3.25rem;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+
+.redaction-editor__find {
+  display: grid;
+  gap: var(--space-2);
+
+  &[hidden] {
+    display: none;
+  }
+
+  label {
+    display: flex;
+    flex: 1 1 18rem;
+    align-items: center;
+    gap: var(--space-2);
+    margin: 0;
+    font-size: var(--text-sm);
+  }
+
+  input[type="search"] {
+    flex: 1;
+    width: auto;
+    min-width: 0;
+    height: 2.25rem;
+    margin: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+  }
+
+  button {
+    @include redaction-button;
+  }
+
+  details {
+    max-height: 14rem;
+    overflow: auto;
+  }
+
+  summary {
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+    cursor: pointer;
+  }
+
+  ol {
+    display: grid;
+    gap: var(--space-1);
+    margin: var(--space-2) 0 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  li {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-1) var(--space-3);
+    max-width: none;
+    margin: 0;
+  }
+}
+
+// A found or suggested match shows itself on the page when chosen: it reads as
+// a link, beside the buttons that act on it.
+.redaction-editor__find li > button:first-child,
+.redaction-personal [data-personal-show] {
+  min-width: 0;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--color-link);
+  text-align: left;
+  text-decoration: underline;
+
+  &:focus {
+    background: none;
+  }
+}
+
+// As tall as the opening message, so shorter selection and reading messages
+// don't move the pages while text is being selected.
+.redaction-editor__word-status {
+  min-height: calc(2em * var(--leading-body));
+  max-width: var(--measure);
+  margin: 0;
+  font-size: var(--text-sm);
+  line-height: var(--leading-body);
+
+  @media (max-width: 40em) {
+    min-height: calc(3em * var(--leading-body));
+  }
+}
+
+// A sheet's pixel width is a view setting only; its image and normalized box
+// overlays always scale together.
+.redaction-editor__viewport {
+  max-width: 100%;
+  max-height: 75vh;
+  overflow: auto;
+  overscroll-behavior: contain;
+  // The script sizes the sheets to the viewport's clientWidth, which counts
+  // padding, so the desk round the pages is a border.
+  border: var(--space-3) solid var(--color-desk);
+  background: var(--color-desk);
+  // Browser scroll anchoring must not compete with explicit zoom anchoring.
+  overflow-anchor: none;
+
+  // Inset, so it shows when the scroller is taller than the window: the same ink
+  // edge as other controls, with the desk edge turning yellow inside it.
+  &:focus-visible {
+    border-color: var(--color-highlight);
+    outline: 3px solid var(--color-text);
+    outline-offset: -3px;
+  }
+
+  @media (max-width: 40em) {
+    border-width: var(--space-2);
+  }
+}
+
+.redaction-editor.is-ready {
+  .redaction-editor__pages { width: 100%; }
+  .redaction-page { max-width: none; margin-bottom: var(--space-4); }
+  .redaction-page:last-child { margin-bottom: 0; }
+  // An outline, not a border: the sheet and its image must stay the same size.
+  .redaction-page__sheet { display: block; max-width: none; box-sizing: border-box; margin: 0 auto; border: 0; outline: var(--border-hair) solid var(--color-line); }
+  .redaction-page__image { width: 100%; max-width: none; }
+}
+
+.redaction-editor.is-panning {
+  .redaction-page__sheet,
+  .redaction-box { cursor: grab; touch-action: none; }
+}
+
+.redaction-word-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  user-select: none;
+  z-index: 1;
+}
+.redaction-word {
+  position: absolute;
+  display: block;
+  overflow: hidden;
+  color: transparent;
+  line-height: 1;
+  white-space: pre;
+  font-family: sans-serif;
+  border: 0;
+  padding: 0;
+  margin: 0;
+
+  &.is-selected, &.is-found, &:focus-visible {
+    background: rgba(50, 120, 255, 0.3);
+    outline: 1px solid #185cbd;
+  }
+}
+.redaction-editor.is-selecting .redaction-word-layer {
+  pointer-events: auto;
+  user-select: text;
+  cursor: text;
+  touch-action: auto;
+  .redaction-word { user-select: text; }
+}
+.redaction-editor .redaction-box { z-index: 2; }
+
+.redaction-personal {
+  margin: var(--space-3) 0;
+  font-size: var(--text-md);
+  line-height: var(--leading-body);
+  overflow-wrap: anywhere;
+
+  &[hidden] { display: none; }
+  summary { cursor: pointer; font-weight: var(--weight-bold); }
+  p { margin: var(--space-2) 0; }
+  label { display: block; margin-top: var(--space-3); font-size: var(--text-sm); }
+  textarea { display: block; width: 100%; max-width: 34rem; box-sizing: border-box; margin-top: var(--space-1); }
+
+  button {
+    @include redaction-button;
+    max-width: 100%;
+    white-space: normal;
+  }
+
+  .redaction-editor__tool-row { gap: var(--space-2); margin: var(--space-3) 0; }
+  [data-personal-status] { color: var(--color-text-soft); font-size: var(--text-sm); }
+  [data-personal-results] { max-height: 26rem; overflow: auto; margin: var(--space-3) 0 0; }
+  ol { padding: 0; list-style: none; }
+  li { max-width: none; margin: 0; }
+  .redaction-personal__page { margin-top: var(--space-3); }
+  .redaction-personal__page > p { font-weight: var(--weight-bold); }
+  .redaction-personal__page > ol { margin-top: var(--space-2); }
+
+  [data-personal-occurrence] {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-1) var(--space-2);
+    padding: var(--space-2) 0;
+    border-top: var(--border-hair) solid var(--color-line);
+
+    > p { flex-basis: 100%; margin: 0; }
+  }
+
+  [data-personal-item-status] { color: var(--color-text-soft); font-style: italic; }
+}
+
+.redaction-suggestion-highlight {
+  position: absolute;
+  pointer-events: none;
+  z-index: 1;
+  background: rgba(50, 120, 255, 0.3);
+  outline: 1px solid #185cbd;
+}
+}

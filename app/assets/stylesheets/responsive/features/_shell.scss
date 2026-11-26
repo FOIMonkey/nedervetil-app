@@ -1,0 +1,26 @@
+// The page's outer frame. Core's own stylesheet does not load this file; a
+// theme lists it in its custom.scss (doc/FORK.md, Frontend).
+
+@use "responsive/foundation" as *;
+@use "responsive/utils" as *;
+
+.entirebody {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+// Core centres #wrapper and caps it at $row-width (the page width).
+#wrapper {
+  flex: 1 0 auto;
+  width: 100%;
+}
+
+#content {
+  padding-top: var(--space-6);
+  padding-bottom: var(--space-8);
+
+  @include respond-min($main_menu-mobile_menu_cutoff) {
+    padding-top: 2.5rem;
+  }
+}

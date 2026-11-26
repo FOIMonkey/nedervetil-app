@@ -6,10 +6,6 @@ require 'redis-client'
 # ActiveJob::Uniqueness gems.
 #
 module RedisConnection
-  def self.instance
-    Redis.new(configuration)
-  end
-
   def self.client
     if configuration.key?(:sentinels)
       RedisClient.sentinel(**configuration).new_client
@@ -19,7 +15,8 @@ module RedisConnection
   end
 
   def self.configuration
-    { url: ENV['REDIS_URL'], password: ENV['REDIS_PASSWORD'] }.
+    { url: ENV.fetch('REDIS_URL', nil),
+      password: ENV.fetch('REDIS_PASSWORD', nil) }.
       merge(sentinel_configuration)
   end
 

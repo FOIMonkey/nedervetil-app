@@ -1,8 +1,9 @@
+@use "../functions" as *;
 // Foundation by ZURB
 // foundation.zurb.com
 // Licensed under MIT Open Source
 
-@import 'global';
+@use "global" as *;
 
 //
 // @variables
@@ -49,10 +50,14 @@ $inline-list-children-display: block !default;
   }
 }
 
+// Emitted explicitly by responsive/foundation_css, in the public cascade.
+@mixin styles {
 @include exports("inline-list") {
   @if $include-html-inline-list-classes {
     .inline-list {
       @include inline-list();
     }
   }
+}
+
 }

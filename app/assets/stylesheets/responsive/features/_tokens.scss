@@ -1,0 +1,126 @@
+@use "sass:color";
+@use "sass:string";
+// Neutral values for the tokens the app's screens use. A theme replaces this
+// file with its own colours, type and spacing under the same names.
+
+// A background image cannot read the text colour, so field icons are drawn in
+// the palette's ink.
+@function hex-digits($colour) {
+  @return string.slice(color.ie-hex-str($colour), 4); // "#FF0E1113" -> "0E1113"
+}
+
+@function icon-caret($colour) {
+  @return url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 5'%3E%3Cpath fill='%23#{hex-digits($colour)}' d='M0 0h10L5 5z'/%3E%3C/svg%3E");
+}
+
+@function icon-calendar($colour) {
+  @return url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%23#{hex-digits($colour)}' stroke-width='1.5'%3E%3Cpath d='M1.75 3.25h12.5v11H1.75zM1.75 6.75h12.5M5 1v3.5M11 1v3.5'/%3E%3C/svg%3E");
+}
+
+$ink: #222222;
+$paper: #f4f4f4;
+
+@mixin palette-light {
+  color-scheme: light;
+  --color-page: var(--white);
+  --color-text: var(--ink);
+  --color-text-soft: var(--grey-700);
+  --color-link: #1a5fb4;
+  --color-rule: var(--grey-700);
+  --color-line: var(--grey-400);
+  --color-panel: var(--grey-100);
+  --color-desk: var(--grey-200);
+  --color-field: var(--white);
+  --icon-caret: #{icon-caret($ink)};
+  --icon-calendar: #{icon-calendar($ink)};
+}
+
+@mixin highlighted {
+  @include palette-light;
+  background-color: var(--color-highlight);
+  color: var(--color-text);
+}
+
+
+// Emit once through tokens_css; importing palette helpers alone adds no CSS.
+@mixin styles {
+
+
+:root {
+  --ink: #{$ink};
+  --white: #ffffff;
+  --grey-700: #555555;
+  --grey-400: #b0b0b0;
+  --grey-300: #cccccc;
+  --grey-200: #e6e6e6;
+  --grey-100: #f4f4f4;
+  --grey-900: #1c1c1c;
+  --black: #000000;
+  --paper: #{$paper};
+
+  @include palette-light;
+  --color-highlight: #fff1b8;
+  --color-on-highlight: var(--ink);
+  --color-highlight-edge: var(--grey-700);
+  --color-control: var(--ink);
+  --color-focus: #ffbf47;
+  --color-header-bg: var(--grey-900);
+  --color-header-text: var(--white);
+  --color-header-soft: var(--grey-300);
+
+  --status-done-bg: var(--color-page);      --status-done-fg: var(--color-text);
+  --status-none-bg: var(--color-page);      --status-none-fg: var(--color-text);
+  --status-waiting-bg: var(--color-page);   --status-waiting-fg: var(--color-text);
+  --status-review-bg: var(--color-page);    --status-review-fg: var(--color-text);
+  --status-late-bg: var(--color-page);      --status-late-fg: var(--color-text);
+
+  --font-sans: system-ui, -apple-system, "Segoe UI", Arial, sans-serif;
+
+  --text-xs: 0.8125rem;
+  --text-sm: 0.875rem;
+  --text-md: 0.9375rem;
+  --text-base: 1rem;
+  --text-body: 1.0625rem;
+  --text-lg: 1.1875rem;
+  --text-xl: 1.375rem;
+  --text-2xl: 1.6875rem;
+  --text-3xl: 2.25rem;
+
+  --leading-tight: 1.15;
+  --leading-snug: 1.35;
+  --leading-body: 1.55;
+
+  --weight-regular: 400;
+  --weight-medium: 500;
+  --weight-bold: 700;
+
+  --measure: 41rem;
+
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.5rem;
+  --space-6: 2rem;
+  --space-7: 3rem;
+  --space-8: 4.5rem;
+
+  --radius: 0.25rem;
+  --border-hair: 1px;
+  --border: 2px;
+  --border-rule: 3px;
+  --border-band: 4px;
+
+  --page-width: 70rem;    // $row-width in _settings.scss
+  --gutter: 0.9375rem;    // Foundation's column padding
+  --page-inset: var(--gutter);
+}
+
+// A media query rather than max(): the Sass compiler and the CSS compressor
+// try to evaluate max() themselves and fail on var().
+@media (min-width: 70em) {
+  :root {
+    --page-inset: calc((100% - var(--page-width)) / 2 + var(--gutter));
+  }
+}
+}

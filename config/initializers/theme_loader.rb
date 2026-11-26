@@ -1,5 +1,6 @@
 # This is a global array of route extensions. Alaveteli modules may add to it.
-# It is used by our config/routes.rb to decide which route extension files to load.
+# It is used by our config/routes.rb to decide which route extension files to
+# load.
 $alaveteli_route_extensions = []
 
 def theme_root(theme_name)
@@ -12,6 +13,8 @@ def require_theme(theme_name)
   $LOAD_PATH.unshift theme_lib.to_s
 
   theme_main_include = theme_lib.join('alavetelitheme.rb')
+
+  Rails.configuration.paths['data'].push(root.join('data'))
 
   return unless File.exist?(theme_main_include)
 
@@ -26,14 +29,27 @@ def require_theme(theme_name)
 end
 
 Rails.configuration.paths.add('config/refusal_advice', glob: '*.{yml,yml.erb}')
+Rails.configuration.paths.add('data')
 
 if Rails.env == "test"
-  # By setting this ALAVETELI_TEST_THEME to a theme name, theme tests can run in the Rails
-  # context with the theme loaded. Otherwise the themes from the config aren't loaded in testing
-  # so they don't interfere with core Alaveteli tests
-  require_theme(ALAVETELI_TEST_THEME) if defined? ALAVETELI_TEST_THEME
+  # By setting this ALAVETELI_TEST_THEME to a theme name, theme tests can run in
+  # the Rails context with the theme loaded. Otherwise the themes from the
+  # config aren't loaded in testing so they don't interfere with core Alaveteli
+  # tests
+  themes = defined?(ALAVETELI_TEST_THEME) ? [ALAVETELI_TEST_THEME] : []
 else
-  AlaveteliConfiguration.theme_urls.reverse.each do |url|
-    require_theme theme_url_to_theme_name(url)
+  themes = AlaveteliConfiguration.theme_urls.map do |url|
+    theme_url_to_theme_name(url)
   end
 end
+themes.reverse_each { |theme| require_theme(theme) }
+
+# Each set of themes builds its stylesheets into a folder of its own, so a
+# build made with one set is never served with another.
+stylesheet_builds = Rails.root.join(
+  'app/assets/builds', themes.empty? ? 'core' : themes.join('+')
+)
+Rails.application.config.dartsass.builds.transform_values! do |output|
+  stylesheet_builds.join(output).to_s
+end
+Rails.application.config.assets.paths << stylesheet_builds

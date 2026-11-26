@@ -12,15 +12,15 @@
 }
 
 .social-link--twitter {
-  background-image: image-url('social-twitter.png');
+  background-image: url("/social-twitter.png");
   @media (-webkit-min-device-pixel-ratio: 1.5), (min-resolution: 144dpi) {
-    background-image: image-url('social-twitter@2.png');
+    background-image: url("/social-twitter@2.png");
   }
 }
 
 .social-link--facebook {
-  background-image: image-url('social-facebook.png');
+  background-image: url("/social-facebook.png");
   @media (-webkit-min-device-pixel-ratio: 1.5), (min-resolution: 144dpi) {
-    background-image: image-url('social-facebook@2.png');
+    background-image: url("/social-facebook@2.png");
   }
 }

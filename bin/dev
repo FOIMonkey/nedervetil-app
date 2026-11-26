@@ -1,2 +1,41 @@
 #!/usr/bin/env ruby
-exec "./bin/rails", "server", *ARGV
+# The Rails server and the stylesheet watcher together. The stylesheets are
+# built before the server starts; if either process stops, the other is
+# stopped too, and Ctrl-C stops both. Arguments go to `rails server`.
+Dir.chdir(File.expand_path('..', __dir__))
+
+system('bin/rails', 'dartsass:build') or
+  abort('bin/dev: the stylesheets did not build')
+
+children = {
+  spawn('bin/rails', 'dartsass:watch', pgroup: true) => 'stylesheet watcher',
+  spawn('bin/rails', 'server', *ARGV, pgroup: true) => 'server'
+}
+
+stop = ->(signal) do
+  children.each_key do |pid|
+    Process.kill(signal, -pid)
+  rescue Errno::ESRCH
+    nil
+  end
+end
+%w[INT TERM].each { |signal| trap(signal) { stop.call(signal) } }
+
+name = nil
+status = nil
+loop do
+  pid, status = Process.wait2
+  name = children.delete(pid)
+  break if name
+rescue Errno::ECHILD
+  break
+end
+
+warn "bin/dev: the #{name} stopped (#{status}); stopping the rest" if name
+stop.call('TERM')
+children.each_key do |child|
+  Process.wait(child)
+rescue Errno::ECHILD
+  nil
+end
+exit(status&.success? ? 0 : 1)

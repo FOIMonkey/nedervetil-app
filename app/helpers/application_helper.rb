@@ -85,13 +85,10 @@ module ApplicationHelper
   end
 
   def read_asset_file(asset_name)
-    assets = Rails.application.assets_manifest.find_sources(asset_name)
-    if assets.first
-      assets.first.force_encoding('utf-8')
-    else
-      raise Sprockets::FileNotFound,
-            "Asset file '#{asset_name}' was not found in the assets directory"
-    end
+    asset = Rails.application.assets.load_path.find(asset_name)
+    raise Propshaft::MissingAssetError, asset_name unless asset
+
+    asset.compiled_content.dup.force_encoding('utf-8')
   end
 
   # Public: Checks whether there is an active theme

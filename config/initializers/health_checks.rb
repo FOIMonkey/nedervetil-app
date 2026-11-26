@@ -28,18 +28,18 @@ Rails.application.config.after_initialize do
                        'hour'),
     success_message: _('The Xapian indexing is not stuck')
   ) do
-    redis = RedisConnection.instance
-    last_id = redis.get('health_check_xapian_queue_last_id').to_i
+    redis = RedisConnection.client
+    last_id = redis.call('GET', 'health_check_xapian_queue_last_id').to_i
 
     oldest_job = ActsAsXapian::ActsAsXapianJob.order(:created_at).first
     next Time.zone.now unless oldest_job
 
     if last_id != oldest_job.id
-      redis.set('health_check_xapian_queue_last_id', oldest_job.id)
-      redis.set('health_check_xapian_queue_last_changed', Time.zone.now.to_i)
+      redis.call('SET', 'health_check_xapian_queue_last_id', oldest_job.id.to_s)
+      redis.call('SET', 'health_check_xapian_queue_last_changed', Time.zone.now.to_i.to_s)
     end
 
-    last_changed = redis.get('health_check_xapian_queue_last_changed').to_i
+    last_changed = redis.call('GET', 'health_check_xapian_queue_last_changed').to_i
     Time.zone.at(last_changed)
   end
 

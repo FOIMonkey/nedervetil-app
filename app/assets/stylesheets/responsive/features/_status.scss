@@ -1,0 +1,38 @@
+// Core's own stylesheet does not load this file; a theme lists it in its
+// custom.scss (doc/FORK.md, Frontend).
+//
+// A status is never colour alone: each has its own mark (a shape) and its name
+// in words.
+
+@use "responsive/features/status_marks";
+
+// Core draws these from a sprite image. Here each is a mask filled with the
+// text colour, so it follows the design and stays sharp at any size.
+.icon-standalone,
+.request_listing .icon-standalone {
+  display: inline-block;
+  position: static;
+  flex: none;
+  width: 1.25em;
+  height: 1.25em;
+  vertical-align: -0.28em;
+  background: var(--color-text);
+  -webkit-mask: var(--status-mark) center / contain no-repeat;
+  mask: var(--status-mark) center / contain no-repeat;
+}
+
+.request_listing .request_left p {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0;
+  padding: 0.2rem 0.6rem 0.2rem 0.45rem;
+  border: var(--border-hair) solid var(--color-text);
+  background: var(--color-page);
+  font-size: var(--text-sm);
+  line-height: var(--leading-snug);
+
+  strong {
+    font-weight: var(--weight-medium);
+  }
+}

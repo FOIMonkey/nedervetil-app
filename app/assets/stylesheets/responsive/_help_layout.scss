@@ -1,3 +1,6 @@
+@use "responsive/foundation" as *;
+@use "responsive/utils" as *;
+
 /* Help layout */
 
 /* These help pages use grid-column elements, so need grid-row mixed in */
@@ -10,6 +13,9 @@
 #help_requesting,
 #help_unhappy {
   @include grid-row($behavior: nest);
+  // A band and its notice are not columns of the row. They read this to stay at
+  // the page's edges (features/_band.scss).
+  --nested-row-gutter: #{$column-gutter * 0.5};
 }
 
 #hash_link_padding {

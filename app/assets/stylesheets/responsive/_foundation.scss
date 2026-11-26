@@ -1,0 +1,30 @@
+// Shared Sass members, with the selected theme's settings applied once.
+// CSS is emitted separately so admin/editor users do not inherit public rules.
+@use "responsive/settings";
+@forward "responsive/settings" hide $row-width, $body-font-family, $base-font-size, $form-label-font-color;
+@forward "foundation/functions";
+@forward "foundation/components/global" hide styles with (
+  $base-font-size: settings.$base-font-size,
+  $body-font-family: settings.$body-font-family
+);
+@forward "foundation/components/grid" hide styles with ($row-width: settings.$row-width);
+@forward "foundation/components/buttons" hide styles;
+@forward "foundation/components/forms" hide styles with ($form-label-font-color: settings.$form-label-font-color);
+@forward "foundation/components/inline-lists" hide styles;
+@forward "foundation/components/tabs" hide styles;
+
+@use "foundation/components/global" as global;
+@use "foundation/components/grid";
+@use "foundation/components/buttons";
+@use "foundation/components/forms";
+@use "foundation/components/inline-lists";
+@use "foundation/components/tabs";
+
+@mixin styles {
+  @include global.styles;
+  @include grid.styles;
+  @include buttons.styles;
+  @include forms.styles;
+  @include inline-lists.styles;
+  @include tabs.styles;
+}

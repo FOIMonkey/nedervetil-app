@@ -1,0 +1,77 @@
+// Lateness is said in words and the label is bold; colour never carries it
+// alone.
+
+.deadline-line { font-size: var(--text-md); }
+.deadline-line__label { font-weight: var(--weight-medium); }
+.deadline-line--late .deadline-line__label { font-weight: var(--weight-bold); }
+.deadline-line__detail { color: var(--color-text-soft); }
+
+.attention-group__deadline .deadline-line { font-size: inherit; }
+.request_listing__deadline { margin: 0; }
+
+.deadlines-panel {
+  h2 { margin-top: 0; font-size: var(--text-lg); }
+}
+.deadlines-panel__next { margin: 0 0 var(--space-3); }
+.deadlines-panel__steps {
+  margin: 0 0 var(--space-4);
+  font-size: var(--text-sm);
+}
+.deadlines-panel__step {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-1) 0;
+  border-bottom: var(--border-hair) solid var(--color-line);
+  align-items: baseline;
+  // Core sizes every dt as a heading and spaces dt + dd apart.
+  dt { margin: 0; font-size: inherit; font-weight: var(--weight-medium); line-height: inherit; }
+  dd { margin: 0; text-align: right; }
+}
+.deadlines-panel__note {
+  display: block;
+  color: var(--color-text-soft);
+}
+.deadlines-panel__changed,
+.deadlines-panel__notice,
+.deadlines-panel__help {
+  font-size: var(--text-sm);
+}
+.deadlines-panel__help,
+.deadlines-panel__optional { color: var(--color-text-soft); }
+.deadlines-panel__restore { margin-bottom: var(--space-3); }
+.deadlines-panel__change summary {
+  cursor: pointer;
+  font-weight: var(--weight-medium);
+  text-decoration: underline;
+}
+.deadlines-panel__form {
+  margin-top: var(--space-3);
+  label { display: block; font-weight: var(--weight-medium); }
+  input[type=date],
+  select,
+  textarea { width: 100%; margin-bottom: 0; }
+}
+
+
+.deadlines-complete {
+  grid-column: 1 / -1;
+  font-size: var(--text-sm);
+  summary {
+    cursor: pointer;
+    font-weight: var(--weight-medium);
+    text-decoration: underline;
+  }
+  fieldset { margin: var(--space-2) 0 0; padding: 0; border: 0; }
+  legend { font-weight: var(--weight-medium); }
+}
+.deadlines-complete__option {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-1) 0;
+  font-weight: var(--weight-regular);
+  input { margin: 0; }
+}
+.deadlines-complete__help { color: var(--color-text-soft); }
+.deadlines-panel .deadlines-complete { margin-top: var(--space-4); }

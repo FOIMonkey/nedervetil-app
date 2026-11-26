@@ -5,11 +5,9 @@
   </style>
 <%- else %>
   <%= render :partial => 'general/responsive_stylesheets' %>
-  <%= stylesheet_link_tag 'responsive/print', :rel => "stylesheet", :media => "print"  %>
+  <%= stylesheet_link_tag 'responsive/print', :rel => "stylesheet", :media => "print", :data => { :turbo_track => 'reload' } %>
   <% if !params[:print_stylesheet].nil? %>
-    <%= stylesheet_link_tag 'responsive/print', :rel => "stylesheet", :media => "all"  %>
-  <% end %>
-  <% if AlaveteliConfiguration::force_registration_on_new_request %>
-    <%= stylesheet_link_tag 'fancybox.css', :rel => "stylesheet"  %>
+    <%# dynamic: a Turbo Drive visit adds it, and takes it away again. %>
+    <%= stylesheet_link_tag 'responsive/print', :rel => "stylesheet", :media => "all", :data => { :turbo_track => 'dynamic' } %>
   <% end %>
 <% end %>

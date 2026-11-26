@@ -1,0 +1,521 @@
+// Ruby Sass 3.4 can't compile max(), min() or clamp() with var().
+
+.page-band--tabs {
+  padding-bottom: 0;
+}
+
+.body-tabs {
+  margin-top: var(--space-5);
+
+  ul {
+    display: flex;
+    gap: var(--space-1);
+    margin: 0;
+    padding: 0;
+    overflow-x: auto;
+    list-style: none;
+    scrollbar-width: none;
+  }
+}
+
+.page-band .body-tabs a,
+.page-band .body-tabs a:link,
+.page-band .body-tabs a:visited {
+  display: inline-flex;
+  gap: 0.5rem;
+  align-items: baseline;
+  padding: 0.8rem var(--space-4) 0.85rem;
+  border: var(--border) solid transparent;
+  border-bottom: 0;
+  color: var(--color-header-text);
+  font-size: var(--text-base);
+  font-weight: var(--weight-medium);
+  line-height: 1.2;
+  white-space: nowrap;
+  text-decoration: none;
+}
+
+.page-band .body-tabs a:hover {
+  background: none;
+  color: var(--color-header-text);
+  text-decoration: underline;
+  text-decoration-thickness: 3px;
+  text-underline-offset: 0.2em;
+}
+
+.page-band .body-tabs a[aria-current] {
+  border-color: var(--color-highlight);
+  background: var(--color-highlight);
+  color: var(--ink);
+  font-weight: var(--weight-bold);
+  text-decoration: none;
+}
+
+.page-band .body-tabs a:focus-visible {
+  outline-offset: -4px;
+  color: var(--color-on-highlight);
+}
+
+// In the band, a visitor's Make request button keeps the band's spacing,
+// without the topic pages' negative margin.
+.page-band .ask-elsewhere > summary {
+  margin: 0;
+}
+
+.body-warnings {
+  margin: 0 0 var(--space-6);
+}
+
+.body-warning {
+  padding: var(--space-3) var(--space-4);
+  border-left: var(--border-band) solid var(--color-rule);
+  background: var(--color-panel);
+
+  p {
+    margin: 0;
+  }
+}
+
+.spotlights {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-4);
+  margin: 0 0 var(--space-7);
+  padding: 0;
+  list-style: none;
+}
+
+.spotlights a,
+.spotlights a:link,
+.spotlights a:visited {
+  display: block;
+  height: 100%;
+  padding: var(--space-4);
+  border-top: var(--border-band) solid var(--color-rule);
+  background: var(--color-panel);
+  color: var(--color-text);
+  text-decoration: none;
+}
+
+.spotlights a:hover {
+  border-top-color: var(--color-highlight);
+}
+
+.spotlights a:hover .spotlight__label {
+  text-decoration-thickness: 3px;
+}
+
+.spotlight__figure {
+  display: block;
+  font-size: var(--text-3xl);
+  font-weight: var(--weight-bold);
+  line-height: 1.05;
+  font-variant-numeric: tabular-nums;
+}
+
+.spotlight__label {
+  display: block;
+  margin-top: var(--space-2);
+  font-weight: var(--weight-medium);
+  line-height: var(--leading-snug);
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.18em;
+}
+
+.spotlight__extra {
+  display: block;
+  margin-top: var(--space-1);
+  color: var(--color-text-soft);
+  font-size: var(--text-sm);
+}
+
+.body-holds__usually {
+  margin: 0 0 var(--space-2);
+  color: var(--color-text-soft);
+}
+
+.body-holds__more summary {
+  padding: var(--space-2) 0;
+  cursor: pointer;
+}
+
+.body-holds .holds-caveats {
+  margin: var(--space-4) 0 0;
+  padding: 0 0 0 var(--space-4);
+  border-left: var(--border-rule) solid var(--color-highlight);
+  list-style: none;
+
+  li {
+    padding: 0 0 var(--space-2);
+    border: 0;
+    font-size: var(--text-base);
+  }
+
+  li:last-child {
+    padding-bottom: 0;
+  }
+
+  p {
+    margin: 0;
+  }
+}
+
+.guide-card {
+  margin: 0 0 var(--space-5);
+  padding: var(--space-4) var(--space-5);
+  border-left: var(--border-band) solid var(--color-highlight);
+  background: var(--color-panel);
+
+  h2,
+  h3 {
+    margin: 0 0 var(--space-1);
+    font-size: var(--text-lg);
+    line-height: var(--leading-snug);
+  }
+
+  p {
+    max-width: var(--measure);
+    margin: 0 0 var(--space-2);
+  }
+
+  p:last-child {
+    margin-bottom: 0;
+  }
+
+  a {
+    font-weight: var(--weight-bold);
+  }
+}
+
+.body-hub section,
+.body-documents section,
+.body-stats section {
+  margin-bottom: var(--space-7);
+}
+
+.body-hub h2,
+.body-documents h2,
+.body-stats h2 {
+  margin: 0 0 var(--space-4);
+}
+
+.body-more {
+  margin: var(--space-3) 0 0;
+  font-weight: var(--weight-bold);
+}
+
+.body-none {
+  margin: 0 0 var(--space-5);
+  color: var(--color-text-soft);
+}
+
+.foi-record__more {
+  margin: var(--space-3) 0 0;
+  font-weight: var(--weight-medium);
+}
+
+.useful-links {
+  margin-top: var(--space-6);
+
+  // First in a side column, it starts level with the main column's heading.
+  &:first-child {
+    margin-top: 0;
+  }
+
+  ul {
+    margin: 0 0 var(--space-4);
+    padding: 0;
+    list-style: none;
+  }
+
+  li {
+    padding: var(--space-2) 0;
+    border-bottom: var(--border-hair) solid var(--color-line);
+  }
+
+  li:first-child {
+    border-top: var(--border-rule) solid var(--color-rule);
+  }
+}
+
+.foi-decisions {
+  margin: 0 0 var(--space-3);
+  padding: 0;
+  list-style: none;
+  border-top: var(--border-rule) solid var(--color-rule);
+
+  li {
+    display: grid;
+    grid-template-columns: 8.5rem minmax(0, 1fr) auto;
+    gap: 0.15rem var(--space-4);
+    padding: var(--space-3) 0;
+    border-bottom: var(--border-hair) solid var(--color-line);
+  }
+}
+
+.foi-decisions__date {
+  color: var(--color-text-soft);
+  font-size: var(--text-sm);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.foi-decisions__what {
+  font-weight: var(--weight-medium);
+  line-height: var(--leading-snug);
+}
+
+.foi-decisions__ref {
+  grid-column: 2;
+  color: var(--color-text-soft);
+  font-size: var(--text-sm);
+}
+
+.foi-decisions__outcome {
+  grid-column: 3;
+  grid-row: 1 / span 2;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  white-space: nowrap;
+}
+
+.body-search {
+  display: flex;
+  max-width: 36rem;
+  margin: 0 0 var(--space-6);
+
+  input[type=search] {
+    flex: 1;
+    min-width: 0;
+    height: 3rem;
+    margin: 0;
+    padding: 0 var(--space-3);
+    border: var(--border) solid var(--color-rule);
+    border-right: 0;
+    border-radius: 0;
+    background: var(--color-field);
+    color: var(--color-text);
+    font-size: var(--text-lg);
+  }
+
+  .button {
+    height: 3rem;
+    margin: 0;
+  }
+}
+
+.foi-table {
+  width: 100%;
+  margin: 0;
+  border-collapse: collapse;
+  border-top: var(--border-rule) solid var(--color-rule);
+  background: none;
+
+  th,
+  td {
+    padding: var(--space-3) 0;
+    border: 0;
+    border-bottom: var(--border-hair) solid var(--color-line);
+    background: none;
+    color: var(--color-text);
+    font-size: var(--text-base);
+    line-height: var(--leading-snug);
+    text-align: left;
+    vertical-align: baseline;
+  }
+
+  thead th {
+    padding-top: var(--space-2);
+    color: var(--color-text-soft);
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+  }
+
+  th[scope=row] {
+    font-weight: var(--weight-regular);
+  }
+
+  td,
+  thead th + th {
+    padding-left: var(--space-4);
+    text-align: right;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+// The authority's own figure is the answer; Scotland beside it is context.
+.foi-table--headline td:nth-child(2) {
+  font-size: var(--text-xl);
+  font-weight: var(--weight-bold);
+}
+
+.foi-table--headline td:nth-child(3) {
+  color: var(--color-text-soft);
+}
+
+.foi-trend {
+  margin: 0 0 var(--space-7);
+
+  figcaption h2 {
+    margin-bottom: var(--space-2);
+  }
+
+  svg {
+    display: block;
+    width: 100%;
+    height: auto;
+    margin: var(--space-3) 0 var(--space-4);
+    overflow: visible;
+    font-family: var(--font-sans);
+  }
+
+  .trend__bar {
+    fill: var(--color-text);
+  }
+
+  .trend__bar--latest {
+    fill: var(--color-highlight);
+    stroke: var(--color-highlight-edge);
+    stroke-width: 2;
+  }
+
+  .trend__all {
+    stroke: var(--color-text-soft);
+    stroke-width: 2;
+    stroke-dasharray: 3 2;
+  }
+
+  .trend__grid {
+    stroke: var(--color-line);
+    stroke-width: 1;
+  }
+
+  .trend__base {
+    stroke: var(--color-rule);
+    stroke-width: 2;
+  }
+
+  text {
+    fill: var(--color-text-soft);
+    font-size: 13px;
+  }
+
+  .trend__value {
+    fill: var(--color-text);
+    font-weight: 700;
+  }
+
+  summary {
+    padding: var(--space-1) 0;
+    font-weight: var(--weight-medium);
+    cursor: pointer;
+  }
+
+  details .foi-table {
+    margin-top: var(--space-3);
+  }
+
+  details .foi-table th,
+  details .foi-table td {
+    padding: var(--space-2) 0;
+    font-size: var(--text-sm);
+  }
+
+  details .foi-table td,
+  details .foi-table thead th + th {
+    padding-left: var(--space-3);
+  }
+}
+
+.foi-trend__key {
+  margin: 0 0 var(--space-3);
+  color: var(--color-text-soft);
+  font-size: var(--text-sm);
+}
+
+.admin-holds .checkbox {
+  display: block;
+  margin: 0 0 var(--space-1);
+}
+
+@media screen and (max-width: 58em) {
+  .body-tabs {
+    margin-right: calc(-1 * var(--gutter));
+    margin-left: calc(-1 * var(--gutter));
+    padding: 0 var(--gutter);
+  }
+
+  // The tabs as two rows of buttons: four don't fit across a phone.
+  .page-band .body-tabs ul {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-2);
+    padding-bottom: var(--space-4);
+  }
+
+  .page-band .body-tabs a,
+  .page-band .body-tabs a:link,
+  .page-band .body-tabs a:visited {
+    justify-content: center;
+    width: 100%;
+    padding: 0.75rem var(--space-3) 0.8rem;
+    border: var(--border) solid var(--grey-700);
+  }
+
+  .page-band .body-tabs a[aria-current] {
+    border-color: var(--color-highlight);
+  }
+
+  .spotlights {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-3);
+    margin-bottom: var(--space-6);
+  }
+
+  .spotlights a,
+  .spotlights a:link,
+  .spotlights a:visited {
+    display: grid;
+    grid-template-columns: 5.5rem minmax(0, 1fr);
+    gap: 0 var(--space-3);
+    align-items: baseline;
+    padding: var(--space-3);
+  }
+
+  .spotlight__figure {
+    grid-row: 1 / span 2;
+    font-size: var(--text-2xl);
+  }
+
+  .spotlight__label {
+    margin-top: 0;
+  }
+
+  .foi-decisions li {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .foi-decisions__ref,
+  .foi-decisions__outcome {
+    grid-column: 1;
+    grid-row: auto;
+  }
+
+  .foi-table--headline td:nth-child(2) {
+    font-size: var(--text-lg);
+  }
+
+  // Long column headings (an authority's name) wrap rather than push the table sideways.
+  .foi-table thead th,
+  .foi-table thead th + th {
+    white-space: normal;
+  }
+
+  .foi-table td,
+  .foi-table thead th + th {
+    padding-left: var(--space-3);
+  }
+
+}

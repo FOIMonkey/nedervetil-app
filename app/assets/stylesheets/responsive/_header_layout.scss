@@ -1,3 +1,6 @@
+@use "responsive/foundation" as *;
+@use "responsive/utils" as *;
+
 /* Header layout */
 
 #banner_content{
@@ -136,12 +139,12 @@
   width: $logo-width;
   height: $logo-height;
   background-size: $logo-width $logo-height;
-  background-image: image-url($logo-filename);
+  background-image: url("/#{$logo-filename}");
   background-repeat: no-repeat;
   background-position: 0 0;
   display: block;
   @media (-webkit-min-device-pixel-ratio: 1.5), (min-resolution: 144dpi) {
-    background-image: image-url($logo-highdpi-filename);
+    background-image: url("/#{$logo-highdpi-filename}");
   }
 }
 
@@ -429,10 +432,3 @@
   }
 }
 
-
-.profile-summary__image {
-  height: 50px;
-  width: 50px;
-  float: left;
-  margin-right: 1em;
-}

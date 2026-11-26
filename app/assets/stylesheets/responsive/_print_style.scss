@@ -1,3 +1,7 @@
+@use "responsive/foundation" as *;
+@use "responsive/utils" as *;
+@use "responsive/utils_print" as *;
+
 body {
     font-size: 10pt;
 }
@@ -33,13 +37,11 @@ body,
 .authority__body__sidebar,
 .list-filter-item,
 .authority__header__action-bar,
-.hero__learn-more,
 .learn-more-foi,
 #header_right,
 #user_profile_search form,
 #user_not_logged_in,
-.request-header__toolbar-actions,
-.correspondence__footer  {
+.request-header__toolbar-actions {
     display: none !important;
 }
 
@@ -177,32 +179,6 @@ p.subtitle {
 }
 
 // homepage
-.homepage-hero {
-    background-image: none;
-    background-color: transparent;
-    border-bottom: 1px solid #e9e9e9;
-    color: black;
-    text-align: center;
-    a {
-      font-weight: 700;
-      text-decoration: none;
-      color: black;
-    }
-}
-
-.hero__intro {
-    width: 100%;
-}
-
-.intro__title {
-    color: black;
-    text-shadow: none;
-}
-
-.hero__new-request {
-    display: none;
-}
-
 .steps__step-box {
     background-color: transparent;
 }

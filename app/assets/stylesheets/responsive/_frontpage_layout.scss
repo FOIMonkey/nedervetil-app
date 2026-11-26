@@ -1,31 +1,7 @@
+@use "responsive/foundation" as *;
+@use "responsive/utils" as *;
+
 /* Frontpage layout */
-
-.homepage-flash {
-  @include content();
-}
-
-.homepage-hero {
-  padding: 2em 0 4em;
-  position: relative;
-  @include respond-min($main_menu-mobile_menu_cutoff) {
-    padding: 4em 0 4em;
-  }
-}
-
-.hero__intro {
-  @include grid-column(12);
-  @include respond-min($main_menu-mobile_menu_cutoff) {
-    @include grid-column(8);
-  }
-}
-
-.hero__new-request {
-  @include grid-column(12);
-  @include respond-min($main_menu-mobile_menu_cutoff) {
-    @include grid-column(4);
-  }
-}
-
 /* Two even columns */
 #frontpage_examples {
   @include grid-row($behavior: nest);
@@ -109,10 +85,6 @@
   margin-top: 0;
 }
 
-.hiw__steps {
-  margin-bottom: 2em;
-}
-
 .steps__list {
   @include respond-min($main_menu-mobile_menu_cutoff) {
     position: relative;
@@ -146,41 +118,3 @@
 .learn-more-foi {
   @include grid-column(12);
 }
-
-#frontpage_ati_network {
-  margin-top: 2em;
-  padding: 3rem 0 2rem;
-
-  @include respond-min( $main_menu-mobile_menu_cutoff ){
-    margin-top: 0;
-    padding: 5rem 0 3rem;
-  }
-
-  .container {
-    max-width: 48rem;
-    margin: 0 auto;
-  }
-
-  h3 {
-    margin-top: 0;
-  }
-
-  &::after { 
-    min-height: 400px;
-    width: 100%;
-  }
-
-  .flag-wrapper {
-    flex-direction: row;
-    flex-wrap: wrap;
-    justify-content: flex-start;
-    display: flex;
-    gap: 0.25rem;
-    margin: 1.25rem auto;
-
-    @include respond-min( $main_menu-mobile_menu_cutoff ){
-      justify-content: center;
-    }
-  }
-}
-

@@ -1,3 +1,6 @@
+@use "responsive/foundation" as *;
+@use "responsive/utils" as *;
+
 #notes {
   // Variables to keep consistency specially with the spacing.
   $padding-x: 1em;

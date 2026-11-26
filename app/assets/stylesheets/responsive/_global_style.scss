@@ -1,3 +1,7 @@
+@use "responsive/foundation" as *;
+@use "responsive/utils" as *;
+
+@use "sass:color";
 html {
   height: 100%;
   font-size: 1em;
@@ -18,7 +22,7 @@ a {
     color: #333333;
   }
   &:visited {
-    color: darken(#075292, 10%);
+    color: color.adjust(#075292, $lightness: -10%);
   }
 }
 
@@ -32,7 +36,6 @@ h1, h2, h3, h4, h5, h6 {
 h1 {
   font-size: 2.5em;
 }
-
 
 h2 {
   font-size: 2em;
@@ -134,11 +137,11 @@ dt + dd {
 }
 
 #notice {
-  background-color: lighten(#62b356, 23%);
+  background-color: color.adjust(#62b356, $lightness: 23%);
 }
 
 #error, .warning {
-  background-color: lighten(#b05460, 23%);
+  background-color: color.adjust(#b05460, $lightness: 23%);
 }
 
 .big {
@@ -153,11 +156,6 @@ label.form_label {
 
 .form_item_note,.form_note {
   font-size:0.875em;
-  line-height: 1.5em;
-}
-
-.form_item_note--important {
-  font-size: 1.142857143em;
   line-height: 1.5em;
 }
 
@@ -381,10 +379,6 @@ div.pagination {
   }
 }
 
-.action-menu__menu__role-name {
-  font-weight: bold;
-}
-
 .action-menu__menu__item {
   border-bottom: 1px solid #e9e9e9;
   color: #777;
@@ -416,36 +410,6 @@ div.pagination {
   color: #ffffff;
 }
 
-.button-unstyled {
-  //completely remove all of Foundation's styles
-  background-color: transparent;
-  padding: 0;
-  color: inherit;
-  font-family: inherit;
-  text-align: inherit;
-  cursor: pointer;
-  position: inherit;
-  text-decoration: inherit;
-  margin: inherit;
-  display: inline;
-  transition: inherit;
-  font-size: inherit;
-  font-weight: inherit;
-  line-height: inherit;
-  border-radius: inherit;
-  border: inherit;
-
-  //make it have the appearance of a link
-  color: #1567ae;
-  text-decoration: underline;
-  &:hover,
-  &:active,
-  &:focus {
-    color: #333;
-    background-color: transparent;
-  }
-}
-
 button,
 .button {
   &:disabled, {
@@ -460,33 +424,4 @@ button,
       background-color: #e9e9e9;
     }
   }
-}
-
-a.button-share, .button-share {
-  background-color: #373368;
-  color: #fff;
-  width: fit-content;
-  display: block;
-  text-decoration: none;
-  border-radius: 3px;
-  padding: 0.5em 0.75em;
-
-  svg {
-    vertical-align: middle;
-    max-width: 1.2em;
-  }
-
-  span {
-    vertical-align: middle;
-  }
-
-  &:hover {
-    color: #373368;
-    background-color: #b4b2d0;
-  }
-}
-
-.button--full-width {
-  width: 100%;
-  text-align: center;
 }

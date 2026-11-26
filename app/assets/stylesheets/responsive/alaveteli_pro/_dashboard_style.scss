@@ -1,8 +1,6 @@
-/* Style for the dashboard */
-
-.dashboard-folder--disabled {
-  color: #999;
-}
+@use "responsive/alaveteli_pro/dashboard_layout" as *;
+@use "responsive/foundation" as *;
+@use "responsive/utils" as *;
 
 .dashboard-folder--top-level {
   background-color: #f3f1eb;
@@ -15,34 +13,8 @@
   border-color: #333;
 }
 
-.dashboard-todo__list {
-  list-style: none;
-  list-style-type: none;
-}
-
-.dashboard-title {
-  font-size: 1.25em;
-  font-wight: bold;
-}
-
-.dashboard-activity__title,
-.dashboard-todo__title{
-  @extend .dashboard-title;
-}
-
-.dashboard-todo__title,
-.dashboard-todo__list__item,
-.dashboard-activity__title,
-.dashboard-activity__item {
-  border-bottom: 1px solid #ddd;
-}
-
-.dashboard-activity__item__time {
-  color: #6a6a6a;
-}
-
 .phase-icon {
-  background-image: image-url('alaveteli-pro/pro-phase-icons.png');
+  background-image: url("/alaveteli-pro/pro-phase-icons.png");
   background-position: 0 -256px;
   background-size: 44px 539px;
   width: 22px;
@@ -52,27 +24,27 @@
   left: 0;
   top: 4px;
   @media (-webkit-min-device-pixel-ratio: 1.5), (min-resolution: 144dpi) {
-    background-image: image-url('alaveteli-pro/pro-phase-icons@2.png');
+    background-image: url("/alaveteli-pro/pro-phase-icons@2.png");
   }
 
   .request--complete & {
-    background-image: image-url('alaveteli-pro/pro-phase-icons--complete.png');
+    background-image: url("/alaveteli-pro/pro-phase-icons--complete.png");
     @media (-webkit-min-device-pixel-ratio: 1.5), (min-resolution: 144dpi) {
-      background-image: image-url('alaveteli-pro/pro-phase-icons--complete@2.png');
+      background-image: url("/alaveteli-pro/pro-phase-icons--complete@2.png");
     }
   }
 
   .request--in_progress & {
-    background-image: image-url('alaveteli-pro/pro-phase-icons--in-progress.png');
+    background-image: url("/alaveteli-pro/pro-phase-icons--in-progress.png");
     @media (-webkit-min-device-pixel-ratio: 1.5), (min-resolution: 144dpi) {
-      background-image: image-url('alaveteli-pro/pro-phase-icons--in-progress@2.png');
+      background-image: url("/alaveteli-pro/pro-phase-icons--in-progress@2.png");
     }
   }
 
   .request--action_needed & {
-    background-image: image-url('alaveteli-pro/pro-phase-icons--action-needed.png');
+    background-image: url("/alaveteli-pro/pro-phase-icons--action-needed.png");
     @media (-webkit-min-device-pixel-ratio: 1.5), (min-resolution: 144dpi) {
-      background-image: image-url('alaveteli-pro/pro-phase-icons--action-needed@2.png');
+      background-image: url("/alaveteli-pro/pro-phase-icons--action-needed@2.png");
     }
   }
 }
@@ -140,21 +112,6 @@
   }
 }
 
-.dashboard-todo__zero {
-  //inbox zero!
-  background-image: image-url('alaveteli-pro/high-five.png');
-  background-position: 0.5em;
-  background-size: 76px 76px;
-  background-color: #f3f1eb;
-  background-repeat: no-repeat;
-  padding: 1.5em 1.5em 1.5em 96px;
-  margin-top: 1em;
-  border-radius: 5px;
-  @media (-webkit-min-device-pixel-ratio: 1.5), (min-resolution: 144dpi) {
-    background-image: image-url('alaveteli-pro/high-five@2.png');
-  }
-}
-
 .dashboard__announcements {
   background-color: #F3F1EB;
   padding: 0.5em 1.5em 1em 1.5em;
@@ -185,17 +142,23 @@
 
 .dashboard__announcements {
   &:after {
-    background-image: image-url('alaveteli-pro/announcement.png');
+    background-image: url("/alaveteli-pro/announcement.png");
     @media (-webkit-min-device-pixel-ratio: 1.5), (min-resolution: 144dpi) {
-      background-image: image-url('alaveteli-pro/announcement@2.png');
+      background-image: url("/alaveteli-pro/announcement@2.png");
     }
   }
 }
 
 .dashboard__announcement {
-  a.dashboard__announcement_dismiss {
+  .dashboard__announcement_dismiss {
+    background: none;
+    border: 0;
+    padding: 0;
     color: #787774;
+    font: inherit;
     font-size: 0.875em;
+    text-decoration: underline;
+    cursor: pointer;
   }
 }
 

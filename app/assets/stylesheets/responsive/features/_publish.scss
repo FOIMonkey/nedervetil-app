@@ -1,0 +1,1712 @@
+@use "responsive/features/tokens" as *;
+
+// Paper stays white in both colour schemes; everything else follows the tokens.
+
+// A line that opens, with a 44px target and its marker kept.
+
+@mixin publish-disclosure {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+  min-height: 2.75rem;
+  font-weight: var(--weight-medium);
+  list-style: none;
+  cursor: pointer;
+
+  &::-webkit-details-marker {
+    display: none;
+  }
+
+  &::before {
+    content: "";
+    flex: none;
+    border-top: 0.35em solid transparent;
+    border-bottom: 0.35em solid transparent;
+    border-left: 0.5em solid currentColor;
+  }
+}
+
+// Included on the open details' summary: its own selector can't reach back up
+// from a nested rule.
+@mixin publish-disclosure-open {
+  &::before {
+    border-top: 0.5em solid currentColor;
+    border-right: 0.35em solid transparent;
+    border-bottom: 0;
+    border-left: 0.35em solid transparent;
+  }
+}
+
+@mixin publish-found-word {
+  padding: 0 0.15em;
+  outline: var(--border-hair) solid var(--color-highlight-edge);
+  background: var(--color-highlight);
+  color: var(--color-on-highlight);
+  font-weight: var(--weight-bold);
+}
+
+// A step of the flow, wherever its controller lives, isn't a section of the site.
+.publish-view #topnav .navigation li.selected a:not(:focus-visible) {
+  box-shadow: none;
+  font-weight: inherit;
+}
+
+// Shown and hidden by the editor script, whatever display the element has.
+.publish-view [hidden] {
+  display: none;
+}
+
+.request-flow-band.publish-band {
+  margin-bottom: var(--space-5);
+  padding-bottom: var(--space-5);
+
+  .page-band__title {
+    max-width: none;
+    margin-bottom: 0;
+
+    // Script puts focus here so a screen reader hears the new page's question.
+    &:focus {
+      outline: 0;
+      box-shadow: none;
+    }
+  }
+}
+
+// Every answer in the flow, whether it's a link, a button or a disclosure:
+// the same width, height and edge.
+.publish-view a.publish-answer,
+.publish-view a.publish-answer:link,
+.publish-view a.publish-answer:visited,
+.publish-view button.publish-answer,
+.publish-view input.publish-answer,
+.publish-view summary.publish-answer {
+  display: flex;
+  box-sizing: border-box;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: var(--action-large);
+  margin: 0;
+  padding: var(--space-2) var(--space-4);
+  border: var(--border) solid var(--color-text);
+  border-radius: 0;
+  background: var(--color-panel);
+  box-shadow: none;
+  color: var(--color-text);
+  font-family: var(--font-sans);
+  font-size: var(--text-lg);
+  font-weight: var(--weight-bold);
+  line-height: var(--leading-tight);
+  text-align: center;
+  text-decoration: none;
+  cursor: pointer;
+  transition: none;
+
+  &:hover {
+    background: var(--color-text);
+    color: var(--color-page);
+  }
+
+  &:focus-visible {
+    outline: 3px solid var(--color-text);
+    outline-offset: 0;
+    background: var(--color-panel);
+    box-shadow: 0 0 0 6px var(--color-focus);
+    color: var(--color-text);
+  }
+}
+
+.publish-view a.publish-answer--primary,
+.publish-view a.publish-answer--primary:link,
+.publish-view a.publish-answer--primary:visited,
+.publish-view button.publish-answer--primary,
+.publish-view input.publish-answer--primary {
+  border-color: var(--color-highlight-edge);
+  background: var(--color-highlight);
+  color: var(--color-on-highlight);
+
+  &:hover {
+    border-color: var(--color-text);
+    background: var(--color-text);
+    color: var(--color-page);
+  }
+
+  &:focus-visible {
+    background: var(--color-highlight);
+    color: var(--color-on-highlight);
+  }
+}
+
+.publish-view a.publish-answer--row,
+.publish-view a.publish-answer--row:link,
+.publish-view a.publish-answer--row:visited,
+.publish-view button.publish-answer--row,
+.publish-view input.publish-answer--row,
+.publish-view summary.publish-answer--row {
+  min-height: var(--action-row);
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--text-base);
+}
+
+// What can't be undone from here: the page's strongest fill, not yellow, since
+// it isn't what's being asked.
+.publish-view button.publish-answer--stop {
+  border-color: var(--color-text);
+  background: var(--color-text);
+  color: var(--color-page);
+
+  &:hover {
+    background: var(--color-page);
+    color: var(--color-text);
+  }
+}
+
+.publish-view summary.publish-answer::-webkit-details-marker {
+  display: none;
+}
+
+// Open, it's a label for what's under it, so it never turns black under the
+// pointer that just opened it. Its marker says it's open.
+.publish-view details[open] > summary.publish-answer {
+  background: var(--color-panel);
+  color: var(--color-text);
+}
+
+// The question's material on the left and its answers on the right.
+.publish-ask {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-5) var(--space-6);
+  align-items: start;
+  padding-bottom: var(--space-7);
+
+  @media (max-width: 47.99em) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (min-width: 48em) {
+  // Stay in reach beside a long list or a long file.
+  .publish-ask__answers {
+    position: sticky;
+    top: var(--space-4);
+  }
+
+  .publish-ask--read {
+    grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  }
+}
+
+// The column can't grow past the page, or a wide table would scroll all of it.
+.publish-ask__what {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-4);
+  min-width: 0;
+}
+
+// Choosing: the ticks take over from the list they'd only repeat.
+.publish-ask:has(.publish-which[open]) {
+  grid-template-columns: minmax(0, 36rem);
+
+  .publish-ask__what > .publish-files:not(.publish-files--plain) {
+    display: none;
+  }
+
+  .publish-ask__what:not(:has(.publish-files--plain, .publish-none, .publish-wait)) {
+    display: none;
+  }
+
+  .publish-ask__answers {
+    position: static;
+    grid-row: 1;
+  }
+}
+
+.publish-answers {
+  display: grid;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.publish-answers__form {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+}
+
+.publish-note {
+  margin: var(--space-2) 0 0;
+  color: var(--color-text-soft);
+  font-size: var(--text-md);
+  line-height: var(--leading-snug);
+}
+
+.publish-back-link {
+  display: inline-flex;
+  align-items: center;
+  justify-self: start;
+  min-width: 2.75rem;
+  min-height: 2.75rem;
+}
+
+.publish-none {
+  margin: 0;
+}
+
+.publish-ask__sub {
+  margin: var(--space-3) 0 0;
+  font-size: var(--text-lg);
+}
+
+// A file: its icon, its name and one plain line.
+.publish-files {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+
+  > li {
+    display: flex;
+    gap: var(--space-3);
+    align-items: center;
+    margin: 0;
+    padding: var(--space-3) 0;
+    border-bottom: var(--border-hair) solid var(--color-line);
+
+    &:first-child {
+      padding-top: 0;
+    }
+  }
+
+  .publish-card__sheet {
+    flex: none;
+    width: 2.6rem;
+    height: 3.4rem;
+  }
+}
+
+.publish-files__text {
+  display: grid;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  line-height: var(--leading-snug);
+
+  > span {
+    color: var(--color-text-soft);
+    font-size: var(--text-md);
+  }
+}
+
+.publish-card__sheet {
+  display: grid;
+  box-sizing: border-box;
+  align-content: start;
+  gap: 4px;
+  padding: 7px 6px;
+  border: var(--border-hair) solid var(--color-line);
+  background: var(--white);
+
+  i {
+    display: block;
+    height: 3px;
+    background: var(--ink);
+
+    &:nth-child(2n) {
+      width: 70%;
+    }
+  }
+}
+
+// Ruled like a sheet.
+.publish-card__sheet--grid {
+  background: repeating-linear-gradient(var(--ink) 0 1px, var(--white) 1px 9px);
+
+  i {
+    display: none;
+  }
+}
+
+// Choose which: tick rows inside the answers.
+.publish-which {
+  > summary::after {
+    content: "";
+    flex: none;
+    margin-left: var(--space-2);
+    border-top: 0.4em solid currentColor;
+    border-inline: 0.3em solid transparent;
+  }
+
+  &[open] > summary::after {
+    border-top: 0;
+    border-bottom: 0.4em solid currentColor;
+  }
+
+  fieldset {
+    display: grid;
+    margin: 0;
+    padding: var(--space-2) 0 var(--space-2);
+    border: 0;
+  }
+}
+
+.publish-which__file {
+  display: flex;
+  gap: var(--space-3);
+  align-items: center;
+  min-height: 2.75rem;
+  margin: 0;
+  padding: var(--space-2) 0;
+  border-bottom: var(--border-hair) solid var(--color-line);
+  font-weight: var(--weight-medium);
+  line-height: var(--leading-snug);
+  overflow-wrap: anywhere;
+  cursor: pointer;
+
+  input {
+    flex: none;
+    width: 1.5rem;
+    height: 1.5rem;
+    margin: 0;
+    accent-color: var(--color-text);
+  }
+
+  small {
+    display: block;
+    color: var(--color-text-soft);
+    font-size: var(--text-sm);
+    font-weight: var(--weight-regular);
+  }
+}
+
+.publish-view button.publish-which__go {
+  margin-top: var(--space-3);
+}
+
+// Once the ticks are open, what's being asked is the ticks.
+.publish-answers__form:has(.publish-which[open]) > button.publish-answer--primary {
+  border-color: var(--color-text);
+  background: var(--color-panel);
+  color: var(--color-text);
+
+  &:hover {
+    background: var(--color-text);
+    color: var(--color-page);
+  }
+}
+
+// Waiting.
+.publish-wait {
+  display: grid;
+  gap: var(--space-3);
+  margin: 0;
+}
+
+.publish-wait__message,
+.publish-wait__again {
+  margin: 0;
+}
+
+.publish-wait__status {
+  margin: 0;
+  font-weight: var(--weight-medium);
+
+  &:empty {
+    display: none;
+  }
+}
+
+// An endless bar while the page asks whether the files are ready.
+.publish-wait__bar {
+  position: relative;
+  overflow: hidden;
+  height: 0.25rem;
+  border-radius: 0.125rem;
+  background: color-mix(in srgb, currentColor 15%, transparent);
+
+  &[hidden] {
+    display: none;
+  }
+
+  span {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    width: 30%;
+    border-radius: inherit;
+    background: var(--color-link, currentColor);
+    animation: publish-wait-slide 1.4s ease-in-out infinite;
+  }
+}
+
+@keyframes publish-wait-slide {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(340%); }
+}
+
+@keyframes publish-wait-fade {
+  0%, 100% { opacity: 0.35; }
+  50% { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .publish-wait__bar span {
+    width: 100%;
+    animation: publish-wait-fade 2s ease-in-out infinite;
+  }
+}
+
+// One page on the desk, large enough to read.
+.publish-desk {
+  padding: var(--space-4);
+  background: var(--color-desk);
+
+  @media (max-width: 47.99em) {
+    padding: var(--space-3);
+  }
+}
+
+.publish-desk__text {
+  padding: var(--space-5);
+  color: var(--ink);
+  font-size: var(--text-md);
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+
+  mark {
+    @include publish-found-word;
+  }
+}
+
+// The words round the name, large enough to read at a glance: the name's marked
+// in yellow and in weight, so it isn't colour alone.
+.publish-name__line {
+  margin: 0;
+  padding: var(--space-4);
+  background: var(--color-panel);
+  font-size: var(--text-lg);
+  line-height: var(--leading-snug);
+  overflow-wrap: anywhere;
+
+  mark {
+    @include publish-found-word;
+  }
+}
+
+.publish-name__page {
+  display: block;
+  margin-bottom: var(--space-1);
+  color: var(--color-text-soft);
+  font-size: var(--text-md);
+}
+
+.publish-name__where {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 var(--space-3);
+  margin: 0;
+  overflow-wrap: anywhere;
+
+  span {
+    color: var(--color-text-soft);
+  }
+}
+
+// Anything to hide: one card a document.
+.publish-doc {
+  display: grid;
+  grid-template-columns: 9.5rem minmax(0, 1fr);
+  gap: var(--space-4);
+  align-items: start;
+  padding-bottom: var(--space-4);
+  border-bottom: var(--border-hair) solid var(--color-line);
+
+  @media (max-width: 30em) {
+    grid-template-columns: 6.5rem minmax(0, 1fr);
+    gap: var(--space-3);
+  }
+}
+
+.publish-thumb {
+  display: block;
+  padding: var(--space-2);
+  background: var(--color-desk);
+}
+
+a.publish-thumb,
+a.publish-thumb:link,
+a.publish-thumb:visited {
+  color: var(--ink);
+  text-decoration: none;
+
+  &:hover {
+    background: var(--color-text);
+  }
+}
+
+// Lines of a page behind the image, so a page still loading doesn't look empty.
+.publish-thumb__paper:has(img) {
+  background:
+    repeating-linear-gradient(var(--grey-300) 0 0.25rem, transparent 0.25rem 0.75rem)
+    0.75rem 1rem / calc(100% - 1.5rem) calc(100% - 2rem) no-repeat var(--white);
+}
+
+.publish-thumb__paper {
+  aspect-ratio: 3 / 4;
+  overflow: hidden;
+  border: var(--border-hair) solid var(--color-line);
+  background: var(--white);
+  color: var(--ink);
+  font-size: 0.5rem;
+  line-height: 1.3;
+
+  // The top of the page, enlarged: a whole page at this size is only dashes.
+  img {
+    display: block;
+    width: 170%;
+    max-width: none;
+    height: auto;
+  }
+}
+
+.publish-thumb__sheet {
+  width: 100%;
+  margin: 0;
+  border-collapse: collapse;
+  font-size: 0.5rem;
+  table-layout: fixed;
+
+  td {
+    overflow: hidden;
+    padding: 2px 3px;
+    border: var(--border-hair) solid var(--grey-400);
+    background: var(--white);
+    color: var(--ink);
+    text-overflow: clip;
+    white-space: nowrap;
+  }
+}
+
+.publish-thumb__text {
+  padding: 0.5rem;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.publish-doc__text {
+  display: grid;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.publish-doc__name {
+  margin: 0;
+  font-size: var(--text-lg);
+  line-height: var(--leading-snug);
+  overflow-wrap: anywhere;
+}
+
+.publish-doc__kind,
+.publish-doc__line {
+  margin: 0;
+  font-size: var(--text-md);
+  line-height: var(--leading-snug);
+  overflow-wrap: anywhere;
+}
+
+.publish-doc__kind {
+  color: var(--color-text-soft);
+}
+
+.publish-doc__hint {
+  margin: 0;
+  color: var(--color-text-soft);
+  font-size: var(--text-md);
+  line-height: var(--leading-snug);
+}
+
+.publish-name__again {
+  margin: 0;
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-panel);
+  font-weight: var(--weight-medium);
+}
+
+.publish-doc__line--needs {
+  font-weight: var(--weight-medium);
+}
+
+.publish-doc__links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 var(--space-4);
+  margin: 0;
+
+  a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 2.75rem;
+  }
+}
+
+// The end of the flow: a receipt, on hairlines.
+.publish-done {
+  display: grid;
+  gap: var(--space-4);
+  padding-bottom: var(--space-7);
+
+  > p {
+    margin: 0;
+  }
+}
+
+.publish-done__lede {
+  font-size: var(--text-xl);
+  font-weight: var(--weight-medium);
+  line-height: var(--leading-snug);
+}
+
+.publish-done .publish-note {
+  margin-top: calc(-1 * var(--space-3));
+}
+
+.publish-receipt {
+  margin: 0;
+  padding: 0;
+  border-top: var(--border-hair) solid var(--color-line);
+  list-style: none;
+
+  > li {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: var(--space-1) var(--space-4);
+    align-items: baseline;
+    margin: 0;
+    padding: var(--space-3) 0;
+    border-bottom: var(--border-hair) solid var(--color-line);
+    overflow-wrap: anywhere;
+  }
+}
+
+.publish-receipt__title {
+  font-size: var(--text-lg);
+  font-weight: var(--weight-bold);
+  line-height: var(--leading-snug);
+}
+
+// Says where the file is in words, so nothing depends on position or colour.
+.publish-receipt__status {
+  padding: 0 var(--space-2);
+  background: var(--color-panel);
+  font-size: var(--text-md);
+  font-weight: var(--weight-bold);
+  line-height: 1.6;
+  white-space: nowrap;
+}
+
+.publish-receipt__meta,
+.publish-receipt__withdraw {
+  grid-column: 1 / -1;
+}
+
+.publish-receipt__meta {
+  color: var(--color-text-soft);
+  font-size: var(--text-md);
+  line-height: var(--leading-snug);
+}
+
+.publish-receipt__withdraw {
+  > summary {
+    display: inline-flex;
+    align-items: center;
+    min-height: 2.75rem;
+    color: var(--color-text);
+    font-size: var(--text-md);
+    text-decoration: underline;
+    list-style: none;
+    cursor: pointer;
+
+    &::-webkit-details-marker {
+      display: none;
+    }
+  }
+
+  form {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: var(--space-2) var(--space-3);
+    align-items: end;
+    padding: var(--space-3);
+    background: var(--color-panel);
+
+    @media (max-width: 35em) {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+
+  label {
+    grid-column: 1 / -1;
+    margin: 0;
+    color: var(--color-text);
+    font-size: var(--text-md);
+    font-weight: var(--weight-medium);
+  }
+
+  input[type="text"] {
+    box-sizing: border-box;
+    width: 100%;
+    min-height: 2.75rem;
+    margin: 0;
+  }
+
+  .publish-view & button.publish-answer {
+    width: auto;
+  }
+}
+
+.publish-done__acts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-2);
+  max-width: 34rem;
+  margin-top: var(--space-2);
+
+  @media (max-width: 30em) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+// Change title: the one field, with the rest folded under it.
+.publish-field {
+  display: grid;
+  gap: var(--space-1);
+
+  label {
+    margin: 0;
+    font-weight: var(--weight-bold);
+  }
+
+  input[type="text"],
+  input[type="date"],
+  textarea {
+    box-sizing: border-box;
+    width: 100%;
+    max-width: none;
+    margin: 0;
+  }
+}
+
+.publish-field__help {
+  color: var(--color-text-soft);
+  font-size: var(--text-md);
+  line-height: var(--leading-snug);
+}
+
+// One short form: fields and Save in one column.
+.publish-ask.publish-details {
+  grid-template-columns: minmax(0, 36rem);
+}
+
+.publish-details__more {
+  margin: 0;
+
+  > summary {
+    margin-bottom: var(--space-3);
+  }
+
+  > .publish-field {
+    margin-bottom: var(--space-4);
+  }
+}
+
+.publish-details__kind {
+  margin: 0;
+  padding: 0;
+  border: 0;
+
+  legend {
+    margin: 0 0 var(--space-1);
+    padding: 0;
+    font-weight: var(--weight-bold);
+  }
+
+  input {
+    float: none;
+  }
+}
+
+// Asking an admin to hide something.
+.publish-ask-admin {
+  label {
+    margin: 0;
+    font-weight: var(--weight-bold);
+  }
+
+  textarea {
+    box-sizing: border-box;
+    width: 100%;
+    margin: 0;
+  }
+}
+
+// Hide something: the editor.
+.publish-page {
+  padding-bottom: var(--space-7);
+}
+
+.publish-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  margin-bottom: var(--space-5);
+  border-bottom: var(--border-rule) solid var(--color-rule);
+
+  a,
+  a:link,
+  a:visited {
+    display: inline-flex;
+    align-items: center;
+    min-height: 2.75rem;
+    padding: var(--space-2) var(--space-4);
+    font-size: var(--text-md);
+    font-weight: var(--weight-medium);
+    overflow-wrap: anywhere;
+    text-decoration: none;
+  }
+
+  a[aria-current] {
+    background: var(--color-text);
+    color: var(--color-page);
+  }
+
+  // One row each, the whole width, so the current one doesn't look unfinished.
+  @media (max-width: 35em) {
+    flex-direction: column;
+
+    a,
+    a:link,
+    a:visited {
+      display: flex;
+      box-sizing: border-box;
+      width: 100%;
+      padding-inline: var(--space-3);
+      border-bottom: var(--border-hair) solid var(--color-line);
+    }
+  }
+}
+
+.publish-editor--text {
+  display: grid;
+  grid-template-columns: 3.5rem minmax(0, 1fr);
+  gap: var(--space-4);
+  align-items: start;
+
+  > .publish-lede {
+    grid-column: 1 / -1;
+    margin: 0;
+  }
+
+  @media (max-width: 35em) {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-2);
+  }
+}
+
+.publish-tools {
+  position: sticky;
+  z-index: 2;
+  top: var(--space-4);
+  display: grid;
+  gap: var(--space-2);
+
+  @media (max-width: 35em) {
+    top: 0;
+    grid-auto-flow: column;
+    justify-content: start;
+    padding: var(--space-2) 0;
+    background: var(--color-page);
+  }
+}
+
+button.publish-tool {
+  display: grid;
+  place-items: center;
+  gap: 2px;
+  width: 3.5rem;
+  height: 3.5rem;
+  margin: 0;
+  padding: var(--space-1);
+  border: var(--border) solid var(--color-text);
+  border-radius: 0;
+  background: var(--color-panel);
+  color: var(--color-text);
+  font: var(--weight-bold) 0.6875rem/1.1 var(--font-sans);
+  cursor: pointer;
+
+  svg {
+    width: 1.3rem;
+    height: 1.3rem;
+  }
+
+  &[aria-pressed="true"] {
+    @include highlighted;
+    border-color: var(--ink);
+  }
+
+  &:disabled {
+    border-style: dashed;
+    opacity: 0.5;
+    cursor: default;
+  }
+}
+
+.publish-sheets {
+  min-width: 0;
+
+  .redaction-page__sheet {
+    width: 100%;
+  }
+
+  .redaction-page__image {
+    width: 100%;
+  }
+
+  // Inside the box's top corner rather than above it, so that while editing it
+  // covers only what is already redacted.
+  .document-paper__tag {
+    pointer-events: none;
+    transform: none;
+  }
+}
+
+.publish-lede {
+  margin: 0 0 var(--space-3);
+}
+
+// Without the script there are no boxes to draw, so nothing talks about them.
+.no-js .publish-editor {
+  > .publish-lede,
+  > .publish-help,
+  > .publish-skip {
+    display: none;
+  }
+}
+
+.publish-nojs {
+  margin-bottom: var(--space-5);
+}
+
+.publish-help {
+  margin: 0 0 var(--space-4);
+
+  summary {
+    @include publish-disclosure;
+  }
+
+  &[open] > summary {
+    @include publish-disclosure-open;
+  }
+
+  p {
+    max-width: var(--measure);
+    margin: var(--space-2) 0 0;
+  }
+
+  ul {
+    max-width: var(--measure);
+    margin: var(--space-1) 0 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  li {
+    margin: 0;
+    padding: var(--space-1) 0;
+    border-bottom: var(--border-hair) solid var(--color-line);
+  }
+}
+
+// Past a long file to how to finish it. Shown to anyone on a phone, whose finger
+// has as far to go as a keyboard.
+.publish-skip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.75rem;
+  margin-bottom: var(--space-2);
+
+  @media (min-width: 56.01em) {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    min-height: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+
+    &:focus {
+      position: static;
+      width: auto;
+      height: auto;
+      min-height: 2.75rem;
+      overflow: visible;
+      clip-path: none;
+    }
+  }
+}
+
+// A 44px target for each control on a page and in what was found.
+// The bar holds them: positioned, they stay clipped by the scroller round the
+// pages instead of adding to the height of the window's page.
+.publish-view .redaction-page__bar {
+  position: relative;
+
+  button {
+    min-height: var(--action-row);
+  }
+}
+
+// Add a box is how a keyboard makes one: the toolbar has it for everyone else.
+// Off screen, not hidden, so it's still in the tab order and focus can return.
+.publish-view .redaction-page__bar .redaction-page__add:not(:focus) {
+  position: absolute;
+  width: 1px;
+  min-width: 0;
+  height: 1px;
+  min-height: 0;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+
+.publish-view .redaction-page__bar .redaction-page__remove {
+  margin-left: auto;
+}
+
+.publish-view .redaction-personal {
+  margin: var(--space-3) 0 0;
+
+  > p:empty,
+  [data-personal-results]:empty {
+    display: none;
+  }
+}
+
+.publish-view .redaction-personal > summary {
+  display: list-item;
+  padding-block: 0.6rem;
+}
+
+.publish-view .redaction-personal--plain {
+  .redaction-editor__tool-row {
+    margin: 0 0 var(--space-2);
+  }
+
+  button[data-personal-scan] {
+    width: 100%;
+    min-height: var(--action-row);
+    background: var(--color-panel);
+    font-size: var(--text-base);
+    font-weight: var(--weight-bold);
+  }
+
+  > p {
+    margin: var(--space-2) 0;
+  }
+}
+
+.redaction-personal__else > summary {
+  @include publish-disclosure;
+}
+
+.redaction-personal__else[open] > summary {
+  @include publish-disclosure-open;
+}
+
+// Few tools, on the desk, the same size as a row's actions; the rest are folded.
+.publish-view .redaction-editor__tools--folded .redaction-editor__tool-row {
+  gap: var(--space-2);
+}
+
+.publish-view .redaction-editor__tools--folded,
+.publish-view .redaction-editor__more,
+.publish-view .redaction-page__bar {
+  button,
+  select {
+    min-height: var(--action-row);
+  }
+
+  button:not([aria-pressed="true"]) {
+    background: var(--color-panel);
+  }
+
+  // Yellow asks something of you, which a tool doesn't: its hover is ink.
+  @media (hover: hover) {
+    button:not(:disabled):not(.redaction-page__clear):hover {
+      background: var(--color-text);
+      color: var(--color-page);
+    }
+  }
+}
+
+// Zoom keeps to the far end of the row that stays in view.
+.publish-zoom {
+  gap: var(--space-2);
+  margin-left: auto;
+
+  @media (max-width: 40em) {
+    margin-left: 0;
+  }
+}
+
+// For the chosen box, in the part of the tools that stays in view.
+.publish-box-tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-5);
+  padding-top: var(--space-2);
+  border-top: var(--border-hair) solid var(--color-line);
+}
+
+.publish-box-tools__set {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: center;
+
+  .publish-tool-row__label {
+    min-width: 2.5rem;
+  }
+}
+
+.redaction-editor__more {
+  padding: 0 var(--space-3);
+  border-bottom: var(--border-hair) solid var(--color-line);
+  background: var(--color-desk);
+
+  @media (max-width: 40em) {
+    padding: 0 var(--space-2);
+  }
+
+  > summary {
+    @include publish-disclosure;
+  }
+
+  &[open] > summary {
+    @include publish-disclosure-open;
+  }
+}
+
+// Find names and Find, in the column beside the pages.
+.publish-view .redaction-personal__else .redaction-editor__find {
+  padding: 0 0 var(--space-2);
+  border: 0;
+  background: none;
+
+  .redaction-editor__tool-row {
+    display: grid;
+    gap: var(--space-2);
+  }
+
+  label {
+    display: grid;
+    flex: none;
+    gap: var(--space-1);
+  }
+
+  input[type="search"] {
+    box-sizing: border-box;
+    width: 100%;
+    margin: 0;
+  }
+
+  .redaction-editor__group {
+    display: grid;
+    gap: var(--space-2);
+  }
+
+  button {
+    width: 100%;
+    min-height: var(--action-row);
+    background: var(--color-panel);
+    font-size: var(--text-base);
+    font-weight: var(--weight-bold);
+  }
+
+  // There's nothing to stop until it's searching.
+  [data-word-stop]:disabled,
+  [data-word-progress]:empty {
+    display: none;
+  }
+}
+
+// No box needed, for anyone who can't place one.
+.publish-ask-fold {
+  margin-top: var(--space-5);
+  padding-top: var(--space-2);
+  border-top: var(--border-hair) solid var(--color-line);
+
+  > summary {
+    @include publish-disclosure;
+  }
+
+  &[open] > summary {
+    @include publish-disclosure-open;
+  }
+
+  .publish-ask-admin {
+    margin-top: var(--space-2);
+  }
+}
+
+// With the form open already, the fold has nothing to add.
+.no-js .publish-ask-fold {
+  display: none;
+}
+
+// What's under More tools: one labelled line each, the same height and gap.
+.publish-tool-row {
+  display: grid;
+  grid-template-columns: 4rem minmax(0, 1fr);
+  gap: var(--space-2);
+  align-items: center;
+  padding: var(--space-2) 0;
+  border-top: var(--border-hair) solid var(--color-line);
+
+  @media (max-width: 30em) {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-1);
+  }
+}
+
+.publish-tool-row__label {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-bold);
+}
+
+.publish-tool-row__tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: center;
+}
+
+// The scroller's own edge says there's more: a scrollbar that doesn't fade away.
+.publish-view .redaction-editor__viewport {
+  scrollbar-color: var(--color-text) var(--color-desk);
+  scrollbar-width: auto;
+  // A rule, flush under the page, so a page cut off here looks cut off on purpose.
+  box-shadow: 0 var(--border-rule) 0 var(--color-rule);
+
+  &::-webkit-scrollbar {
+    width: 0.75rem;
+    height: 0.75rem;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: var(--color-text);
+  }
+
+  &::-webkit-scrollbar-track {
+    background: var(--color-desk);
+  }
+}
+
+// Drawn but not saved: highlighted with a dashed edge until the new copy applies it.
+.publish-editor .redaction-box {
+  border: var(--border) dashed var(--ink);
+  background: rgba(255, 229, 0, 0.7);
+}
+
+.publish-text {
+  width: 100%;
+  min-height: 24rem;
+  font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  font-size: var(--text-md);
+}
+
+.publish-note-field {
+  margin: 0;
+
+  label {
+    display: block;
+    margin: 0 0 var(--space-1);
+    font-size: var(--text-md);
+    font-weight: var(--weight-medium);
+  }
+
+  input[type="text"] {
+    box-sizing: border-box;
+    width: 100%;
+    margin: 0;
+  }
+}
+
+.publish-save {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.publish-side__next {
+  margin: 0;
+}
+
+// Beside the pages on a wide screen, where it stays in reach while they scroll.
+@media (min-width: 56.01em) and (min-height: 50em) {
+  .publish-view .publish-side {
+    position: sticky;
+    top: var(--space-4);
+    max-height: calc(100vh - 2 * var(--space-4));
+    overflow-y: auto;
+    // Room for a focus ring inside the scroller's edge.
+    padding: var(--space-1);
+  }
+}
+
+// On a phone only the button stays at the foot of the window, slim, over a page
+// that is still there to draw on; the note waits below the pages. Not when
+// zoomed in so far that the window is short.
+@media (max-width: 56em) {
+  .request-flow--two.publish-work {
+    row-gap: var(--space-5);
+  }
+}
+
+@media (max-width: 56em) and (min-height: 30em) {
+  .publish-view button.publish-save__go {
+    position: fixed;
+    z-index: 5;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    min-height: 3.25rem;
+    border-width: var(--border) 0 0;
+  }
+
+  .publish-page:has(.publish-save:not([hidden])) {
+    padding-bottom: calc(3.25rem + var(--space-7));
+  }
+}
+
+.publish-list:empty {
+  display: none;
+}
+
+.publish-side__title {
+  margin-top: var(--space-6);
+}
+
+.publish-side__none,
+.publish-side__note {
+  margin: var(--space-3) 0;
+}
+
+.publish-side__consent {
+  margin: var(--space-3) 0 0;
+}
+
+button.publish-side__plain {
+  min-height: var(--action-row);
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  border: var(--border) solid var(--color-text);
+  border-radius: 0;
+  background: var(--color-panel);
+  color: var(--color-text);
+  font: inherit;
+  font-weight: var(--weight-medium);
+  cursor: pointer;
+
+  &:hover {
+    @include highlighted;
+  }
+}
+
+.publish-list {
+  margin: var(--space-2) 0 0;
+  padding: 0;
+  list-style: none;
+
+  li {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 0.1rem var(--space-3);
+    align-items: center;
+    margin: 0;
+    padding: var(--space-2) 0;
+    border-bottom: var(--border-hair) solid var(--color-line);
+  }
+}
+
+.publish-list__what {
+  font-weight: var(--weight-bold);
+}
+
+.publish-list__meta {
+  grid-column: 1;
+  font-size: var(--text-md);
+}
+
+.publish-list__go {
+  grid-row: 1 / span 2;
+  grid-column: 2;
+}
+
+button.publish-list__button {
+  min-height: var(--action-row);
+  padding: var(--space-1) var(--space-3);
+  font-size: var(--text-md);
+
+  &:disabled {
+    border-style: dashed;
+    cursor: default;
+  }
+}
+
+button.publish-list__remove {
+  min-width: var(--action-row);
+  min-height: var(--action-row);
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--color-text);
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.publish-swatch {
+  display: inline-block;
+  width: 1.1rem;
+  height: 0.7rem;
+  margin-right: var(--space-2);
+  border: var(--border-hair) solid var(--color-text);
+  background: var(--black);
+}
+
+// That didn't work: says so plainly, on a panel.
+.publish-failed {
+  margin: 0 0 var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-panel);
+  font-weight: var(--weight-medium);
+}
+
+// Filed behind the question, so its pages get the column to themselves.
+.publish-view .document-pages {
+  margin: 0;
+}
+
+button.document-consent__plain {
+  border-color: var(--color-text);
+  background: transparent;
+  color: var(--color-text);
+}
+
+// The dark page needs its surfaces further from it than the theme's single grey,
+// or a secondary button is only its outline. color-mix so a palette with no dark
+// page (no --night) is left as it was. html:root outranks the palette's :root.
+@supports (color: color-mix(in srgb, red, blue)) {
+  @media screen and (prefers-color-scheme: dark) {
+    html:root {
+      --color-panel: color-mix(in srgb, var(--night, var(--grey-100)) 89%, white);
+      --color-desk: color-mix(in srgb, var(--night, var(--grey-200)) 93%, white);
+      --color-edge: color-mix(in srgb, var(--night, var(--ink)) 55%, white);
+    }
+  }
+}
+
+:root {
+  --color-edge: var(--color-text);
+}
+
+.publish-view a.publish-answer:not(.publish-answer--primary),
+.publish-view button.publish-answer:not(.publish-answer--primary, .publish-answer--stop),
+.publish-view summary.publish-answer,
+a.receipt__act:not(.receipt__act--primary),
+.receipt__more > summary,
+.publish-view .redaction-page__bar button,
+.publish-view .redaction-editor__tools--folded button:not([aria-pressed="true"]),
+.publish-view .redaction-editor__more button:not([aria-pressed="true"]),
+.publish-view .redaction-personal button,
+button.publish-tool {
+  border-color: var(--color-edge);
+
+  &:hover {
+    border-color: var(--color-text);
+  }
+}
+
+// Nothing to press yet: a flat fill and muted words, with no edge to press.
+.publish-view .redaction-editor__tools--folded button:disabled,
+.publish-view .redaction-editor__more button:disabled,
+.publish-view .redaction-page__bar button:disabled {
+  border-color: transparent;
+  background: var(--color-panel);
+  color: var(--color-text-soft);
+  opacity: 1;
+}
+
+// A quiet link, not one more button: past the fill given to the bar's buttons.
+.publish-view .redaction-page__bar .redaction-page__clear:not([aria-pressed="true"]) {
+  background: none;
+}
+
+// A chosen filter is black and bold: yellow on this page is for Search.
+.documents .documents-facet__item label:has(input:checked:not([value=""])) {
+  background: var(--color-text);
+  color: var(--color-page);
+}
+
+@media (hover: hover) {
+  .documents .documents-facet__item label:hover {
+    background: var(--color-panel);
+    color: var(--color-text);
+  }
+
+  .documents .documents-facet__item label:has(input:checked:not([value=""])):hover {
+    background: var(--color-text);
+    color: var(--color-page);
+  }
+}
+
+// At the end of the list, where it can't sit over the filters it applies.
+.documents button.documents-facets__apply {
+  position: static;
+  border-color: var(--color-text);
+  background: var(--color-text);
+  color: var(--color-page);
+  box-shadow: none;
+}
+
+// In forced colours fills go, and with them what they said: what's on.
+@media (forced-colors: active) {
+  .redaction-editor__tools [aria-pressed="true"],
+  .publish-tabs a[aria-current],
+  button.publish-tool[aria-pressed="true"] {
+    background: Highlight;
+    color: HighlightText;
+    forced-color-adjust: none;
+  }
+
+  #topnav .navigation li.selected a {
+    border-bottom: var(--border-band) solid Highlight;
+  }
+
+  // The site's search button is an icon drawn in ink, lost on a dark ground.
+  .navigation_search_form button[type="submit"] {
+    position: relative;
+
+    &::after {
+      content: "";
+      position: absolute;
+      inset: 25%;
+      background: ButtonText;
+      -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%23000' stroke-width='2'%3E%3Ccircle cx='6.5' cy='6.5' r='4.5'/%3E%3Cpath d='m10 10 4.5 4.5'/%3E%3C/svg%3E") center / contain no-repeat;
+      mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%23000' stroke-width='2'%3E%3Ccircle cx='6.5' cy='6.5' r='4.5'/%3E%3Cpath d='m10 10 4.5 4.5'/%3E%3C/svg%3E") center / contain no-repeat;
+      forced-color-adjust: none;
+    }
+  }
+}
+
+.documents .documents-kinds a[aria-current] {
+  border-color: var(--color-text);
+  background: var(--color-text);
+  color: var(--color-page);
+}
+
+// On a phone the band folds, so what the page is about starts on the first
+// screen: search shrinks to its button and opens up while focus is in the form
+// (the header-search controller: a tap on the button puts the cursor in the
+// field; without scripts the button opens the search page), and the links stay
+// on one line that scrolls.
+@media (max-width: 35em) {
+  #banner #banner_content.banner_content {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2) var(--space-3);
+    align-items: center;
+  }
+
+  #banner .banner_site-title {
+    flex: 1 1 0;
+    min-width: 0;
+    margin: 0;
+
+    // Each level between the band and the name has to be able to shrink, or the
+    // name runs under the account link on a narrow window.
+    > * {
+      flex: 1 1 auto;
+      min-width: 0;
+      margin: 0;
+    }
+
+    .site-title__logo {
+      display: flex;
+      gap: var(--space-2);
+      align-items: center;
+      min-width: 0;
+    }
+
+    .site-title__mark {
+      flex: none;
+      width: 2rem;
+      height: 2rem;
+    }
+
+    .site-title__name {
+      min-width: 0;
+      overflow: hidden;
+      font-size: var(--text-base);
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+  }
+
+  #banner #logged_in_bar {
+    flex: none;
+    width: auto;
+    margin: 0;
+  }
+
+  #banner .navigation_search {
+    flex: none;
+    width: auto;
+    margin: 0;
+  }
+
+  #banner .navigation_search:focus-within {
+    flex: 1 1 100%;
+    order: 3;
+  }
+
+  #banner .navigation_search_form {
+    width: auto;
+  }
+
+  #banner .navigation_search:not(:focus-within) .navigation_search_form {
+    input[type="search"] {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      overflow: hidden;
+      border: 0;
+      clip-path: inset(50%);
+    }
+  }
+
+  #topnav .navigation {
+    display: flex;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+
+    li {
+      flex: none;
+    }
+  }
+
+  .request-band__crumb {
+    display: none;
+  }
+}

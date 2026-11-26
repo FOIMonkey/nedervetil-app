@@ -1,0 +1,36 @@
+// Core's own stylesheet does not load this file; a theme lists it in its
+// custom.scss (doc/FORK.md, Frontend).
+
+@use "responsive/features/tokens" as *;
+
+// Boxes and thin borders that core paints in colours written straight into
+// its stylesheet. Left alone they are off-palette on the light page, and on
+// the dark page some become a white box holding white text.
+
+.request_deny_response,
+.wizard__action,
+.correspondence__suggestion,
+#user_public_suspended {
+  border-color: var(--color-line);
+  background: var(--color-panel);
+  color: var(--color-text);
+}
+
+.wizard__question--answered {
+  color: var(--color-text-soft);
+}
+
+#request_header,
+#select_authority_help > div,
+.js-loaded div.request_form_response--allow div#request_subject,
+.wizard__question fieldset,
+.wizard__question--answered fieldset {
+  border-color: var(--color-line);
+}
+
+// An administrator's note comes in a colour they chose, which means something,
+// so it keeps its colours. The light palette keeps a link or a mark inside it
+// dark, as the note's own text is.
+#notes .note {
+  @include palette-light;
+}

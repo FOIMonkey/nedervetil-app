@@ -1,3 +1,8 @@
+@use "responsive/foundation" as *;
+@use "responsive/utils" as *;
+
+@use "sass:math";
+
 .batch-builder-mode {
     margin-bottom: 1em;
 
@@ -31,7 +36,7 @@
 .batch-builder__search-results,
 .batch-builder__chosen-authorities,
 .batch-builder__actions {
-    padding: ($column-gutter / 2); // Same padding as grid-columns
+    padding: math.div($column-gutter, 2); // Same padding as grid-columns
 
     // On desktop browsers that don't support flexbox (IE9 and below)
     // this will cause all the batch UI elements to line up in a vertical
@@ -119,6 +124,11 @@
 
 .batch-builder__list__item__anchor {
     @include flex(1 0 0%);
+
+    // A category heading opens and closes its list.
+    &[role="button"] {
+        cursor: pointer;
+    }
 }
 
 .batch-builder__list__item__name {

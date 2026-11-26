@@ -1,21 +1,25 @@
+@use "responsive/foundation" as *;
+@use "responsive/utils" as *;
+
+@use "sass:color";
 $note-text:          $oil;
-$note-bg:            lighten($primary-color, 60%);
+$note-bg:            color.adjust($primary-color, $lightness: 60%);
 $note-border:        $primary-color;
 
-$note-red-text:      darken($alert-color, 25%);
-$note-red-bg:        lighten($alert-color, 40%);
+$note-red-text:      color.adjust($alert-color, $lightness: -25%);
+$note-red-bg:        color.adjust($alert-color, $lightness: 40%);
 $note-red-border:    $alert-color;
 
-$note-green-text:    darken($success-color, 25%);
-$note-green-bg:      lighten($success-color, 40%);
+$note-green-text:    color.adjust($success-color, $lightness: -25%);
+$note-green-bg:      color.adjust($success-color, $lightness: 40%);
 $note-green-border:  $success-color;
 
-$note-blue-text:     darken($primary-color, 15%);
-$note-blue-bg:       lighten($primary-color, 60%);
+$note-blue-text:     color.adjust($primary-color, $lightness: -15%);
+$note-blue-bg:       color.adjust($primary-color, $lightness: 60%);
 $note-blue-border:   $primary-color;
 
-$note-yellow-text:   darken($warning-color, 30%);
-$note-yellow-bg:     lighten($warning-color, 40%);
+$note-yellow-text:   color.adjust($warning-color, $lightness: -30%);
+$note-yellow-bg:     color.adjust($warning-color, $lightness: 40%);
 $note-yellow-border: $warning-color;
 
 $border-top-size: 8px;

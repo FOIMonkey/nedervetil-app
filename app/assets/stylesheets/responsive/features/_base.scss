@@ -1,0 +1,238 @@
+// Text, links, buttons, form fields and notices. Core's own stylesheet does
+// not load this file; a theme lists it in its custom.scss (doc/FORK.md,
+// Frontend).
+
+@use "responsive/features/tokens" as *;
+@use "responsive/features/buttons" as *;
+
+html {
+  // Room for the scrollbar on every page, so short and long pages line up.
+  overflow-y: scroll;
+  font-size: 100%;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  background: var(--color-page);
+  color: var(--color-text);
+  font-family: var(--font-sans);
+  // 16px, not the 17px reading size: core's grid is measured in em, so a
+  // larger size here would widen the page and knock the content out of line
+  // with the masthead. Reading text sets --text-body on its own container.
+  font-size: var(--text-base);
+  line-height: var(--leading-body);
+}
+
+// Underlined, in the tokens' link colour, so a link never depends on colour
+// alone.
+a,
+a:link,
+a:visited {
+  color: var(--color-link);
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 0.15em;
+}
+
+a:hover,
+a:active {
+  color: var(--color-on-highlight);
+  background-color: var(--color-highlight);
+}
+
+// A black outline with a yellow halo: visible on white, on yellow and on the
+// black masthead (where the halo does the work).
+:focus-visible {
+  outline: 3px solid var(--color-text);
+  outline-offset: 0;
+  box-shadow: 0 0 0 6px var(--color-focus);
+}
+
+a:focus-visible {
+  color: var(--color-on-highlight);
+  background-color: var(--color-highlight);
+  text-decoration-thickness: 3px;
+}
+
+.skip-to-link:focus {
+  position: absolute;
+  top: var(--space-2);
+  left: var(--space-2);
+  z-index: 100;
+  width: auto;
+  height: auto;
+  padding: var(--space-2) var(--space-4);
+  clip: auto;
+  background: var(--color-highlight);
+  color: var(--color-on-highlight);
+  font-weight: var(--weight-bold);
+}
+
+// More space above a heading than below it, so it belongs to what follows.
+h1, h2, h3, h4, h5, h6 {
+  margin: var(--space-6) 0 var(--space-3);
+  color: var(--color-text);
+  font-family: var(--font-sans);
+  font-weight: var(--weight-bold);
+  line-height: var(--leading-tight);
+  text-wrap: balance;
+}
+
+h1 {
+  margin-top: 0;
+  font-size: var(--text-3xl);
+  letter-spacing: -0.015em;
+}
+
+h2 { font-size: var(--text-2xl); letter-spacing: -0.01em; }
+h3 { font-size: var(--text-xl); }
+h4 { font-size: var(--text-lg); }
+h5, h6 { font-size: var(--text-body); }
+
+p {
+  margin: 0 0 var(--space-4);
+}
+
+hr {
+  border: 0;
+  border-top: var(--border-hair) solid var(--color-line);
+}
+
+::selection {
+  background: var(--color-highlight);
+  color: var(--color-on-highlight);
+}
+
+label,
+label.form_label {
+  color: var(--color-text);
+  font-size: var(--text-base);
+  font-weight: var(--weight-medium);
+}
+
+input[type="text"],
+input[type="password"],
+input[type="email"],
+input[type="search"],
+input[type="url"],
+input[type="tel"],
+input[type="number"],
+input[type="date"],
+form input[type="text"],
+form input[type="password"],
+form input[type="email"],
+form input[type="search"],
+select,
+textarea {
+  height: auto;
+  padding: 0.4rem 0.6rem;
+  border: var(--border) solid var(--color-text);
+  border-radius: var(--radius);
+  background-color: var(--color-field);
+  box-shadow: none;
+  color: var(--color-text);
+  font-family: var(--font-sans);
+  font-size: var(--text-base);
+  line-height: var(--leading-snug);
+  transition: none;
+
+  &:focus {
+    border-color: var(--color-text);
+    background-color: var(--color-field);
+    outline: 3px solid var(--color-text);
+    outline-offset: 0;
+    box-shadow: 0 0 0 6px var(--color-focus);
+  }
+}
+
+// Core greys read-only fields with a fixed light colour, which leaves the
+// light text unreadable in dark mode.
+input[readonly],
+textarea[readonly] {
+  background-color: var(--color-panel);
+  cursor: text;
+}
+
+// Told the page is dark, a browser draws radio buttons and tick boxes dark grey
+// on the near-black page, which reads as switched off. So they are always
+// drawn the light way: white, with a black mark when chosen.
+input[type="radio"],
+input[type="checkbox"] {
+  color-scheme: light;
+  accent-color: var(--color-control);
+}
+
+// Core's drop-down arrow and date calendar are a black shape and a pale image,
+// which are lost on the dark page.
+select {
+  padding-right: 2rem;
+  background-image: var(--icon-caret);
+  background-position: right 0.7rem center;
+  background-size: 0.625rem 0.3125rem;
+  background-repeat: no-repeat;
+}
+
+::placeholder {
+  color: var(--color-text-soft);
+  opacity: 1;
+}
+
+input[type="submit"],
+form input[type="submit"],
+button.button,
+form.button_to button,
+a.link_button_green {
+  @include input-button-size-standard;
+  display: inline-block;
+  margin: 0;
+  border: var(--border) solid var(--color-highlight-edge);
+  border-radius: var(--radius);
+  background: var(--color-highlight);
+  box-shadow: none;
+  color: var(--color-on-highlight);
+  font-family: var(--font-sans);
+  font-weight: var(--weight-medium);
+  text-decoration: none;
+  cursor: pointer;
+  transition: none;
+
+  // (core makes a button in a form see-through when it has focus)
+  &:focus {
+    background: var(--color-highlight);
+    color: var(--color-on-highlight);
+  }
+
+  // The box-shadow reset above would otherwise drop the focus halo.
+  &:focus-visible {
+    box-shadow: 0 0 0 6px var(--color-focus);
+  }
+
+  &:hover,
+  &:active {
+    background: var(--color-text);
+    color: var(--color-page);
+  }
+}
+
+#notice,
+#error,
+.warning,
+.errorExplanation {
+  margin: 0 0 var(--space-5);
+  padding: var(--space-4) var(--space-5);
+  border: var(--border) solid var(--color-text);
+  border-radius: var(--radius);
+  background: var(--color-page);
+  color: var(--color-text);
+  font-size: var(--text-body);
+}
+
+#notice {
+  @include highlighted;
+  border-color: var(--color-highlight-edge);
+}
+
+#error,
+.errorExplanation {
+  border-width: var(--border-band);
+}

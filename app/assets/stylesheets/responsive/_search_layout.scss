@@ -1,11 +1,12 @@
-/* Layout for search (and filters on request list)*/
-/* These pages use grid-columns, so are contained in a grid-row */
-#general_search,
-#general_search_redirect,
-#public_body_show,
-#request_list,
-#request_index {
+@use "responsive/foundation" as *;
+@use "responsive/utils" as *;
+
+/* The page uses grid-columns, so is contained in a grid-row */
+#public_body_show {
   @include grid-row($behavior: nest);
+  // A band and its notice are not columns of the row. They read this to stay at
+  // the page's edges (features/_band.scss).
+  --nested-row-gutter: #{$column-gutter * 0.5};
 }
 
 

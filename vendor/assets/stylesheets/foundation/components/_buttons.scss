@@ -1,8 +1,10 @@
+@use "../functions" as *;
+@use "sass:color";
 // Foundation by ZURB
 // foundation.zurb.com
 // Licensed under MIT Open Source
 
-@import 'global';
+@use "global" as *;
 
 //
 // @variables
@@ -37,22 +39,22 @@ $button-function-factor: -20% !default;
 $button-border-width: 0 !default;
 $button-border-style: solid !default;
 $button-bg-color: $primary-color !default;
-$button-bg-hover: scale-color($button-bg-color, $lightness: $button-function-factor) !default;
+$button-bg-hover: color.scale($button-bg-color, $lightness: $button-function-factor) !default;
 $button-border-color: $button-bg-hover !default;
 $secondary-button-bg-color: $secondary-color !default;
-$secondary-button-bg-hover: scale-color($secondary-color, $lightness: $button-function-factor) !default;
+$secondary-button-bg-hover: color.scale($secondary-color, $lightness: $button-function-factor) !default;
 $secondary-button-border-color: $secondary-button-bg-hover !default;
 $success-button-bg-color: $success-color !default;
-$success-button-bg-hover: scale-color($success-color, $lightness: $button-function-factor) !default;
+$success-button-bg-hover: color.scale($success-color, $lightness: $button-function-factor) !default;
 $success-button-border-color: $success-button-bg-hover !default;
 $alert-button-bg-color: $alert-color !default;
-$alert-button-bg-hover: scale-color($alert-color, $lightness: $button-function-factor) !default;
+$alert-button-bg-hover: color.scale($alert-color, $lightness: $button-function-factor) !default;
 $alert-button-border-color: $alert-button-bg-hover !default;
 $warning-button-bg-color: $warning-color !default;
-$warning-button-bg-hover: scale-color($warning-color, $lightness: $button-function-factor) !default;
+$warning-button-bg-hover: color.scale($warning-color, $lightness: $button-function-factor) !default;
 $warning-button-border-color: $warning-button-bg-hover !default;
 $info-button-bg-color: $info-color !default;
-$info-button-bg-hover: scale-color($info-color, $lightness: $button-function-factor) !default;
+$info-button-bg-hover: color.scale($info-color, $lightness: $button-function-factor) !default;
 $info-button-border-color: $info-button-bg-hover !default;
 
 // We use this to set the default radius used throughout the core.
@@ -147,16 +149,16 @@ $button-disabled-cursor: $cursor-default-value !default;
   @if $bg {
 
     @if $bg-hover == null {
-      $bg-hover: if($bg == $button-bg-color, $button-bg-hover, scale-color($bg, $lightness: $button-function-factor));
+      $bg-hover: if(sass($bg == $button-bg-color): $button-bg-hover; else: color.scale($bg, $lightness: $button-function-factor));
     }
 
     @if $border-color == null {
-      $border-color: if($bg == $button-bg-color, $button-border-color, scale-color($bg, $lightness: $button-function-factor));
+      $border-color: if(sass($bg == $button-bg-color): $button-border-color; else: color.scale($bg, $lightness: $button-function-factor));
     }
 
     // This find the lightness percentage of the background color.
-    $bg-lightness: lightness($bg);
-    $bg-hover-lightness: lightness($bg-hover);
+    $bg-lightness: color.channel($bg, 'lightness', $space: hsl);
+    $bg-hover-lightness: color.channel($bg-hover, 'lightness', $space: hsl);
 
     background-color: $bg;
     border-color: $border-color;
@@ -167,12 +169,12 @@ $button-disabled-cursor: $cursor-default-value !default;
     &,
     &:link,
     &:visited {
-      color: if($bg-lightness > 70%, $button-font-color-alt, $button-font-color);
+      color: if(sass($bg-lightness > 70%): $button-font-color-alt; else: $button-font-color);
     }
 
     &:hover,
     &:focus {
-      color: if($bg-hover-lightness > 70%, $button-font-color-alt, $button-font-color);
+      color: if(sass($bg-hover-lightness > 70%): $button-font-color-alt; else: $button-font-color);
     }
   }
 
@@ -215,6 +217,8 @@ $button-disabled-cursor: $cursor-default-value !default;
 }
 
 
+// Emitted explicitly by responsive/foundation_css, in the public cascade.
+@mixin styles {
 @include exports("button") {
   @if $include-html-button-classes {
 
@@ -262,4 +266,6 @@ $button-disabled-cursor: $cursor-default-value !default;
       }
     }
   }
+}
+
 }

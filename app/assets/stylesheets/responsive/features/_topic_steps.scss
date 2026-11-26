@@ -1,0 +1,571 @@
+@use "responsive/features/tokens" as *;
+@use "responsive/features/buttons" as *;
+
+
+// The topics module emits these rules after its other page styles.
+@mixin styles {
+
+
+// A topic page, one screen at a time: what you can have now, who to ask, and
+// what to do if FOI won't help.
+
+.triage-btn,
+a.triage-btn:link,
+a.triage-btn:visited {
+  @include button-size-large;
+  border: var(--border) solid var(--color-text);
+  background: var(--color-text);
+  color: var(--color-page);
+  list-style: none;
+  text-align: center;
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+a.triage-btn:hover,
+a.triage-btn:focus-visible,
+summary.triage-btn:hover {
+  border-color: var(--color-highlight-edge);
+  background: var(--color-highlight);
+  color: var(--color-on-highlight);
+}
+
+.ask-elsewhere > summary.triage-btn {
+  margin: 0;
+  text-decoration: none;
+}
+
+.triage-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: var(--space-3) 0;
+}
+
+.triage-actions--quiet .triage-btn,
+.triage-actions--quiet a.triage-btn:link,
+.triage-actions--quiet a.triage-btn:visited {
+  background: none;
+  color: var(--color-text);
+}
+
+.triage-lede {
+  margin: 0 0 var(--space-1);
+  font-size: var(--text-lg);
+  font-weight: var(--weight-medium);
+}
+
+.triage-who {
+  margin: var(--space-3) 0 0;
+  font-size: var(--text-lg);
+  font-weight: var(--weight-bold);
+  line-height: var(--leading-snug);
+}
+
+.triage-who__label {
+  display: block;
+  color: var(--color-text-soft);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-regular);
+}
+
+.triage-warning {
+  display: block;
+  margin: var(--space-2) 0;
+  padding-left: var(--space-3);
+  border-left: var(--border-rule) solid var(--color-rule);
+  font-size: var(--text-md);
+}
+
+.triage-rows {
+  margin: var(--space-3) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.triage-rows--also {
+  margin-top: 0;
+}
+
+.triage-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--space-3) var(--space-4);
+  padding: var(--space-3) 0;
+  border-top: var(--border-hair) solid var(--color-line);
+
+  &[hidden] {
+    display: none;
+  }
+}
+
+.triage-row__text {
+  flex: 1;
+  min-width: 0;
+}
+
+.triage-row__title {
+  display: block;
+  font-size: var(--text-body);
+  font-weight: var(--weight-medium);
+  line-height: var(--leading-snug);
+}
+
+.triage-row__meta {
+  display: block;
+  margin-top: var(--space-1);
+  font-size: var(--text-md);
+}
+
+.triage-row__action {
+  display: flex;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--space-2);
+}
+
+@media (max-width: 40em) {
+  .triage-row {
+    flex-direction: column;
+  }
+
+  .triage-row__action {
+    justify-content: flex-start;
+  }
+
+  .ask-elsewhere__note {
+    position: static;
+    width: auto;
+    max-width: none;
+  }
+}
+
+// One question at a time, in the site's own language: a band, a heavy rule,
+// hairline rows. Each answer is a link, so the address holds the state and it
+// works without a script.
+.triage-screen {
+  max-width: 46rem;
+  padding-bottom: var(--space-6);
+}
+
+.triage-screen__back {
+  margin: 0 0 var(--space-3);
+  font-size: var(--text-sm);
+}
+
+.triage-screen__asked {
+  margin: 0 0 var(--space-1);
+  color: var(--color-text-soft);
+  font-size: var(--text-md);
+}
+
+.triage-screen__title {
+  margin: 0;
+  font-size: var(--text-2xl);
+  line-height: var(--leading-tight);
+
+  &:focus {
+    outline: none;
+  }
+}
+
+.triage-screen__body {
+  margin: var(--space-2) 0 0;
+  font-size: var(--text-body);
+  line-height: var(--leading-snug);
+}
+
+.triage-screen__then {
+  margin: var(--space-6) 0 0;
+  font-size: var(--text-xl);
+}
+
+.triage-screen__group {
+  margin: var(--space-5) 0 0;
+  font-size: var(--text-lg);
+}
+
+// As the topics list: a heavy rule, then rows. The whole row lights up.
+.triage-replies {
+  margin-top: var(--space-3);
+  border-top: var(--border-rule) solid var(--color-rule);
+}
+
+a.triage-reply,
+a.triage-reply:link,
+a.triage-reply:visited {
+  display: block;
+  margin: 0 calc(-1 * var(--space-2));
+  padding: var(--space-3) var(--space-2);
+  border-bottom: var(--border-hair) solid var(--color-line);
+  color: var(--color-text);
+  font-size: var(--text-xl);
+  font-weight: var(--weight-bold);
+  line-height: var(--leading-snug);
+  text-decoration: none;
+
+  &:hover,
+  &:focus-visible {
+    @include highlighted;
+    color: var(--ink);
+  }
+
+  &[hidden] {
+    display: none;
+  }
+}
+
+.triage-reply__label {
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 0.15em;
+}
+
+// Questions read as questions, as they do on the home page.
+.triage-replies--questions a.triage-reply {
+  font-weight: 300;
+
+  .triage-reply__label {
+    text-decoration-thickness: 1px;
+  }
+}
+
+a.triage-reply--quiet,
+a.triage-reply--quiet:link,
+a.triage-reply--quiet:visited {
+  font-size: var(--text-base);
+  font-weight: var(--weight-medium);
+}
+
+.triage-reply__topic {
+  display: block;
+  margin-top: 0.1rem;
+  color: var(--color-text-soft);
+  font-size: var(--text-md);
+  font-weight: var(--weight-regular);
+  line-height: var(--leading-snug);
+}
+
+a.triage-reply:hover .triage-reply__topic,
+a.triage-reply:focus-visible .triage-reply__topic {
+  color: var(--ink);
+}
+
+.triage-card {
+  margin-top: var(--space-3);
+  padding-top: var(--space-3);
+  border-top: var(--border-rule) solid var(--color-rule);
+
+  .triage-rows {
+    margin-top: 0;
+  }
+
+  .triage-row:first-child {
+    padding-top: 0;
+    border-top: 0;
+  }
+
+  .topic-published {
+    margin-top: var(--space-3);
+  }
+}
+
+// The one thing to tap: yellow with an edge, as everywhere on the site.
+.triage .triage-btn,
+.triage a.triage-btn:link,
+.triage a.triage-btn:visited {
+  border-color: var(--color-highlight-edge);
+  background: var(--color-highlight);
+  color: var(--color-on-highlight);
+}
+
+.triage a.triage-btn:hover,
+.triage a.triage-btn:focus-visible,
+.triage summary.triage-btn:hover {
+  border-color: var(--color-text);
+  background: var(--color-text);
+  color: var(--color-page);
+}
+
+@media (min-width: 40em) {
+  \.triage-replies--topics a.triage-reply {
+    display: grid;
+    grid-template-columns: minmax(0, 20rem) minmax(0, 1fr);
+    gap: var(--space-5);
+    align-items: baseline;
+  }
+
+  \.triage-replies--topics .triage-reply__topic {
+    margin-top: 0;
+    text-decoration: none;
+  }
+}
+
+.triage-refused {
+  margin-top: var(--space-5);
+}
+
+.triage-other {
+  margin-top: var(--space-5);
+}
+
+// A topic page: what can be looked up now beside what can only be asked for,
+// each under a heavy heading (and a sign, where the theme has them). On a
+// narrow screen asking comes second.
+.topic-sorted__layout {
+  display: grid;
+  gap: var(--space-6);
+  padding-bottom: var(--space-6);
+}
+
+.topic-group-head {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-3);
+  padding-bottom: var(--space-2);
+  border-bottom: calc(2 * var(--border-band)) solid var(--color-rule);
+
+  h2 {
+    flex: 1;
+    min-width: 0;
+    margin: 0;
+    font-size: var(--text-2xl);
+    line-height: var(--leading-tight);
+  }
+
+  .topic-sign {
+    width: 3.25rem;
+    height: 3.25rem;
+    padding: 0.3rem;
+  }
+}
+
+// Under a heavy heading the rows need no rule of their own on top.
+.topic-rows {
+  margin-top: 0;
+  border-top: 0;
+}
+
+.topic-rows a.triage-reply {
+  margin: 0;
+  padding-inline: 0;
+}
+
+.topic-sorted .topic-rows a.triage-reply {
+  border-bottom: var(--border-rule) solid var(--color-rule);
+}
+
+.topic-rows--small a.triage-reply,
+.topic-sorted .topic-rows--small a.triage-reply {
+  border-bottom: var(--border-hair) solid var(--color-line);
+  font-size: var(--text-lg);
+}
+
+.topic-sorted__papers {
+  padding-bottom: var(--space-6);
+}
+
+// The nation, folded to "Showing England, Change" until someone opens it.
+.nation-pick {
+  margin-top: var(--space-4);
+
+  .nation-tabs {
+    margin-top: var(--space-2);
+  }
+}
+
+.nation-pick__summary {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: 2.75rem;
+  color: var(--color-header-text);
+  font-weight: var(--weight-bold);
+  list-style: none;
+  cursor: pointer;
+
+  &::-webkit-details-marker {
+    display: none;
+  }
+
+  &:focus-visible {
+    outline: 3px solid var(--color-highlight);
+    outline-offset: 2px;
+  }
+}
+
+.nation-pick__change {
+  color: var(--color-header-soft);
+  font-weight: var(--weight-medium);
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
+}
+
+.nation-pick__summary:hover .nation-pick__change {
+  color: var(--color-header-text);
+  text-decoration-thickness: 3px;
+}
+
+.nation-pick[open] .nation-pick__change {
+  color: var(--color-header-text);
+}
+
+// A question's page: the answer and who to ask, with the topic's other
+// questions beside it.
+.topic-question__layout {
+  display: grid;
+  gap: var(--space-6);
+  padding-bottom: var(--space-6);
+}
+
+.topic-question__main {
+  min-width: 0;
+  max-width: 46rem;
+}
+
+.topic-question__lead {
+  margin: 0;
+  font-size: var(--text-2xl);
+  line-height: var(--leading-tight);
+}
+
+.topic-question__body {
+  margin: var(--space-2) 0 0;
+  font-size: var(--text-body);
+  line-height: var(--leading-snug);
+}
+
+.topic-question__then {
+  margin: var(--space-6) 0 0;
+  font-size: var(--text-xl);
+}
+
+.topic-question__side {
+  min-width: 0;
+
+  h2 {
+    margin: 0 0 var(--space-2);
+    font-size: var(--text-lg);
+  }
+
+  section + section {
+    margin-top: var(--space-5);
+  }
+}
+
+.topic-toc {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+
+  li {
+    padding: var(--space-2) 0;
+    border-top: var(--border-hair) solid var(--color-line);
+    font-size: var(--text-md);
+    line-height: var(--leading-snug);
+  }
+
+  li[aria-current] {
+    font-weight: var(--weight-bold);
+  }
+}
+
+// An admin's guide to the source or the question (TopicGuide), set like a
+// help answer.
+.topic-guide__body {
+  max-width: var(--measure);
+  margin-top: var(--space-3);
+  font-size: var(--text-body);
+  line-height: var(--leading-body);
+
+  p,
+  ul,
+  ol,
+  pre,
+  blockquote {
+    margin: 0 0 var(--space-3);
+  }
+
+  ul,
+  ol {
+    padding-left: var(--space-5);
+  }
+
+  li {
+    margin-bottom: var(--space-1);
+  }
+
+  h3 {
+    margin: var(--space-5) 0 var(--space-2);
+    font-size: var(--text-lg);
+    line-height: var(--leading-snug);
+  }
+
+  blockquote,
+  pre,
+  .trix-content blockquote {
+    padding: var(--space-3) var(--space-4);
+    border: 0;
+    background: var(--color-panel);
+  }
+
+  pre {
+    overflow-x: auto;
+    white-space: pre-wrap;
+  }
+
+  .trix-content > :last-child {
+    margin-bottom: 0;
+  }
+}
+
+.topic-guide__draft {
+  margin: var(--space-2) 0 0;
+  padding: var(--space-2) var(--space-3);
+  border: var(--border) dashed var(--color-line);
+  font-size: var(--text-sm);
+}
+
+// Who holds it: asking is one of several things here, so its buttons are
+// quiet.
+.topic-holders-page .triage-actions--quiet .triage-btn,
+.topic-holders-page .triage-actions--quiet a.triage-btn:link,
+.topic-holders-page .triage-actions--quiet a.triage-btn:visited,
+.topic-holders-page .triage-actions--quiet summary.triage-btn {
+  border-color: var(--color-text);
+  background: none;
+  color: var(--color-text);
+}
+
+@media (min-width: 48em) {
+  .topic-sorted__layout {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 19rem);
+    column-gap: var(--space-7);
+    align-items: start;
+  }
+
+  .topic-sorted__layout--ask-only {
+    grid-template-columns: minmax(0, 46rem);
+  }
+
+  .topic-group-head h2 {
+    font-size: var(--text-3xl);
+  }
+
+  .topic-group-head .topic-sign {
+    width: 4rem;
+    height: 4rem;
+    padding: 0.4rem;
+  }
+
+  // The side's first heading reads on the answer's first line.
+  .topic-question__layout {
+    grid-template-columns: minmax(0, 46rem) minmax(0, 16rem);
+    column-gap: var(--space-7);
+    align-items: baseline;
+  }
+}
+}

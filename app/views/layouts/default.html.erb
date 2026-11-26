@@ -95,33 +95,6 @@
     <% unless @render_to_file %>
       <%= render partial: 'ga_code' unless @user&.is_admin? %>
 
-      <%= javascript_include_tag "application", nonce: true %>
-
-      <% if is_admin? %>
-        <%= javascript_include_tag "bootstrap-dropdown", nonce: true %>
-      <% end %>
-
-      <% if AlaveteliConfiguration::force_registration_on_new_request && !@user %>
-        <%= javascript_include_tag 'fancybox.js', nonce: true %>
-        <%= javascript_tag nonce: true do %>
-          $(document).ready(function() {
-            $("#make-request-link").fancybox({
-              'modal': false,
-              'width': 950,
-              'height': 400,
-              'type': 'iframe',
-              'href': '<%= signin_path(modal: 1) %>',
-              'onClosed': function() {
-                // modal_signin_successful variable set by modal dialog box
-                if (typeof modal_signin_successful != 'undefined' ) {
-                  window.location.href = '<%= select_authority_url %>';
-                }
-              }
-            });
-          });
-        <% end %>
-      <% end %>
-
       <%= content_for :javascript %>
     <% end %>
 

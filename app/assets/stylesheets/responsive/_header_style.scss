@@ -1,3 +1,6 @@
+@use "responsive/foundation" as *;
+@use "responsive/utils" as *;
+
 /* Header style */
 .navigation {
   border-bottom: 1px solid #e9e9e9;
@@ -5,7 +8,7 @@
 
 #navigation_search {
   button[type="submit"] {
-    background:image-url('search.png') transparent no-repeat center center;
+    background:url("/search.png") transparent no-repeat center center;
   }
 }
 
@@ -33,10 +36,6 @@
   top: 1.1em;
   line-height: 1em;
   right: 20px;
-}
-
-.profile-summary__image {
-   border-radius: 5px;
 }
 
 .profile-summary__email {

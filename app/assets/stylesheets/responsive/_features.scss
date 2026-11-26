@@ -1,0 +1,12 @@
+// The app's own screens, on neutral tokens. A theme with its own main.scss
+// loads these itself, after responsive/foundation_css and
+// responsive/utility_classes (all.scss loads them first). A theme with styles
+// of its own loads responsive/features/tokens_css, then its styles, then
+// responsive/features/all. Modules using palette mixins also @use tokens.
+//
+// base, shell, status, request, lists, pages, pro and core_panels restyle
+// the older pages on the tokens, and hold the only rules for some newer ones
+// (doc/FORK.md lists them). They are not loaded here: a theme lists them among
+// its own styles.
+@use "responsive/features/tokens_css";
+@use "responsive/features/all";

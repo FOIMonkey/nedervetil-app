@@ -30,10 +30,6 @@
 
 .js-loaded {
 
-  .embargo__submit {
-    display: none;
-  }
-
   .status-picker__submit {
     display: none;
   }
@@ -52,8 +48,4 @@
   .status-picker__option--selected label {
     font-weight: bold;
   }
-}
-
-.extend-embargo-sidebar {
-  border-top: 1px solid #ccc;
 }

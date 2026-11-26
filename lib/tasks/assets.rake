@@ -1,16 +1,14 @@
 namespace :assets do
-  desc 'Symlink non-digest asset paths to the most recent digest versions'
+  desc 'Link each asset at its plain name to its fingerprinted copy'
   task link_non_digest: :environment do
-    assets = Dir.glob(File.join(Rails.root, 'public/assets/**/*'))
-    regex = /(-{1}[a-z0-9]{32}*\.{1}){1}/
-    assets.each do |file|
-      next if File.directory?(file) || file !~ regex
+    config = Rails.application.config.assets
+    JSON.parse(config.manifest_path.read).each do |logical_path, entry|
+      digested_path = entry.fetch('digested_path')
+      next if digested_path == logical_path
 
-      source = file.split('/')
-      source.push(source.pop.gsub(regex, '.'))
-
-      non_digested = File.join(source)
-      FileUtils.ln_sf(file, non_digested)
+      # Both names are in the same folder, so the link is relative.
+      FileUtils.ln_sf(File.basename(digested_path),
+                      config.output_path.join(logical_path))
     end
   end
 end

@@ -16,28 +16,8 @@
   }
 }
 
-.sidebar__note {
-  font-size: 0.9em;
-}
-
-// Blog page doesn't have the request page header, so extra
-// padding is required to stop its contents touching the nav.
-#general_blog .right_column {
-  padding-top: 2.5em;
-}
-
-.sidebar_similar_requests__more-link {
-  font-size: 0.75em;
-}
-
-/* #track-request .feed_link is here to override specificity in the request sidebar,
-   normally .feed_link should be enough */
-#track-request .feed_link,
 .feed_link {
   text-align: left;
-  .track-request-action {
-    text-align: center;
-  }
 }
 
 .act_link {
@@ -59,70 +39,13 @@
   width: 16px;
   background-size: 160px 16px;
   background-repeat: no-repeat;
-  background-image: image-url('act-links-sprite.png');
+  background-image: url("/act-links-sprite.png");
   @media (-webkit-min-device-pixel-ratio: 1.5), (min-resolution: 144dpi) {
-    background-image: image-url('act-links-sprite@2.png');
+    background-image: url("/act-links-sprite@2.png");
   }
-}
-
-.act-link-icon--facebook {
-  background-position: 0 0;
-}
-
-.act-link-icon--twitter {
-  background-position: -16px 0;
-}
-
-.act-link-icon--medium {
-  background-position: -32px 0;
-}
-
-.act-link-icon--widget {
-  background-position: -48px 0;
-}
-
-.act-link-icon--wordpress {
-  background-position: -64px 0;
-}
-
-.act-link-icon--write {
-  background-position: -80px 0;
-}
-
-.act-link-icon--youtube {
-  background-position: -96px 0;
-}
-
-.act-link-icon--rss {
-  background-position: -112px 0;
 }
 
 .act-link-icon--donation {
   background-position: -128px 0;
 }
 
-.act-link-icon--web-share {
-  background-position: -144px 0;
-}
-
-.sidebar__section.blog-posts {
-  .blog-posts-list {
-    list-style: none;
-    padding: 0;
-  }
-}
-
-.sidebar__section.citations {
-  .citations-list--compact {
-    list-style: none;
-    padding: 0;
-  }
-
-  .citations-list__citation--compact {
-    margin-bottom: 0.5em;
-  }
-
-  .citations-new {
-    font-size: 0.875rem
-  }
-}

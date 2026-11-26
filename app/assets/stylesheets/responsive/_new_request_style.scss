@@ -1,3 +1,6 @@
+@use "responsive/foundation" as *;
+@use "responsive/utils" as *;
+
 /* Styles for pages in making a new request */
 
 /* /select_authority page */
@@ -83,16 +86,6 @@
   background: #fff08a;
   border: 1px solid #baad1d;
   padding: 0.1em 0.5em;
-}
-
-#request_search_ahead_results {
-  background-color: #f4f4f4;
-  padding: 1.5em;
-  margin-bottom: 1.5em;
-  h2 {
-    font-size: 1em;
-    font-weight: normal;
-  }
 }
 
 .message-text-length {

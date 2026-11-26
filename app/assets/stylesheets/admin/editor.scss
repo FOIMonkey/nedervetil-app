@@ -1,0 +1,101 @@
+@use "responsive/features/attachment_management";
+@use "responsive/foundation" as *;
+@use "responsive/utils" as *;
+
+// The redaction and text editors on admin pages. The public stylesheet
+// carries their styles, but an admin page loads only admin.css, or a theme's
+// admin skin, so the editors link this file there
+// (disclosures/versions/_admin_stylesheet). A theme that replaces
+// responsive/features/tokens gives the editors its colours and type here too,
+// as on the requester's pages. Nested in body.admin, so that the editors'
+// rules outrank the admin styles for bare lists, selects and forms.
+
+@use "responsive/features/tokens_css";
+
+body.admin {
+  @include attachment_management.styles;
+
+  // What the editors take from the public base styles.
+  .attachment-management {
+    color: var(--color-text);
+    font: var(--weight-regular) var(--text-base)/var(--leading-body) var(--font-sans);
+
+    .warning {
+      margin: 0 0 var(--space-5);
+      padding: var(--space-4) var(--space-5);
+      border: var(--border) solid var(--color-text);
+      border-radius: var(--radius);
+      background: var(--color-page);
+      color: var(--color-text);
+      font-size: var(--text-body);
+
+      p:last-child {
+        margin-bottom: 0;
+      }
+    }
+
+    label {
+      font-weight: var(--weight-medium);
+    }
+
+    input[type="text"],
+    .attachment-management__textarea {
+      box-sizing: border-box;
+      width: 100%;
+      max-width: var(--measure);
+    }
+
+    input[type="submit"],
+    button.button {
+      display: inline-block;
+      margin: 0;
+      padding: 0.5rem 1.1rem;
+      border: var(--border) solid var(--color-highlight-edge);
+      border-radius: var(--radius);
+      background: var(--color-highlight);
+      box-shadow: none;
+      color: var(--color-on-highlight);
+      font-family: var(--font-sans);
+      font-size: var(--text-base);
+      font-weight: var(--weight-medium);
+      line-height: var(--leading-snug);
+      text-shadow: none;
+      cursor: pointer;
+
+      &:focus {
+        background: var(--color-highlight);
+        color: var(--color-on-highlight);
+      }
+
+      &:focus-visible {
+        outline: 3px solid var(--color-text);
+        outline-offset: 0;
+        box-shadow: 0 0 0 6px var(--color-focus);
+      }
+
+      &:hover:not(:disabled),
+      &:active:not(:disabled) {
+        background: var(--color-text);
+        color: var(--color-page);
+      }
+
+      &:disabled {
+        opacity: 0.5;
+        cursor: default;
+      }
+
+      &[hidden] {
+        display: none;
+      }
+    }
+
+    .visually-hidden {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip: rect(0 0 0 0);
+      white-space: nowrap;
+    }
+  }
+}

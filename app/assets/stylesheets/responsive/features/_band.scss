@@ -1,0 +1,259 @@
+@use "sass:meta";
+@use "responsive/foundation" as *;
+@use "responsive/utils" as *;
+@use "responsive/features/tokens" as *;
+@use "responsive/features/buttons" as *;
+
+
+// Kept as a mixin so scoped admin uses preserve parent-selector semantics.
+@mixin styles($width: $row-width, $light-palette: meta.get-mixin("palette-light")) {
+
+
+// A page opts in with the body class "band-view" and a .page-band header.
+
+.band-view #topnav {
+  border-bottom-color: var(--color-header-bg);
+}
+
+.band-view #content {
+  padding-top: 0;
+}
+
+// Pro pages widen the wrapper; a band page keeps the masthead's width so the
+// band starts under the logo.
+.alaveteli-pro.band-view #wrapper {
+  max-width: $width;
+}
+
+// A page with its own search in the band hides the masthead's, so there is
+// one search box per screen.
+.has-page-search .navigation_search {
+  display: none;
+}
+
+// Full width without overflow: the band and its highlight rule are one border
+// image drawn out to the window edges, and a border image never makes the page
+// scroll sideways. It overlaps the masthead's hidden rule, so no gap shows
+// between the two at fractional pixel heights.
+.page-band {
+  position: relative;
+  // Inside one of the older pages' nested rows, which pull their sides out
+  // by half a gutter, the band steps back in to the page's edge.
+  margin: -4px var(--nested-row-gutter, 0) var(--space-6);
+  padding: var(--space-5) 0 var(--space-6);
+  border: 0 solid transparent;
+  border-image-source: linear-gradient(to top, var(--color-highlight) var(--border-band), var(--color-header-bg) var(--border-band));
+  border-image-slice: 0 fill;
+  border-image-width: 0;
+  border-image-outset: 0 100vmax;
+  // The same black underneath the border image, which contrast checkers can't see.
+  background-color: var(--color-header-bg);
+  color: var(--color-header-text);
+
+  a,
+  a:link,
+  a:visited {
+    color: var(--color-header-text);
+  }
+
+  a:hover,
+  a:focus-visible {
+    color: var(--color-on-highlight);
+  }
+
+  h1 {
+    color: var(--color-header-text);
+  }
+
+  @include respond-min($main_menu-mobile_menu_cutoff) {
+    padding: var(--space-6) 0 var(--space-7);
+  }
+}
+
+// A notice sits directly under the band, in the page's flow, as a strip the
+// same width as the band (drawn the same way) with its words on the column.
+.band-flash {
+  // Read here, not on the notice: a theme may give that the light palette.
+  --band-flash-fill: var(--color-panel);
+  --band-flash-text: var(--color-text);
+  margin: calc(-1 * var(--space-6)) var(--nested-row-gutter, 0) var(--space-6);
+
+  // Script moves focus here so it's read out; it's not a control, so no ring.
+  &:focus {
+    outline: 0;
+    box-shadow: none;
+  }
+
+  #notice,
+  #error {
+    margin: 0;
+    padding: var(--space-4) 0;
+    border: 0 solid transparent;
+    border-image-slice: 0 fill;
+    border-image-width: 0;
+    border-image-outset: 0 100vmax;
+    font-size: var(--text-base);
+    font-weight: var(--weight-medium);
+    line-height: var(--leading-snug);
+  }
+
+  // A notice isn't asking anything, so it isn't yellow.
+  #notice {
+    border-image-source: linear-gradient(var(--band-flash-fill), var(--band-flash-fill));
+    background-color: var(--band-flash-fill);
+    color: var(--band-flash-text);
+  }
+
+  // A problem asks something of you, so it is: yellow to the window's edges with
+  // a black edge below, and its words say what happened and what's next.
+  #error {
+    position: relative;
+    border-image-source: linear-gradient(var(--color-highlight), var(--color-highlight));
+    background-color: var(--color-highlight);
+    color: var(--color-on-highlight);
+
+    &::after {
+      content: "";
+      position: absolute;
+      right: -100vmax;
+      bottom: 0;
+      left: -100vmax;
+      height: var(--border);
+      background: var(--ink);
+    }
+
+    a,
+    a:link,
+    a:visited {
+      color: inherit;
+    }
+  }
+}
+
+.band-flash__label {
+  display: block;
+  font-size: var(--text-lg);
+  font-weight: var(--weight-bold);
+}
+
+// The current section keeps the highlight underneath it, so focus has to show
+// some other way: the fill every other item gets, in both colour schemes.
+#topnav .navigation li.selected a:focus-visible {
+  outline-color: var(--color-header-text);
+  background: var(--color-highlight);
+  box-shadow: none;
+  color: var(--color-on-highlight);
+}
+
+// The site's own header and footer: the same words in the same place, with a
+// 44px target.
+#topnav .navigation li a {
+  box-sizing: border-box;
+  min-height: 2.75rem;
+}
+
+.navigation_search_form input[type="search"],
+.navigation_search_form button {
+  min-height: 2.75rem;
+}
+
+.account-link {
+  display: inline-block;
+  margin-block: -0.5rem;
+  padding-block: 0.5rem;
+}
+
+.footer a {
+  display: inline-block;
+  margin-block: -0.8rem;
+  padding-block: 0.8rem;
+}
+
+// A link in the band: its words stay put and its target reaches 44px.
+.page-band .request-band__crumb a,
+.request-band__facts a {
+  display: inline-block;
+  margin-block: -0.75rem;
+  padding-block: 0.75rem;
+}
+
+.page-band__back {
+  margin: 0 0 var(--space-4);
+  font-size: var(--text-md);
+}
+
+.page-band__title {
+  margin: 0 0 var(--space-3);
+  font-size: 2.25rem;
+  font-weight: var(--weight-bold);
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+
+  @include respond-min($main_menu-mobile_menu_cutoff) {
+    font-size: 3.5rem;
+  }
+}
+
+.page-band__summary {
+  max-width: var(--measure);
+  margin: 0;
+  color: var(--color-header-soft);
+  font-size: var(--text-lg);
+  line-height: var(--leading-body);
+}
+
+.page-band__figures {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-6);
+  margin: var(--space-4) 0 0;
+  color: var(--color-header-soft);
+  font-size: var(--text-md);
+
+  strong {
+    margin-right: var(--space-1);
+    color: var(--color-header-text);
+    font-size: var(--text-2xl);
+    font-weight: var(--weight-bold);
+  }
+}
+
+.page-band__label {
+  display: inline-block;
+  margin: 0 0 var(--space-3);
+  padding: 0 var(--space-2);
+  border: var(--border-hair) solid var(--color-header-soft);
+  color: var(--color-header-text);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  line-height: 1.6;
+}
+
+.band-search {
+  display: flex;
+  max-width: 36rem;
+  margin: var(--space-4) 0;
+  --color-highlight-edge: var(--ink);
+
+  // White in both colour schemes, focused or not (see .request-flow-find).
+  input[type=search] {
+    @include meta.apply($light-palette);
+    flex: 1;
+    min-width: 0;
+    @include button-field-height($button-large);
+    margin: 0;
+    padding: 0 var(--space-3);
+    border: var(--border) solid var(--ink);
+    border-right: 0;
+    border-radius: 0;
+    background: var(--white);
+    color: var(--ink);
+    font-size: var(--text-lg);
+  }
+
+  button {
+    @include button-size-large;
+    margin: 0;
+  }
+}
+}

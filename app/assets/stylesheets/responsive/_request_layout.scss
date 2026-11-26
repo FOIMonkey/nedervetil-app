@@ -1,5 +1,7 @@
-/* Layout for request page */
+@use "responsive/foundation" as *;
+@use "responsive/utils" as *;
 
+/* Layout for request page */
 
 .request-status {
   @include grid-column(12);
@@ -25,32 +27,12 @@
   position: relative;
 }
 
-.request-header__profile-photo {
-  //we use --narrow when a profile photo is available
-  @include grid-column(2, $collapse:true);
-  img {
-    max-width: 100%;
-    padding-right: 1em;
-  }
-  @include respond-min( $main_menu-mobile_menu_cutoff ){
-    @include grid-column(1, $collapse:true);
-  }
-}
-
 .request-header__subtitle {
   @include grid-column(12, $collapse:true);
   margin-top: 0;
   @include respond-min( $main_menu-mobile_menu_cutoff ){
     margin-bottom: 0;
     @include grid-column(7, $collapse:true);
-  }
-}
-
-.request-header__subtitle--narrow {
-  //we use --narrow when a profile photo is available
-  @include grid-column(10, $collapse:true);
-  @include respond-min( $main_menu-mobile_menu_cutoff ){
-    @include grid-column(6, $collapse:true);
   }
 }
 
@@ -89,7 +71,6 @@
     }
   }
 
-
   .action-bar__follow {
     display: inline-block;
     margin: 0;
@@ -109,42 +90,10 @@
   }
 }
 
-.request-header__action-bar__actions--narrow {
-  //we use --narrow when a profile photo is available
-  @media (min-width: 30em) {
-    @include grid-column(10, $collapse:true);
-  }
-  @include respond-min( $main_menu-mobile_menu_cutoff ){
-    @include grid-column(5, $collapse:true);
-  }
-}
-
 .request-header__closed_to_correspondence ,
 .request-header__restricted_correspondence {
   display: block;
   margin-top: 2em;
-}
-
-#request_upload_response .request-header__closed_to_correspondence {
-  @include grid-column(12);
-  margin-top: 0.5em;
-  margin-bottom: 1em;
-}
-
-
-.feed_link_toolbar {
-  width: 100%;
-  @media (min-width: 30em) {
-    width: 50%;
-  }
-}
-
-a.track-request-action {
-  margin-top: 0;
-  width: 100%;
-  @media (min-width: 30em) {
-    margin-left: 1em;
-  }
 }
 
 .action-menu {
@@ -157,10 +106,6 @@ a.track-request-action {
 
 .correspondence {
   word-wrap: break-word;
-}
-
-.gone_postal_help{
-  @include grid-column(12);
 }
 
 #describe_state_form_1 {
@@ -183,7 +128,6 @@ a.track-request-action {
       width: 42rem;
     }
   }
-
 
   #followup {
     @include grid-column(12, $collapse: true);
@@ -248,10 +192,6 @@ a.track-request-action {
 .event_actions {
   padding: 1.2em;
 }
-
-.correspondence__footer {
-  padding: 0.6em 1.2em;
- }
 
 .attachments {}
 
@@ -339,39 +279,6 @@ a.track-request-action {
   }
 }
 
-.correspondence__footer__cplink {
-  @include flexbox();
-}
-
-.cplink__label {
-  @include flex(0 0 auto);
-  margin-right: 0.5em;
-  white-space: nowrap;
-  font-size: 0.875em;
-  height: 2em; //match cplink_field
-  padding: 0.5em 0;
-  line-height: 1em;
-}
-
-input.cplink__field {
-  @include flex(1 0 8em);
-  height: 2em;
-  padding: 0 0.5em;
-  margin-bottom: 0;
-  @include ie8 {
-    width: 100%;
-  }
-}
-
-.cplink__button {
-  @include flex(0 0 auto);
-  padding: 0.5em;
-  font-size: 0.875em;
-  height: 2em; //match cplink_field
-  margin-bottom: 0;
-  line-height: 1em;
-}
-
 #reports_new {
     form {
       max-width: 38em;
@@ -387,21 +294,4 @@ input.cplink__field {
   &:last-child {
     padding-bottom: 1.2em;
   }
-}
-
-.request-category_container {
-  display: block;
-  columns: 3 15rem;
-  column-gap: 5rem;
-
-  // More specific version of Foundation’s .hide
-  .hide {
-    display: none;
-  }
-}
-
-.request-category {
-  display: inline-block;
-  padding: 0;
-  width: 100%;
 }

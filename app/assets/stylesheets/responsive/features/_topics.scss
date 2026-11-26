@@ -1,0 +1,712 @@
+@use "responsive/features/topic_steps";
+@use "responsive/foundation" as *;
+@use "responsive/utils" as *;
+@use "responsive/features/tokens" as *;
+@use "responsive/features/buttons" as *;
+
+.page-band__title--huge {
+  max-width: 14ch;
+  margin-bottom: var(--space-3);
+  font-size: 2.75rem;
+  line-height: 1;
+
+  @include respond-min($main_menu-mobile_menu_cutoff) {
+    font-size: 4.5rem;
+  }
+}
+
+.topics__pitch {
+  margin-bottom: var(--space-6);
+}
+
+.page-band--topics {
+  margin-bottom: var(--space-7);
+
+  @include respond-min($main_menu-mobile_menu_cutoff) {
+    padding: var(--space-7) 0 var(--space-8);
+  }
+}
+
+// Every row is the same height, so the beam can line up with any of them. The
+// beam shapes come from Topics::TopicsHelper#torch_style, so these lengths must
+// match its TORCH. Without :has() the beam stays on the search box.
+.torch {
+  --rh: 4.75rem;
+  --m: 15rem;
+  --gx: 25rem;
+  position: relative;
+  display: grid;
+  grid-template-columns: var(--gx) minmax(0, 1fr);
+}
+
+// A theme's lamp picture (topics/topics/_torch_image) sits above the beam.
+.torch__badger {
+  position: absolute;
+  z-index: 2;
+  top: calc((var(--rows) * var(--rh) - var(--m)) / 2);
+  left: 0;
+  width: var(--m);
+  height: auto;
+}
+
+.torch__beam {
+  position: absolute;
+  z-index: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  background: #ffe500; // the disc's own yellow, so lamp and beam are one shape
+  clip-path: var(--beam-0);
+  transition: clip-path 0.22s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+@for $i from 1 through 12 {
+  .torch:has(.torch__row--#{$i}:hover, .torch__row--#{$i}:focus-within) .torch__beam {
+    clip-path: var(--beam-#{$i});
+  }
+}
+
+.torch__find,
+.torch__topics {
+  position: relative;
+  z-index: 1;
+  grid-column: 2;
+}
+
+// Anything in the beam is on the highlight, so its edges are ink in both colour schemes.
+.torch__find {
+  display: flex;
+  align-items: center;
+  height: var(--rh);
+  padding: 0 var(--space-4);
+  --color-highlight-edge: var(--ink);
+}
+
+.torch__search {
+  display: flex;
+  width: 100%;
+  margin: 0; // the framework's form margin left the field off centre in its panel
+
+  // White in both colour schemes, focused or not (see .request-flow-find).
+  input[type=search] {
+    @include palette-light;
+    flex: 1;
+    min-width: 0;
+    height: 3rem;
+    margin: 0;
+    padding: 0 var(--space-3);
+    border: var(--border) solid var(--ink);
+    border-right: 0;
+    border-radius: 0;
+    background: var(--white);
+    color: var(--ink);
+    font-size: var(--text-lg);
+  }
+
+  button {
+    height: 3rem;
+    margin: 0;
+  }
+}
+
+.torch__topics {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.torch__row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  height: var(--rh);
+  padding: 0 var(--space-4);
+  border-top: var(--border-hair) solid var(--grey-700);
+
+  a,
+  a:link,
+  a:visited {
+    flex: 1;
+    min-width: 0;
+    background: none;
+    color: var(--color-header-text);
+    text-decoration: none;
+  }
+
+  // The whole row is the link.
+  a::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+  }
+
+  a:focus-visible {
+    outline: none;
+    box-shadow: none;
+  }
+}
+
+.torch__title {
+  display: block;
+  font-size: var(--text-xl);
+  font-weight: var(--weight-bold);
+  line-height: var(--leading-snug);
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 0.15em;
+}
+
+.torch__summary {
+  display: block;
+  overflow: hidden;
+  color: var(--color-header-soft);
+  font-size: var(--text-md);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.torch__row:hover,
+.torch__row:focus-within {
+  border-top-color: transparent;
+
+  a,
+  a:link,
+  a:visited,
+  .torch__summary {
+    color: var(--ink);
+  }
+
+  .torch__title {
+    text-decoration-thickness: 3px;
+  }
+}
+
+.torch__row:hover + .torch__row,
+.torch__row:focus-within + .torch__row,
+.torch__row--1 {
+  border-top-color: transparent;
+}
+
+.torch__row:focus-within {
+  outline: 3px solid var(--ink);
+  outline-offset: -3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .torch__beam {
+    transition: none;
+  }
+}
+
+// On phones there's no room for the lamp picture: the search box keeps its
+// highlighted panel and a topic lights when tapped or reached with the keyboard.
+@media screen and (max-width: 58em) {
+  .torch {
+    display: block;
+  }
+
+  .torch__badger,
+  .torch__beam {
+    display: none;
+  }
+
+  .torch__find {
+    height: auto;
+    padding: var(--space-3);
+    background: #ffe500;
+  }
+
+  .torch__row {
+    height: auto;
+    padding: var(--space-3);
+  }
+
+  .torch__summary {
+    white-space: normal;
+  }
+
+  .torch__row:hover,
+  .torch__row:focus-within {
+    background: var(--color-highlight);
+  }
+}
+
+.asked {
+  margin-bottom: var(--space-7);
+
+  h2 {
+    margin-bottom: var(--space-4);
+  }
+}
+
+.asked__list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+
+  // The topic's name sits on its first question's line.
+  > li {
+    display: grid;
+    grid-template-columns: 13rem minmax(0, 1fr);
+    gap: var(--space-2) var(--space-6);
+    align-items: baseline;
+    padding: var(--space-4) 0 var(--space-3);
+    border-top: var(--border-hair) solid var(--color-line);
+  }
+}
+
+.asked__topic {
+  font-size: var(--text-md);
+  font-weight: var(--weight-bold);
+}
+
+.asked__questions {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+
+  li {
+    padding-bottom: var(--space-2);
+  }
+}
+
+a.asked__question {
+  font-size: var(--text-2xl);
+  font-weight: 300;
+  line-height: 1.25;
+  letter-spacing: -0.01em;
+  text-decoration-thickness: 1px;
+}
+
+.papers {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr));
+  gap: var(--space-5);
+  margin: 0 0 var(--space-4);
+  padding: 0;
+  list-style: none;
+}
+
+.papers--three {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+// Two to a row on a phone, so four papers don't take a screen each.
+@media (max-width: 30em) {
+  .papers {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-4);
+  }
+}
+
+.paper {
+  position: relative;
+}
+
+.paper__sheet {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  height: 13rem;
+  padding: var(--space-4) var(--space-3) 0;
+  overflow: hidden;
+  background: var(--color-panel);
+
+  img {
+    display: block;
+    width: 10rem;
+    height: auto;
+    border: var(--border-hair) solid var(--color-line);
+    background: var(--white);
+  }
+}
+
+.paper__sheet .paper__icon {
+  width: 4rem;
+  margin-top: var(--space-6);
+  border: 0;
+  background: none;
+}
+
+.paper__sheet .doc-sheet__grid {
+  width: 10rem;
+  max-width: 100%;
+  padding: 0.65rem 0.55rem;
+  overflow: hidden;
+  border: var(--border-hair) solid var(--color-line);
+  background: var(--white);
+
+  table {
+    font-size: 0.5rem;
+  }
+
+  td {
+    max-width: 4.7rem;
+    padding: 0 0.2rem;
+  }
+}
+
+a.paper__title {
+  display: block;
+  margin-top: var(--space-2);
+  font-weight: var(--weight-medium);
+  line-height: var(--leading-snug);
+
+  &::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+  }
+}
+
+.paper:hover .paper__sheet,
+.paper:focus-within .paper__sheet {
+  background: var(--color-highlight);
+}
+
+.paper__meta {
+  display: block;
+  color: var(--color-text-soft);
+  font-size: var(--text-sm);
+}
+
+.papers-section {
+  margin-bottom: var(--space-6);
+}
+
+.nation-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-5);
+}
+
+.page-band a.nation-tabs__tab,
+.page-band a.nation-tabs__tab:link,
+.page-band a.nation-tabs__tab:visited {
+  @include button-size-small;
+  border: var(--border) solid var(--color-header-soft);
+  color: var(--color-header-text);
+  font-weight: var(--weight-medium);
+  text-decoration: none;
+}
+
+.page-band a.nation-tabs__tab:hover {
+  border-color: var(--color-highlight);
+  background: none;
+  color: var(--color-header-text);
+  text-decoration: underline;
+}
+
+.page-band a.nation-tabs__tab[aria-current] {
+  border-color: var(--color-highlight);
+  background: var(--color-highlight);
+  color: var(--ink);
+  font-weight: var(--weight-bold);
+}
+
+.topic-groups {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: var(--space-3) 0 0;
+  padding: 0;
+  list-style: none;
+
+  .topic-holders & li {
+    padding: 0;
+    border: 0;
+  }
+
+  a,
+  a:link,
+  a:visited {
+    display: inline-block;
+    padding: 0.15rem var(--space-2);
+    border: var(--border) solid var(--color-rule);
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+    text-decoration: none;
+  }
+}
+
+.topic-others {
+  margin-top: var(--space-5);
+  padding-top: var(--space-5);
+  border-top: var(--border-rule) solid var(--color-rule);
+
+  h2 {
+    margin: 0 0 var(--space-3);
+    font-size: var(--text-xl);
+  }
+
+  ul {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2) var(--space-5);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    font-size: var(--text-lg);
+    font-weight: var(--weight-medium);
+  }
+}
+
+.topic-page__layout {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  gap: var(--space-7);
+
+  section {
+    margin-bottom: var(--space-7);
+  }
+
+  h2 {
+    margin: 0 0 var(--space-4);
+  }
+}
+
+.topic-page__side h2 {
+  font-size: var(--text-xl);
+}
+
+.topic-page__note {
+  display: block;
+  color: var(--color-text-soft);
+  font-size: var(--text-sm);
+}
+
+// The band on a topic page has less padding than elsewhere, so the holders start higher.
+.topic-page .page-band {
+  padding: var(--space-4) 0 var(--space-5);
+
+  @include respond-min($main_menu-mobile_menu_cutoff) {
+    padding: var(--space-5) 0 var(--space-6);
+  }
+}
+
+.topic-page__find {
+  margin: var(--space-4) 0 0;
+}
+
+.topic-questions + .topic-page__note {
+  margin-top: var(--space-4);
+}
+
+// The authority is the answer, so it is in the largest type.
+.topic-holders {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-5) var(--space-6);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+
+  li {
+    padding-top: var(--space-3);
+    border-top: var(--border-rule) solid var(--color-rule);
+  }
+}
+
+// What they hold and who holds it are both the answer, so both are main text.
+.topic-holders__what {
+  margin: 0 0 var(--space-1);
+  font-size: var(--text-lg);
+  line-height: var(--leading-snug);
+}
+
+.topic-holders__who {
+  margin: 0;
+  font-size: var(--text-xl);
+  font-weight: var(--weight-bold);
+  line-height: var(--leading-tight);
+}
+
+.topic-questions {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+
+  li {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: var(--space-4);
+    padding: var(--space-3) 0;
+    border-bottom: var(--border-hair) solid var(--color-line);
+  }
+}
+
+.topic-questions__text {
+  font-size: var(--text-body);
+}
+
+.topic-questions--asked .topic-questions__text {
+  font-size: var(--text-xl);
+  font-weight: 300;
+  line-height: 1.3;
+}
+
+.topic-questions__actions {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.topic-questions__ask {
+  font-weight: var(--weight-bold);
+}
+
+.ask-elsewhere {
+  position: relative;
+
+  // The padding makes a 44px touch target; the negative margin keeps it out of the layout.
+  > summary {
+    margin: calc(-1 * var(--space-3)) calc(-1 * var(--space-2));
+    padding: var(--space-3) var(--space-2);
+    list-style: none;
+    cursor: pointer;
+    text-decoration: underline;
+
+    &::-webkit-details-marker {
+      display: none;
+    }
+  }
+}
+
+.ask-elsewhere__note {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  z-index: 3;
+  width: 22rem;
+  max-width: 80vw;
+  margin: var(--space-2) 0 0;
+  padding: var(--space-3) var(--space-4);
+  border: var(--border) solid var(--color-text);
+  background: var(--color-page);
+  color: var(--color-text);
+  font-size: var(--text-md);
+  font-weight: var(--weight-regular);
+  text-align: left;
+
+  .page-band & {
+    left: 0;
+    right: auto;
+  }
+
+  .page-band & a,
+  .page-band & a:link,
+  .page-band & a:visited {
+    color: var(--color-link);
+  }
+
+  .page-band & a:hover,
+  .page-band & a:focus-visible {
+    color: var(--color-on-highlight);
+  }
+}
+
+// On a phone the actions sit under the question, so the note opens in the page below them.
+@media (max-width: 58em) {
+  .topic-questions__actions {
+    flex-wrap: wrap;
+  }
+
+  .topic-questions__actions .ask-elsewhere[open] {
+    flex-basis: 100%;
+  }
+
+  .topic-questions__actions .ask-elsewhere__note {
+    position: static;
+    width: auto;
+    max-width: none;
+  }
+}
+
+.topic-holders__site {
+  font-weight: var(--weight-regular);
+}
+
+.topic-published,
+.topic-elsewhere {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+
+  li {
+    padding: var(--space-2) 0 var(--space-3);
+  }
+}
+
+.topic-elsewhere a {
+  font-weight: var(--weight-medium);
+}
+
+.topic-elsewhere__what {
+  display: block;
+}
+
+.topic-out::after {
+  content: "\00a0\2197";
+}
+
+.topic-refused {
+  padding: var(--space-4);
+  border: var(--border) solid var(--color-rule);
+
+  h2 {
+    margin-bottom: var(--space-2);
+  }
+
+  ul {
+    margin: 0;
+    padding-left: var(--space-4);
+  }
+}
+
+@media screen and (max-width: 58em) {
+  .asked__list > li {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  a.asked__question {
+    font-size: var(--text-xl);
+    font-weight: 350;
+  }
+
+  .papers--three {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .topic-page__layout {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0;
+  }
+
+  .topic-holders {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .topic-questions li {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-2);
+  }
+}
+
+.topics__other {
+  color: var(--color-text-soft);
+}
+
+@include topic_steps.styles;

@@ -1,3 +1,5 @@
+
+@use "sass:color";
 // We want to see where links are pointing, but not everywhere
 // so expand links in some places
 
@@ -10,7 +12,7 @@
   a[href^=http]:after {
     content:" (" attr(href) ")";
     font-weight: normal;
-    color: lighten(black, 50%);
+    color: color.adjust(black, $lightness: 50%);
     font-size: 0.875em;
   }
 }

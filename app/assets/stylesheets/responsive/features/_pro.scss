@@ -1,0 +1,234 @@
+// The signed-in request screens (.alaveteli-pro). Core's own stylesheet does
+// not load this file; a theme lists it in its custom.scss (doc/FORK.md,
+// Frontend).
+
+@use "responsive/features/tokens" as *;
+
+.alaveteli-pro {
+  .inner-canvas { background-color: var(--color-page); color: var(--color-text); }
+  .inner-canvas-header { background-color: var(--color-panel); }
+  .inner-canvas-header h1 { font-size: var(--text-3xl); }
+  .dashboard-folders .dashboard-folder__name,
+  .dashboard-folders .dashboard-folder__name:visited { color: var(--color-text); }
+  .dashboard-folders .dashboard-folder__name {
+    position: relative;
+    padding-right: 2.5em;
+  }
+  .dashboard-folder__count { position: absolute; right: 0.75em; top: 0.75em; }
+  .requests__folder-title h2 { font-size: var(--text-2xl); }
+  .requests__search { display: flex; align-items: stretch; }
+  .requests__search input[type=text] { flex: 1 1 auto; min-width: 0; margin: 0; border-right-width: 0; }
+  .requests__search__button,
+  .requests__search__button:focus {
+    position: static;
+    flex: none;
+    width: auto;
+    height: auto;
+    aspect-ratio: 1;
+    margin: 0;
+    border: var(--border-hair) solid var(--color-rule);
+    border-radius: 0;
+    background: var(--color-highlight) center / 1rem no-repeat;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%230e1113' stroke-width='2'%3E%3Ccircle cx='6.5' cy='6.5' r='4.5'/%3E%3Cpath d='m10 10 4.5 4.5'/%3E%3C/svg%3E");
+    cursor: pointer;
+  }
+  .requests__search__button:hover { box-shadow: inset 0 0 0 2px var(--color-on-highlight); }
+  .request__download a {
+    background-color: var(--color-highlight); color: var(--color-on-highlight);
+    border: 2px solid var(--color-on-highlight); border-radius: 0; font-size: var(--text-sm);
+  }
+  .request__download a:hover { background-color: var(--color-text); color: var(--color-page); }
+  .batch-summary__phase .progress-bar { background-color: var(--color-rule); border-radius: 0; }
+  .request__phase-summary-icon,
+  .request__phase-summary-icon.request__phase-summary-icon--action-needed,
+  .request__phase-summary-icon.request__phase-summary-icon--in-progress,
+  .request__phase-summary-icon.request__phase-summary-icon--complete { background-color: var(--color-rule); }
+  .embargo-indicator--small {
+    display: inline-block; width: auto; height: auto; background-image: none;
+    text-indent: 0; font-size: var(--text-sm); font-weight: 400; line-height: 1.4;
+    padding: 0.1em 0.4em; margin-right: 0.4em; vertical-align: middle;
+    border: 1px solid var(--color-rule); color: var(--color-text);
+  }
+
+  .dashboard-folder--top-level,
+  .requests__header,
+  .dashboard__announcements,
+  .blank-slate__message {
+    background-color: var(--color-panel);
+    color: var(--color-text);
+    border-color: var(--color-line);
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  .dashboard-folder__name,
+  .request__title,
+  .request__title a,
+  .blank-slate__message h2,
+  .action-menu__menu li a {
+    color: var(--color-text);
+  }
+
+  .request__meta__label,
+  .requests__sort label {
+    color: var(--color-text-soft);
+  }
+
+  .request {
+    border: 0;
+    border-top: 3px solid var(--color-rule);
+    padding: 1.25em 0;
+    overflow-wrap: anywhere;
+  }
+
+  .request__title { font-weight: 700; }
+  .dashboard-sub-folders { font-weight: 400; }
+  .requests__search input[type=text],
+  .requests__sort select {
+    border: 1px solid var(--color-rule);
+    background-color: var(--color-field);
+    color: var(--color-text);
+    border-radius: 0;
+  }
+
+  @media screen and (max-width: 58em) {
+    .dashboard-left-column,
+    .dashboard-right-column {
+      float: none;
+      width: 100%;
+      padding-left: 0.9375em;
+      padding-right: 0.9375em;
+    }
+    .request__meta > * { min-width: 0; }
+  }
+}
+
+.alaveteli-pro {
+  .dashboard-sidebar__heading {
+    margin: 0 0 var(--space-2);
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+    color: var(--color-text-soft);
+  }
+  .attention-sidebar { margin-bottom: var(--space-5); }
+  .attention-sidebar .dashboard-folder { border-bottom: var(--border-hair) solid var(--color-line); }
+  .attention-sidebar__item--active > .dashboard-folder__name,
+  .attention-sidebar__item--active > .dashboard-folder__name:visited {
+    @include highlighted;
+    border: var(--border) solid var(--color-highlight-edge);
+    font-weight: var(--weight-bold);
+  }
+  .dashboard-folder--selected > .dashboard-folder__name { font-weight: var(--weight-bold); }
+  .dashboard-sub-folders .icon-standalone {
+    width: 1.1em;
+    height: 1.1em;
+    margin-right: var(--space-2);
+  }
+
+  .requests__folder-hint { margin: calc(-1 * var(--space-2)) 0 var(--space-4); }
+  .attention-group__also,
+  .requests__folder-hint {
+    font-size: var(--text-sm);
+    color: var(--color-text-soft);
+  }
+  .attention-group__also {
+    margin: var(--space-3) 0 0;
+  }
+
+  .attention-replies {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .attention-reply {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: var(--space-1) var(--space-4);
+    padding: var(--space-3) 0;
+    border-bottom: var(--border-hair) solid var(--color-line);
+  }
+  .attention-reply__link {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: var(--space-1) var(--space-3);
+    text-decoration: none;
+  }
+  .attention-reply__from { font-weight: var(--weight-bold); text-decoration: underline; text-decoration-thickness: 2px; }
+  .attention-reply__label {
+    padding: 0 var(--space-2);
+    border: var(--border-hair) solid currentColor;
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+  }
+  .attention-reply__date {
+    grid-column: 2;
+    grid-row: 1;
+    font-size: var(--text-sm);
+    color: var(--color-text-soft);
+    white-space: nowrap;
+  }
+  .attention-reply__request {
+    grid-column: 1 / -1;
+    font-size: var(--text-sm);
+    color: var(--color-text-soft);
+  }
+
+  .routine-line {
+    margin: var(--space-1) 0 0;
+    font-size: var(--text-md);
+  }
+  .routine-replies { list-style: none; margin: 0; padding: 0; }
+  .routine-reply {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    align-items: baseline;
+    gap: var(--space-2);
+    padding: var(--space-1) 0;
+    & + .routine-reply { border-top: var(--border-hair) solid var(--color-line); }
+    > a { min-width: 0; overflow-wrap: anywhere; }
+    > time { font-size: var(--text-sm); color: var(--color-text-soft); white-space: nowrap; }
+  }
+  .routine-reply-dismiss { margin: 0; }
+  .routine-replies-dismiss-all { margin: var(--space-2) 0 0; }
+  .routine-reply-dismiss__button {
+    margin: 0; // core gives every button a 20px bottom margin
+    border: 0;
+    background: transparent;
+    color: var(--color-text);
+    font: inherit;
+    padding: var(--space-1) 0;
+    min-width: 24px;
+    min-height: 24px;
+    text-decoration: underline;
+    cursor: pointer;
+  }
+  .attention-request-group .request__title { margin-bottom: var(--space-2); }
+  .attention-request-group .attention-replies { border-top: var(--border-hair) solid var(--color-line); }
+  .attention-request-group .attention-reply:last-child { border-bottom: 0; }
+  .attention-group__meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-1) var(--space-4);
+    margin: 0;
+    font-size: var(--text-md);
+  }
+  .attention-group__status {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    font-weight: var(--weight-medium);
+  }
+  .attention-group__replies { margin: var(--space-2) 0 0; font-size: var(--text-md); }
+  .attention-group__replies--attention { font-weight: var(--weight-bold); }
+  .attention-request-group .routine-line:first-child { margin-top: 0; }
+  .attention-empty { padding: var(--space-4) 0; }
+
+  @media screen and (max-width: 58em) {
+    .attention-reply { grid-template-columns: minmax(0, 1fr); }
+    .attention-reply__date { grid-column: 1; grid-row: auto; }
+  }
+}
+
+.alaveteli-pro .search-and-filter-overview p,
+.alaveteli-pro .search-and-filter-overview strong { color: var(--color-text); }
