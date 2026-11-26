@@ -52,12 +52,8 @@ class ApplicationMailer < ActionMailer::Base
     mail(default_opts)
   end
 
-  def contact_for_user(user = nil)
-    if feature_enabled?(:alaveteli_pro) && user && user.is_pro?
-      pro_contact_from_name_and_email
-    else
-      contact_from_name_and_email
-    end
+  def contact_for_user(_user = nil)
+    contact_from_name_and_email
   end
 
   # Set headers that mark an email as being auto-generated and suppress out of

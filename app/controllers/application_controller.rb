@@ -198,7 +198,7 @@ class ApplicationController < ActionController::Base
   # Intended to be used as a before_action, see RequestController for example
   # usage.
   def set_in_pro_area
-    @in_pro_area = params[:pro] == "1" && current_user.present? && current_user.is_pro?
+    @in_pro_area = params[:pro] == "1" && current_user.present?
   end
 
   private
@@ -346,4 +346,15 @@ class ApplicationController < ActionController::Base
   include ConfigHelper
 
   include HashableParams
+
+  include PrivateArchive
+
+  # Run the privacy gate ahead of other callbacks once locale and user are set.
+  # prepend_before_action runs bottom-up, so a subclass's prepend_before_action
+  # runs before the gate and must not look up request-named records.
+  prepend_before_action :private_archive_policy
+  prepend_before_action :authentication_check
+  prepend_before_action :collect_locales
+  prepend_before_action :set_gettext_locale
+  after_action :private_archive_no_store
 end

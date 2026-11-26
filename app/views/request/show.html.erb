@@ -2,8 +2,6 @@
               title: h(@info_request.title),
               public_body: (@info_request.public_body.name)) %>
 
-<%= render partial: 'request/request_meta_tags' %>
-
 <% if flash[:request_sent] %>
   <%= render partial: 'request_sent' %>
 <% end %>
@@ -62,18 +60,9 @@
         <% elsif @show_action_menu %>
           <%= render partial: 'request/after_actions',
                      locals: { info_request: @info_request,
-                               track_thing: @track_thing,
                                show_owner_update_status_action: @show_owner_update_status_action,
                                show_other_user_update_status_action: @show_other_user_update_status_action,
                                last_response: @last_response } %>
-
-          <%= render partial: 'track/tracking_links_simple',
-                     locals: { track_thing: @track_thing,
-                               user: @user,
-                               follower_count: @follower_count,
-                               own_request: @info_request.user && \
-                                            @info_request.user == @user,
-                               location: 'toolbar' } %>
         <% end %>
       </div>
     </div>
@@ -86,8 +75,4 @@
                        similar_requests: @similar_requests,
                        similar_more: @similar_more,
                        citations: @citations } %>
-<% end %>
-
-<%= content_for :javascript do %>
-  <%= javascript_include_tag 'request-attachments.js', nonce: true %>
 <% end %>

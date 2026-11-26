@@ -26,26 +26,14 @@ class InfoRequestBatchController < ApplicationController
   end
 
   def redirect_embargoed_requests_for_pro_users
-    # Pro users should see their embargoed requests in the pro page, so that
-    # if other site functions send them to a request page, they end up back in
-    # the pro area
-    if feature_enabled?(:alaveteli_pro) && \
-       params[:pro] != "1" && current_user && current_user.is_pro?
-      if @info_request_batch.user == current_user && \
-         @info_request_batch.embargo_duration.present?
-        redirect_to show_alaveteli_pro_batch_request_url(@info_request_batch)
-      end
-    end
+    return unless params[:pro] != "1" && current_user &&
+                  @info_request_batch.user == current_user
+
+    redirect_to show_alaveteli_pro_batch_request_url(@info_request_batch)
   end
 
   def redirect_public_requests_from_pro_context
-    # Requests which aren't embargoed should always go to the normal request
-    # page, so that pros see them in that context after they publish them
-    if feature_enabled?(:alaveteli_pro) && params[:pro] == "1"
-      unless @info_request_batch.embargo_duration.present?
-        redirect_to info_request_batch_url(@info_request_batch)
-      end
-    end
+    # Requests and batches are always private in the unified inbox.
   end
 
   def load_info_requests

@@ -16,12 +16,6 @@ include AlaveteliFeatures::Helpers
 
 Role.create(name: 'admin') if Role.where(name: 'admin').empty?
 
-if feature_enabled?(:alaveteli_pro)
-  %w[pro pro_admin].each do |role_name|
-    Role.create(name: role_name) if Role.where(name: role_name).empty?
-  end
-end
-
 if feature_enabled?(:projects)
   %w[project_owner project_contributor].each do |role_name|
     Role.create(name: role_name) if Role.where(name: role_name).empty?

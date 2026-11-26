@@ -1,0 +1,48 @@
+require 'spec_helper'
+
+RSpec.describe 'PrivateArchive core policy overrides' do
+  describe "a request's prominence" do
+    it 'is requester_only from the start' do
+      expect(FactoryBot.build(:info_request).prominence).
+        to eq('requester_only')
+    end
+
+    it 'is requester_only or hidden, and nothing else' do
+      %w[requester_only hidden].each do |prominence|
+        expect(FactoryBot.build(:info_request, prominence: prominence)).
+          to be_valid
+      end
+      ['normal', 'backpage', nil, 'invalid'].each do |prominence|
+        expect(FactoryBot.build(:info_request, prominence: prominence)).
+          not_to be_valid
+      end
+    end
+  end
+
+  describe 'message prominence' do
+    it 'allows normal or hidden and rejects requester_only' do
+      request = FactoryBot.create(:info_request)
+      message = request.outgoing_messages.first
+      expect(message).to be_valid
+      message.prominence = 'hidden'
+      expect(message).to be_valid
+      message.prominence = 'requester_only'
+      expect(message).not_to be_valid
+    end
+  end
+
+  describe 'admin field placement' do
+    it 'keeps fields admin-only' do
+      options = PrivateArchive::Policy.searchable_options(
+        index: { body: 'A' }, admin_index: { prominence_reason: 'D' },
+        root: :info_request, filterable: [:prominence],
+        sortable: [:created_at]
+      )
+      expect(options).to eq(
+        admin_index: { body: 'A', prominence_reason: 'D' },
+        root: :info_request, filterable: [:prominence],
+        sortable: [:created_at]
+      )
+    end
+  end
+end

@@ -5,7 +5,7 @@
 # Email: hello@mysociety.org; WWW: http://www.mysociety.org/
 
 class AlaveteliPro::PagesController < AlaveteliPro::BaseController
-  skip_before_action :pro_user_authenticated?
+  skip_before_action :require_inbox_sign_in
 
   def show
     if template_exists? "alaveteli_pro/pages/#{params[:id]}"

@@ -1,282 +1,118 @@
+# CanCanCan authorization policy. Read visibility is split across VisitorRules,
+# RequesterRules and AdminRules; action abilities live here. Document and
+# attachment rules join in B07.
 class Ability
   include CanCan::Ability
-  include AlaveteliFeatures::Helpers
+  include Ability::VisitorRules
+  include Ability::RequesterRules
+  include Ability::AdminRules
 
-  attr_reader :user, :project, :public_token
+  attr_reader :user
 
-  def self.guest(**args)
-    new(nil, **args)
+  def self.guest
+    new(nil)
   end
 
-  def initialize(user, project: nil, public_token: false)
-    # Define abilities for the passed in user here. For example:
-    #
-    #   user ||= User.new # guest user (not logged in)
-    #   if user.is_admin?
-    #     can :manage, :all
-    #   else
-    #     can :read, :all
-    #   end
-    #
-    # The first argument to `can` is the action you are giving the user
-    # permission to do.
-    # If you pass :manage it will apply to every action. Other common actions
-    # here are :read, :create, :update and :destroy.
-    #
-    # The second argument is the resource the user can perform the action on.
-    # If you pass :all it will apply to every resource. Otherwise pass a Ruby
-    # class of the resource.
-    #
-    # The third argument is an optional hash of conditions to further filter the
-    # objects.
-    # For example, here the user can only update published articles.
-    #
-    #   can :update, Article, :published => true
-    #
-    # See the wiki for details:
-    # https://github.com/CanCanCommunity/cancancan/wiki/Defining-Abilities
-
+  def initialize(user)
     @user = user
-    @project = project
-    @public_token = public_token
 
-    # Creating requests (full PrivateArchive/Ability rules land in B03 PR 2)
-    can :create, InfoRequest if user&.active?
+    visitor_rules
+    requester_rules if user
+    admin_rules if admin?
 
-    # Updating request status
-    can :update_request_state, InfoRequest do |request|
-      can_update_request_state?(request)
-    end
-
-    # Viewing requests, messages & attachments as Pro admin
-    if user&.view_hidden_and_embargoed?
-      can :_read, InfoRequest
-      can :_read, OutgoingMessage
-      can :_read, IncomingMessage
-      can :_read, FoiAttachment
-    end
-
-    # Viewing requests, messages & attachments as admin
-    if user&.view_hidden?
-      can :_read, InfoRequest do |info_request|
-        !info_request.embargo
-      end
-      can :_read, [IncomingMessage, OutgoingMessage] do |message|
-        !message.info_request.embargo
-      end
-      can :_read, FoiAttachment do |attachment|
-        !attachment.info_request.embargo
-      end
-    end
-
-    can :_read, InfoRequest do |info_request|
-      !info_request.embargo &&
-        %w[normal backpage].include?(info_request.prominence)
-    end
-    can :_read, OutgoingMessage, prominence: 'normal'
-    can :_read, IncomingMessage, prominence: 'normal'
-    can :_read, FoiAttachment, prominence: 'normal'
-
-    if user
-      # Viewing their own embargoed requests with public prominence
-      can :_read, InfoRequest do |info_request|
-        info_request.embargo &&
-          info_request.user == user &&
-          %w[normal backpage].include?(info_request.prominence)
-      end
-
-      # Viewing their own request, messages & attachments with requester only prominence
-      can :_read, InfoRequest, user: user, prominence: 'requester_only'
-      can :_read, OutgoingMessage, info_request: { user: user }, prominence: 'requester_only'
-      can :_read, IncomingMessage, info_request: { user: user }, prominence: 'requester_only'
-      can :_read, FoiAttachment, incoming_message: { info_request: { user: user } }, prominence: 'requester_only'
-    end
-
-    # Reading attachments with prominence
-    can :read, FoiAttachment do |attachment|
-      can?(:_read, attachment) &&
-        can?(:read, attachment.incoming_message) &&
-        !attachment.erased?
-    end
-
-    # Reading messages with prominence
-    can :read, [IncomingMessage, OutgoingMessage] do |message|
-      can?(:_read, message) && can?(:read, message.info_request)
-    end
-
-    # Reading requests with prominence or via a project or public token
-    can :read, InfoRequest do |info_request|
-      next true if can?(:_read, info_request)
-      next true if public_token &&
-        %w[normal backpage].include?(info_request.prominence)
-
-      visible_to_project_member?(info_request)
-    end
-
-    can :manage, OutgoingMessage::Snippet do |_request|
-      user && user.is_admin?
-    end
-
-    # Viewing batch requests
-    can :read, InfoRequestBatch do |batch_request|
-      if batch_request.embargo_duration
-        user && (user == batch_request.user || user&.view_embargoed?)
-      else
-        true
-      end
-    end
-
-    # Downloading batch requests
-    can :download, InfoRequestBatch do |batch_request|
-      (user && user == batch_request.user && user.is_pro?) ||
-        can?(:admin, batch_request)
-    end
-
-    # Updating batch requests
-    can :update, InfoRequestBatch do |batch_request|
-      if batch_request.embargo_duration
-        user && (user.is_pro_admin? ||
-                 (user == batch_request.user && user.is_pro?))
-      else
-        user && requester_or_admin?(batch_request)
-      end
-    end
-
-    # Removing batch request embargoes
-    can :destroy_embargo, InfoRequestBatch do |batch_request|
-      if batch_request.embargo_duration
-        user && (user == batch_request.user || user.is_pro_admin?)
-      else
-        user && requester_or_admin?(batch_request)
-      end
-    end
-
-    if feature_enabled? :alaveteli_pro
-      # Accessing alaveteli professional
-      if user && (user.is_pro_admin? || user.is_pro?)
-        can :access, :alaveteli_pro
-      end
-
-      # Creating embargoes
-      can :create_embargo, InfoRequest do |info_request|
-        user && info_request.user &&
-          info_request.user.is_pro? &&
-          (user.is_pro_admin? || user == info_request.user) &&
-          !info_request.embargo &&
-          info_request.info_request_batch_id.nil?
-      end
-
-      # Extending embargoes
-      can :update, AlaveteliPro::Embargo do |embargo|
-        user && (user.is_pro_admin? ||
-                 user == embargo.info_request.user && user.is_pro?)
-      end
-
-      # Removing embargoes
-      can :destroy, AlaveteliPro::Embargo do |embargo|
-        user && (user == embargo.info_request.user || user.is_pro_admin?)
-      end
-    end
-
-    can :admin, AlaveteliPro::Embargo if user && user.is_pro_admin?
-
-    can :admin, [InfoRequest, InfoRequestBatch] do |content|
-      if content.embargoed?
-        user && user.is_pro_admin?
-      else
-        user && user.is_admin?
-      end
-    end
-
-    can :create_citation, [InfoRequest, InfoRequestBatch] do |content|
-      user && (user.is_admin? || user.is_pro? || content.user == user)
-    end
-
-    can :create_comment, InfoRequest do |info_request|
-      next false unless feature_enabled?(:annotations)
-      next false unless info_request.comments_allowed?
-
-      next true if feature_enabled?(:public_annotations)
-      next true if info_request.embargo && user&.is_pro_admin?
-      next true if !info_request.embargo && user&.is_admin?
-
-      user && info_request.user == user
-    end
-
-    can :share, InfoRequest do |info_request|
-      info_request.embargo &&
-        (user&.is_pro_admin? || info_request.is_actual_owning_user?(user))
-    end
-
-    can :admin, Comment do |comment|
-      if comment.info_request.embargo
-        user && user.is_pro_admin?
-      else
-        user && user.is_admin?
-      end
-    end
-
-    can :login_as, User do |target_user|
-      if user == target_user
-        false
-      elsif target_user.is_pro? || target_user.is_pro_admin?
-        user && user.is_pro_admin?
-      else
-        user && user.is_admin?
-      end
-    end
-
-    if feature_enabled? :alaveteli_pro
-      can :read, :api_key if user && user.is_pro_admin?
-    elsif user && user.is_admin?
-      can :read, :api_key
-    end
-
-    if feature_enabled? :projects
-      can :admin, Project if user && user.is_pro_admin?
-
-      can :read, Project do |target_project|
-        user && (user.is_pro_admin? || target_project.member?(user))
-      end
-
-      can :edit, Project do |target_project|
-        user && (user.is_pro_admin? || target_project.owner?(user))
-      end
-
-      can :leave, Project do |target_project|
-        user && target_project.contributor?(user)
-      end
-
-      can :export, Project do |target_project|
-        next true if target_project.dataset_public?
-        next false unless user
-        next true if user&.is_pro_admin?
-
-        target_project.owner?(user)
-      end
-    end
+    request_state_rules
+    sending_rules
+    request_care_rules
+    snippet_and_batch_rules
+    account_rules
   end
 
   private
 
-  def visible_to_project_member?(info_request)
-    return false unless project
-    return false unless project.member?(user) &&
-      project.info_request?(info_request)
+  def request_state_rules
+    can :update_request_state, InfoRequest do |request|
+      can_update_request_state?(request)
+    end
+  end
 
-    return false if info_request.prominence == 'hidden'
-    return false if info_request.prominence == 'requester_only' &&
-      !info_request.is_owning_user?(user)
+  def sending_rules
+    can :create, InfoRequest if may_act?
+    can %i[follow_up send_reminder], InfoRequest do |request|
+      may_act? && requester_of?(request) && can?(:read, request)
+    end
 
-    true
+    return unless may_act? && user.trusted?
+
+    can :create, InfoRequestBatch
+  end
+
+  def request_care_rules
+    can :adjust_deadlines, InfoRequest do |request|
+      may_act? && (requester_of?(request) || admin?) && can?(:read, request)
+    end
+
+    can :report, InfoRequest do |request|
+      may_act? && can?(:read, request)
+    end
+
+    can :delete_request, InfoRequest do |request|
+      may_withdraw_or_delete? && requester_of?(request) &&
+        can?(:read, request) &&
+        !request.holding_pen_request?(read_only: true)
+    end
+  end
+
+  def snippet_and_batch_rules
+    can :manage, OutgoingMessage::Snippet do |_request|
+      admin?
+    end
+
+    can :download, InfoRequestBatch do |batch_request|
+      may_act? && requester_or_admin?(batch_request)
+    end
+
+    can :update, InfoRequestBatch do |batch_request|
+      may_act? && requester_or_admin?(batch_request)
+    end
+  end
+
+  def account_rules
+    # Kept for themes still checking this instead of request_journey_pro?.
+    can :access, :alaveteli_pro if user
+
+    can :login_as, User do |target_user|
+      admin? && user != target_user && !target_user.closed?
+    end
+
+    can :read, User do |account|
+      admin? || (may_act? && account == user)
+    end
+  end
+
+  # Suspended or closed admins have no admin powers.
+  def admin?
+    user.present? && user.active_admin?
+  end
+
+  def may_act?
+    user.present? && user.active?
+  end
+
+  # Suspended requesters may still withdraw or delete their own content.
+  def may_withdraw_or_delete?
+    user.present? && !user.closed?
+  end
+
+  # Actual requester only (not an admin), regardless of account state.
+  def requester_of?(request)
+    user.present? && request.is_actual_owning_user?(user)
   end
 
   def can_update_request_state?(request)
-    (user && request.is_old_unclassified?) || request.is_owning_user?(user) ||
-      (project && project.info_request?(request) && project.member?(user))
+    may_act? && (requester_of?(request) || admin?)
   end
 
   def requester_or_admin?(request)
-    user == request.user || user.is_admin?
+    user == request.user || admin?
   end
 end

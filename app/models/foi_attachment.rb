@@ -73,6 +73,10 @@ class FoiAttachment < ApplicationRecord
   BODY_MAX_TRIES = 3
   BODY_MAX_DELAY = 5
 
+  def self.prominence_states
+    %w(normal public requester_only hidden)
+  end
+
   def delete_cached_file!
     @cached_body = nil
     file.purge_later if file.attached?

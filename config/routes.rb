@@ -83,25 +83,9 @@ Rails.application.routes.draw do
   get '/body_statistics' => redirect('/statistics#public_bodies'), :as => :public_bodies_statistics
 
   ##### Request controller
-  get '/browse' => 'request#index', as: :requests
-  get '/list/all' => redirect('/list')
-  get '/list/recent' => redirect('/list')
-  match '/list(/:tag)/successful' => 'request#list',
-        :as => :request_list_successful,
-        :view => 'successful',
-        :via => :get
-  match '/list(/:tag)/unsuccessful' => 'request#list',
-        :as => :request_list_unsuccessful,
-        :view => 'unsuccessful',
-        :via => :get
-  match '/list(/:tag)/awaiting' => 'request#list',
-        :as => :request_list_awaiting,
-        :view => 'awaiting',
-        :via => :get
-  match '/list(/:tag)' => 'request#list',
-        :as => :request_list,
-        :view => 'all',
-        :via => :get
+  # Public request listings are closed in private-archive mode.
+  get '/browse' => redirect('/documents')
+  get '/list(/*rest)' => redirect('/documents'), format: false
 
   match '/select_authority' => 'request#select_authority',
         :as => :select_authority,
@@ -162,24 +146,6 @@ Rails.application.routes.draw do
   match '/request/:url_title/download' => 'request#download_entire_request',
         :as => :download_entire_request,
         :via => :get
-  ####
-
-  #### Public Tokens controller
-  resources :public_tokens, only: [:show], path: 'r', param: :public_token
-
-  scope path: 'request/:url_title' do
-    post :public_tokens, to: 'public_tokens#create'
-    delete :public_tokens, to: 'public_tokens#destroy'
-  end
-
-  scope 'r/:public_token/response/:incoming_message_id' do
-    get 'attach/html/:part/*file_name' => 'attachments#show_as_html',
-        as: :share_attachment_as_html,
-        format: false
-    get 'attach/:part(/*file_name)' => 'attachments#show',
-        as: :share_attachment,
-        format: false
-  end
   ####
 
   #### Citations controller
@@ -321,12 +287,6 @@ Rails.application.routes.draw do
         :as => :show_user_requests,
         :view => 'requests',
         :via => :get
-  match '/user/:url_name/wall' => 'user#wall',
-        :as => :show_user_wall,
-        :via => :get
-  match '/user/contact/:url_name' => 'users/messages#contact',
-        :as => :contact_user,
-        :via => [:get, :post]
   match '/profile/change_email' => 'users/email_changes#new',
         :as => :signchangeemail,
         :via => :get
@@ -452,41 +412,7 @@ Rails.application.routes.draw do
         :via => :get
   ####
 
-  #### Track controller
-  # /track/ is for setting up an email alert for the item
-  # /feed/ is a direct RSS feed of the item
-  match '/request/:url_title/:feed' => 'track#track_request',
-        :as => :track_request,
-        :feed => /(track|feed)/,
-        :via => :get
-  match '/:feed/list/:view' => 'track#track_list',
-        :as => :track_list,
-        :view => nil,
-        :feed => /(track|feed)/,
-        :via => :get
-  match '/:feed/body/:url_name' => 'track#track_public_body',
-        :as => :track_public_body,
-        :feed => /(track|feed)/,
-        :via => :get
-  match '/:feed/user/:url_name' => 'track#track_user',
-        :as => :track_user,
-        :feed => /(track|feed)/,
-        :via => :get
-  match '/:feed/search/:query_array' => 'track#track_search_query',
-        :as => :track_search,
-        :feed => /(track|feed)/,
-        :constraints => { :query_array => /.*/ },
-        :via => :get
-
-  match '/track/update/:track_id' => 'track#update',
-        :as => :update,
-        :via => [:get, :post]
-  match '/track/delete_all_type' => 'track#delete_all_type',
-        :as => :delete_all_type,
-        :via => :post
-  match '/track/feed/:track_id' => 'track#atom_feed',
-        :as => :atom_feed,
-        :via => :get
+  #### Track controller (retired in private-archive mode)
   ####
 
   #### Refusal Advice controller
@@ -899,129 +825,48 @@ Rails.application.routes.draw do
   end
   ####
 
-  #### Api controller
-  match '/api/v2/request.json' => 'api#create_request',
-        :as => :api_create_request,
-        :via => :post
-
-  match '/api/v2/request/:id.json' => 'api#show_request',
-        :as => :api_show_request,
-        :via => :get
-  match '/api/v2/request/:id.json' => 'api#add_correspondence',
-        :as => :api_add_correspondence,
-        :via => :post
-  match '/api/v2/request/:id/update.json' => 'api#update_state',
-        :as => :api_update_state,
-        :via => :post
-
-  match '/api/v2/body/:id/request_events.:feed_type' => 'api#body_request_events',
-        :as => :api_body_request_events,
-        :feed_type => '^(json|atom)$',
-        :via => :get
-  ####
-
   #### Pro Pages
-  constraints FeatureConstraint.new(:alaveteli_pro) do
-    namespace :alaveteli_pro, path: :pro, as: :pro do
-      resources :pages, only: [:show]
-    end
+  namespace :alaveteli_pro, path: :pro, as: :pro do
+    resources :pages, only: [:show]
   end
 
-  #### Pro Pricing
-  constraints FeatureConstraint.new(:pro_pricing) do
-    namespace :alaveteli_pro, path: :pro, as: :pro do
-      resources :plans, only: [:index], path: :pricing
+  #### Unified Inbox (alaveteli_pro naming kept for theme compatibility)
+  namespace :alaveteli_pro, path: 'pro' do
+    get :dashboard, to: 'dashboard#index'
+    resources :draft_info_requests, :only => [:create, :update, :destroy]
+    resources :info_requests, only: [:new, :create, :index] do
+      get :preview, on: :new # /info_request/new/preview
     end
-
-    scope module: :alaveteli_pro do
-      resources :plans, only: [:show]
-
-      scope path: :profile do
-        resources :invoices, only: [:index]
-        resources :subscriptions, only: [:index, :create, :destroy] do
-          collection do
-            resource :payment_method, only: [:update]
-          end
-          member do
-            get :authorise
-          end
-        end
+    scope path: 'info_requests/:url_title' do
+      resources :classifications, only: :create, param: :described_state do
+        get :message, on: :member
       end
-
-      match '/pro/subscriptions/stripe-webhook' => 'stripe_webhooks#receive',
-            :via => :post
     end
+    resources :batch_request_authority_searches, :only => [:index, :new]
+    resources :draft_info_request_batches, :only => [:create, :update] do
+      collection do
+        put :update_bodies
+      end
+    end
+    resources :info_request_batches, :only => [:new, :create] do
+      get :preview, on: :new # /info_request_batch/new/preview
+      resource :batch_download, only: [:show], format: true, path: 'download'
+    end
+    resources :public_bodies, :only => [:index]
   end
 
-  #### Alaveteli Pro
-  constraints FeatureConstraint.new(:alaveteli_pro) do
-    scope module: :alaveteli_pro do
-      resources :account_request, :only => [:index, :create], path: :pro do
-        collection do
-          get :training, to: redirect('/pro')
-        end
-      end
-    end
+  scope path: :pro do
+    # Show a batch request in the inbox context
+    match '/info_request_batches/:id' => 'info_request_batch#show',
+          :as => :show_alaveteli_pro_batch_request,
+          :via => :get,
+          :defaults => { :pro => '1' }
 
-    namespace :alaveteli_pro, path: 'pro' do
-      get :dashboard, to: 'dashboard#index'
-      resources :draft_info_requests, :only => [:create, :update]
-      resources :info_requests, only: [:new, :create, :index] do
-        get :preview, on: :new # /info_request/new/preview
-      end
-      scope path: 'info_requests/:url_title' do
-        resources :classifications, only: :create, param: :described_state do
-          get :message, on: :member
-        end
-      end
-      resources :embargoes, :only => [:destroy, :create] do
-        collection do
-          post :destroy_batch
-        end
-      end
-      resources :embargo_extensions, :only => [:create] do
-        collection do
-          post :create_batch
-        end
-      end
-      resources :batch_request_authority_searches, :only => [:index, :new]
-      resources :draft_info_request_batches, :only => [:create, :update] do
-        collection do
-          put :update_bodies
-        end
-      end
-      resources :info_request_batches, :only => [:new, :create] do
-        get :preview, on: :new # /info_request_batch/new/preview
-        resource :batch_download, only: [:show], format: true, path: 'download'
-      end
-      resources :public_bodies, :only => [:index]
-      resources :projects, :except => [:show, :destroy] do
-        member do
-          get :requests, action: 'edit_resources'
-          patch :requests, action: 'update_resources'
-          get :questions, action: 'edit_key_set'
-          patch :questions, action: 'update_key_set'
-          get :contributors, action: 'edit_contributors'
-          patch :contributors, action: 'update_contributors'
-        end
-      end
-    end
-
-    scope path: :pro do
-      # So that we can show a batch request using the existing controller from
-      # the pro context
-      match '/info_request_batches/:id' => 'info_request_batch#show',
-            :as => :show_alaveteli_pro_batch_request,
-            :via => :get,
-            :defaults => { :pro => '1' }
-
-      # So that we can show the authority selection screen using the existing
-      # controller but in a pro context
-      match '/select_authority' => 'request#select_authority',
-            :as => :alaveteli_pro_select_authority,
-            :via => :get,
-            :defaults => { :pro => '1' }
-    end
+    # Show the authority selection screen in the inbox context
+    match '/select_authority' => 'request#select_authority',
+          :as => :alaveteli_pro_select_authority,
+          :via => :get,
+          :defaults => { :pro => '1' }
   end
   ####
 end

@@ -17,18 +17,7 @@
 <li class="<%= 'selected' if (controller?('alaveteli_pro/info_requests') && action?('new', 'preview') || controller?('alaveteli_pro/batch_request_authority_searches') && action?('index') || controller?('alaveteli_pro/info_request_batches') && action?('new', 'preview')) %>">
   <%= link_to _("Make a request"),
               select_authority_path,
-              :id => 'make-request-link',
-              :onclick => track_analytics_event(
-                AnalyticsEvent::Category::PRO_NAV_CLICK,
-                AnalyticsEvent::Action::PRO_NAV_MAKE_REQUEST) %>
-</li>
-
-<li class="<%= 'selected' if controller?('request') && !action?('new', 'select_authority', 'show') %>">
-  <%= link_to _("View public requests"),
-              request_list_successful_path,
-              :onclick => track_analytics_event(
-                AnalyticsEvent::Category::PRO_NAV_CLICK,
-                AnalyticsEvent::Action::PRO_NAV_BROWSE_PUBLIC) %>
+              :id => 'make-request-link' %>
 </li>
 
 <li class="<%= 'selected' if controller?('public_body') %>">

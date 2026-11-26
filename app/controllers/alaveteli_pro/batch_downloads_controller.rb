@@ -6,7 +6,7 @@ class AlaveteliPro::BatchDownloadsController < AlaveteliPro::BaseController
   include ActionController::Live
 
   skip_before_action :html_response
-  skip_before_action :pro_user_authenticated?
+  skip_before_action :require_inbox_sign_in
   before_action :user_authenticated?
 
   def show

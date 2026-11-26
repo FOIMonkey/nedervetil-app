@@ -1,6 +1,5 @@
 require 'rubygems'
 require 'webmock/rspec'
-require 'stripe_mock_patch'
 require "alaveteli_features/spec_helpers"
 require 'strip_attributes/matchers'
 

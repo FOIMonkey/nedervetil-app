@@ -183,18 +183,27 @@ class GeneralController < ApplicationController
     raise RouteNotFound
   end
 
+  # Exposes public statistics only; never leak private request/user counts.
   def version
     respond_to do |format|
-      format.json { render json: Statistics::General.new }
+      format.json do
+        payload = {
+          alaveteli_git_commit: Statistics::General.new.alaveteli_git_commit,
+          alaveteli_version: ALAVETELI_VERSION,
+          ruby_version: RUBY_VERSION
+        }
+        if defined?(Disclosures::Document)
+          payload[:public_document_count] = Disclosures::Document.listed.count
+        end
+        render json: payload
+      end
     end
   end
 
   private
 
   def redirect_pros_to_dashboard
-    if feature_enabled?(:alaveteli_pro) && current_user && current_user.is_pro?
-      redirect_to alaveteli_pro_dashboard_path
-    end
+    redirect_to alaveteli_pro_dashboard_path if current_user
   end
 
   def recent_request_events

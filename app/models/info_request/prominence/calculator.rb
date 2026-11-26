@@ -1,22 +1,10 @@
 class InfoRequest
   module Prominence
+    # Reads an InfoRequest's prominence attribute and reports whether it is
+    # requester_only. Returned by InfoRequest#prominence(decorate: true).
     class Calculator
       def initialize(info_request)
         @info_request = info_request
-      end
-
-      def is_public?
-        %w(normal backpage).include?(to_s) && !@info_request.embargo
-      end
-
-      # Is this request findable via search?
-      def is_searchable?
-        to_s == 'normal' && !@info_request.embargo
-      end
-
-      # Is this request hidden from some people?
-      def is_private?
-        %w(hidden requester_only).include?(to_s) || @info_request.embargo.present?
       end
 
       # Is this request visible only to admins and the requester?
@@ -24,9 +12,17 @@ class InfoRequest
         to_s == 'requester_only'
       end
 
-      # Is this request visible only to admins?
-      def is_hidden?
-        to_s == 'hidden'
+      # Requests are never public or publicly searchable in private-archive mode.
+      def is_public?
+        false
+      end
+
+      def is_searchable?
+        false
+      end
+
+      def is_private?
+        true
       end
 
       def to_s

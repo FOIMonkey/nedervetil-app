@@ -1,9 +1,7 @@
 module Authentication
   # Permit known local pages and numeric navigation fields only.
   class ReturnPath
-    # Switches to '/pro/info_requests' in B03 PR 2 once the unified inbox is
-    # enabled for every account.
-    DEFAULT = '/'.freeze
+    DEFAULT = '/pro/info_requests'.freeze
     PATHS = [
       %r{\A/\z},
       %r{\A/help/[a-zA-Z0-9_-]+\z},

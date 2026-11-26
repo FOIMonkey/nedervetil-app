@@ -28,8 +28,6 @@ module Statistics
       to_h.to_json
     end
 
-    protected
-
     def alaveteli_git_commit
       `git log -1 --format="%H"`.strip
     end

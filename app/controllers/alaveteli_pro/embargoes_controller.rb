@@ -5,7 +5,7 @@
 # Email: hello@mysociety.org; WWW: http://www.mysociety.org/
 
 class AlaveteliPro::EmbargoesController < AlaveteliPro::BaseController
-  skip_before_action :pro_user_authenticated?, only: [:destroy, :destroy_batch]
+  skip_before_action :require_inbox_sign_in, only: [:destroy, :destroy_batch]
 
   def create
     @info_request = InfoRequest.find(embargo_params[:info_request_id])

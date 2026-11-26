@@ -18,9 +18,6 @@
   <%= render partial: 'request/citations',
              locals: { citations: @citations, info_request: @info_request } %>
 
-  <%= render partial: 'request/share_by_link',
-             locals: { info_request: @info_request } %>
-
   <%= render partial: 'blog_posts/blog_posts',
              locals: { taggable: info_request } %>
 

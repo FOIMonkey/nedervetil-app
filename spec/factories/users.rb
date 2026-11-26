@@ -66,31 +66,12 @@ FactoryBot.define do
       admin
     end
 
-    factory :pro_user do
-      sequence(:name) { |n| "Pro User #{n}" }
-      pro
-
-      after(:create) do |user, _evaluator|
-        create(:pro_account, user: user)
-      end
-    end
-
-    factory :pro_admin_user do
-      name { 'Pro Admin User' }
-      admin
-      pro_admin
-    end
-
     trait :admin do
       after(:create) { |user| user.add_role(:admin) }
     end
 
-    trait :pro do
-      after(:create) { |user| user.add_role(:pro) }
-    end
-
-    trait :pro_admin do
-      after(:create) { |user| user.add_role(:pro_admin) }
+    trait :trusted do
+      trusted { true }
     end
 
     trait :enable_hotp do

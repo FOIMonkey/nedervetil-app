@@ -93,16 +93,8 @@ class RequestController < ApplicationController
       @sidebar = true
       @sidebar_template = @in_pro_area ? "alaveteli_pro/info_requests/sidebar" : "sidebar"
 
-      # Track corresponding to this page
-      @track_thing = TrackThing.create_track_for_request(@info_request)
-      @feed_autodetect = [ { url: do_track_url(@track_thing, 'feed'), title: @track_thing.params[:title_in_rss], has_json: true } ]
-
       respond_to do |format|
-        format.html do
-          @has_json = true
-          render template: 'request/show'
-        end
-        format.json { render json: @info_request.json_for_api(true) }
+        format.html { render template: 'request/show' }
       end
     end
   end
@@ -613,17 +605,14 @@ class RequestController < ApplicationController
   end
 
   def redirect_new_form_to_pro_version
-    # Pros should use the pro version of the form
-    if feature_enabled?(:alaveteli_pro) &&
-       request_user &&
-       request_user.is_pro? &&
-       params[:pro] != "1"
-      if params[:url_name]
-        redirect_to(
-          new_alaveteli_pro_info_request_url(public_body: params[:url_name]))
-      else
-        redirect_to new_alaveteli_pro_info_request_url
-      end
+    return unless request_user && params[:pro] != "1"
+
+    if params[:url_name]
+      redirect_to(
+        new_alaveteli_pro_info_request_url(public_body: params[:url_name])
+      )
+    else
+      redirect_to new_alaveteli_pro_info_request_url
     end
   end
 

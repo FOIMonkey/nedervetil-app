@@ -74,9 +74,18 @@ class User < ApplicationRecord
                  instance_writer: false,
                  default: DEFAULT_CONTENT_LIMITS
 
-  rolify before_add: :setup_pro_account,
-         after_add: :assign_role_features,
-         after_remove: :assign_role_features
+  has_and_belongs_to_many :roles,
+                          -> { site_wide },
+                          join_table: :users_roles,
+                          after_add: :assign_role_features,
+                          after_remove: :assign_role_features
+
+  scope :with_any_role, ->(*names) {
+    where(id: unscoped.joins(:roles).
+                where(roles: { name: names.map(&:to_s) }).
+                select(:id))
+  }
+  scope :with_role, ->(name) { with_any_role(name) }
 
   strip_attributes allow_empty: true
 
@@ -163,9 +172,6 @@ class User < ApplicationRecord
   has_many :request_classifications,
            inverse_of: :user,
            dependent: :destroy
-  has_one :pro_account,
-          inverse_of: :user,
-          dependent: :destroy
   has_many :request_summaries,
            inverse_of: :user,
            dependent: :destroy,
@@ -211,6 +217,12 @@ class User < ApplicationRecord
            inverse_of: :user,
            dependent: :destroy
 
+  has_many :permission_changes,
+           -> { order(created_at: :desc, id: :desc) },
+           class_name: 'User::PermissionChange',
+           inverse_of: :user,
+           dependent: :destroy
+
   scope :active, -> { not_banned.not_closed }
   scope :banned, -> { where.not(ban_text: '') }
   scope :not_banned, -> { where(ban_text: '') }
@@ -230,7 +242,6 @@ class User < ApplicationRecord
 
   validate :email_and_name_are_valid
 
-  after_update :update_pro_account
   after_update :reindex_referencing_models, :invalidate_cached_pages,
                unless: :no_xapian_reindex
 
@@ -319,16 +330,28 @@ class User < ApplicationRecord
                 user.name, true, user.id).order(:created_at)
   end
 
+  # Reads the user's roles once: a page can ask dozens of times.
+  def has_role?(name)
+    roles.any? { |role| role.name == name.to_s }
+  end
+
+  def is_admin?
+    has_role?(:admin)
+  end
+
+  # Raises for a name outside Role.allowed_roles.
+  def add_role(name)
+    role = Role.site_wide.find_or_create_by!(name: name.to_s)
+    roles << role unless roles.include?(role)
+    role
+  end
+
+  def remove_role(name)
+    roles.delete(roles.select { |role| role.name == name.to_s })
+  end
+
   def view_hidden?
-    is_admin?
-  end
-
-  def view_embargoed?
-    is_pro_admin?
-  end
-
-  def view_hidden_and_embargoed?
-    view_hidden? && view_embargoed?
+    active_admin?
   end
 
   def transactions(*associations)
@@ -414,7 +437,7 @@ class User < ApplicationRecord
   end
 
   def admin?
-    is_admin? || is_pro_admin?
+    active_admin?
   end
 
   def can_admin_roles
@@ -479,13 +502,20 @@ class User < ApplicationRecord
     'normal'
   end
 
-  def no_limit?
-    super || is_admin? || is_pro_admin?
+  # Exempt from sending limits and allowed to send batches. Prefer this over
+  # the :trusted column, which stores only the admin tick.
+  def trusted?
+    self[:trusted] || active_admin? || internal_admin_user?
+  end
+
+  # Legacy writer alias; intentionally no reader.
+  def no_limit=(value)
+    self.trusted = value
   end
 
   def exceeded_request_limits?
     return true if suspended?
-    return false if no_limit?
+    return false if trusted?
 
     exceeded_limit?(:info_requests) ||
       InfoRequest.exceeded_creation_rate?(info_requests)
@@ -493,14 +523,14 @@ class User < ApplicationRecord
 
   def exceeded_followup_limits?
     return true if suspended?
-    return false if no_limit?
+    return false if trusted?
 
     false
   end
 
   def exceeded_comment_limits?
     return true if suspended?
-    return false if no_limit?
+    return false if trusted?
 
     exceeded_limit?(:comments) ||
       Comment.exceeded_creation_rate?(comments)
@@ -508,14 +538,13 @@ class User < ApplicationRecord
 
   def exceeded_user_message_limits?
     return true if suspended?
-    return false if no_limit?
+    return false if trusted?
 
     exceeded_limit?(:user_messages)
   end
 
   def exceeded_limit?(content)
-    return false if no_limit?
-    return false if can_make_batch_requests?
+    return false if trusted?
     return false if content_limit(content).blank?
 
     # Has the User created too much of the content in the past 24 hours?
@@ -694,16 +723,6 @@ class User < ApplicationRecord
 
   def assign_role_features(_role)
     features.assign_role_features
-  end
-
-  def setup_pro_account(role)
-    return unless role == Role.pro_role
-
-    pro_account || build_pro_account if feature_enabled?(:pro_pricing)
-  end
-
-  def update_pro_account
-    pro_account.update_stripe_customer if pro_account
   end
 
   def content_limit(content)

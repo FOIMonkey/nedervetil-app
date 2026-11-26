@@ -1,50 +1,8 @@
-# Set up our available features and (optionally) get some defaults for
-# them from the config/general.yml configuration.
-
-# See Flipper's documentation for further examples of how you can enable
-# and disable features, noting that (depending on the adapter used) there
-# might well be settings stored in other places (the db, caches, etc) that
-# you need to respect.
+# The features admins can switch on per account. See Flipper's
+# documentation for how features are stored:
 # https://github.com/jnunemaker/flipper/blob/master/lib/flipper/dsl.rb
 
-features = %i[
-  annotations
-  alaveteli_pro
-  projects
-  pro_pricing
-  pro_self_serve
-  public_annotations
-  user_to_user_messaging
-]
-
-backend = AlaveteliFeatures.backend
-
-features.each do |feature|
-  if AlaveteliConfiguration.public_send("enable_#{feature}")
-    backend.enable(feature) unless backend.enabled?(feature)
-  elsif backend.enabled?(feature)
-    backend.disable(feature)
-  end
-end
-
-if ENV['OLLAMA_URL']
-  backend.enable(:insights) unless backend.enabled?(:insights)
-else
-  backend.disable(:insights)
-end
-
 Rails.configuration.after_initialize do
-  notifications = AlaveteliFeatures.features.add(
-    :notifications,
-    label: 'Daily email notification digests'
-  )
-  batch_category = AlaveteliFeatures.features.add(
-    :pro_batch_category_ui,
-    label: 'Batch category user interface',
-    condition: -> {
-      PublicBody.category_root.children.any?
-    }
-  )
   AlaveteliFeatures.features.add(
     :pro_batch_category_add_all,
     label: 'Batch category "add all" button'
@@ -52,13 +10,5 @@ Rails.configuration.after_initialize do
   AlaveteliFeatures.features.add(
     :database_backed_alerts,
     label: 'Generate alerts from the database instead of the search index'
-  )
-
-  next unless ActiveRecord::Base.connection.data_source_exists?(:roles)
-
-  AlaveteliFeatures.groups.add(
-    :pro,
-    roles: [Role.pro_role],
-    features: [notifications, batch_category]
   )
 end

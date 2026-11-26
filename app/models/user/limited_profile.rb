@@ -10,7 +10,7 @@ module User::LimitedProfile
       user_admin_roles_exists = user_roles.project(1).
         join(roles).on(user_roles[:role_id].eq(roles[:id])).
         where(user_roles[:user_id].eq(User.arel_table[:id])).
-        where(roles[:name].in(%w[admin pro_admin])).
+        where(roles[:name].in(%w[admin])).
         exists
 
       User.
@@ -24,7 +24,7 @@ module User::LimitedProfile
 
   def limited_profile?
     self != User.internal_admin_user &&
-      !is_admin? && !is_pro_admin? &&
+      !is_admin? &&
       !confirmed_not_spam? &&
       info_requests_count.zero? &&
       status_update_count.zero?

@@ -126,7 +126,6 @@ gem 'net-http', '~> 0.9.1'
 gem 'net-protocol', '~> 0.4.0'
 gem 'ostruct', '~> 0.6.3'
 gem 'redcarpet', '~> 3.6.1'
-gem 'rolify', '~> 6.0.1'
 gem 'rqrcode', '~> 3.2.0'
 gem 'ruby-msg', '~> 1.5.0', mysociety: 'ruby-msg', branch: 'ascii-encoding'
 gem 'rubyzip', '~> 3.7.0'
@@ -135,7 +134,6 @@ gem 'secure_headers', '~> 7.3.0'
 gem 'sidekiq', '8.1.7'
 gem 'sidekiq-limit_fetch', '~> 4.4.1'
 gem 'strip_attributes', mysociety: 'strip_attributes', branch: 'globalize3-rails8'
-gem 'stripe', '~> 13.5.1'
 gem 'syslog_protocol', '~> 0.9.0'
 gem 'vpim', '~> 24.2.20'
 gem 'will_paginate', '~> 4.0.1'
@@ -170,7 +168,6 @@ gem 'globalize', '~> 7.1.3'
 gem 'locale', '~> 2.1.5'
 gem 'unicode', '~> 0.4.4'
 gem 'unidecoder', '~> 1.1.0'
-gem 'money', '~> 7.1.1'
 
 # mime-types 3.0.0 requires Ruby 2.0.0, and _something_ is trying to update it
 gem 'mime-types', '< 4.0.0', require: false
@@ -202,7 +199,6 @@ group :test do
   gem 'simplecov-lcov', '~> 0.9.0'
   gem 'capybara', '~> 3.40.0'
   gem 'cuprite', '~> 0.20.0'
-  gem 'stripe-ruby-mock', '~> 5.0.0'
   gem 'rails-controller-testing'
 end
 
