@@ -1,7 +1,7 @@
 <div id="topnav" class="topnav <%= @in_pro_area ? 'topnav--pro' : '' %>">
   <nav aria-label="Main navigation">
     <ul id="navigation" class="navigation">
-      <% if can?(:access, :alaveteli_pro) %>
+      <% if current_user %>
         <%= render :partial => 'alaveteli_pro/general/nav_items' %>
       <% else %>
         <%= render :partial => 'general/nav_items' %>

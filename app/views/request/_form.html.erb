@@ -10,9 +10,6 @@
   </div>
 </div>
 
-<div id="typeahead_response" class="typeahead_response">
-</div>
-
 <%= fields_for :outgoing_message do |o| %>
   <p>
     <label class="form_label" for="outgoing_message_body">
@@ -33,7 +30,7 @@
   <% end %>
   <%= hidden_field_tag(:submitted_new_request, 1 ) %>
   <%= hidden_field_tag(:preview, 1 ) %>
-  <%= submit_tag _('Next Step: Preview your public request') %>
+  <%= submit_tag _('Next step: preview your request') %>
 </div>
 
 <% if !@info_request.tag_string.empty? %>

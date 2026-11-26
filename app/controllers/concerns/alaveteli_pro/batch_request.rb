@@ -1,3 +1,5 @@
+# Shared view helpers for batch authority selection controllers, exposing the
+# active search or browse mode and selected category tag.
 module AlaveteliPro::BatchRequest
   extend ActiveSupport::Concern
 
@@ -10,10 +12,10 @@ module AlaveteliPro::BatchRequest
   def mode
     valid_modes = %w(search browse)
     @mode ||= if valid_modes.include?(params[:mode])
-        params[:mode]
-      else
-        valid_modes.first
-      end
+                params[:mode]
+              else
+                valid_modes.first
+              end
   end
 
   def category_tag

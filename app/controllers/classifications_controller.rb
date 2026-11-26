@@ -25,7 +25,7 @@ class ClassificationsController < ApplicationController
   end
 
   def create
-    set_last_request(info_request)
+    remember_last_request(info_request)
 
     if params[:last_info_request_event_id].to_i != info_request.
         last_event_id_needing_description

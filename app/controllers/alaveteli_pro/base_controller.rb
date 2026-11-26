@@ -9,6 +9,10 @@ class AlaveteliPro::BaseController < ApplicationController
   before_action :require_inbox_sign_in
   before_action :set_in_pro_area
 
+  # An override of set_in_pro_area from ApplicationController, because we are
+  # always in the pro area if we're using a descendant of this controller.
+  # Note that this is called as a before_action in this class, so that
+  # every descendant sets it.
   def set_in_pro_area
     @in_pro_area = true
   end

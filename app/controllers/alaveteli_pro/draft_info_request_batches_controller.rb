@@ -1,19 +1,34 @@
-class AlaveteliPro::DraftInfoRequestBatchesController < ApplicationController
+# The inbox's batch drafts: the letter and the authorities a batch request
+# is written for, saved before it is sent.
+class AlaveteliPro::DraftInfoRequestBatchesController < AlaveteliPro::BaseController
   include AlaveteliPro::BatchRequest
+
+  read_only :requests, only: %i[create update update_bodies]
+
+  before_action :require_batch_permission
 
   def create
     @draft = current_user.draft_info_request_batches.create(draft_params)
     respond_or_redirect(@draft)
   end
 
+  # Skip validation so invalid edits persist and preview shows current errors
+  # rather than stale saved text.
   def update
     @draft = current_user.draft_info_request_batches.find(params[:id])
-    @draft.update(draft_params_multiple_bodies)
+    @draft.transaction do
+      @draft.assign_attributes(draft_params_multiple_bodies)
+      @draft.save!(validate: false)
+    end
     if params[:preview]
-      redirect_to preview_new_alaveteli_pro_info_request_batch_path(draft_id: @draft.id)
+      redirect_to preview_new_alaveteli_pro_info_request_batch_path(
+        draft_id: @draft.id
+      )
     else
-      redirect_to new_alaveteli_pro_info_request_batch_path(draft_id: @draft.id),
-                  notice: _("Your draft has been saved!")
+      redirect_to(
+        new_alaveteli_pro_info_request_batch_path(draft_id: @draft.id),
+        notice: _("Your draft has been saved!")
+      )
     end
   end
 
@@ -88,12 +103,12 @@ class AlaveteliPro::DraftInfoRequestBatchesController < ApplicationController
   # different params.
   def draft_params
     params.require(:alaveteli_pro_draft_info_request_batch).
-      permit(:title, :body, :embargo_duration, :public_body_ids )
+      permit(:title, :body, :public_body_ids)
   end
 
   def draft_params_multiple_bodies
     params.require(:alaveteli_pro_draft_info_request_batch).
-      permit(:title, :body, :embargo_duration, public_body_ids: [])
+      permit(:title, :body, public_body_ids: [])
   end
 
   def update_bodies_params

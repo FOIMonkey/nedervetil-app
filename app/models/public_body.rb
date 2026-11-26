@@ -178,6 +178,14 @@ class PublicBody < ApplicationRecord
   # following the pattern for the existing `extend` option.
   #
   # [1] https://github.com/technoweenie/acts_as_versioned/blob/63b1fc8529/lib/acts_as_versioned.rb#L98-L118
+  def publication_scheme_link
+    HttpUrl.with_default_scheme(publication_scheme)
+  end
+
+  def disclosure_log_link
+    HttpUrl.with_default_scheme(disclosure_log)
+  end
+
   class Version
     before_save :copy_translated_attributes
 

@@ -1,71 +1,103 @@
-<% batch_request = @info_request_batch.present? %>
-
-<% if batch_request %>
-  <% @title = _("Make a batch request") %>
+<% if @info_request_batch.present? %>
+  <%= render partial: 'alaveteli_pro/info_requests/batch_request_new' %>
 <% else %>
-  <% @title = _("Make an {{law_used_short}} request",
-                law_used_short: h(@info_request.legislation)) %>
-<% end %>
+  <% body = @info_request.public_body %>
+  <% step = @step || :write %>
+  <% subject = @subject || @info_request.title.to_s %>
+  <% context = @journey_context || {} %>
+  <% draft_id = @draft_info_request&.persisted? ? @draft_info_request.id : nil %>
+  <% carry = { subject: subject.presence, question: params[:question].presence, from: @copied&.id,
+               draft_id: draft_id, journey: context.presence }.compact %>
+  <% carry[:public_body] = body.url_name if body %>
+  <% content_for :body_class, "band-view request-flow-view#{' has-page-search' if step == :who}" %>
+  <% @title = { who: _('Who holds it?'), subject: _('Request subject'), write: _('Write request') }.fetch(step) %>
 
-<div class="inner-canvas">
+  <header class="page-band request-flow-band">
+    <h1 class="page-band__title"><%= @title %></h1>
+    <% if step == :who %>
+      <%= form_tag new_alaveteli_pro_info_request_path, method: :get, id: 'authority_form', class: 'request-flow-find', role: 'search' do %>
+        <% carry.except(:journey).each do |name, value| %><%= hidden_field_tag name, value, id: nil %><% end %>
+        <% context.each do |name, value| %><%= hidden_field_tag "journey[#{name}]", value, id: nil %><% end %>
+        <%= hidden_field_tag :step, 'who', id: nil %>
+        <label class="visually-hidden" for="authority_query"><%= _('Authority') %></label>
+        <input type="search" id="authority_query" name="query" value="<%= @authority_query %>" placeholder="<%= _('A council, police force, NHS trust or department') %>">
+        <button type="submit"><%= _('Find') %></button>
+      <% end %>
+    <% end %>
+    <%= render partial: 'alaveteli_pro/info_requests/steps', locals: {
+      now: { who: 1, subject: 2, write: 3 }.fetch(step),
+      steps: [[_('Who'), body&.name, nil], [_('Subject'), subject.presence, nil], [_('Write request')], [_('Check and send')]]
+    } %>
+  </header>
+  <%= band_notice %>
 
-  <div class="inner-canvas-header">
-    <div class="row">
-      <h1><%= @title %></h1>
-    </div>
-  </div>
+  <%= foi_error_messages_for :info_request, :outgoing_message %>
+  <%= render partial: 'request/email_override_warning' %>
 
-  <div class="inner-canvas-body">
-    <div class="row">
-      <% if batch_request %>
-        <%= foi_error_messages_for :info_request_batch,
-                                   :example_info_request,
-                                   :outgoing_message %>
-      <% else %>
-        <%= foi_error_messages_for :info_request, :outgoing_message %>
+  <% case step %>
+  <% when :who %>
+    <div class="request-flow">
+      <% if subject.present? %><p class="request-flow__quiet"><%= _('About <b>{{subject}}</b>', subject: subject) %></p><% end %>
+      <% if (context['nation'] || context['holder']) && defined?(Topics::Topic) %>
+        <p><%= [Topics::Topic::NATIONS[context['nation']], Topics::Suggestions::HOLDERS[context['holder']]].compact.map { |label| _(label) }.join(' · ') %></p>
+      <% end %>
+      <% if @authority_results %>
+        <ul class="authority-results" aria-label="<%= _('Authorities') %>">
+          <% @authority_results.each do |result| %>
+            <li>
+              <%= link_to result.name, new_alaveteli_pro_info_request_path(carry.merge(public_body: result.url_name, step: (@copied ? 'write' : 'subject'))), class: 'authority-results__name' %>
+              <% if defined?(Topics::Holds) && (line = Topics::Holds.line(result)) %><span class="authority-results__meta"><%= line %></span><% end %>
+              <span class="authority-results__pick" aria-hidden="true"><%= _('Choose') %></span>
+            </li>
+          <% end %>
+          <li class="authority-results__none"><%= @authority_results.empty? ? _('Nothing found. Try another name.') : _('Choose the authority that holds the information.') %></li>
+        </ul>
+      <% end %>
+      <% if defined?(Topics::Topic) %>
+      <div class="request-flow__unsure">
+        <h2><%= _('Not sure who holds it?') %></h2>
+        <p><%= _('Each topic says who usually does.') %></p>
+        <ul class="request-flow__topics">
+          <% Topics::Topic.all.each do |topic| %>
+            <li><%= link_to topic.title, request_journey_link_path(topic_path(topic.slug, nation: context['nation'])) %></li>
+          <% end %>
+        </ul>
+        <% if context['holder'] || context['nation'] %>
+          <p><%= link_to _('Search all authorities'), new_alaveteli_pro_info_request_path(carry.merge(step: 'who', journey: context.except('holder', 'nation').presence)) %></p>
+        <% end %>
+      </div>
       <% end %>
     </div>
-
-    <%= render partial: 'request/email_override_warning' %>
-
-    <div class="row">
-
-      <div class="request-to-header">
-        <% if batch_request %>
-        <p id="to_public_body" class="to_public_body">
-          <span class="to_public_body_label"><%= _('To') %></span>
-          <%= render partial: 'alaveteli_pro/info_request_batches/authority_list_with_link',
-                     locals: { batch: @info_request_batch,
-                               draft: @draft_info_request_batch } %>
-        </p>
-        <% else %>
-          <%= render partial: 'alaveteli_pro/info_requests/select_authority_form',
-                     locals: { info_request: @info_request } %>
-        <% end %>
-
-        <p id="from_user" class="from_user">
-          <span class="from_user_label"><%= _('From') %></span>
-          <%= @user&.name || '…' %>
-        </p>
-      </div> <!-- .request-to-header -->
-
-
-      <div id="request_advice" class="request_advice">
-        <%= render partial: 'alaveteli_pro/info_requests/new_request_advice' %>
-      </div>
-
-      <div id="request_form" class="request_form">
-
-        <% if batch_request %>
-          <%= render partial: 'alaveteli_pro/info_request_batches/form' %>
-        <% else %>
-          <%= render partial: 'alaveteli_pro/info_requests/form' %>
-        <% end %>
-
-      </div>  <!-- .request_form -->
-
-    </div>  <!-- .row -->
-
-  </div>  <!-- .inner-canvas-body -->
-
-</div> <!-- .inner-canvas -->
+  <% when :subject %>
+    <div class="request-flow">
+      <%= form_tag new_alaveteli_pro_info_request_path, method: :get, id: 'subject_form' do %>
+        <% carry.except(:subject, :journey).each do |name, value| %><%= hidden_field_tag name, value, id: nil %><% end %>
+        <% context.each do |name, value| %><%= hidden_field_tag "journey[#{name}]", value, id: nil %><% end %>
+        <%# Enter checks publications, or proceeds after a check. %>
+        <% if @suggestions %><button type="submit" name="step" value="write" hidden><%= _('Write request') %></button>
+        <% else %><button type="submit" name="check" value="1" hidden><%= _('Check publications') %></button><% end %>
+        <p class="request-to"><span class="request-to__name"><%= _('To <strong>{{authority}}</strong>', authority: body.name) %></span>
+          <button type="submit" name="step" value="who" class="request-to__change"><%= _('Change authority') %></button></p>
+        <% missing = params[:check].present? && subject.blank? %>
+        <div class="request-question__field<%= ' request-question__field--error' if missing %>">
+          <label for="subject"><%= _('What is it about?') %></label>
+          <% if missing %><p class="request-question__error" id="subject-error"><%= _('<b>Subject missing</b> Add a short title.') %></p><% end %>
+          <%= text_field_tag :subject, subject, maxlength: 200, placeholder: _('Spending on table tennis clubs in Cowes'),
+                             'aria-describedby': (missing ? 'subject-error subject-hint' : 'subject-hint') %>
+          <p class="request-sheet__hint" id="subject-hint"><%= _('They see this as the email subject.') %></p>
+        </div>
+        <% if @suggestions %><%= render partial: 'alaveteli_pro/info_requests/publications', locals: { suggestions: @suggestions } %><% end %>
+        <div class="request-flow__bar">
+          <% if @suggestions %>
+            <button type="submit" name="step" value="write" class="button request-flow__next"><%= _('Write request') %></button>
+            <button type="submit" name="check" value="1" class="button request-flow__ghost"><%= _('Check publications') %></button>
+          <% else %>
+            <button type="submit" name="check" value="1" class="button request-flow__next"><%= _('Check publications') %></button>
+          <% end %>
+        </div>
+      <% end %>
+    </div>
+  <% else %>
+    <%= render partial: 'alaveteli_pro/info_requests/check' %>
+  <% end %>
+<% end %>

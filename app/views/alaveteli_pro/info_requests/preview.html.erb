@@ -1,55 +1,39 @@
-<% batch_request = @info_request_batch.present? %>
-
-<% if batch_request %>
-  <% @title = _("Preview new batch request") %>
+<% if @info_request_batch.present? %>
+  <%= render partial: 'alaveteli_pro/info_requests/batch_request_preview' %>
 <% else %>
-  <% @title = _("Preview new {{law_used_short}} request to '{{public_body_name}}'",
-                law_used_short: h(@info_request.legislation),
-                public_body_name: h(@info_request.public_body.name)) %>
-<% end %>
-<div class="inner-canvas">
-  <div class="inner-canvas-header">
-    <div class="row">
-      <h1><%= @title %></h1>
-    </div>
-  </div>
-  <div class="inner-canvas-body">
-    <div class="row">
-      <div class="new_info_request">
-        <div class="message-preview">
-          <div class="preview-advice">
-            <div class="advice-panel">
-              <% if batch_request %>
-                <%= render(
-                      partial: "alaveteli_pro/info_request_batches/embargo_info",
-                      locals: { embargo: @embargo, tense: :future })  %>
-              <% else %>
-                <%= render(
-                      partial: "alaveteli_pro/info_requests/embargo_info",
-                      locals: { embargo: @embargo, tense: :future })  %>
-              <% end %>
-            </div>
-          </div>
-
-          <div class="preview-pane">
-            <% if batch_request %>
-              <%= render partial: 'alaveteli_pro/info_request_batches/message_preview',
-                         locals: {
-                            batch: @info_request_batch,
-                            draft: @draft_info_request_batch,
-                            outgoing_message: @outgoing_message
-                         } %>
-            <% else %>
-              <%= render partial: 'alaveteli_pro/info_requests/message_preview',
-                         locals: {
-                            info_request: @info_request,
-                            draft_info_request: @draft_info_request,
-                            outgoing_message: @outgoing_message
-                         } %>
-            <% end %>
-          </div>
-        </div>
+  <% body = @info_request.public_body %>
+  <% @title = _('Check and send') %>
+  <% content_for :body_class, 'band-view request-flow-view' %>
+  <% check = RequestJourney::Checks.for("#{@info_request.title}\n#{@outgoing_message.body}") %>
+  <header class="page-band request-flow-band">
+    <h1 class="page-band__title"><%= @title %></h1>
+    <%= render partial: 'alaveteli_pro/info_requests/steps', locals: {
+      now: 4, steps: [[_('Who'), body.name, nil], [_('Subject'), @info_request.title, nil], [_('Write request')], [_('Check and send')]]
+    } %>
+  </header>
+  <%= band_notice %>
+  <%= render partial: 'request/email_override_warning' %>
+  <div class="request-flow request-flow--two request-check">
+    <div class="request-flow__main">
+      <% if check %>
+        <p class="request-check__nudge" role="note"><b><%= check.line %></b> <%= check.note %>
+          <% if check.link %><%= link_to check.link.last, class: 'topic-out' do %><%= check.link.first %><span class="visually-hidden"> <%= _('(another site)') %></span><% end %><% end %></p>
+      <% end %>
+      <div class="request-sheet">
+        <p class="request-sheet__to"><%= _('To <b>{{authority}}</b>', authority: body.name) %></p>
+        <div class="request-sheet__subject"><h2><%= @info_request.title %></h2></div>
+        <div class="request-sheet__letter request-sheet__review"><%= simple_format(h(@outgoing_message.body)) %></div>
       </div>
+      <p><%= link_to _('Write request'), new_alaveteli_pro_info_request_path(draft_id: @draft_info_request.id, step: 'write') %></p>
     </div>
+    <aside class="request-flow__side request-flow__check">
+      <%= render partial: 'alaveteli_pro/info_requests/facts', locals: { body: body } %>
+      <%= form_tag alaveteli_pro_info_requests_path, id: 'send_form', class: 'request-review__actions' do %>
+        <%= hidden_field_tag :draft_id, @draft_info_request.id, id: nil %>
+        <%= hidden_field_tag :review_token, RequestJourney::Review.token(@draft_info_request), id: nil %>
+        <% if new_request_turnstile? %><p><%= turnstile_box('first_request') %></p><% end %>
+        <button type="submit" name="send" value="1" id="submit_button" class="button request-flow__send" data-disable-with="<%= _('Sending…') %>"><%= _('Send request') %></button>
+      <% end %>
+    </aside>
   </div>
-</div>
+<% end %>

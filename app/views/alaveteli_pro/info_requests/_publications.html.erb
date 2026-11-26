@@ -1,0 +1,21 @@
+<section class="request-suggestions" aria-labelledby="request-suggestions-title">
+  <h2 id="request-suggestions-title"><%= _('Possible matches') %></h2>
+  <ul>
+    <% suggestions.questions.each do |link| %>
+      <li><%= link_to link.title, link.url, target: '_blank', rel: 'noopener' %>
+        <span class="request-suggestions__note"><%= link.note %></span></li>
+    <% end %>
+    <% suggestions.documents.each do |document| %>
+      <% hit = document.hit %>
+      <% anchor = hit && (hit.kind == 'image' ? "text-#{hit.number}" : hit.anchor) %>
+      <% url = disclosure_document_path(document.public_id, find: suggestions.subject, anchor: anchor) %>
+      <li><%= link_to document.title, request_journey_link_path(url), target: '_blank', rel: 'noopener' %>
+        <span class="request-suggestions__note"><%= suggestions.body.name %><%= " · #{_('released {{date}}', date: I18n.l(document.released_on, format: '%-d %B %Y'))}" if document.released_on %></span>
+        <% if hit %><p class="request-suggestions__excerpt"><%= hit.label %>: <%= hit.snippet %></p><% end %></li>
+    <% end %>
+    <% suggestions.releases.each do |release| %>
+      <li><%= link_to release.title, release.url, target: '_blank', rel: 'noopener' %>
+        <span class="request-suggestions__note"><%= suggestions.body.name %> · <%= _('released {{date}}', date: I18n.l(release.released_on, format: '%-d %B %Y')) %> · <%= _('another site') %></span></li>
+    <% end %>
+  </ul>
+</section>

@@ -1,0 +1,18 @@
+<%# Minimal /body/<name> view until B11/B13 adds AuthorityFeeds and Topics hub panels. %>
+<% body = @public_body %>
+<div class="body-hub">
+  <h1><%= body.name %></h1>
+  <% if body.is_requestable? %>
+    <p><%= link_to make_request_path(body), class: 'page-band__button' do %><%= _('Make request<span class="visually-hidden"> to {{public_body_name}}</span>', public_body_name: body.name) %><% end %></p>
+  <% end %>
+  <% if @search&.results&.any? %>
+    <section aria-labelledby="body-here">
+      <h2 id="body-here"><%= _('Published here') %></h2>
+      <ol class="documents__list">
+        <% @search.results.first(5).each do |document| %>
+          <%= render partial: 'disclosures/documents/result', locals: { document: document, search: @search, in_batch: false } %>
+        <% end %>
+      </ol>
+    </section>
+  <% end %>
+</div>

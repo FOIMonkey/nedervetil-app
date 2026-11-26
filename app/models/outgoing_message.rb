@@ -17,22 +17,21 @@
 #  from_name                    :text
 #
 
-# models/outgoing_message.rb:
-# A message, associated with a request, from the user of the site to somebody
-# else. e.g. An initial request for information, or a complaint.
-#
 # Copyright (c) 2007 UK Citizens Online Democracy. All rights reserved.
 # Email: hello@mysociety.org; WWW: http://www.mysociety.org/
 
+# An initial request or follow-up from a requester to an authority. Validates
+# letter templates, applies display/index masking and tracks delivery.
 class OutgoingMessage < ApplicationRecord
   include MessageProminence
-  include MaskedByRequest
   include Rails.application.routes.url_helpers
   include LinkToHelper
+  include MaskedByRequest
   include Searchable
   include Taggable
 
   include OutgoingMessage::DeliveryStatus
+  include OutgoingMessage::DeliveryTransitions
 
   MESSAGE_TYPES = %w(initial_request followup).freeze
   WHAT_DOING_VALUES = %w(normal_sort
@@ -40,8 +39,8 @@ class OutgoingMessage < ApplicationRecord
                          external_review
                          new_information).freeze
 
-  # To override the default letter
-  attr_accessor :default_letter
+  # To override the default letter (default_letter= is defined below)
+  attr_reader :default_letter
 
   before_validation :cache_from_name
   validates_presence_of :from_name, unless: -> (m) { !m.info_request&.user }
@@ -69,28 +68,27 @@ class OutgoingMessage < ApplicationRecord
            inverse_of: :outgoing_message,
            dependent: :destroy
 
-  delegate :apply_masks, :expire, :log_event, to: :info_request
+  delegate :expire, :log_event, to: :info_request
   delegate :public_body, to: :info_request, private: true, allow_nil: true
 
   after_initialize :set_default_letter
 
-  strip_attributes allow_empty: true
+  # Run after core association callbacks.
+  after_create :request_limits_record
+  after_save :touch_request_activity, if: :sent_activity_changed?
+
+  # Exempts Deadlines::Reminder follow-ups from RequestLimits.
+  attr_accessor :request_limits_exempt
+
+  # prominence_reason is MessageProminence's.
+  normalizes :body, :status, :message_type, :what_doing, :prominence,
+             :from_name, with: Whitespace::TRIM
 
   admin_columns include: [:to, :from, :subject]
 
   default_url_options[:host] = AlaveteliConfiguration.domain
 
   scope :followup, -> { where(message_type: 'followup') }
-  scope :is_searchable, -> { where(prominence: 'normal') }
-
-  scope :not_embargoed, -> {
-    joins(:info_request).
-      select('outgoing_messages.*').
-        joins('LEFT OUTER JOIN embargoes
-               ON embargoes.info_request_id = info_requests.id').
-          where('embargoes.id IS NULL').
-            references(:embargoes)
-  }
 
   searchable PrivateArchive::Policy.searchable_options(
     index: {
@@ -120,34 +118,25 @@ class OutgoingMessage < ApplicationRecord
       where("regexp_replace(outgoing_messages.body, '[[:space:]]', '', 'g') =
              regexp_replace(?, '[[:space:]]', '', 'g')", body)
     else
-      # For other databases (e.g. SQLite) not the end of the world being space-sensitive for this check
+      # For other databases (e.g. SQLite) not the end of the world being
+      # space-sensitive for this check
       where(body: body)
     end
   end
 
-  def get_internal_review_insert_here_note
-    _("GIVE DETAILS ABOUT YOUR COMPLAINT HERE")
-  end
-
-  def get_default_message
+  def default_message
     letter_template.body(default_message_replacements)
   end
 
-  def set_signature_name(name)
-    # We compare against raw_body as body strips linebreaks and applies
-    # censor rules
-    self.body = get_default_message + name if raw_body == get_default_message
+  def add_signature(name)
+    self.body = default_message + name if default_body?
   end
 
   def from_name
-    return info_request.external_user_name if info_request.is_external?
-
     super || info_request.user_name
   end
 
   def safe_from_name
-    return info_request.external_user_name if info_request.is_external?
-
     apply_all_masks(from_name, 'text/plain', redacted_attribute: :from_name)
   end
 
@@ -165,8 +154,10 @@ class OutgoingMessage < ApplicationRecord
   def to
     if replying_to_incoming_message?
       # calling safe_from_name from so censor rules are run
-      MailHandler.address_from_name_and_email(incoming_message_followup.safe_from_name,
-                                              incoming_message_followup.from_email)
+      MailHandler.address_from_name_and_email(
+        incoming_message_followup.safe_from_name,
+        incoming_message_followup.from_email
+      )
     else
       info_request.recipient_name_and_email
     end
@@ -179,8 +170,10 @@ class OutgoingMessage < ApplicationRecord
   def subject
     if message_type == 'followup'
       if what_doing == 'internal_review'
-        _("Internal review of {{email_subject}}",
-          email_subject: info_request.email_subject_request(html: false))
+        PlainTextTranslation._(
+          "Internal review of {{email_subject}}",
+          email_subject: info_request.email_subject_request(html: false)
+        )
       else
         info_request.
           email_subject_followup(incoming_message: incoming_message_followup,
@@ -196,8 +189,8 @@ class OutgoingMessage < ApplicationRecord
   #
   # options - Hash of options
   #           :censor_rules - Array of CensorRules to apply. Defaults to the
-  #                           applicable_censor_rules of the associated
-  #                           InfoRequest. (optional)
+  #                           black censor rules of the associated InfoRequest.
+  #                           (optional)
   #
   # Returns a String
   def body(options = {})
@@ -206,16 +199,15 @@ class OutgoingMessage < ApplicationRecord
 
     text = clean_text(text)
 
-    # Use the given censor_rules; otherwise fetch them from the associated
-    # info_request
     censor_rules = options.fetch(:censor_rules) do
-      info_request.try(:applicable_censor_rules) or []
+      info_request ? info_request.masks_for(:requester).censor_rules : []
     end
 
-    # FIXME: We appear not to be applying text masks here
-    censor_rules.reduce(text) do |t, rule|
-      rule.apply_to_text(t, redactable: self, redacted_attribute: :body)
-    end
+    AlaveteliTextMasker.apply_masks(text, 'text/plain',
+                                    censor_rules: Array(censor_rules),
+                                    default_masks: false,
+                                    redactable: self,
+                                    redacted_attribute: :body)
   end
 
   def raw_body
@@ -231,29 +223,14 @@ class OutgoingMessage < ApplicationRecord
     MySociety::Validate.contains_postcode?(body)
   end
 
-  def is_owning_user?(user)
-    info_request.is_owning_user?(user)
-  end
-
   # An admin function
   def prepare_message_for_resend
     if MESSAGE_TYPES.include?(message_type) &&
-         (status == 'sent' || status == 'failed')
+       (status == 'sent' || status == 'failed')
       self.status = 'ready'
     else
       raise "Message id #{id} has type '#{message_type}' status " \
         "'#{status}' which prepare_message_for_resend can't handle"
-    end
-  end
-
-  # Returns the text to quote the original message when sending this one
-  def quoted_part_to_append_to_email
-    if message_type == 'followup' && !incoming_message_followup.nil?
-      quoted = "\n\n-----Original Message-----\n\n"
-      quoted += incoming_message_followup.get_body_for_quoting
-      quoted += "\n"
-    else
-      ""
     end
   end
 
@@ -282,27 +259,29 @@ class OutgoingMessage < ApplicationRecord
   end
 
   # Return body for display as HTML
-  def get_body_for_html_display
+  def get_body_for_html_display # rubocop:disable Naming/AccessorMethodName -- the add-on calls it
     text = body.strip
     remove_privacy_sensitive_things!(text)
     text = CGI.escapeHTML(text)
-    text = MySociety::Format.make_clickable(text, { contract: 1, nofollow: true })
-    text.gsub!(/\[(email address|mobile number)\]/, '[<a href="/help/officers#mobiles">\1</a>]')
-    text = ActionController::Base.helpers.simple_format(
+    text = MySociety::Format.make_clickable(
+      text, { contract: 1, nofollow: true }
+    )
+    text.gsub!(/\[(email address|mobile number)\]/,
+               '[<a href="/help/officers#mobiles">\1</a>]')
+    ActionController::Base.helpers.simple_format(
       text, {}, sanitize_options: { attributes: %w[href rel title] }
     )
-    text.html_safe
   end
 
   # Return body for display as text
-  def get_body_for_text_display
-    get_text_for_indexing(strip_salutation=false)
+  def body_for_text_display
+    get_text_for_indexing(false)
   end
 
   def default_letter=(text)
-    original_default = get_default_message.clone
+    original_default = default_message.clone
     @default_letter = text
-    self.body = get_default_message if raw_body == original_default
+    self.body = default_message if default_body?(original_default)
   end
 
   def update_and_log_event(event: {}, options: {}, **params)
@@ -331,29 +310,34 @@ class OutgoingMessage < ApplicationRecord
 
   private
 
+  # Compares raw_body against the normalized template (body strips line breaks
+  # and applies censor rules).
+  def default_body?(template = default_message)
+    raw_body == self.class.normalize_value_for(:body, template)
+  end
+
   def cache_from_name
     return if read_attribute(:from_name)
 
     self.from_name = info_request.user_name if info_request
   end
 
+  # Automatic classification: sending never marks unread replies as reviewed.
   def set_info_request_described_state
-    if status == 'failed'
-      info_request.set_described_state('error_message')
-    elsif message_type == 'initial_request'
-      info_request.set_described_state('waiting_response')
-    elsif message_type == 'followup'
-      if info_request.described_state == 'waiting_clarification'
+    automatic do
+      if status == 'failed'
+        record_failure_status
+      elsif message_type == 'initial_request'
         info_request.set_described_state('waiting_response')
+      elsif message_type == 'followup'
+        record_followup_status
       end
-      if what_doing == 'internal_review'
-        info_request.set_described_state('internal_review')
-      end
+      restore_status_after_resend
     end
   end
 
   def set_default_letter
-    self.body = get_default_message if raw_body.nil?
+    self.body = default_message if raw_body.nil?
   end
 
   def letter_template
@@ -373,7 +357,6 @@ class OutgoingMessage < ApplicationRecord
     if info_request
       opts[:url] = request_url(info_request) if info_request.url_title
       opts[:info_request_title] = info_request.title if info_request.title
-      opts[:embargo] = true if info_request.embargo
     end
 
     opts[:public_body_name] =
@@ -393,28 +376,31 @@ class OutgoingMessage < ApplicationRecord
     message_type == 'followup' &&
       incoming_message_followup &&
       incoming_message_followup.safe_from_name &&
-      incoming_message_followup.valid_to_reply_to?
+      incoming_message_followup.followup_to_sender?
   end
 
   def template_changed
+    # rubocop:disable Layout/LineLength -- a regex
     if raw_body.empty? || HTMLEntities.new.decode(raw_body) =~
                           /\A#{template_regex(letter_template.body(default_message_replacements))}/
+      # rubocop:enable Layout/LineLength
       if message_type == 'followup'
         if what_doing == 'internal_review'
-          errors.add(:body, _("Please give details explaining why you want a review"))
+          errors.add(:body,
+                     _("Please give details explaining why you want a review"))
         else
           errors.add(:body, _("Please enter your follow up message"))
         end
-      elsif
-        errors.add(:body, _("Please enter your letter requesting information"))
-      else
-        raise "Message id #{id} has type '#{message_type}' which validate can't handle"
+      elsif message_type == 'initial_request'
+        errors.add(:body,
+                   _("Please enter your letter requesting information"))
       end
     end
   end
 
   def template_regex(template_text)
-    text = template_text.gsub("\r", "\n") # in case we have '\r\n' or even '\r's all the way down
+    # in case we have '\r\n' or even '\r's all the way down
+    text = template_text.tr("\r", "\n")
     # feels like this should need a gsub(/\//, '\/') but doesn't seem to
     Regexp.escape(text.squeeze("\n")).
       gsub("\\n", '\s*').
@@ -423,25 +409,54 @@ class OutgoingMessage < ApplicationRecord
   end
 
   def body_has_signature
-    if raw_body =~ /#{template_regex(letter_template.signoff(default_message_replacements))}\s*\Z/m
-      errors.add(:body, _("Please sign at the bottom with your name, or alter the \"{{signoff}}\" signature", signoff: letter_template.signoff(default_message_replacements)))
+    # rubocop:disable Layout/LineLength -- a regex
+    if /#{template_regex(letter_template.signoff(default_message_replacements))}\s*\Z/m.match?(raw_body)
+      # rubocop:enable Layout/LineLength
+      errors.add(
+        :body,
+        _("Please sign at the bottom with your name, or alter the " \
+          "\"{{signoff}}\" signature",
+          signoff: letter_template.signoff(default_message_replacements))
+      )
     end
   end
 
   def body_uses_mixed_capitals
-    unless MySociety::Validate.uses_mixed_capitals(body)
-      errors.add(:body, _('Please write your message using a mixture of capital and lower case letters. This makes it easier for others to read.'))
-    end
+    return if MySociety::Validate.uses_mixed_capitals(body)
+
+    errors.add(:body,
+               _('Please write your message using a mixture of capital ' \
+                 'and lower case letters. This makes it easier for ' \
+                 'others to read.'))
   end
 
   def what_doing_value
-    if what_doing.nil? || !WHAT_DOING_VALUES.include?(what_doing)
-      errors.add(:what_doing_dummy, _('Please choose what sort of reply you are making.'))
-    end
+    return if WHAT_DOING_VALUES.include?(what_doing)
+
+    errors.add(:what_doing_dummy,
+               _('Please choose what sort of reply you are making.'))
   end
 
   # remove excess linebreaks that unnecessarily space it out
   def clean_text(text)
     text.strip.gsub(/(?:\n\s*){2,}/, "\n\n")
+  end
+
+  def request_limits_record
+    return unless defined?(RequestLimits)
+    return unless message_type == 'followup'
+    return if request_limits_exempt
+
+    RequestLimits.record!(info_request.user, :followup,
+                          info_request_id: info_request_id)
+  end
+
+  def sent_activity_changed?
+    status == 'sent' &&
+      (saved_change_to_status? || saved_change_to_last_sent_at?)
+  end
+
+  def touch_request_activity
+    info_request&.record_activity!(last_sent_at || Time.current)
   end
 end

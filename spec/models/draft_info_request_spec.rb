@@ -2,14 +2,14 @@
 #
 # Table name: draft_info_requests
 #
-#  id               :integer          not null, primary key
-#  title            :string
-#  user_id          :integer
-#  public_body_id   :integer
-#  body             :text
-#  embargo_duration :string
-#  created_at       :datetime         not null
-#  updated_at       :datetime         not null
+#  id              :integer          not null, primary key
+#  title           :string
+#  user_id         :integer
+#  public_body_id  :integer
+#  body            :text
+#  created_at      :datetime         not null
+#  updated_at      :datetime         not null
+#  journey_context :jsonb            not null
 #
 
 require 'spec_helper'

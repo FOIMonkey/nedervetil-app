@@ -3,10 +3,16 @@
   <div class="requests">
     <div class="requests__folder-title">
       <h2><%= @request_filter.filter_capital_label %></h2>
+      <% attention_active = defined?(IncomingAttention::Effective) && IncomingAttention::Effective.active? %>
+      <% if attention_active && @request_filter.filter == 'needs_attention' %>
+        <p class="requests__folder-hint"><%= _("Replies you should read. Each one stays here until you set its request's status.") %></p>
+      <% elsif attention_active && @request_filter.filter == 'routine_updates' %>
+        <p class="requests__folder-hint"><%= _('Acknowledgements and other routine updates. Dismiss an update to remove it from this list.') %></p>
+      <% end %>
     </div>
     <div class="requests__header">
 
-      <%= form_for( @request_filter, :url => '', :method => 'get', :html => { :class => 'requests__filter_form' }) do |f| %>
+      <%= form_for(@request_filter, url: '', method: 'get', html: { class: 'requests__filter_form', data: { controller: 'auto-submit' } }) do |f| %>
         <div class="requests__search">
           <%= f.text_field :search, :placeholder => _('Search') %>
           <button type="submit" class="requests__search__button">
@@ -16,8 +22,8 @@
           </button>
         </div>
         <div class="requests__sort">
-          <label for="sort-options"><%= _('Sort by') %></label>
-          <%= f.select :order, @request_filter.order_options %>
+          <%= f.label :order, _('Sort by') %>
+          <%= f.select :order, @request_filter.order_options, {}, data: { action: 'auto-submit#submit' } %>
         </div>
         <%= f.hidden_field :filter %>
       <% end %>
@@ -50,8 +56,15 @@
       </p>
     </div>
     <div class="requests__list">
-      <%= render @request_summaries.map(&:summarisable) %>
-      <%= will_paginate WillPaginate::Collection.new(@page, @per_page, @request_summaries.count) %>
+      <% if attention_active %>
+        <% if @request_summaries.empty? && !@request_filter.search.present? && %w[needs_attention routine_updates].include?(@request_filter.filter) %>
+          <p class="attention-empty"><%= @request_filter.filter == 'needs_attention' ? _('Nothing needs your attention.') : _('No routine updates.') %></p>
+        <% end %>
+        <%= render partial: "incoming_attention/request_groups", locals: { summaries: @request_summaries, data: @attention_data, filter: @request_filter.filter } %>
+      <% else %>
+        <%= render @request_summaries.map(&:summarisable) %>
+      <% end %>
+      <%= will_paginate WillPaginate::Collection.new(@page, @per_page, (attention_active ? @request_summaries.total_entries : @request_summaries.count)) %>
     </div> <!-- .requests__list -->
 
   </div> <!-- .requests -->

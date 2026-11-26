@@ -1,9 +1,12 @@
+# Records SMTP delivery and failure events on an OutgoingMessage and matches
+# logged Message-IDs against Exim or Postfix MailServerLog rows to compute
+# delivery status.
 module OutgoingMessage::DeliveryStatus
   extend ActiveSupport::Concern
 
-  included do
-    STATUS_TYPES = %w(ready sent failed).freeze
+  STATUS_TYPES = %w(ready sent failed).freeze
 
+  included do
     validates_inclusion_of :status, in: STATUS_TYPES
   end
 
@@ -63,13 +66,11 @@ module OutgoingMessage::DeliveryStatus
 
   def sendable?
     if status == 'ready'
-      if message_type == 'initial_request'
-        true
-      elsif message_type == 'followup'
-        true
-      else
+      unless %w[initial_request followup].include?(message_type)
         raise "Message id #{id} has type '#{message_type}' which cannot be sent"
       end
+
+      true
     elsif status == 'sent'
       raise "Message id #{id} has already been sent"
     else
@@ -84,8 +85,7 @@ module OutgoingMessage::DeliveryStatus
   def smtp_message_ids
     info_request_events.
       order(:created_at).
-        map { |event| event.params[:smtp_message_id] }.
-          compact.
+        filter_map { |event| event.params[:smtp_message_id] }.
             map do |smtp_id|
               smtp_id.match(/<(.*)>/) { |m| m.captures.first } || smtp_id
             end
@@ -125,7 +125,7 @@ module OutgoingMessage::DeliveryStatus
     if status == 'failed'
       MailServerLog::DeliveryStatus.new(:failed)
     else
-      mail_server_logs.map(&:delivery_status).compact.reject(&:unknown?).last ||
+      mail_server_logs.filter_map(&:delivery_status).reject(&:unknown?).last ||
         MailServerLog::DeliveryStatus.new(:unknown)
     end
   end
@@ -142,7 +142,8 @@ module OutgoingMessage::DeliveryStatus
                 try(:line)
     end
 
-    lines.compact.map { |line| line[/\b\w{6}-(?:\w{6}-\w{2}|\w{11}-\w{4})\b/].strip }.compact
+    lines.compact.
+      filter_map { |line| line[/\b\w{6}-(?:\w{6}-\w{2}|\w{11}-\w{4})\b/].strip }
   end
 
   def exim_mail_server_logs

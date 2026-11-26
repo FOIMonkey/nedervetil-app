@@ -1,69 +1,3 @@
-<% unless @batch %>
-  <% content_for :javascript do %>
-    <%= javascript_tag nonce: true do %>
-      $(document).ready(function(){
-        // Avoid triggering too often (on each keystroke) by using the
-        // debounce jQuery plugin:
-        // http://benalman.com/projects/jquery-throttle-debounce-plugin/
-        $("#typeahead_search").keypress($.debounce( 300, function() {
-          if ( $('#request_search_ahead_results').text().trim().length > 0) {
-            $('#typeahead_response').slideUp('fast');
-          }
-
-        $("#typeahead_response").load("<%= search_ahead_url %>?q="+encodeURI(this.value)+
-          "&requested_from=<%= @info_request.public_body.url_name %>"+
-          "&per_page=3", function() {
-
-            if ( $('#request_search_ahead_results').text().trim().length > 0) {
-              $('#typeahead_response').hide().slideDown('fast');
-
-              $("#typeahead_response .request_short_listing a").on('click', function(){
-                <%= raw(track_analytics_event(
-                  AnalyticsEvent::Category::VIEW_REQUEST,
-                  AnalyticsEvent::Action::POSSIBLE_RELATED,
-                  :label => "$.trim($(this).text())",
-                  :label_is_script => true
-                )) %>
-              }).attr({
-                "target": "_blank"
-              });
-
-              $("#body-site-search-link").on('click', function(){
-                <%= raw(track_analytics_event(
-                  AnalyticsEvent::Category::SEARCH_OFFICIAL_WEBSITE,
-                  AnalyticsEvent::Action::POSSIBLE_RELATED,
-                  :label => @info_request.public_body.calculated_home_page
-                )) %>
-              }).attr({
-                "target": "_blank",
-                "href": "http://www.google.com/#q="+encodeURI($("#typeahead_search").val())+
-                        "+site:<%= @info_request.public_body.calculated_home_page %>"
-              });
-
-              $('.close-button').click(function() { $(this).parent().hide() });
-            }
-          });
-        }));
-
-        var questions = $('#request_form_questions')
-        var questionInputs = $('input[name=request_form_response]', questions)
-        var questionResponses = $('.request_form_response')
-
-        // when inputs are checked update which response is focused.
-        questionInputs.on('click', function () {
-          var id = '#request_form_response--' + $(this).val()
-          questionResponses.removeClass('request_form_response--focused')
-          questionResponses.filter(id).addClass('request_form_response--focused')
-        })
-
-        // checked state can follow manual page reloads, ensure correct response
-        // is focused.
-        questionInputs.filter(':checked').click()
-      });
-    <% end %>
-  <% end %>
-<% end %>
-
 <% if @batch %>
   <% @title = _("Make an {{law_used_short}} request",
                 law_used_short: h(@info_request.legislation)) %>
@@ -72,28 +6,13 @@
 <% end %>
 
 
+<%= page_band _('Make a request') %>
+
+<%# data-turbo="false": the next step renders a page after the submit, which Turbo would drop (doc/FORK.md). %>
 <%= form_for(@info_request, :url => (@batch ? new_batch_path : new_request_path),
-                            :html => { :id => 'write_form' }  ) do |f| %>
+                            :html => { :id => 'write_form', :data => { :turbo => false } }  ) do |f| %>
   <div id="request_header" class="request_header">
     <div id="request_header_body" class="request_header_body">
-      <h1><%= _('Make a request') %></h1>
-
-      <% if @existing_request %>
-        <div class="errorExplanation" id="errorExplanation">
-          <ul>
-            <li>
-              <%= _('{{existing_request_user}} already created the same ' \
-                    'request on {{date}}. You can either view the ' \
-                    '<a href="{{existing_request}}">existing request</a>, or ' \
-                    'edit the details below to make a new but similar request.',
-                    :existing_request_user => user_or_you_capital_link(@existing_request.user),
-                    :date => simple_date(@existing_request.created_at),
-                    :existing_request => request_path(@existing_request)) %>
-            </li>
-          </ul>
-        </div>
-      <% end %>
-
       <% if @existing_batch %>
         <div class="errorExplanation" id="errorExplanation">
           <ul>
@@ -118,16 +37,17 @@
         <label class="form_label"><%= _('To:') %></label>
         <span id="to_public_body" class="to_public_body">
           <%= _("Your selected authorities") %>
-          <span class="batch_public_body_toggle" data-hidetext="<%= _("(hide)") %>" data-showtext="<%= _("(show)") %>"><a class="toggle-message"></a></span>
         </span>
 
-        <div class="batch_public_body_list">
+        <%# Open without scripts too: a details element needs none. %>
+        <details class="batch_public_body_list">
+          <summary class="batch_public_body_toggle"><%= _("Show the authorities") %></summary>
           <ul>
             <% @public_bodies.each do |public_body| %>
               <li><%= public_body.name %></li>
             <% end %>
           </ul>
-        </div>
+        </details>
       <% else %>
         <p id="to_public_body" class="to_public_body">
           <span class="to_public_body_label"><%= _('To') %></span>
@@ -194,15 +114,6 @@
           <li><%= _('Make sure the information you are asking for is not ' \
                        'already publicly available.') %></li>
 
-          <% unless @batch %>
-            <li>
-              <% if @info_request.public_body.info_requests.is_public.any? %>
-                <%= _("Browse <a href='{{url}}'>other requests</a> to '{{public_body_name}}' for examples of how to word your request.", :public_body_name=>h(@info_request.public_body.name), :url=>public_body_path(@info_request.public_body)) %>
-              <% else %>
-                <%= _("Browse <a href='{{url}}'>other requests</a> for examples of how to word your request.", :url=>request_list_successful_url) %>
-              <% end %>
-            </li>
-      <% end %>
         </ul>
       </div>
 
@@ -212,7 +123,7 @@
         <ul>
           <li>
             <%= raw(_("<strong>Can I request information about myself?</strong> " \
-                      "<a href=\"{{url}}\">No!</a>",
+                      "<a href=\"{{url}}\">No</a>",
                       :url => help_requesting_path(:anchor => "data_protection").html_safe)) %>
           </li>
           <li><%= _('Write your request in <strong>simple, precise language</strong>.') %></li>
@@ -232,16 +143,16 @@
           <li>
             <% if @user %>
               <%= raw(_('Everything that you enter on this page, including ' \
-                        '<strong>your name</strong> ({{user_name}}), will ' \
-                        'be <strong>displayed publicly</strong> on this ' \
-                        'website <a href="{{url}}">forever</a>',
+                        '<strong>your name</strong> ({{user_name}}), is ' \
+                        'sent to the authority. It stays ' \
+                        '<strong>private</strong> on this website.',
                         user_name: @user.name,
                         url: help_privacy_path(anchor: 'public_request').html_safe)) %>.
             <% else %>
               <%= raw(_('Everything that you enter on this page, including ' \
-                        '<strong>your name</strong>, will be <strong>displayed ' \
-                        'publicly</strong> on this website ' \
-                        '<a href="{{url}}">forever</a>',
+                        '<strong>your name</strong>, is sent to the ' \
+                        'authority. It stays <strong>private</strong> on ' \
+                        'this website.',
                         :url => help_privacy_path(:anchor => "public_request").html_safe)) %>.
             <% end %>
           </li>
@@ -256,7 +167,7 @@
       </div>
     </div>
 
-    <div id="request_form" class="request_form">
+    <div id="request_form" class="request_form" data-controller="question-responses" data-action="change->question-responses#pick">
       <% if @batch || @info_request.public_body.questions.blank? %>
         <%= render 'form', f: f %>
       <% else %>
@@ -272,7 +183,7 @@
         </div>
 
         <% @info_request.public_body.questions.each do |question| %>
-          <div class="request_form_response request_form_response--<%= question.action %>" id="request_form_response--<%= question.key %>">
+          <div class="request_form_response request_form_response--<%= question.action %>" id="request_form_response--<%= question.key %>" data-question-responses-target="response">
             <% if question.action == :allow %>
               <%= render 'form', f: f %>
             <% else %>
@@ -285,8 +196,3 @@
   </div>
 <% end %>
 
-<% if @batch %>
-  <% content_for :javascript do %>
-    <%= javascript_include_tag 'new-request.js', nonce: true %>
-  <% end %>
-<% end %>

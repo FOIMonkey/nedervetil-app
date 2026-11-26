@@ -2,13 +2,12 @@
 #
 # Table name: draft_info_request_batches
 #
-#  id               :integer          not null, primary key
-#  title            :string
-#  body             :text
-#  user_id          :integer
-#  created_at       :datetime         not null
-#  updated_at       :datetime         not null
-#  embargo_duration :string
+#  id         :integer          not null, primary key
+#  title      :string
+#  body       :text
+#  user_id    :integer
+#  created_at :datetime         not null
+#  updated_at :datetime         not null
 #
 
 require 'spec_helper'
@@ -17,8 +16,6 @@ require 'models/concerns/info_request/draft_title_validation'
 RSpec.describe AlaveteliPro::DraftInfoRequestBatch do
   it_behaves_like 'concerns/info_request/draft_title_validation',
                   :draft_info_request_batch
-
-  it { is_expected.to strip_attribute(:embargo_duration) }
 
   let(:draft_batch) { FactoryBot.create(:draft_info_request_batch) }
   let(:pro_user) { FactoryBot.create(:pro_user) }
@@ -30,7 +27,8 @@ RSpec.describe AlaveteliPro::DraftInfoRequestBatch do
 
   it "sets a default body if none is provided" do
     draft = AlaveteliPro::DraftInfoRequestBatch.new(user: pro_user)
-    expect(draft.body).to eq "Dear [Authority name],\n\n\n\nYours faithfully,\n\n#{pro_user.name}"
+    expect(draft.body).to eq "Dear [Authority name],\n\n\n\n" \
+                             "Yours faithfully,\n\n#{pro_user.name}"
   end
 
   it "it imposes an alphabetical sort order on associated public bodies" do

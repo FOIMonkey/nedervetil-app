@@ -73,7 +73,7 @@
 </div>
 
 <%- if @sidebar %>
-  <%= render partial: @sidebar_template,
+  <%= render partial: 'sidebar',
              locals: { info_request: @info_request,
                        similar_requests: @similar_requests,
                        similar_more: @similar_more,

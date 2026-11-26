@@ -1,5 +1,9 @@
+# Lets trusted users search or browse requestable authorities to add to a
+# DraftInfoRequestBatch, serving both full pages and XHR fragments.
 class AlaveteliPro::BatchRequestAuthoritySearchesController < AlaveteliPro::BaseController
   include AlaveteliPro::BatchRequest
+
+  before_action :require_batch_permission
 
   MAX_RESULTS = 500
 
@@ -10,7 +14,7 @@ class AlaveteliPro::BatchRequestAuthoritySearchesController < AlaveteliPro::Base
   end
 
   def search
-    # perform_search sets @query but typeahead_search doesn't
+    # typeahead_search doesn't set @query
     @query = params[:authority_query] || ""
     @search = typeahead_search(
       @query,
@@ -61,14 +65,19 @@ class AlaveteliPro::BatchRequestAuthoritySearchesController < AlaveteliPro::Base
 
   # Limit the result count
   def calculate_result_limit(search)
-    (search.matches_estimated > MAX_RESULTS) ? MAX_RESULTS : search.matches_estimated
+    if search.matches_estimated > MAX_RESULTS
+      MAX_RESULTS
+    else
+      search.matches_estimated
+    end
   end
 
   def check_page_limit!(page, per_page)
     # Later pages are very expensive to load
-    if page > MAX_RESULTS / per_page
-      raise ActiveRecord::RecordNotFound, "Sorry. No pages after #{MAX_RESULTS / per_page}."
-    end
+    return unless page > MAX_RESULTS / per_page
+
+    raise ActiveRecord::RecordNotFound,
+          "Sorry. No pages after #{MAX_RESULTS / per_page}."
   end
 
   def find_or_initialise_draft

@@ -1,0 +1,4 @@
+<p class="request-sheet__fixed"><%= greeting %></p>
+<label class="visually-hidden" for="outgoing_message_letter"><%= label %></label>
+<%= text_area_tag 'outgoing_message[letter]', text, id: 'outgoing_message_letter', rows: rows, class: 'request-sheet__text' %>
+<p class="request-sheet__fixed"><%= signoff %><br><b><%= signer %></b></p>

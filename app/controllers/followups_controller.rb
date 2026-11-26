@@ -205,7 +205,7 @@ class FollowupsController < ApplicationController
   end
 
   def set_last_request_data
-    set_last_request(@info_request)
+    remember_last_request(@info_request)
   end
 
   def set_outgoing_message

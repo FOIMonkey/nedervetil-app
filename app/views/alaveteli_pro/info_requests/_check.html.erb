@@ -1,0 +1,44 @@
+<% body = @info_request.public_body %>
+<% signer = current_user.name %>
+<% earlier = @draft_info_request&.public_body %>
+<% middle = RequestLetter.split(@outgoing_message.body, body.name, signer) ||
+            (earlier && RequestLetter.split(@outgoing_message.body, earlier.name, signer)) %>
+<%= form_tag alaveteli_pro_info_requests_path, id: 'write_form', class: 'request-flow request-flow--two request-check' do %>
+  <% if @draft_info_request&.persisted? %><%= hidden_field_tag :draft_id, @draft_info_request.id, id: nil %><% end %>
+  <%= hidden_field_tag 'info_request[public_body_id]', body.id, id: nil %>
+  <% (@journey_context || {}).each do |key, value| %><%= hidden_field_tag "journey[#{key}]", value, id: nil %><% end %>
+  <%# Enter opens Check and send. %>
+  <button type="submit" name="review" value="1" hidden><%= _('Check and send') %></button>
+  <div class="request-flow__main">
+    <% if @copied %>
+      <p class="request-flow__quiet"><%= _('Copied from your request of {{date}} to {{public_body_name}}. Change it, then send.', date: I18n.l(@copied.created_at.to_date, format: '%-d %b'), public_body_name: @copied.public_body.name) %></p>
+    <% end %>
+    <div class="request-sheet">
+      <p class="request-sheet__to"><%= _('To <b>{{authority}}</b>', authority: body.name) %>
+        <button type="submit" name="journey_step" value="who" class="request-to__change"><%= _('Change authority') %></button></p>
+      <div class="request-sheet__subject">
+        <label for="info_request_title"><%= _('Subject') %></label>
+        <%= text_field_tag 'info_request[title]', @info_request.title, id: 'info_request_title', size: 50, 'aria-describedby': 'request-subject-hint' %>
+        <button type="submit" name="journey_step" value="publications" class="request-to__change"><%= _('Check publications') %></button>
+        <p class="request-sheet__hint" id="request-subject-hint"><%= _('A short title. They see it as the email subject.') %></p>
+      </div>
+      <div class="request-sheet__letter">
+        <% if middle %>
+          <%= render partial: 'general/letter_sheet',
+                     locals: { greeting: RequestLetter.greeting(body.name), label: _('Your request'), text: middle,
+                               rows: 10, signoff: RequestLetter.template.signoff, signer: signer } %>
+        <% else %>
+          <label class="request-sheet__label" for="outgoing_message_body"><%= _('Your request') %></label>
+          <%= text_area_tag 'outgoing_message[body]', @outgoing_message.body, id: 'outgoing_message_body', rows: 16, class: 'request-sheet__text' %>
+        <% end %>
+      </div>
+    </div>
+  </div>
+  <aside class="request-flow__side request-flow__check">
+    <%= render partial: 'alaveteli_pro/info_requests/facts', locals: { body: body } %>
+    <div class="request-check__actions">
+      <button type="submit" name="save_draft" value="1" class="button request-flow__ghost"><%= _('Save draft') %></button>
+      <button type="submit" name="review" value="1" class="button request-flow__send"><%= _('Check and send') %></button>
+    </div>
+  </aside>
+<% end %>

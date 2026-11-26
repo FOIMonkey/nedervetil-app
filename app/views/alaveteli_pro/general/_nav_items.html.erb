@@ -1,46 +1,40 @@
-<li class="<%= 'selected' if controller?('alaveteli_pro/dashboard') && action?('index') %>"">
-  <%= link_to _("Dashboard"),
-      alaveteli_pro_dashboard_path,
+<%# This partial is rendered only after the viewer's Pro access is checked. The
+    flag below reuses that result for this render; it is never an access decision. %>
+<% @request_journey_pro = true %>
+<% own_request = controller?('request') && action?('show') && @info_request&.is_actual_owning_user?(@user) %>
+<li class="<%= 'selected' if controller?('alaveteli_pro/dashboard') && action?('index') || controller?('alaveteli_pro/info_requests') && action?('index') || controller?('info_request_batch') && action?('show') || own_request %>">
+  <%= request_journey_nav _('Home'), 'home',
+      :id => 'dashboard-link',
       :onclick => track_analytics_event(
         AnalyticsEvent::Category::PRO_NAV_CLICK,
         AnalyticsEvent::Action::PRO_NAV_DASHBOARD) %>
 </li>
 
-<li class="<%= 'selected' if (controller?('alaveteli_pro/info_requests') && action?('index') || controller?('info_request_batch') && action?('show') || controller?('request') && action?('show') ) %>">
-  <%= link_to _("Requests"),
-      alaveteli_pro_info_requests_path,
-      :onclick => track_analytics_event(
-        AnalyticsEvent::Category::PRO_NAV_CLICK,
-        AnalyticsEvent::Action::PRO_NAV_REQUESTS) %>
-</li>
-
 <li class="<%= 'selected' if (controller?('alaveteli_pro/info_requests') && action?('new', 'preview') || controller?('alaveteli_pro/batch_request_authority_searches') && action?('index') || controller?('alaveteli_pro/info_request_batches') && action?('new', 'preview')) %>">
-  <%= link_to _("Make a request"),
-              select_authority_path,
-              :id => 'make-request-link' %>
+  <%= request_journey_nav _('Make request'), 'request',
+              :id => 'make-request-link',
+              :onclick => track_analytics_event(
+                AnalyticsEvent::Category::PRO_NAV_CLICK,
+                AnalyticsEvent::Action::PRO_NAV_MAKE_REQUEST) %>
 </li>
 
-<li class="<%= 'selected' if controller?('public_body') %>">
-  <%= link_to _("View authorities"),
-      list_public_bodies_default_path,
+<li class="<%= 'selected' if controller?('topics/topics') %>">
+  <%= request_journey_nav _('Topics'), 'topics' %>
+</li>
+
+<li class="<%= 'selected' if controller?('disclosures/documents', 'disclosures/versions') %>">
+  <%= request_journey_nav _('Documents'), 'documents' %>
+</li>
+
+<li class="<%= 'selected' if controller?('public_body', 'authority_groups/groups') %>">
+  <%= request_journey_nav _('Authorities'), 'authorities',
       :onclick => track_analytics_event(
         AnalyticsEvent::Category::PRO_NAV_CLICK,
         AnalyticsEvent::Action::PRO_NAV_VIEW_AUTHORITIES) %>
 </li>
 
-<% if Blog.enabled? %>
-  <li class="<%= 'selected' if controller?('general') && action?('blog') %>">
-    <%= link_to _("Read blog"),
-                blog_path,
-                :onclick => track_analytics_event(
-                  AnalyticsEvent::Category::PRO_NAV_CLICK,
-                  AnalyticsEvent::Action::PRO_NAV_READ_BLOG) %>
-  </li>
-<% end %>
-
 <li class="<%= 'selected' if controller?('help') %>">
-  <%= link_to _("Help"),
-              help_about_path,
+  <%= request_journey_nav _('About'), 'about',
               :onclick => track_analytics_event(
                 AnalyticsEvent::Category::PRO_NAV_CLICK,
                 AnalyticsEvent::Action::PRO_NAV_HELP) %>

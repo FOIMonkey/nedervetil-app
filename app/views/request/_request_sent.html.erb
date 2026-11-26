@@ -13,36 +13,6 @@
                 "replied by then.",
                 :late_number_of_days => AlaveteliConfiguration.reply_late_after_days) %>
         </p>
-
-        <a href="<%= request.url %>"
-          class="button button-share js-share-request"
-          role="button"
-          data-share-title="<%= @info_request.title %>"
-          data-share-url="<%= request.url %>"
-          data-clipboard-text="<%= request.url %>"
-          data-clipboard-success="<%= _('Link copied!') %>">
-          <%= File.read(Rails.root.join("app/assets/images/share-icon.svg")).html_safe %>
-          <span><%= _("Share this request") %></span>
-        </a>
-
-        <h2><%= _("Keep your request up to date") %></h2>
-
-        <% if feature_enabled?(:annotations) %>
-          <p class="request-sent-message__para">
-            <%= _('If you write about this request ' \
-                  '(for example in a forum or a blog) ' \
-                  'please link to this page, and <a href="{{url}}">add an ' \
-                  'annotation</a> below telling people ' \
-                  'about your writing.',
-                  :url => new_comment_url(:url_title => @info_request.url_title).html_safe) %>
-          </p>
-        <% else %>
-          <p class="request-sent-message__para">
-            <%= _('If you write about this request ' \
-                  '(for example in a forum or a blog) ' \
-                  'please link to this page.') %>
-          </p>
-        <% end %>
       </div>
 
       <div class="request-sent-message__column-2">
@@ -51,11 +21,9 @@
 
           <ul class="what-next__list">
             <li>
-              <%= link_to _("View other requests to {{public_body}}", :public_body => @info_request.public_body.name), public_body_path(@info_request.public_body) %>
-            </li>
-            <li>
-              <%= link_to _("Help us classify requests that haven't " \
-                            "been updated"), categorise_play_path %>
+              <%= link_to _('Documents from {{public_body}}',
+                          public_body: @info_request.public_body.name),
+                        public_body_path(@info_request.public_body) %>
             </li>
           </ul>
         </div>

@@ -179,10 +179,8 @@ RSpec.describe 'One-file public catalogue and request deletion',
 
     expect(Disclosures::Search.new(q: 'spending report').results.map(&:id)).
       to eq([public_doc.id])
-    if defined?(RequestJourney::Suggestions)
-      expect(RequestJourney::Suggestions.new(body, 'spending report').
-        documents.map(&:public_id)).to eq([public_doc.public_id])
-    end
+    expect(RequestJourney::Suggestions.new(body, 'spending report').
+      documents.map(&:public_id)).to eq([public_doc.public_id])
 
     get disclosure_document_path(public_doc)
     expect(response).to have_http_status(:ok)

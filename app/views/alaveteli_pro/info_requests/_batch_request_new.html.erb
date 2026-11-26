@@ -1,0 +1,46 @@
+<% @title = _("Make a batch request") %>
+
+<%= page_band %>
+<div class="inner-canvas">
+
+  <div class="inner-canvas-body">
+    <div class="row">
+      <%= foi_error_messages_for :info_request_batch,
+                                 :example_info_request,
+                                 :outgoing_message %>
+    </div>
+
+    <%= render partial: 'request/email_override_warning' %>
+
+    <div class="row">
+
+      <div class="request-to-header">
+        <p id="to_public_body" class="to_public_body">
+          <span class="to_public_body_label"><%= _('To') %></span>
+          <%= render partial: 'alaveteli_pro/info_request_batches/authority_list_with_link',
+                     locals: { batch: @info_request_batch,
+                               draft: @draft_info_request_batch } %>
+        </p>
+
+        <p id="from_user" class="from_user">
+          <span class="from_user_label"><%= _('From') %></span>
+          <%= @user&.name || '…' %>
+        </p>
+      </div> <!-- .request-to-header -->
+
+
+      <div id="request_advice" class="request_advice">
+        <%= render partial: 'alaveteli_pro/info_requests/new_request_advice' %>
+      </div>
+
+      <div id="request_form" class="request_form">
+
+        <%= render partial: 'alaveteli_pro/info_request_batches/form' %>
+
+      </div>  <!-- .request_form -->
+
+    </div>  <!-- .row -->
+
+  </div>  <!-- .inner-canvas-body -->
+
+</div> <!-- .inner-canvas -->

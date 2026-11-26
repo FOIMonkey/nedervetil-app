@@ -1,0 +1,8 @@
+<ol class="flow-rail" aria-label="<%= _('Steps') %>">
+  <% steps.each.with_index(1) do |(name, value, path), number| %>
+    <li class="flow-rail__step<%= ' flow-rail__step--done' if number < now %><%= ' flow-rail__step--now' if number == now %>"<% if number == now %> aria-current="step"<% end %>>
+      <span class="flow-rail__name"><% if number < now && path %><%= link_to name, path %><% else %><%= name %><% end %></span>
+      <% if number < now && value %><span class="flow-rail__value"><%= value %></span><% end %>
+    </li>
+  <% end %>
+</ol>

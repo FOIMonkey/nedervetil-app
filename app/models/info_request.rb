@@ -246,10 +246,10 @@ class InfoRequest < ApplicationRecord
   # repeated requests, say once a quarter for time information, then might need to do that.
   # TODO: this *should* also check outgoing message joined to is an initial
   # request (rather than follow up)
-  def self.find_existing(title, public_body_id, body)
+  def self.find_existing(title, public_body_id, body, within: InfoRequest.all)
     conditions = { title: title&.squish, public_body_id: public_body_id }
 
-    InfoRequest.
+    within.
       includes(:outgoing_messages).
         where(conditions).
           merge(OutgoingMessage.with_body(body)).
@@ -1093,12 +1093,14 @@ class InfoRequest < ApplicationRecord
   def get_last_public_response_event
     public_response_events.last
   end
+  alias last_public_response_event get_last_public_response_event
 
   def get_last_public_response
     if get_last_public_response_event
       get_last_public_response_event.incoming_message
     end
   end
+  alias last_public_response get_last_public_response
 
   def public_outgoing_events
     info_request_events.select { |e| e.outgoing? && e.outgoing_message.is_public? }
