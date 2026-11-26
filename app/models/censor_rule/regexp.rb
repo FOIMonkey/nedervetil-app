@@ -28,7 +28,7 @@ module CensorRule::Regexp
     ::Warning.with_raised_warnings do
       Regexp.new(pattern, regexp_options)
     end
-  rescue RaisedWarning => e
+  rescue ::Warning::RaisedWarning => e
     raise RegexpError, e.message.split('warning: ').last.chomp
   end
 

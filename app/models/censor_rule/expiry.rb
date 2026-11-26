@@ -3,14 +3,14 @@ module CensorRule::Expiry
   extend ActiveSupport::Concern
 
   included do
-    after_commit :expire_requests
+    after_commit :expire_requests, if: :reaches_requester?
   end
 
   def expire_requests
-    if censorable
-      censorable.expire_requests
-    else
+    if global?
       InfoRequest::ExpireJob.perform_later(InfoRequest, :all)
+    elsif censorable
+      censorable.expire_requests
     end
   end
 end

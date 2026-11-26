@@ -58,6 +58,7 @@ class InfoRequest < ApplicationRecord
   include InfoRequest::Guessable
   include InfoRequest::HoldingPen
   include InfoRequest::MagicEmail
+  include InfoRequest::Masking
   include InfoRequest::PublicToken
   include InfoRequest::Sluggable
   include InfoRequest::TitleValidation
@@ -584,7 +585,8 @@ class InfoRequest < ApplicationRecord
   def safe_from_name
     return external_user_name if is_external?
 
-    apply_masks(from_name, redactable: self, redacted_attribute: :from_name)
+    apply_all_masks(from_name, 'text/plain',
+                    redactable: self, redacted_attribute: :from_name)
   end
 
   def user_name_slug
@@ -627,7 +629,7 @@ class InfoRequest < ApplicationRecord
   def expire(options={})
     # Clear any attachment masked_at timestamp, forcing attachments to be
     # reparsed
-    clear_attachment_masks!
+    clear_attachment_masks! unless options[:preserve_attachment_masks]
 
     # Clear out cached entries, by removing files from disk (the built in
     # Rails fragment cache made doing this and other things too hard)
@@ -645,12 +647,23 @@ class InfoRequest < ApplicationRecord
   end
 
   def clear_attachment_masks!
-    foi_attachments.unlocked.update_all(masked_at: nil)
+    foi_attachments.update_all(masked_at: nil)
   end
 
-  # Removes anything cached about the object in the database, and saves
+  def record_activity!(at = Time.current)
+    return if last_activity_at && last_activity_at >= at
+
+    update_column(:last_activity_at, at)
+  end
+
+  # Single UPDATE avoids re-saving the request once per message.
   def clear_in_database_caches!
-    incoming_messages.each(&:clear_in_database_caches!)
+    incoming_messages.where('cached_main_body_text_unfolded IS NOT NULL ' \
+                            'OR cached_main_body_text_folded IS NOT NULL').
+      update_all(cached_main_body_text_unfolded: nil,
+                 cached_main_body_text_folded: nil,
+                 updated_at: Time.current)
+    incoming_messages.reset
   end
 
   def update_last_public_response_at
@@ -1280,81 +1293,6 @@ class InfoRequest < ApplicationRecord
     ret.reverse
   end
 
-  # Get the list of censor rules that apply to this request
-  def applicable_censor_rules
-    query= <<-SQL
-    SELECT cr.* FROM censor_rules cr
-      WHERE (
-          cr.censorable_type = 'InfoRequest'
-          AND cr.censorable_id = :info_request_id
-        OR cr.censorable_id IS NULL
-          AND cr.censorable_type IS NULL
-        OR cr.censorable_type = 'PublicBody'
-          AND cr.censorable_id = :public_body_id
-        OR cr.censorable_type = 'User'
-          AND cr.censorable_id = :user_id
-      )
-    ORDER BY 
-      (CASE WHEN cr.censorable_type = 'InfoRequest' THEN 0
-         WHEN cr.censorable_type IS NULL THEN 1
-         WHEN cr.censorable_type = 'PublicBody' THEN 2
-         ELSE 3
-       END) ASC,
-      cr.created_at DESC
-    SQL
-    CensorRule.find_by_sql [
-      query,
-      {
-        info_request_id: id,
-        public_body_id: public_body_id,
-        user_id: user_id
-      }
-    ]
-  end
-
-  def apply_censor_rules_to_text(text, redactable: nil, redacted_attribute: nil)
-    applicable_censor_rules.reduce(text) do |t, rule|
-      rule.apply_to_text(t, redactable: redactable,
-                            redacted_attribute: redacted_attribute)
-    end
-  end
-
-  def apply_censor_rules_to_binary(text, redactable: nil, redacted_attribute: nil)
-    applicable_censor_rules.reduce(text) do |t, rule|
-      rule.apply_to_binary(t, redactable: redactable,
-                              redacted_attribute: redacted_attribute)
-    end
-  end
-
-  def apply_masks(text, content_type = 'text/plain', redactable: nil, redacted_attribute: nil)
-    mask_options = { censor_rules: applicable_censor_rules,
-                     masks: masks,
-                     redactable: redactable,
-                     redacted_attribute: redacted_attribute }
-    AlaveteliTextMasker.apply_masks(text, content_type, mask_options)
-  end
-
-  # Masks we apply to text associated with this request convert email addresses
-  # we know about into textual descriptions of them
-  def masks
-    masks = [
-      { to_replace: AlaveteliConfiguration.contact_email,
-        replacement: _("[{{site_name}} contact email]",
-                       site_name: site_name) }
-    ]
-
-    if persisted?
-      masks << { to_replace: incoming_email,
-                 replacement: _('[FOI #{{request}} email]', request: id.to_s) }
-    end
-
-    if public_body.is_followupable?
-      masks << { to_replace: public_body.request_email,
-                 replacement: _("[{{public_body}} request email]",
-                                   public_body: public_body.short_or_long_name) }
-    end
-  end
-
   def is_owning_user?(user)
     return false unless user
 
@@ -1665,6 +1603,7 @@ class InfoRequest < ApplicationRecord
       incoming_message.save!
 
       raw_email.update(mail: mail)
+      incoming_message.store_header_values_on_receipt
 
       unless described_state == 'user_withdrawn'
         self.awaiting_description = true

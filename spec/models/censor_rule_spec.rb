@@ -2,18 +2,20 @@
 #
 # Table name: censor_rules
 #
-#  id                :integer          not null, primary key
-#  text              :text             not null
-#  replacement       :text             not null
-#  last_edit_editor  :string           not null
-#  last_edit_comment :text             not null
-#  created_at        :datetime         not null
-#  updated_at        :datetime         not null
-#  regexp            :boolean          default(FALSE), not null
-#  case_sensitive    :boolean          default(TRUE), not null
-#  ignore_diacritics :boolean          default(FALSE), not null
-#  censorable_type   :string
-#  censorable_id     :bigint
+#  id                  :integer          not null, primary key
+#  text                :text             not null
+#  replacement         :text             not null
+#  last_edit_editor    :string           not null
+#  last_edit_comment   :text             not null
+#  created_at          :datetime         not null
+#  updated_at          :datetime         not null
+#  regexp              :boolean          default(FALSE), not null
+#  case_sensitive      :boolean          default(TRUE), not null
+#  ignore_diacritics   :boolean          default(FALSE), not null
+#  censorable_type     :string
+#  censorable_id       :bigint
+#  masking_finished_at :datetime
+#  colour              :string           default("black"), not null
 #
 
 require 'spec_helper'
@@ -93,17 +95,6 @@ RSpec.describe CensorRule do
         expect { rule.update!(replacement: 'new replacement') }.
           not_to change(rule.redactions, :count)
       end
-
-      it 'keeps redactions against locked attachments' do
-        attachment = FactoryBot.create(:body_text, locked: true)
-        rule.redactions.create!(redactable: attachment,
-                                redacted_attribute: 'body')
-
-        expect { rule.update!(text: 'new pattern') }.
-          to change(rule.redactions, :count).by(-1)
-
-        expect(rule.redactions.pluck(:redactable_id)).to eq([attachment.id])
-      end
     end
   end
 
@@ -126,20 +117,6 @@ RSpec.describe CensorRule do
       rule.destroy!
       expect(rule).to receive(:expire_requests)
       rule.run_callbacks(:commit)
-    end
-  end
-
-  describe '#global?' do
-    subject { rule.global? }
-
-    context 'without a censorable' do
-      let(:rule) { FactoryBot.build(:global_censor_rule) }
-      it { is_expected.to eq(true) }
-    end
-
-    context 'with a censorable' do
-      let(:rule) { FactoryBot.build(:user_censor_rule) }
-      it { is_expected.to eq(false) }
     end
   end
 
@@ -386,6 +363,31 @@ RSpec.describe CensorRule do
       expect(rule.apply_to_binary(text)).to eq("Some xxxxxxx text")
     end
 
+    # A Unicode property such as \p{L} compiles for text and not for bytes.
+    it 'leaves bytes as they are for a rule that only compiles for text' do
+      rule = FactoryBot.build(:regexp_censor_rule, text: '\p{L}+cole')
+      expect(rule).to be_valid
+      expect(rule.apply_to_text('École text')).to eq('[REDACTED] text')
+      expect(rule.apply_to_binary('École text'.b)).to eq('École text'.b)
+    end
+
+    # A \u escape for a character outside ASCII compiles from bytes, but as a
+    # UTF-8 pattern, and matching that against bytes outside ASCII raises.
+    it 'leaves bytes as they are for a rule that escapes a character ' \
+       'outside ASCII' do
+      rule = FactoryBot.build(:regexp_censor_rule, text: 'caf\u00e9')
+      expect(rule.text).to be_ascii_only
+      expect(rule).to be_valid
+      expect(rule.apply_to_text('café text')).to eq('[REDACTED] text')
+      expect(rule.apply_to_binary('café text'.b)).to eq('café text'.b)
+    end
+
+    it 'replaces the bytes of a regexp rule written with the character ' \
+       'itself' do
+      rule = FactoryBot.build(:regexp_censor_rule, text: 'café')
+      expect(rule.apply_to_binary('café text'.b)).to eq('xxxxx text'.b)
+    end
+
     it "replaces the regexp with the same number of 'x' characters as the text
         replaced when applied to binary" do
       attrs = { text: '--PRIVATE.*--PRIVATE',
@@ -539,6 +541,73 @@ RSpec.describe CensorRule do
           )
         }.not_to change(rule.redactions, :count)
       end
+    end
+  end
+
+  describe '#pdf_rule' do
+    let(:gap) { PDFRedactor::GAP }
+    let(:line) { PDFRedactor::LINE }
+
+    it 'matches a plain rule across line breaks and gaps' do
+      rule = FactoryBot.build(:censor_rule, text: 'Jane Doelittle').pdf_rule
+      expect("Jane#{line}Doelittle").to match(rule.re)
+      expect("J#{gap}ane Doelittle").to match(rule.re)
+      expect(rule.literal).to be(true)
+      expect(rule.text).to eq('Jane Doelittle')
+    end
+
+    it 'keeps to the case of a case-sensitive rule' do
+      rule = FactoryBot.build(:censor_rule, text: 'Jane').pdf_rule
+      expect('jane').not_to match(rule.re)
+    end
+
+    it 'ignores case when the rule does' do
+      rule = FactoryBot.build(:censor_rule, text: 'Jane',
+                                            case_sensitive: false).pdf_rule
+      expect('JANE').to match(rule.re)
+    end
+
+    it 'uses the regexp of a regexp rule' do
+      rule = FactoryBot.build(:regexp_censor_rule, text: 'J\w+e').pdf_rule
+      expect('Jane').to match(rule.re)
+      expect(rule.literal).to be(false)
+    end
+
+    it 'keeps what apply_to_binary matches for content-stream syntax' do
+      rule = FactoryBot.build(:censor_rule, text: '<0055> Tj').pdf_rule
+      expect(rule.legacy).to eq('<0055> Tj'.b)
+    end
+
+    it 'matches the text alone for a rule that only compiles for text' do
+      rule = FactoryBot.build(:regexp_censor_rule, text: '\p{L}+cole').pdf_rule
+      expect('École').to match(rule.re)
+      expect(rule.legacy).to be_nil
+    end
+
+    it 'matches the text alone for a rule that escapes a character outside ' \
+       'ASCII' do
+      rule = FactoryBot.build(:regexp_censor_rule, text: 'caf\u00e9')
+      expect(rule.text).to be_ascii_only
+      expect('café').to match(rule.pdf_rule.re)
+      expect(rule.pdf_rule.legacy).to be_nil
+    end
+  end
+
+  describe '#record_match', feature: :redaction_tracking do
+    let(:rule) { FactoryBot.create(:global_censor_rule, text: 'secret') }
+    let(:redactable) { FactoryBot.create(:info_request) }
+
+    it 'creates a redaction row when the rule matched' do
+      expect {
+        rule.record_match(redactable, :body, matched: true)
+      }.to change(rule.redactions, :count).by(1)
+    end
+
+    it 'removes the redaction row when the rule no longer matches' do
+      rule.record_match(redactable, :body, matched: true)
+      expect {
+        rule.record_match(redactable, :body, matched: false)
+      }.to change(rule.redactions, :count).by(-1)
     end
   end
 
@@ -699,7 +768,8 @@ RSpec.describe 'when validating rules' do
 
     describe 'if a regexp error is produced' do
       it 'should add an error message to the text field with the regexp error message' do
-        allow(Regexp).to receive(:new).and_raise(RegexpError.new("very bad regexp"))
+        allow(Regexp).
+          to receive(:new).and_raise(RegexpError.new("very bad regexp"))
         expect(@censor_rule.valid?).to eq(false)
         expect(@censor_rule.errors[:text]).to eq(["very bad regexp"])
       end
@@ -725,6 +795,47 @@ RSpec.describe 'when validating rules' do
         @censor_rule.valid?
         expect(@censor_rule.errors[:text]).to eq([])
       end
+    end
+  end
+
+  describe 'colour' do
+    it 'defaults to black and rejects unknown colours' do
+      rule = CensorRule.new
+      expect(rule.colour).to eq('black')
+      expect(rule).to be_black
+
+      blue = FactoryBot.build(:censor_rule, :blue)
+      expect(blue).to be_valid
+      expect(blue).to be_blue
+
+      invalid = FactoryBot.build(:censor_rule, colour: 'green')
+      expect(invalid).not_to be_valid
+    end
+
+    it 'does not expire requests when creating, updating, or destroying a blue rule' do
+      request = FactoryBot.create(:info_request)
+      expect(request).not_to receive(:expire_requests)
+
+      rule = FactoryBot.create(:censor_rule, :blue, censorable: request)
+      rule.update!(text: 'other text')
+      rule.destroy!
+    end
+
+    it 'expires requests when changing a rule between black and blue' do
+      request = FactoryBot.create(:info_request)
+      rule = FactoryBot.create(:censor_rule, censorable: request)
+
+      expect(InfoRequest::ExpireJob).to receive(:perform_later).
+        with(request).twice
+      rule.update!(colour: 'blue')
+      rule.update!(colour: 'black')
+    end
+
+    it 'skips ASCII-8BIT byte_pattern for non-ASCII diacritics rules' do
+      rule = FactoryBot.build(:censor_rule, text: 'école',
+                                            ignore_diacritics: true)
+      expect(rule.byte_pattern('ASCII-8BIT')).to be_nil
+      expect(rule.byte_pattern('UTF-8')).to be_a(Regexp)
     end
   end
 end

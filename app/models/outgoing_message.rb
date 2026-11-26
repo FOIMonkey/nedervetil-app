@@ -26,9 +26,9 @@
 
 class OutgoingMessage < ApplicationRecord
   include MessageProminence
+  include MaskedByRequest
   include Rails.application.routes.url_helpers
   include LinkToHelper
-  include Redactable
   include Searchable
   include Taggable
 
@@ -148,9 +148,7 @@ class OutgoingMessage < ApplicationRecord
   def safe_from_name
     return info_request.external_user_name if info_request.is_external?
 
-    apply_masks(
-      from_name, redactable: self, redacted_attribute: :from_name
-    )
+    apply_all_masks(from_name, 'text/plain', redacted_attribute: :from_name)
   end
 
   # Public: The value to be used in the From: header of an OutgoingMailer

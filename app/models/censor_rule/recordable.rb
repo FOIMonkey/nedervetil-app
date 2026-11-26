@@ -15,11 +15,18 @@ module CensorRule::Recordable
     before_update :clear_redactions_if_pattern_changed
   end
 
+  # For content masked as a whole, such as a PDF, where the masker says
+  # whether this rule matched.
+  def record_match(redactable, redacted_attribute, matched:)
+    record_redaction(redactable, redacted_attribute,
+                     before: false, after: matched)
+  end
+
   private
 
   def record_redaction(redactable, redacted_attribute, before:, after:)
     return unless redactable&.persisted? &&
-      feature_enabled?(:redaction_tracking)
+                  feature_enabled?(:redaction_tracking)
 
     if redacted_attribute.blank?
       raise ArgumentError,

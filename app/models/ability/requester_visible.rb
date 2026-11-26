@@ -8,8 +8,7 @@ class Ability
 
     REQUEST = %w[requester_only].freeze
     MESSAGE = %w[normal].freeze
-    # 'normal' is retired in B07 when foi_attachments migrates to 'public'.
-    FILE = %w[normal public requester_only].freeze
+    FILE = %w[public requester_only].freeze
 
     module_function
 

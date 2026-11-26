@@ -1,6 +1,8 @@
-require 'tempfile'
 require 'config_helper'
 
+# Applies default personal-data masks (email addresses, mobile numbers, login
+# links) and CensorRules across PDFs, text and binary files while skipping
+# images, archives and zip-based documents.
 module AlaveteliTextMasker
   include ConfigHelper
 
@@ -21,14 +23,45 @@ module AlaveteliTextMasker
     }
   }.with_indifferent_access.deep_symbolize_keys.freeze
 
-  DoNotBinaryMask = [ 'image/tiff',
-                      'image/gif',
-                      'image/jpeg',
-                      'image/png',
-                      'image/bmp',
-                      'application/zip' ]
+  # Raised when a PDF cannot be masked; faulted files are marked for admins
+  # and never published (see FoiAttachment::Maskable#masking_outcome).
+  PDFMaskingError = Class.new(StandardError)
 
-  TextMask = [ 'text/css',
+  # Reasons recorded in options[:unmasked] when masking cannot open a file.
+  UNMASKED_PDF = 'the PDF needs a password, so masking could not open it'.freeze
+  UNMASKED_ZIP = 'the file is an archive (zip, 7-Zip, RAR, gzip), or a ' \
+                 'document stored as a zip (Office, ODF), which masking ' \
+                 'cannot open yet'.freeze
+
+  # Byte-pass skip reason; identifies rule by id so secret text is not exposed.
+  UNMASKED_RULE = 'anything censor rule %<id>s matches: its pattern only ' \
+                  'works on text, and this kind of file is masked as ' \
+                  'bytes'.freeze
+
+  # Slice size for BytePass#strip_nul to avoid monopolizing the GVL.
+  NUL_STRIP_SLICE = 1024 * 1024
+
+  # Rule scopes that trigger PDF OCR (omitting global/body rules for speed).
+  OCR_RULE_TYPES = %w[InfoRequest User].freeze
+
+  # Zip containers bypass BytePass (compressed content is unreachable and byte
+  # replacement can corrupt stored parts, upstream #3233; see doc/FORK.md).
+  # Matched by MIME prefix or zip magic so legacy OLE (.doc/.xls/.ppt) and
+  # uncompressed ODF -flat-xml variants stay byte-masked.
+  ZIP_CONTAINER_PREFIXES = %w[
+    application/vnd.openxmlformats-officedocument.
+    application/vnd.ms-word.
+    application/vnd.ms-excel.
+    application/vnd.ms-powerpoint.
+    application/vnd.sun.xml.
+  ].freeze
+
+  # Images are never masked, by design, so they go as they came, unmarked.
+  DO_NOT_BINARY_MASK = %w[
+    image/tiff image/gif image/jpeg image/png image/bmp
+  ].freeze
+
+  TEXT_MASK = ['text/css',
                'text/csv',
                'text/html',
                'text/plain',
@@ -41,28 +74,39 @@ module AlaveteliTextMasker
                'text/x-mail',
                'text/xml',
                'text/x-pascal',
-               'text/x-vcard' ]
+               'text/x-vcard'].freeze
 
   # Replaces all email addresses in (possibly binary) data
   # Also applies custom masks and censor items
+  #
+  # options[:unmasked] collects skipped parts for admins (excluding images).
+  # options[:default_masks] = false omits default masks on incoming files.
   def apply_masks(text, content_type, options = {})
-    # See if content type is one that we mask - things like zip files and
-    # images may get broken if we try to. We err on the side of masking too
-    # much, as many unknown types will really be text.
-
     return text if text.nil?
 
-    # Special cases for some content types
-    case content_type
-    when 'application/pdf'
-      apply_pdf_masks(text, options)
-    when *TextMask
-      apply_text_masks(text, options)
-    when *DoNotBinaryMask
-      text # do nothing
-    else
-      apply_binary_masks(text, options)
+    pass_for(content_type, text).new(self, content_type, options).apply(text)
+  end
+
+  def archive?(content_type, body)
+    type = content_type.to_s.downcase
+    return true if type == 'application/zip'
+    return true if ZIP_CONTAINER_PREFIXES.any? { |p| type.start_with?(p) }
+    if type.start_with?('application/vnd.oasis.opendocument.') &&
+       !type.end_with?('-flat-xml')
+      return true
     end
+
+    head = body.to_s.byteslice(0, 64).to_s.b
+    archive_signatures.any? { |re| head.match?(re) }
+  end
+
+  # Archive magic bytes from PDFRedactor::FinalScan::CONTAINERS so both agree;
+  # loaded lazily because this module loads before PDFRedactor.
+  def archive_signatures
+    @archive_signatures ||=
+      PDFRedactor::FinalScan::CONTAINERS.filter_map do |re, _, kind|
+        Regexp.new("\\A(?:#{re.source})", re.options) if kind == :archive
+      end.freeze
   end
 
   def masks
@@ -94,130 +138,24 @@ module AlaveteliTextMasker
     @masks = nil
   end
 
+  # Builds PDFRedactor rules for verification (Disclosures::TextCopy).
+  def pdf_rules(censor_rules, options = {})
+    PDFPass.new(self, 'application/pdf', options).rules(censor_rules)
+  end
+
   private
 
-  def uncompress_pdf(text)
-    temp = Tempfile.new('pdftk', './tmp', encoding: 'ascii-8bit')
-    temp.write(text)
-    temp.close
-
-    AlaveteliExternalCommand.run(
-      "pdftk", temp.path, "output", "-", "uncompress"
-    )
-  ensure
-    temp.unlink
-  end
-
-  def compress_pdf(text)
-    temp = Tempfile.new('pdftk', './tmp', encoding: 'ascii-8bit')
-    temp.write(text)
-    temp.close
-
-    if AlaveteliConfiguration.use_ghostscript_compression
-      command = ["gs",
-                 "-sDEVICE=pdfwrite",
-                 "-dCompatibilityLevel=1.4",
-                 "-dPDFSETTINGS=/screen",
-                 "-dNOPAUSE",
-                 "-dQUIET",
-                 "-dBATCH",
-                 "-sOutputFile=-",
-                 temp.path]
+  # See if content type is one that we mask - things like zip files and
+  # images may get broken if we try to. We err on the side of masking too
+  # much, as many unknown types will really be text.
+  def pass_for(content_type, text)
+    # Special cases for some content types
+    case content_type
+    when 'application/pdf' then PDFPass
+    when *TEXT_MASK then TextPass
+    when *DO_NOT_BINARY_MASK then NeverMasked
     else
-      command = ["pdftk", temp.path, "output", "-", "compress"]
-    end
-    AlaveteliExternalCommand.run(*command)
-  ensure
-    temp.unlink
-  end
-
-  def apply_pdf_masks(text, options = {})
-    uncompressed_text = uncompress_pdf(text)
-    # if we managed to uncompress the PDF...
-    if uncompressed_text.blank?
-      text
-    else
-      # then censor stuff (making a copy so can compare again in a bit)
-      censored_uncompressed_text = apply_binary_masks(uncompressed_text, options)
-
-      # if the censor rule removed something...
-      if censored_uncompressed_text != uncompressed_text
-        # then use the altered file (recompressed)
-        recompressed_text = compress_pdf(censored_uncompressed_text)
-
-        if recompressed_text.blank?
-          # buggy versions of pdftk sometimes fail on
-          # compression, I don't see it's a disaster in
-          # these cases to save an uncompressed version?
-          recompressed_text = censored_uncompressed_text
-          Rails.logger.warn "Unable to compress PDF; problem with your pdftk version?"
-        end
-
-        if recompressed_text.blank?
-          text
-        else
-          recompressed_text
-        end
-      else
-        text
-      end
-    end
-  end
-
-  def apply_binary_masks(text, options = {})
-    # Keep original size, so can check haven't resized it
-    orig_size = text.bytesize
-    text = text.dup
-
-    # Replace ASCII email addresses...
-    text.gsub!(MySociety::Validate.email_find_regexp) do |email|
-      email.gsub(/[^@.]/, 'x')
-    end
-
-    # And replace UCS-2 ones (for Microsoft Office documents)...
-    # Find emails, by finding them in parts of text that have ASCII
-    # equivalents to the UCS-2
-    ascii_chars = text.gsub(/\0/, "")
-    emails = ascii_chars.scan(MySociety::Validate.email_find_regexp)
-
-    # Convert back to UCS-2, making a mask at the same time
-    emails.map! do |email|
-      # We want the ASCII representation of UCS-2
-      [email[0].encode('UTF-16LE').force_encoding('US-ASCII'),
-       email[0].gsub(/[^@.]/, 'x').encode('UTF-16LE').force_encoding('US-ASCII')]
-    end
-
-    # Now search and replace the UCS-2 email with the UCS-2 mask
-    emails.each do |email, mask|
-      text.gsub!(email, mask)
-    end
-
-    # Replace censor items
-    censor_rules = options[:censor_rules] || []
-    redactable = options[:redactable]
-    redacted_attribute = options[:redacted_attribute]
-    text = censor_rules.reduce(text) do |t, rule|
-      rule.apply_to_binary(t, redactable: redactable,
-                              redacted_attribute: redacted_attribute)
-    end
-    raise "internal error in apply_binary_masks" if text.bytesize != orig_size
-
-    text
-  end
-
-  def apply_text_masks(text, options = {})
-    all_masks = (options[:masks] || []) + masks.values
-    censor_rules = options[:censor_rules] || []
-    redactable = options[:redactable]
-    redacted_attribute = options[:redacted_attribute]
-
-    text = all_masks.inject(text) do |memo, mask|
-      memo.gsub(mask[:to_replace], mask[:replacement])
-    end
-
-    censor_rules.reduce(text) do |t, rule|
-      rule.apply_to_text(t, redactable: redactable,
-                            redacted_attribute: redacted_attribute)
+      archive?(content_type, text) ? ArchivePass : BytePass
     end
   end
 end

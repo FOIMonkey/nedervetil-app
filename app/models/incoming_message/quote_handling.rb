@@ -18,12 +18,15 @@ module IncomingMessage::QuoteHandling
       # http://www.whatdotheyknow.com/request/71/response/108
       # http://www.whatdotheyknow.com/request/police_powers_to_inform_car_insu
       # http://www.whatdotheyknow.com/request/secured_convictions_aided_by_cct
+      # rubocop:disable Layout/LineLength -- a regex source string
       multiline_original_message = '(>>>.* \d\d/\d\d/\d\d\d\d\s+\d\d:\d\d(?::\d\d)?\s*>>>)'
+      # rubocop:enable Layout/LineLength
       text.gsub!(/^(#{multiline_original_message}\n.*)$/m, replacement)
 
       # On Thu, Nov 28, 2013 at 9:08 AM, A User
       # <[1]request-7-skm40s2ls@xxx.xxxx> wrote:
-      text.gsub!(/^( On [^\n]+\n\s*\<[^>\n]+\> (wrote|said):\s*\n.*)$/m, replacement)
+      text.gsub!(/^( On [^\n]+\n\s*\<[^>\n]+\> (wrote|said):\s*\n.*)$/m,
+                 replacement)
 
       # Single line sections
       text.gsub!(/^(>.*\n)/, replacement)
@@ -31,6 +34,7 @@ module IncomingMessage::QuoteHandling
 
       ['-', '_', '*', '#'].each do |scorechar|
         score = /(?:[#{scorechar}]\s*){8,}/
+        # rubocop:disable Layout/LineLength -- a regex
         text.sub!(/(Disclaimer\s+)?  # appears just before
                           (
                               \s*#{score}\n(?:(?!#{score}\n).)*? # top line
@@ -38,6 +42,7 @@ module IncomingMessage::QuoteHandling
                               .*?(?:#{score}|\z) # bottom line OR end of whole string (for ones with no terminator TODO: risky)
                           )
                          /imx, replacement)
+        # rubocop:enable Layout/LineLength
       end
 
       # Special paragraphs
@@ -51,10 +56,12 @@ module IncomingMessage::QuoteHandling
                       legal\spurposes\.
                       /imx, replacement)
       # http://www.whatdotheyknow.com/request/net_promoter_value_scores_for_bb
+      # rubocop:disable Layout/LineLength -- a regex
       text.gsub!(/^http:\/\/www.bbc.co.uk
                       .*?
                       Further\s+communication\s+will\s+signify\s+your\s+consent\s+to\s+this\.
                       /imx, replacement)
+      # rubocop:enable Layout/LineLength
 
       # To end of message sections
       # http://www.whatdotheyknow.com/request/123/response/192
@@ -86,33 +93,15 @@ module IncomingMessage::QuoteHandling
     name = Regexp.escape(info_request.user_name)
 
     # To end of message sections
-    text.gsub!(/^\s?#{name}[^\n]+\n([^\n]+\n)?\s?Sent by:[^\n]+\n.*/im, "\n\n" + replacement)
+    text.gsub!(/^\s?#{name}[^\n]+\n([^\n]+\n)?\s?Sent by:[^\n]+\n.*/im,
+               "\n\n" + replacement)
 
     # Some other sort of forwarding quoting
     text.gsub!(/^\s?#{name}\s+To\s+FOI requests at.*/im, "\n\n" + replacement)
 
     # http://www.whatdotheyknow.com/request/229/response/809
+    # rubocop:disable Layout/LineLength -- a regex
     text.gsub(/^\s?From: [^\n]+\n\s?Sent: [^\n]+\n\s?To:\s+['"]?#{name}['"]?\n\s?Subject:.*/im, "\n\n" + replacement)
-  end
-
-  private
-
-  def handle_quoted_sections(text, collapse: true)
-    if collapse
-      text = text.gsub(/(\s*FOLDED_QUOTED_SECTION\s*)+/m, "FOLDED_QUOTED_SECTION")
-      text = text.strip
-
-      # if there is nothing but quoted stuff, then show the subject
-      if text == "FOLDED_QUOTED_SECTION"
-        text = "[Subject only] " + CGI.escapeHTML(subject || '') + text
-      end
-
-      # and display link for quoted stuff
-      text = text.gsub(/FOLDED_QUOTED_SECTION/, "\n\n" + '<span class="unfold_link"><a href="?unfold=1#incoming-'+id.to_s+'">'+_("show quoted sections")+'</a></span>' + "\n\n")
-    elsif get_main_body_text_folded.include?('FOLDED_QUOTED_SECTION')
-      text = text + "\n\n" + '<span class="unfold_link"><a href="?#incoming-'+id.to_s+'">'+_("hide quoted sections")+'</a></span>'
-    end
-
-    text.strip
+    # rubocop:enable Layout/LineLength
   end
 end

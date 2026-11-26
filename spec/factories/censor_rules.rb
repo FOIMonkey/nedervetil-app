@@ -2,18 +2,20 @@
 #
 # Table name: censor_rules
 #
-#  id                :integer          not null, primary key
-#  text              :text             not null
-#  replacement       :text             not null
-#  last_edit_editor  :string           not null
-#  last_edit_comment :text             not null
-#  created_at        :datetime         not null
-#  updated_at        :datetime         not null
-#  regexp            :boolean          default(FALSE), not null
-#  case_sensitive    :boolean          default(TRUE), not null
-#  ignore_diacritics :boolean          default(FALSE), not null
-#  censorable_type   :string
-#  censorable_id     :bigint
+#  id                  :integer          not null, primary key
+#  text                :text             not null
+#  replacement         :text             not null
+#  last_edit_editor    :string           not null
+#  last_edit_comment   :text             not null
+#  created_at          :datetime         not null
+#  updated_at          :datetime         not null
+#  regexp              :boolean          default(FALSE), not null
+#  case_sensitive      :boolean          default(TRUE), not null
+#  ignore_diacritics   :boolean          default(FALSE), not null
+#  censorable_type     :string
+#  censorable_id       :bigint
+#  masking_finished_at :datetime
+#  colour              :string           default("black"), not null
 #
 
 FactoryBot.define do
@@ -40,7 +42,10 @@ FactoryBot.define do
       association :censorable, factory: :user
     end
 
-    factory :global_censor_rule do
+    factory :global_censor_rule
+
+    trait :blue do
+      colour { 'blue' }
     end
 
     trait :case_insensitive do

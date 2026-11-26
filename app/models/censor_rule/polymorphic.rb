@@ -13,11 +13,11 @@ module CensorRule::Polymorphic
     scope :global, -> { where(censorable_id: nil, censorable_type: nil) }
   end
 
-  def global?
-    censorable_id.nil? && censorable_type.nil?
-  end
-
   def censorable_requests
     censorable&.info_requests || InfoRequest.unscoped
+  end
+
+  def global?
+    censorable_id.nil? && censorable_type.nil?
   end
 end

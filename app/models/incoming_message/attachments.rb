@@ -5,8 +5,6 @@ module IncomingMessage::Attachments
 
   UnableToExtractAttachments = Class.new(StandardError)
 
-  MAX_ATTACHMENT_TEXT_CLIPPED = 1_000_000 # 1Mb ish
-
   included do
     has_many :foi_attachments,
              -> { order(:id) },
@@ -21,9 +19,7 @@ module IncomingMessage::Attachments
     # MailHandler.ensure_parts_counted
     # The filename here is passed from the URL parameter, so it's the
     # display_filename rather than the real filename.
-    # rubocop:disable Layout/LineLength
     def get_attachment_by_url_part_number_and_filename(attachments, found_url_part_number, display_filename)
-      # rubocop:enable Layout/LineLength
       attachment_by_part_number = attachments.detect do |a|
         a.url_part_number == found_url_part_number
       end
@@ -48,9 +44,7 @@ module IncomingMessage::Attachments
       end
     end
 
-    # rubocop:disable Layout/LineLength
     def get_attachment_by_url_part_number_and_filename!(attachments, found_url_part_number, display_filename)
-      # rubocop:enable Layout/LineLength
       attachment = get_attachment_by_url_part_number_and_filename(
         attachments, found_url_part_number, display_filename
       )
@@ -74,8 +68,11 @@ module IncomingMessage::Attachments
     end
   end
 
+  # Returns [] when mail cannot be parsed for display; jobs needing a real
+  # attachment list must call #parse_raw_email first.
   def get_attachments_for_display # rubocop:disable Naming/AccessorMethodName
-    parse_raw_email
+    return [] unless parsed_for_display?
+
     # return what user would consider attachments, i.e. not the main body
     main_part = get_main_body_text_part
     attachments = []
@@ -91,75 +88,12 @@ module IncomingMessage::Attachments
   end
 
   # Returns text version of attachment text
-  # TODO: This could be a private method – it is only called by IncomingMessage
-  # and is directly tested.
   def get_attachment_text_full # rubocop:disable Naming/AccessorMethodName
-    text = _get_attachment_text_internal
-
-    # This can be useful for memory debugging
-    # puts 'xxx ' + MySociety::DebugHelpers.allocated_string_size_around_gc
-
-    # Save clipped version for snippets
-    if cached_attachment_text_clipped.nil?
-      clipped = text.mb_chars[0..MAX_ATTACHMENT_TEXT_CLIPPED].delete("\0")
-      self.cached_attachment_text_clipped = clipped
-      save!
-    end
-
-    text
-  end
-
-  # Returns a version reduced to a sensible maximum size - this
-  # is for performance reasons when showing snippets in search results.
-  def get_attachment_text_clipped # rubocop:disable Naming/AccessorMethodName
-    if cached_attachment_text_clipped.nil?
-      # As side effect, get_attachment_text_full makes snippet text
-      attachment_text = get_attachment_text_full
-      raise "internal error" if cached_attachment_text_clipped.nil?
-    end
-
-    cached_attachment_text_clipped
-  end
-
-  # Returns an Array of file extensions of attachments to this message.
-  # Defaults to the normal extension for known mime type, otherwise uses other
-  # extensions.
-  def get_present_file_extensions # rubocop:disable Naming/AccessorMethodName
-    ret = {}
-
-    get_attachments_for_display.each do |attachment|
-      ext = AlaveteliFileTypes.mimetype_to_extension(attachment.content_type)
-      if ext.nil? && !attachment.filename.nil?
-        ext = File.extname(attachment.filename).gsub(/^[.]/, "")
-      end
-      ret[ext] = 1 unless ext.nil?
-    end
-
-    ret.keys
-  end
-
-  def locked?
-    foi_attachments.locked.any?
-  end
-
-  def lock_all_attachments(editor:, reason:, **event)
-    transaction do
-      foi_attachments.each { _1.lock!(**event, editor: editor, reason: reason) }
-    end
-
-    # We need to expire the attachments after _all_ have been locked to ensure
-    # the expiry process doesn't clear masks of all but the first attachment
-    # before they are locked. If this happens then the attachments are locked in
-    # an unmasked state.
-    foi_attachments.each(&:expire)
-
-    true
-  rescue ActiveRecord::RecordInvalid
-    false
+    _get_attachment_text_internal
   end
 
   def all_attachments_masked_or_erased?
-    foi_attachments.unmasked.not_erased.none?
+    foi_attachments.not_erased.where(masked_at: nil).none?
   end
 
   private
@@ -167,45 +101,39 @@ module IncomingMessage::Attachments
   def _get_attachment_text_internal
     # Extract text from each attachment
     get_attachments_for_display.reduce('') do |memo, attachment|
-      return memo if Ability.guest.cannot?(:read, attachment)
+      next memo if Ability.guest.cannot?(:read, attachment)
       next memo if attachment.masking_failed?
 
       text = attachment.body_to_text
 
-      # NOTE: The redaction is recorded on `FoiAttachment#body_to_text` here
-      # since this differs from `FoiAttachment#body`. This is text extracted
-      # from the already masked body, so a rule can match here having found
-      # nothing to match in the body itself.
-      unless attachment.locked?
-        text = attachment.apply_masks(
-          text,
-          'text/html',
-          redacted_attribute: :body_to_text
-        )
-      end
+      # Apply default masks too (stored files only carry incoming/admin masks);
+      # tracked on :body_to_text since it differs from FoiAttachment#body.
+      text = attachment.apply_all_masks(
+        text,
+        'text/html',
+        redacted_attribute: :body_to_text
+      )
 
-      memo += text
-    rescue FoiAttachment::MaskingError
-      memo
+      memo + text
     end
   end
 
-  # rubocop:disable Lint::UnderscorePrefixedVariableName
-  def extract_attachments
+  def extract_attachments(reading = MailHandler::Reading.of(raw_email.data))
     raw_email_ensure_not_erased!
 
-    _mail = raw_email.mail!
-    attachment_attributes = MailHandler.get_attachment_attributes(_mail)
-    attachment_attributes = attachment_attributes.inject({}) do |memo, attrs|
-      attrs.delete(:original_body)
-      memo[attrs[:hexdigest]] = attrs
-      memo
+    # Parts with the same bytes are one attachment: the first one's place,
+    # the last one's attributes.
+    parts = reading.parts.each_with_object({}) do |part, memo|
+      memo[part.hexdigest] = part
     end
+    attachment_attributes = parts.transform_values(&:attributes)
 
+    # Defer storage writes until after protection checks pass so an aborted
+    # reparse never mutates stored bytes.
+    deferred_bodies = {}
     attachments = attachment_attributes.map do |hexdigest, attrs|
       attachment = foi_attachments.find_or_initialize_by(hexdigest: hexdigest)
-      attachment.attributes = attrs
-      attachment
+      assign_parsed_attributes(attachment, attrs, deferred_bodies)
     end
 
     # Get the main body part from the set of attachments not from the
@@ -215,46 +143,91 @@ module IncomingMessage::Attachments
     # identical.
     main_part = get_main_body_text_part(attachments)
 
-    # We don't use get_main_body_text_internal, as we want to avoid charset
-    # conversions, since _uudecode_attachments needs to deal with those.
-    # e.g. for https://secure.mysociety.org/admin/foi/request/show_raw_email/24550
     if main_part
-      c = _mail.count_first_uudecode_count
-      attachments += _uudecode_attachments(main_part.body, c)
+      c = reading.count_first_uudecode_count
+      blocks = main_text_blocks(reading, main_part)
+      attachments += _uudecode_attachments(blocks, c, deferred_bodies)
+      normalize_extracted_main_body(main_part, deferred_bodies)
     end
 
-    # Purge old public attachments that will be rebuilt with a new hexdigest
     old_attachments = (foi_attachments - attachments)
-
-    non_public_old_attachments = old_attachments.reject(&:is_public?)
-    if non_public_old_attachments.any?
-      # if there are non public attachments error as we don't want to re-build
-      # and lose the prominence as this will make them public
-      raise UnableToExtractAttachments, "unable to extract attachments due " \
-        "to prominence of attachments " \
-        "(ID=#{non_public_old_attachments.map(&:id).join(', ')})"
-    end
-
-    locked_old_attachments = old_attachments.select(&:locked?)
-    if locked_old_attachments.any?
-      # if there are locked attachments error as we don't want to re-build and
-      # lose any changes made outside Alaveteli
-      raise UnableToExtractAttachments, "unable to extract attachments due " \
-        "to locked attachments " \
-        "(ID=#{locked_old_attachments.map(&:id).join(', ')})"
-    end
+    refuse_if_protected!(old_attachments)
 
     old_attachments.each(&:mark_for_destruction)
-  end
-  # rubocop:enable Lint::UnderscorePrefixedVariableName
 
-  # Returns attachments that are uuencoded in main body part
-  def _uudecode_attachments(text, start_part_number)
-    MailHandler.uudecode(text, start_part_number).map do |attrs|
-      hexdigest = attrs.delete(:hexdigest)
-      attachment = foi_attachments.find_or_initialize_by(hexdigest: hexdigest)
-      attachment.attributes = attrs
-      attachment
+    deferred_bodies.each do |attachment, body|
+      attachment.body = body
+      attachment.clear_rasterized_metadata!
     end
+  end
+
+  def refuse_if_protected!(old_attachments)
+    protected_old = old_attachments.reject do |a|
+      a.prominence == 'requester_only' && !a.erased? && !a.black_masked?
+    end
+    return unless protected_old.any?
+
+    raise UnableToExtractAttachments,
+          'unable to extract attachments due to protected attachments ' \
+          "(ID=#{protected_old.map(&:id).join(', ')})"
+  end
+
+  def normalize_extracted_main_body(main_part, deferred_bodies)
+    return unless deferred_bodies.key?(main_part)
+
+    raw_bytes = deferred_bodies[main_part]
+    normalized = normalize_main_body(main_part, raw_bytes,
+                                     content_type: main_part.content_type)
+    main_part.content_type = 'text/plain'
+    main_part.charset = 'UTF-8'
+    if main_part.filename.present? && main_part.filename.match?(/\.html?\z/i)
+      main_part.filename = main_part.filename.sub(/\.html?\z/i, '.txt')
+    end
+    deferred_bodies[main_part] = normalized
+  rescue AttachmentToText::ConversionFailed
+    nil
+  end
+
+  # MailHandler::Report stops scanning after MAX_UU_BLOCKS; if main_part wasn't
+  # scanned (uuencoded is nil), reject the mail as TooComplex.
+  def main_text_blocks(reading, main_part)
+    searched = reading.parts.find do |part|
+      part.hexdigest == main_part.hexdigest && part.uuencoded
+    end
+    return searched.uuencoded if searched
+
+    raise MailHandler::TooComplex,
+          'as many uuencoded blocks as a mail may hold come before the ' \
+          'main text'
+  end
+
+  # Returns attachments uuencoded in the main body, numbered after mail parts.
+  def _uudecode_attachments(blocks, start_part_number, deferred_bodies)
+    blocks.each_with_index.map do |block, index|
+      attrs = { body: block.body, filename: block.filename,
+                content_type: block.content_type,
+                url_part_number: start_part_number + index + 1 }
+      attachment = foi_attachments.
+                   find_or_initialize_by(hexdigest: block.hexdigest)
+      assign_parsed_attributes(attachment, attrs, deferred_bodies)
+    end
+  end
+
+  def assign_parsed_attributes(attachment, attrs, deferred_bodies)
+    if attachment.persisted? &&
+       (attachment.erased? || attachment.is_public? ||
+        attachment.manual_black_mask?)
+      attrs = attrs.except(:body, :filename, :content_type)
+    else
+      deferred_bodies[attachment] = attrs[:body]
+      attrs = attrs.except(:body)
+      if attachment.persisted?
+        attachment.masked_at = nil
+        attachment.masking_failed_at = nil
+        attachment.black_masked = false
+      end
+    end
+    attachment.attributes = attrs
+    attachment
   end
 end

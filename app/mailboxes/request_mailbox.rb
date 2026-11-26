@@ -1,4 +1,14 @@
+# Routes inbound mail to matching/guessed InfoRequests or the holding pen,
+# dropping SpamAddress matches. Re-queues refused mail reads up to
+# ROUTE_AGAIN_FOR (already_received? deduplicates; see doc/FORK.md).
 class RequestMailbox < ApplicationMailbox
+  include ConfigHelper
+
+  ROUTE_AGAIN_EVERY = 10.minutes
+  ROUTE_AGAIN_FOR = 12.hours
+
+  rescue_from MailHandler::ReadRefused, with: :route_again_later
+
   def process
     return if spam?
 
@@ -26,6 +36,27 @@ class RequestMailbox < ApplicationMailbox
   end
 
   private
+
+  # Enqueue before marking pending so a failed enqueue leaves the email failed
+  # rather than stranded in pending.
+  def route_again_later(error)
+    return give_up_routing(error) if inbound_email.created_at <
+                                     ROUTE_AGAIN_FOR.ago
+
+    ActionMailbox::RoutingJob.set(wait: ROUTE_AGAIN_EVERY).
+      perform_later(inbound_email) or raise error
+    inbound_email.pending!
+  end
+
+  def give_up_routing(error)
+    logger.warn("InboundEmail #{inbound_email.id}: left as failed after " \
+                "#{ROUTE_AGAIN_FOR.inspect} (#{error.message})")
+    return unless send_exception_notifications?
+
+    ExceptionNotifier.notify_exception(
+      error, data: { inbound_email_id: inbound_email.id }
+    )
+  end
 
   def addresses
     @addresses ||= MailHandler.get_all_addresses(mail)

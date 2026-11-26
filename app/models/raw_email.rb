@@ -8,20 +8,20 @@
 #  erased_at        :datetime
 #  message_id       :string
 #  message_checksum :string
+#  read_at          :datetime
 #
 
-# models/raw_email.rb:
-# The fat part of models/incoming_message.rb
-#
 # Copyright (c) 2008 UK Citizens Online Democracy. All rights reserved.
 # Email: hello@mysociety.org; WWW: http://www.mysociety.org/
 
+# Stores the unaltered RFC 822 email for an IncomingMessage in Active Storage,
+# parsing headers on demand and supporting expiry and administrative erasure.
 class RawEmail < ApplicationRecord
   class UnmaskedAttachmentsError < StandardError; end
 
-  include Erasable
+  KEPT_FOR = 120.days
 
-  # deliberately don't strip_attributes, so keeps raw email properly
+  include Erasable
 
   has_one :incoming_message,
           inverse_of: :raw_email
@@ -32,13 +32,53 @@ class RawEmail < ApplicationRecord
 
   has_one_attached :file, service: :raw_emails
 
+  scope :expired, ->(at = Time.current) {
+    joins(:file_attachment, incoming_message: :info_request).
+      where.not(read_at: nil).
+      where(erased_at: nil).
+      where.not(info_requests: { url_title: 'holding_pen' }).
+      where(
+        'COALESCE(info_requests.last_activity_at, ' \
+        'info_requests.created_at) <= ?',
+        at - KEPT_FOR
+      )
+  }
+
+  after_touch :invalidate_attention_prediction, if: :erased_at?
+  after_update :invalidate_attention_prediction,
+               if: -> { saved_change_to_erased_at? && erased_at? }
+
   delegate :date, to: :mail
-  delegate :multipart?, to: :mail
-  delegate :parts, to: :mail
 
   delegate :expire, :log_event, to: :info_request
 
-  delegate :lock_all_attachments, to: :incoming_message
+  def self.purge_expired!(at = Time.current)
+    expired(at).find_each do |raw_email|
+      raw_email.file.purge_later
+      raw_email.inbound_email&.destroy
+    end
+  end
+
+  def read?
+    read_at.present?
+  end
+
+  def kept?
+    file.attached? && erased_at.nil?
+  end
+
+  def expired?
+    read? && erased_at.nil? && !file.attached?
+  end
+
+  def mark_read!
+    return if read?
+
+    update_columns(read_at: Time.current)
+    ActiveRecord.after_all_transactions_commit do
+      RawEmail::ForgetInboundJob.perform_later(self)
+    end
+  end
 
   def inbound_email
     ActionMailbox::InboundEmail.find_by(
@@ -64,6 +104,7 @@ class RawEmail < ApplicationRecord
   def mail=(new_mail)
     @data = new_mail.raw_source # If mail library is passed a string
     @data = new_mail.encoded if @data.empty? # or if built using the DSL
+    @mail = nil
 
     file.attach(
       io: StringIO.new(@data),
@@ -122,9 +163,14 @@ class RawEmail < ApplicationRecord
 
   def message_id
     return self[:message_id] if self[:message_id].present?
+    return unless data
 
     # taken from https://github.com/rails/rails/blob/624fe3c/actionmailbox/app/models/action_mailbox/inbound_email/message_id.rb#L27-L35
-    message_id = mail.message_id rescue nil
+    message_id = begin
+                   mail.message_id
+                 rescue
+                   nil
+                 end
     message_id ||= Mail::MessageIdField.new(
       "<#{message_checksum}@#{::Socket.gethostname}.mail>"
     ).message_id
@@ -135,6 +181,7 @@ class RawEmail < ApplicationRecord
 
   def message_checksum
     return self[:message_checksum] if self[:message_checksum].present?
+    return unless data
 
     # taken from https://github.com/rails/rails/blob/624fe3c/actionmailbox/app/models/action_mailbox/inbound_email/message_id.rb#L17
     message_checksum = OpenSSL::Digest::SHA1.hexdigest(data)
@@ -159,5 +206,13 @@ class RawEmail < ApplicationRecord
 
   def incoming_message_id
     incoming_message.id.to_s
+  end
+
+  def invalidate_attention_prediction
+    return unless defined?(IncomingAttention::Prediction)
+
+    IncomingAttention::Prediction.invalidate_message(
+      incoming_message&.id, 'raw_erased'
+    )
   end
 end

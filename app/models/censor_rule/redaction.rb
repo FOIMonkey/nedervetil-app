@@ -16,10 +16,7 @@ class CensorRule::Redaction < ApplicationRecord
 
   validates_presence_of :redacted_attribute
 
-  # Redactions that can be worked out again by re-applying the rule. Locking
-  # an attachment masks it a final time and stops any further rules being
-  # applied to it, so what it redacted can no longer be recalculated.
-  scope :recalculable, -> { where.not(redactable: FoiAttachment.locked) }
+  scope :recalculable, -> { all }
 
   scope :for_request, ->(info_request) {
     where(redactable: info_request).

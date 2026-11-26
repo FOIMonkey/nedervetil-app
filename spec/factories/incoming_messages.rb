@@ -7,7 +7,6 @@
 #  created_at                     :datetime         not null
 #  updated_at                     :datetime         not null
 #  raw_email_id                   :integer          not null
-#  cached_attachment_text_clipped :text
 #  cached_main_body_text_folded   :text
 #  cached_main_body_text_unfolded :text
 #  subject                        :text
@@ -101,7 +100,7 @@ FactoryBot.define do
     end
   end
 
-  factory :plain_incoming_message, class: IncomingMessage do
+  factory :plain_incoming_message, class: 'IncomingMessage' do
     info_request
     association :raw_email, strategy: :create
     last_parsed { nil }

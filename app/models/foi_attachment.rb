@@ -13,46 +13,55 @@
 #  hexdigest             :string(32)
 #  created_at            :datetime
 #  updated_at            :datetime
-#  prominence            :string           default("normal")
+#  prominence            :string           default("requester_only"), not null
 #  prominence_reason     :text
 #  masked_at             :datetime
-#  locked                :boolean          default(FALSE)
-#  replaced_at           :datetime
-#  replaced_reason       :string
 #  erased_at             :datetime
 #  masking_failed_at     :datetime
+#  black_masked          :boolean          default(FALSE), not null
 #
 
-# models/foi_attachment.rb:
-# An attachment to an email (IncomingMessage)
-#
 # Copyright (c) 2007 UK Citizens Online Democracy. All rights reserved.
 # Email: hello@mysociety.org; WWW: http://www.mysociety.org/
-# This is the type which is used to send data about attachments to the view
 
 require 'digest'
 
+# A file extracted from an IncomingMessage and stored through Active Storage.
 class FoiAttachment < ApplicationRecord
   include Rails.application.routes.url_helpers
   include LinkToHelper
 
   include MessageProminence
 
+  def self.prominence_states
+    %w(public requester_only hidden)
+  end
+
+  def is_public?
+    prominence == 'public'
+  end
+
   include ContentType
   include Erasable
   include Eventable
-  include Lockable
+  include HTMLSanitising
   include Maskable
-  include Redactable
-  include Replaceable
+  include MaskedByRequest
+  include Prominence
+  include StoredFile
 
   MissingError = Class.new(StandardError)
-  MaskingError = Class.new(StandardError)
 
   belongs_to :incoming_message, inverse_of: :foi_attachments, optional: true
   has_one :raw_email, through: :incoming_message, source: :raw_email
   has_one :info_request, through: :incoming_message, source: :info_request
   has_one :user, through: :info_request
+  has_one :disclosure_document, class_name: 'Disclosures::Document',
+                                inverse_of: :foi_attachment
+  has_many :applied_revisions,
+           -> { where(status: 'applied').order(applied_at: :desc, id: :desc) },
+           class_name: 'AttachmentManagement::Revision',
+           inverse_of: :foi_attachment
 
   has_one_attached :file, service: :attachments
 
@@ -60,9 +69,9 @@ class FoiAttachment < ApplicationRecord
   validates_presence_of :display_size
 
   before_validation :ensure_filename!, only: [:filename]
-  before_destroy :delete_cached_file!
+  after_update :invalidate_attention_prediction
 
-  scope :binary, -> { where.not(content_type: AlaveteliTextMasker::TextMask) }
+  scope :binary, -> { where.not(content_type: AlaveteliTextMasker::TEXT_MASK) }
 
   delegate :expire, to: :info_request
   delegate :metadata, to: :file_blob, allow_nil: true
@@ -73,33 +82,18 @@ class FoiAttachment < ApplicationRecord
   BODY_MAX_TRIES = 3
   BODY_MAX_DELAY = 5
 
-  def self.prominence_states
-    %w(normal public requester_only hidden)
-  end
-
   def delete_cached_file!
     @cached_body = nil
     file.purge_later if file.attached?
   end
 
-  def body=(d)
-    self.hexdigest ||= Digest::MD5.hexdigest(d)
+  def reload(*)
+    @cached_body = nil
+    super
+  end
 
-    ensure_filename!
-    if file.attached?
-      file_blob.upload(StringIO.new(d.to_s), identify: false)
-      file_blob.save
-
-    else
-      file.attach(
-        io: StringIO.new(d.to_s),
-        filename: filename,
-        content_type: content_type
-      )
-    end
-
-    @cached_body = d.force_encoding("ASCII-8BIT")
-    update_display_size!
+  def body=(data)
+    store_file!(data)
   end
 
   def body
@@ -107,17 +101,7 @@ class FoiAttachment < ApplicationRecord
 
     ensure_not_erased!
 
-    begin
-      return file.download if locked? || masked?
-    rescue ActiveStorage::FileNotFoundError => ex
-      # file isn't in storage and has gone missing, rescue to allow the masking
-      # job to run and rebuild the stored file or even the whole attachment.
-      raise ex if locked? || erased?
-    end
-
-    if masking_failed?
-      raise MaskingError, "masking previously failed (ID=#{id})"
-    end
+    return file.download if masked?
 
     if persisted?
       FoiAttachment::MaskJob.unlock!(self)
@@ -125,7 +109,7 @@ class FoiAttachment < ApplicationRecord
       return body_after_masking unless destroyed?
     end
 
-    load_attachment_from_incoming_message!.body if destroyed?
+    file.download if file.attached?
   end
 
   # body as UTF-8 text, with scrubbing of invalid chars if needed
@@ -145,14 +129,15 @@ class FoiAttachment < ApplicationRecord
   # applied
   def unmasked_body
     ensure_not_erased!
-    mail_attributes[:body]
+    original_attributes[:body]
   end
 
   def main_body_part?
-    self == incoming_message.get_main_body_text_part
+    incoming_message.present? &&
+      self == incoming_message.get_main_body_text_part
   end
 
-  # Returns HTML, of extra comment to put by attachment
+  # Returns extra note for delivery-status parts, or nil on ReadRefused.
   def extra_note
     return unless content_type == 'message/delivery-status'
 
@@ -160,6 +145,8 @@ class FoiAttachment < ApplicationRecord
     return unless dsn.status && dsn.message
 
     "DSN: #{dsn.status} #{dsn.message}"
+  rescue MailHandler::ReadRefused
+    nil
   end
 
   # Called by controller so old filenames still work
@@ -169,27 +156,26 @@ class FoiAttachment < ApplicationRecord
     # Convert weird spaces (e.g. \n) to normal ones
     filename = filename.gsub(/\s/, " ")
     # Remove slashes, they mess with URLs
-    filename.gsub(/\//, "-")
+    filename.tr('/', "-")
   end
 
   def redacted_filename
-    return replaced_filename if replaced_filename.present?
     return filename unless info_request
-    return filename if locked? && !locking?
 
-    # FIXME: We should use `apply_masks` to use the full masking pipeline, but
-    # this may break some attachment URLs.
-    info_request.apply_censor_rules_to_text(
-      filename, redactable: self, redacted_attribute: :filename
-    )
+    apply_censor_rules(filename, 'text/plain', redacted_attribute: :filename)
   end
 
   # TODO: changing this will break existing URLs, so have a care - maybe
   # make another old_display_filename see above
   def display_filename
+    self.class.display_form(redacted_filename)
+  end
+
+  # A filename as it's written in an attachment's URL.
+  def self.display_form(filename)
     # Sometimes filenames have e.g. %20 in - no point butchering that
     # (without unescaping it, this would remove the % and leave 20s in there)
-    filename = CGI.unescape(redacted_filename)
+    filename = CGI.unescape(filename)
     # Remove weird spaces
     filename = filename.gsub(/\s+/, " ")
     # Remove non-alphabetic characters
@@ -203,23 +189,24 @@ class FoiAttachment < ApplicationRecord
   end
 
   def ensure_filename!
-    if filename.blank?
-      calc_ext = AlaveteliFileTypes.mimetype_to_extension(content_type)
-      calc_ext = "bin" unless calc_ext
-      if !within_rfc822_subject.nil?
-        computed = within_rfc822_subject + "." + calc_ext
-      else
-        computed = "attachment." + calc_ext
-      end
-      self.filename = computed
+    return unless filename.blank?
+
+    calc_ext = AlaveteliFileTypes.mimetype_to_extension(content_type)
+    calc_ext = "bin" unless calc_ext
+    if !within_rfc822_subject.nil?
+      computed = within_rfc822_subject + "." + calc_ext
+    else
+      computed = "attachment." + calc_ext
     end
+    self.filename = computed
   end
 
   def filename=(filename)
-    filename.try(:delete!, "\0")
+    filename.try(:tr!, "\0\r\n", '')
     calc_ext = AlaveteliFileTypes.mimetype_to_extension(content_type)
     # Put right extension on if missing
-    if !filename.nil? && !filename.match(/\.#{calc_ext}$/) && calc_ext
+    if !filename.nil? && calc_ext &&
+       !filename.match?(/\.#{Regexp.escape(calc_ext)}\z/i)
       computed = filename + "." + calc_ext
     else
       computed = filename
@@ -238,59 +225,46 @@ class FoiAttachment < ApplicationRecord
     end
   end
 
-  # Whether this type has a "View as HTML"
-  def html_viewer?
-    return false if erased?
-
-    AttachmentToHTML.extractable?(self)
-  end
-
-  # For "View as HTML" of attachment
-  def body_to_html(**kwargs)
-    ensure_not_erased!
-    AttachmentToHTML.to_html(self, **kwargs)
-  end
-
   def body_to_text
     ensure_not_erased!
     AttachmentToText.new(self).to_text
-  end
-
-  def cached_urls
-    [
-      request_path(info_request)
-    ]
-  end
-
-  def load_attachment_from_incoming_message
-    IncomingMessage.get_attachment_by_url_part_number_and_filename!(
-      incoming_message.get_attachments_for_display,
-      url_part_number,
-      display_filename
-    )
   end
 
   def storage_key
     file.blob.key if file&.attached?
   end
 
+  def original_attributes
+    mail_attributes.slice(:body, :content_type, :filename)
+  end
+
   private
 
-  def mail_attributes
-    raw_email_ensure_not_erased!
+  def invalidate_attention_prediction
+    return unless defined?(IncomingAttention::Prediction)
+    return unless saved_change_to_prominence? || saved_change_to_erased_at?
 
-    MailHandler.attachment_attributes_for_hexdigest(
-      raw_email.mail,
-      hexdigest: hexdigest
+    IncomingAttention::Prediction.invalidate_message(
+      incoming_message_id, 'attachment_visibility_changed'
     )
+  end
 
-  rescue MailHandler::MismatchedAttachmentHexdigest
+  def mail_attributes
+    unless raw_email&.kept?
+      raise RawEmail::Erasable::ErasedError,
+            "email is no longer kept (ID=#{raw_email&.id})"
+    end
+
+    MailHandler::Reading.page_seconds_left!
+
+    found = MailHandler::Reading.of(raw_email.data, part: hexdigest).
+            part_with(hexdigest)
+    return found.attributes if found
+
     begin
-      attributes = MailHandler.attempt_to_find_original_attachment_attributes(
-        raw_email.mail,
-        body: file.download
-      ) if file.attached?
-
+      attributes = MailHandler::Reading.of(
+        raw_email.data, stored: file.download
+      ).matched if file.attached?
     rescue ActiveStorage::FileNotFoundError
       raise MissingError, "attachment missing from storage (ID=#{id})"
     end
@@ -303,21 +277,8 @@ class FoiAttachment < ApplicationRecord
     attributes
   end
 
-  def load_attachment_from_incoming_message!
-    attachment = load_attachment_from_incoming_message
-    return attachment if attachment
-
-    raise MissingError, "attachment couldn't be reloaded using " \
-      "url_part_number and display_filename attributes"
-  end
-
   def body_after_masking
     return @cached_body if @cached_body
-
-    if masking_failed?
-      raise MaskingError, "masking previously failed (ID=#{id})"
-    end
-
     return file.download if masked? && file_blob.service.exist?(file_blob.key)
 
     raise MissingError, "attachment still missing after masking (ID=#{id})"

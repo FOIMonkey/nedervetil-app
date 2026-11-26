@@ -9,6 +9,7 @@ module FoiAttachment::ContentType
     'text/csv' => _('CSV file'),
     'text/html' => _('HTML file'),
     'application/rtf' => _('RTF file'),
+    'text/rtf' => _('RTF file'),
 
     # Binary Documents
     'application/pdf' => _('PDF file'),
@@ -28,6 +29,7 @@ module FoiAttachment::ContentType
     # Word Processing
     'application/vnd.openxmlformats-officedocument.wordprocessingml.document' => _('Word document'),
     'application/vnd.ms-word' => _('Word document'),
+    'application/msword' => _('Word document'),
     'application/vnd.ms-word.document.macroenabled.12' => _('Word document'),
     'application/vnd.oasis.opendocument.text' => _('Word processing document'),
     'application/vnd.oasis.opendocument.text-template' => _('Word processing document'),
@@ -59,7 +61,7 @@ module FoiAttachment::ContentType
   # rubocop:enable Layout/LineLength
 
   included do
-    scope :binary, -> { where.not(content_type: AlaveteliTextMasker::TextMask) }
+    scope :binary, -> { where.not(content_type: AlaveteliTextMasker::TEXT_MASK) }
 
     validates_presence_of :content_type
 
@@ -72,6 +74,6 @@ module FoiAttachment::ContentType
   end
 
   def text_type?
-    AlaveteliTextMasker::TextMask.include?(content_type)
+    AlaveteliTextMasker::TEXT_MASK.include?(content_type)
   end
 end

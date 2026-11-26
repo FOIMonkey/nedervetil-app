@@ -13,14 +13,12 @@
 #  hexdigest             :string(32)
 #  created_at            :datetime
 #  updated_at            :datetime
-#  prominence            :string           default("normal")
+#  prominence            :string           default("requester_only"), not null
 #  prominence_reason     :text
 #  masked_at             :datetime
-#  locked                :boolean          default(FALSE)
-#  replaced_at           :datetime
-#  replaced_reason       :string
 #  erased_at             :datetime
 #  masking_failed_at     :datetime
+#  black_masked          :boolean          default(FALSE), not null
 #
 FactoryBot.define do
   factory :foi_attachment do
@@ -62,33 +60,6 @@ FactoryBot.define do
       masked_at { nil }
     end
 
-    trait :locked do
-      locked { true }
-    end
-
-    trait :unlocked do
-      locked { false }
-    end
-
-    trait :replaced do
-      locked { true }
-      masked_at { 12.hours.ago }
-      replaced_at { 12.hours.ago }
-      replaced_reason { 'GDPR case' }
-
-      transient do
-        replacement_body { 'Replacement body' }
-      end
-
-      after(:build) do |foi_attachment, evaluator|
-        foi_attachment.file.attach(
-          io: StringIO.new(evaluator.replacement_body),
-          filename: foi_attachment.filename,
-          content_type: foi_attachment.content_type
-        )
-      end
-    end
-
     trait :erased do
       erased_at { 12.hours.ago }
     end
@@ -106,7 +77,9 @@ FactoryBot.define do
     end
 
     factory :docx_attachment do
+      # rubocop:disable Layout/LineLength -- a MIME type
       content_type { 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' }
+      # rubocop:enable Layout/LineLength
       filename { 'lorem.docx' }
       body { load_file_fixture('lorem.docx') }
     end
@@ -124,7 +97,9 @@ FactoryBot.define do
     end
 
     factory :pptx_attachment do
+      # rubocop:disable Layout/LineLength -- a MIME type
       content_type { 'application/vnd.openxmlformats-officedocument.presentationml.presentation' }
+      # rubocop:enable Layout/LineLength
       filename { 'interesting.pptx' }
       body { load_file_fixture('interesting.pptx') }
     end
@@ -189,7 +164,9 @@ FactoryBot.define do
     end
 
     factory :xlsx_attachment do
-      content_type { 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }
+      content_type do
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+      end
       filename { 'interesting.xlsx' }
       body { load_file_fixture('interesting.xlsx') }
     end
