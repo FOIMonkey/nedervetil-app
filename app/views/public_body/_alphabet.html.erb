@@ -1,3 +1,7 @@
 <%- "A".upto("Z") do |l| -%>
-  <%= link_to_unless (@tag == l), l, list_public_bodies_by_tag_path(l.downcase) %>
+  <% if @tag == l %>
+    <strong class="alphabet__letter alphabet__letter--current" aria-current="true"><%= l %></strong>
+  <% else %>
+    <%= link_to l, list_public_bodies_by_tag_path(l.downcase), class: 'alphabet__letter' %>
+  <% end %>
 <% end %>

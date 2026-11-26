@@ -24,7 +24,7 @@ module Disclosures
     end
 
     def replies
-      @replies ||= thread_messages.
+      @replies ||= Deadlines::Stage.share_thread(info_request).
         select { |message| ability.can?(:read, message) }.
         map { |message| reply_for(message) }
     end
@@ -61,7 +61,7 @@ module Disclosures
 
     # Attaches already-loaded request/part/message to avoid N+1 in checks.
     def share(list)
-      thread_messages
+      Deadlines::Stage.share_thread(info_request)
       parts = thread_parts
       list.each do |document|
         if document.info_request_id == info_request.id
@@ -75,7 +75,7 @@ module Disclosures
 
     def suggestions_for(message)
       @suggestions ||= begin
-        ids = thread_messages.map(&:id)
+        ids = Deadlines::Stage.share_thread(info_request).map(&:id)
         parts = thread_parts
         Suggestion.where(incoming_message_id: ids).to_a.each do |row|
           part = parts[row.foi_attachment_id]
@@ -135,12 +135,8 @@ module Disclosures
       [main, folded.reject { |_, list| list.empty? }]
     end
 
-    def thread_messages
-      Deadlines::Stage.share_thread(info_request)
-    end
-
     def routine?(message)
-        IncomingAttention::Labels.routine?(message)
+      IncomingAttention::Labels.routine?(message)
     end
 
     def document_for(row)

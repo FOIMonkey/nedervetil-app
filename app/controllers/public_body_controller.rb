@@ -1,103 +1,20 @@
-# app/controllers/public_body_controller.rb:
-# Show information about a public body.
-#
 # Copyright (c) 2007 UK Citizens Online Democracy. All rights reserved.
 # Email: hello@mysociety.org; WWW: http://www.mysociety.org/
 
 require 'tempfile'
 
+# Serves the public authority directory, category/tag listings, CSV export and
+# typeahead search; /body/:url_name requests are handled by PrivateArchive.
 class PublicBodyController < ApplicationController
   skip_before_action :html_response, only: [:show, :list_all_csv]
   skip_before_action :redirect_gettext_locale, only: :show
+  helper_method :request_journey_page_choices
 
   MAX_RESULTS = 500
-  # TODO: tidy this up with better error messages, and a more standard infrastructure for the redirect to canonical URL
-  def show
-    long_cache
-    @page = get_search_page_from_params
-    requests_per_page = 25
 
-    # Later pages are very expensive to load
-    if @page > MAX_RESULTS / requests_per_page
-      raise ActiveRecord::RecordNotFound, "Sorry. No pages after #{MAX_RESULTS / requests_per_page}."
-    end
-
-    if MySociety::Format.simplify_url_part(params[:url_name], 'body') != params[:url_name]
-      redirect_to url_name: MySociety::Format.simplify_url_part(params[:url_name], 'body'), status: :moved_permanently
-      return
-    end
-
-    @locale = AlaveteliLocalization.locale
-
-    AlaveteliLocalization.with_locale(@locale) do
-      @public_body = PublicBody.find_by_url_name_with_historic(params[:url_name])
-      raise ActiveRecord::RecordNotFound, "None found" if @public_body.nil?
-
-      if @public_body.url_name.nil?
-        redirect_back(fallback_location: root_path)
-        return
-      end
-
-      # If found by historic name, or alternate locale name, redirect to new name
-      if @public_body.url_name != params[:url_name]
-        redirect_to url_name: @public_body.url_name
-        return
-      end
-
-      set_last_body(@public_body)
-
-      @number_of_visible_requests = @public_body.info_requests.is_searchable.count
-
-      @searched_to_send_request = false
-      referrer = request.env['HTTP_REFERER']
-
-      if !referrer.nil? && referrer.match(%r{^#{frontpage_url}search/.*/bodies$})
-        @searched_to_send_request = true
-      end
-
-      @view = params[:view]
-
-      query = InfoRequestEvent.make_query_from_params(params.merge(latest_status: @view))
-      query += " requested_from:#{@public_body.url_name}"
-
-      # Use search query for this so can collapse and paginate easily
-      # TODO: really should just use SQL query here rather than Xapian.
-      sortby = "described"
-      begin
-        @request_results = perform_search(
-          [InfoRequestEvent], query, sortby,
-          'request_collapse', requests_per_page
-        )
-        if @page > 1
-          @page_desc = " (page #{ @page })"
-        else
-          @page_desc = ""
-        end
-      rescue
-        @request_results = nil
-      end
-
-      flash.keep(:search_params)
-
-      @track_thing = TrackThing.create_track_for_public_body(@public_body)
-
-      @existing_track = TrackThing.find_existing(@user, @track_thing) if @user
-
-      @follower_count = TrackThing.where(public_body_id: @public_body.id).count
-
-      @feed_autodetect = [ { url: do_track_url(@track_thing, 'feed'),
-                             title: @track_thing.params[:title_in_rss],
-                             has_json: true } ]
-
-      respond_to do |format|
-        format.html do
-          @has_json = true
-          render template: "public_body/show"
-        end
-        format.json { render json: @public_body.json_for_api }
-      end
-    end
-  end
+  # Kept for the route; PrivateArchive#private_archive_body_page intercepts
+  # /body/:url_name before this action runs.
+  def show; end
 
   def list
     long_cache
@@ -112,6 +29,7 @@ class PublicBodyController < ApplicationController
       @public_bodies = PublicBody.visible.
                                   with_tag(@tag).
                                   with_query(params[:public_body_query], @tag).
+                                  preload(:translations, :tags).
                                   paginate(page: params[:page], per_page: 100)
 
       @description =
@@ -153,7 +71,8 @@ class PublicBodyController < ApplicationController
     end
   end
 
-  # Used so URLs like /local/islington work, for use e.g. writing to a local paper.
+  # Used so URLs like /local/islington work, for use e.g. writing to a local
+  # paper.
   def list_redirect
     @tag = params[:tag]
     redirect_to list_public_bodies_url(tag: @tag)
@@ -179,8 +98,16 @@ class PublicBodyController < ApplicationController
     query = params[:query]
     return head :bad_request unless query
 
-    flash[:search_params] = params.slice(:query, :bodies, :page)
     @request_results = typeahead_search(query, model: PublicBody)
-    render partial: "public_body/search_ahead"
+    render :search_typeahead, layout: false
+  end
+
+  private
+
+  # @public_body is set by PrivateArchive#private_archive_body_page.
+  def request_journey_page_choices
+    return {} unless @public_body
+
+    { public_body: @public_body.url_name }
   end
 end
