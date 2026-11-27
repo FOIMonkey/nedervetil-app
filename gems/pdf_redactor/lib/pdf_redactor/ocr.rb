@@ -77,8 +77,9 @@ module PDFRedactor
     end
 
     def page_words(job, number)
-      job.run('pdftoppm', '-r', DPI.to_s, '-gray', '-png', '-f', number.to_s,
-              '-l', number.to_s, '-singlefile', job.input, job.scratch('page'))
+      job.run('pdftoppm', '-cropbox', '-r', DPI.to_s, '-gray', '-png',
+              '-f', number.to_s, '-l', number.to_s, '-singlefile',
+              job.input, job.scratch('page'))
       words(job.run('tesseract', job.scratch('page.png'), 'stdout', 'tsv',
                     env: TESSERACT_ENV).stdout)
     rescue PDFRedactor.backend::ToolError
@@ -96,20 +97,27 @@ module PDFRedactor
       end
     end
 
+    def box_coords(raw, doc)
+      vals = PDFRedactor.list(doc.resolve(raw)).map { |v| doc.resolve(v).to_f }
+      vals = [0.0, 0.0, 612.0, 792.0] unless vals.size == 4
+      x0, x1 = [vals[0], vals[2]].minmax
+      y0, y1 = [vals[1], vals[3]].minmax
+      [x0, y0, x1, y1]
+    end
+
     # Pixel position in pdftoppm's picture of the page -> page space.
     def to_page(attrs, doc)
-      box = attrs['CropBox'] || attrs['MediaBox'] || [0, 0, 612, 792]
-      box = box.map { |v| doc.resolve(v).to_f }
-      bx0 = box[0]
-      by0 = box[1]
-      bx1 = box[2]
-      by1 = box[3]
-      bx0, bx1 = bx1, bx0 if bx0 > bx1
-      by0, by1 = by1, by0 if by0 > by1
+      media = box_coords(attrs['MediaBox'] || [0, 0, 612, 792], doc)
+      crop = attrs['CropBox'] ? box_coords(attrs['CropBox'], doc) : media
+      bx0 = [crop[0], media[0]].max
+      by0 = [crop[1], media[1]].max
+      bx1 = [crop[2], media[2]].min
+      by1 = [crop[3], media[3]].min
+      bx0, by0, bx1, by1 = media if bx0 >= bx1 || by0 >= by1
       s = DPI / 72.0
       wu = (bx1 - bx0) * s
       hu = (by1 - by0) * s
-      rot = attrs['Rotate'].to_i % 360
+      rot = doc.resolve(attrs['Rotate']).to_i % 360
       ->(px, py) do
         u, v = case rot
                when 90 then [py, hu - px]
@@ -128,9 +136,10 @@ module PDFRedactor
     def rasterize(pdf, pages)
       PDFRedactor.backend.job(input: pdf, input_name: 'input.pdf') do |job|
         pages.each do |n|
-          job.run('pdftoppm', '-hide-annotations', '-r', RASTER_DPI.to_s,
-                  '-gray', '-jpeg', '-jpegopt', 'quality=80', '-f', n.to_s,
-                  '-l', n.to_s, '-singlefile', job.input, job.scratch("p#{n}"))
+          job.run('pdftoppm', '-cropbox', '-hide-annotations',
+                  '-r', RASTER_DPI.to_s, '-gray', '-jpeg',
+                  '-jpegopt', 'quality=80', '-f', n.to_s, '-l', n.to_s,
+                  '-singlefile', job.input, job.scratch("p#{n}"))
           job.run('magick', job.scratch("p#{n}.jpg"), '-units',
                   'PixelsPerInch', '-density', RASTER_DPI.to_s, '-compress',
                   'JPEG', '-quality', '80', job.scratch("p#{n}.pdf"))

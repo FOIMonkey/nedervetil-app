@@ -7,5 +7,5 @@
 # and behaviors.
 Rails.application.config.filter_parameters += [
   :passw, :email, :secret, :token, :_key, :crypt, :salt, :certificate, :otp,
-  :ssn, :cvv, :cvc
+  :ssn, :cvv, :cvc, :draft_claim, :text, :body
 ]

@@ -105,3 +105,6 @@ authors:
   storage), the upstream `develop` design for reverting a reported request
   (`69ed931b1`), and upstream `pg_trgm` trigram similarity search branch work
   used for authority name typo fallback.
+
+Our black-box PDF redaction tools were inspired by, and in part ported from,
+[Froide](https://github.com/okfde/froide).

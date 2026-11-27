@@ -16,7 +16,9 @@ class Ability
            AttachmentManagement.requester_access == 'replace')
       end
       can :edit_attachment_text, FoiAttachment do |attachment|
-        can?(:admin, attachment.info_request) || Disclosures.requester_editing?
+        can?(:manage_attachment, attachment) &&
+          (can?(:admin, attachment.info_request) ||
+           Disclosures.requester_editing?)
       end
       can :view_attachment_draft, AttachmentManagement::Revision do |revision|
         can?(:manage_attachment, revision.foi_attachment) &&

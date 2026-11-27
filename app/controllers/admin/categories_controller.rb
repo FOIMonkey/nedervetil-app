@@ -5,8 +5,8 @@ class Admin::CategoriesController < AdminController
   include TranslatableParams
 
   before_action :set_category, only: [:edit, :update, :destroy, :reorder]
-  before_action :set_root, except: [:destroy, :reorder]
   before_action :check_klass
+  before_action :set_root, except: [:destroy, :reorder]
 
   def index
   end
@@ -96,8 +96,13 @@ class Admin::CategoriesController < AdminController
 
   helper_method :current_klass
   def current_klass
-    @klass ||= @category.root.title.safe_constantize if @category&.root
-    @klass ||= params.fetch(:model_type, 'PublicBody').safe_constantize
+    return @klass if defined?(@klass)
+
+    root_title = @category&.root&.title
+    root_klass = Categorisable.models.find { |m| m.name == root_title }
+    param_name = params.fetch(:model_type, 'PublicBody').to_s
+    @klass = root_klass ||
+             Categorisable.models.find { |m| m.name == param_name }
   end
 
   def check_klass

@@ -80,7 +80,7 @@ module OfficePackage
       file_index = -1
       Zip::File.open(path) do |zip_file|
         zip_file.each do |entry|
-          next unless entry.file?
+          next if skip_non_file?(entry, skipped)
           next if (file_index += 1) < (skip || 0)
 
           if seen >= max_entries || bytes_read >= max_total
@@ -101,6 +101,13 @@ module OfficePackage
       seen
     end
 
+    def skip_non_file?(entry, skipped)
+      return false if entry.file?
+
+      record_skipped(skipped, entry) unless entry.directory?
+      true
+    end
+
     def record_skipped(skipped, entry)
       skipped << entry.to_s if skipped && skipped.size < MAX_ENTRIES
     end
@@ -109,7 +116,7 @@ module OfficePackage
       size = entry.size.to_i
       return nil if size.negative? || size > limit
 
-      body = entry.get_input_stream.read(limit + 1)
+      body = entry.get_input_stream { |stream| stream.read(limit + 1) }
       return nil if body.nil? || body.bytesize > limit
 
       body

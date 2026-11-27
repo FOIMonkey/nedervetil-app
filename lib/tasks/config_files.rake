@@ -84,7 +84,10 @@ namespace :config_files do
     # credentials, the same way `rails credentials:edit` would.
     master_key = Rails.root.join("config/master.key")
     unless master_key.exist? || ENV["RAILS_MASTER_KEY"]
-      master_key.write(ActiveSupport::EncryptedFile.generate_key)
+      flags = File::WRONLY | File::CREAT | File::EXCL
+      File.open(master_key, flags, 0o600) do |f|
+        f.write(ActiveSupport::EncryptedFile.generate_key)
+      end
     end
 
     encrypted_file = ActiveSupport::EncryptedConfiguration.new(

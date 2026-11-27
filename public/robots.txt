@@ -12,7 +12,8 @@ Disallow: */feed/*
 Disallow: */profile/*
 Disallow: */signin*
 Disallow: */tor*
-Allow: */request/*/response/*/attach/*
+Disallow: /admin/
+Disallow: /request/
 Disallow: */request/*/response/*
 Disallow: */request/*/download*
 Disallow: */change_request/*

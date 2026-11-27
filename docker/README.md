@@ -33,7 +33,8 @@ Stop the demo with `docker compose stop`; its database and files are preserved.
 Set `DEMO_THEME_URL` to clone a different theme, or see
 [Without a theme](#without-a-theme). Setup writes
 `config/general-nedervetil-test-theme.yml` from `config/general.yml-example`
-with `SITE_NAME: 'Nedervetil'`, `ENABLE_TWO_FACTOR_AUTH: true`,
+with `SITE_NAME: 'Nedervetil'`, `DOMAIN: 'localhost:3000'` (so links in
+captured mail open the demo), `ENABLE_TWO_FACTOR_AUTH: true`,
 `INCOMING_ATTENTION_ENABLED: true`, and `INCOMING_OUTCOME_MODE: 'apply'`, then
 links `config/general.yml` to it. `config/general.yml-example` keeps
 production's defaults.
@@ -45,7 +46,8 @@ localhost only: http://localhost:3000 and, for mail, http://localhost:1080.
 Setup loads invented sample data (`bin/rails sample_data:load`):
 
 - authorities in groups by place, type, and sector;
-- requests across the main lifecycle states, with deadlines, a reminder, and a batch;
+- requests across the main lifecycle states, with a saved draft, deadlines, a
+  reminder, and a batch;
 - published documents and one redaction waiting in the admin review queue;
 - stored AI readings, so no external reply-reading service is needed;
 - regulator decisions and FOI statistics.
@@ -66,13 +68,15 @@ before opening `/admin`.
 
 Things to try:
 
-- Start a new request to Larkhollow District Council about public toilets. On
-  the check step, the site suggests published documents from that council and
-  common topic questions.
+- Start a new request to Larkhollow District Council about **public toilets**
+  to see published documents from that council suggested on the check step (or
+  try **abandoned vehicles** to see a matching topic question and dataset).
 - Sign in as `admin@example.org`, complete the 2FA setup prompt, and open
   `/documents/review` to inspect the requester's redaction of a decision letter.
-- On the requester's dashboard, press Remind on the overdue request. The
-  follow-up appears in MailHog at http://localhost:1080.
+- On the requester's dashboard, press **Remind them** on the overdue internal
+  review (**Use of live facial recognition**; the SEND transport sample
+  already shows an earlier reminder). The follow-up appears in MailHog at
+  http://localhost:1080.
 - Send a daily summary: `docker compose run --rm app script/send-notifications`.
 
 Mail isn't sent while sample data loads, so MailHog starts empty.

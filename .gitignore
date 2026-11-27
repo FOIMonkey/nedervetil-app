@@ -47,4 +47,11 @@
 /vendor/data/
 
 /config/credentials.yml.enc
+/config/credentials/*.yml.enc
+/config/credentials/*.key
 /config/master.key
+/.env
+/.env.*
+/.irb_history
+/.pry_history
+/.byebug_history

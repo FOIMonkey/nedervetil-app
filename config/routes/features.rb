@@ -142,6 +142,10 @@ scope 'admin/documents/:id', module: 'admin/disclosures',
   patch 'manage', to: 'documents#update'
   delete 'manage', to: 'documents#destroy'
   get 'edit', to: 'documents#edit', as: 'edit_document'
+  get 'download', to: 'documents#download', as: 'download_document'
+  get 'pages/:page', to: 'documents#page_image',
+                     as: 'document_page',
+                     constraints: { page: /\d+/ }
   post 'withdraw', to: 'documents#withdraw', as: 'withdraw_document'
 end
 

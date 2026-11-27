@@ -27,6 +27,28 @@ RSpec.shared_examples 'a rich text field without attachments' do |field|
     expect_no_attachments(stored(record, field))
   end
 
+  it 'purges an unattached blob referenced by a stripped attachment' do
+    record.public_send("#{field}=", html)
+
+    perform_enqueued_jobs { record.save! }
+
+    expect(ActiveStorage::Blob.exists?(blob.id)).to be(false)
+  end
+
+  it 'keeps a blob referenced by a stripped attachment when used elsewhere' do
+    other = ActionText::RichText.create!(
+      record: FactoryBot.create(:public_body), name: 'other', body: 'x'
+    )
+    ActiveStorage::Attachment.create!(
+      name: 'embeds', record: other, blob: blob
+    )
+    record.public_send("#{field}=", html)
+
+    perform_enqueued_jobs { record.save! }
+
+    expect(ActiveStorage::Blob.exists?(blob.id)).to be(true)
+  end
+
   it 'removes attachments sent in Trix markup' do
     trix = "<p>Text</p><figure data-trix-attachment='" \
       "#{{ sgid: blob.attachable_sgid }.to_json}'></figure>"

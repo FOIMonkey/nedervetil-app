@@ -307,12 +307,18 @@ class PublicBody < ApplicationRecord
     has_tag?('site_administration')
   end
 
-  # Can an FOI (etc.) request be made to this body?
-  def is_requestable?
-    has_request_email? && !defunct? && !not_apply?
+  def internal_admin_body?
+    url_name == 'internal_admin_authority'
   end
 
-  scope :is_requestable, -> { with_request_email.not_defunct.foi_applies }
+  # Can an FOI (etc.) request be made to this body?
+  def is_requestable?
+    has_request_email? && !defunct? && !not_apply? && !internal_admin_body?
+  end
+
+  scope :is_requestable, -> {
+    visible.with_request_email.not_defunct.foi_applies
+  }
 
   # Strict superset of is_requestable?
   def is_followupable?
@@ -327,7 +333,7 @@ class PublicBody < ApplicationRecord
   def not_requestable_reason
     if defunct?
       'defunct'
-    elsif not_apply?
+    elsif not_apply? || internal_admin_body?
       'not_apply'
     elsif !has_request_email?
       'bad_contact'

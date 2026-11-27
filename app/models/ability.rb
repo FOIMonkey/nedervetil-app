@@ -146,7 +146,7 @@ class Ability
   end
 
   def can_update_request_state?(request)
-    may_act? && (requester_of?(request) || admin?)
+    may_act? && (requester_of?(request) || admin?) && can?(:read, request)
   end
 
   def requester_or_admin?(request)

@@ -16,22 +16,34 @@ class NotificationMailer < ApplicationMailer
       outside_holding_pen
     due = notifications.where('send_after <= ?', Time.zone.now)
     due.distinct.pluck(:user_id).each do |user_id|
-      rows = Notification.reject_and_mark_expired(
-        notifications.where(user_id: user_id).order(created_at: :desc).to_a
-      )
-      next if rows.empty?
-
-      NotificationMailer.daily_summary(User.find(user_id), rows).deliver_now
-      Notification.where(id: rows.map(&:id)).update_all(seen_at: Time.zone.now)
-      done_something = true
-    rescue StandardError => e
-      # The rows stay unseen, and the other accounts still get their mail.
-      Rails.logger.warn(
-        "notification_delivery_failed user_id=#{user_id} #{e.class}"
-      )
+      done_something = true if deliver_daily_for_user(notifications, user_id)
     end
     held || done_something
   end
+
+  def self.deliver_daily_for_user(notifications, user_id)
+    rows = Notification.reject_and_mark_expired(
+      notifications.where(user_id: user_id).order(created_at: :desc).to_a
+    )
+    return false if rows.empty?
+
+    user = User.find_by(id: user_id)
+    unless user&.active? && user.receive_email_alerts?
+      Notification.where(id: rows.map(&:id)).update_all(expired: true)
+      return false
+    end
+
+    NotificationMailer.daily_summary(user, rows).deliver_now
+    Notification.where(id: rows.map(&:id)).update_all(seen_at: Time.zone.now)
+    true
+  rescue StandardError => e
+    # The rows stay unseen, and the other accounts still get their mail.
+    Rails.logger.warn(
+      "notification_delivery_failed user_id=#{user_id} #{e.class}"
+    )
+    false
+  end
+  private_class_method :deliver_daily_for_user
 
   def self.send_instant_notifications
     frequency = Notification.frequencies[Notification::INSTANTLY]
@@ -45,6 +57,12 @@ class NotificationMailer < ApplicationMailer
       outside_holding_pen.order(:created_at)
     rows = Notification.reject_and_mark_expired(notifications.to_a)
     rows.each do |notification|
+      unless notification.user&.active? &&
+             notification.user.receive_email_alerts?
+        notification.update!(expired: true)
+        next
+      end
+
       NotificationMailer.instant_notification(notification).deliver_now
       notification.update!(seen_at: Time.zone.now)
       done_something = true
@@ -162,6 +180,8 @@ class NotificationMailer < ApplicationMailer
 
   def overdue_notification(notification)
     @info_request = notification.info_request_event.info_request
+    return unless Ability.new(@info_request.user).can?(:read, @info_request)
+
     @url = signin_url(r: respond_to_last_path(@info_request))
 
     mail_user(
@@ -178,6 +198,8 @@ class NotificationMailer < ApplicationMailer
 
   def very_overdue_notification(notification)
     @info_request = notification.info_request_event.info_request
+    return unless Ability.new(@info_request.user).can?(:read, @info_request)
+
     @url = signin_url(r: respond_to_last_path(@info_request))
 
     mail_user(

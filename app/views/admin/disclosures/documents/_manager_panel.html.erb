@@ -59,7 +59,7 @@
       <li><%= link_to _('Edit details'), admin_disclosure_edit_document_path(document), class: 'btn document-manage__action-btn' %></li>
     <% end %>
     <% if document.servable? && stage != :listed %>
-      <li><%= link_to "#{_('Download')} (#{document_format_line(document)})", disclosure_document_download_path(document), class: 'btn document-manage__action-btn', data: { turbo: false } %></li>
+      <li><%= link_to "#{_('Download')} (#{document_format_line(document)})", admin_disclosure_download_document_path(document), class: 'btn document-manage__action-btn', data: { turbo: false } %></li>
     <% end %>
     <% if stage == :listed %>
       <li><%= link_to _('View public document'), disclosure_document_path(document), class: 'btn document-manage__action-btn' %></li>

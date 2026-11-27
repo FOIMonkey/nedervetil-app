@@ -18,11 +18,12 @@ class SafeRedirect
   private
 
   # A path with no leading slash is relative to the current page, which
-  # Rails refuses to redirect to.
+  # Rails refuses to redirect to; multiple slashes or backslashes are
+  # collapsed to a single root slash so protocol-relative paths cannot form.
   def absolute_path
     path = uri.path
-    return path if path.blank? || path.start_with?('/')
+    return path if path.blank?
 
-    "/#{path}"
+    "/#{path.sub(%r{\A[/\\]+}, '')}"
   end
 end

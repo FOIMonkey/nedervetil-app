@@ -98,6 +98,49 @@ RSpec.describe OfficePackage::CompoundFile do
     expect(file.encrypted?).to be(false)
   end
 
+  it 'refuses a storage tree nested deeper than MAX_DEPTH' do
+    bytes = OfficeFixtures.compound({ 'Leaf' => 'hello' }).b
+    dir_start = bytes.unpack1('@48V')
+    fat_sector = bytes.unpack1('@76V')
+    dir_offset = (dir_start + 1) * 512
+    root = bytes.byteslice(dir_offset, 128).dup
+    root[76, 4] = [1].pack('V')
+
+    depth = described_class::MAX_DEPTH + 2
+    entries = [root]
+    (1..depth).each do |i|
+      entry = "\x00".b * 128
+      name = "D#{i}".encode('UTF-16LE').b
+      entry[0, name.bytesize] = name
+      entry[64, 2] = [name.bytesize + 2].pack('v')
+      entry[66] = [described_class::STORAGE].pack('C')
+      entry[68, 12] = [0xFFFFFFFF, 0xFFFFFFFF,
+                       i < depth ? i + 1 : 0xFFFFFFFF].pack('VVV')
+      entries << entry
+    end
+    empty_links = [0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF].pack('VVV')
+    while entries.size % 4 != 0
+      free = "\x00".b * 128
+      free[68, 12] = empty_links
+      entries << free
+    end
+
+    dir_bytes = entries.join
+    dir_sectors = dir_bytes.bytesize / 512
+    bytes[dir_offset, 512] = dir_bytes.byteslice(0, 512)
+    first_extra = (bytes.bytesize - 512) / 512
+    bytes << dir_bytes.byteslice(512..)
+    chain = [dir_start, *(first_extra...(first_extra + dir_sectors - 1))]
+    fat_offset = (fat_sector + 1) * 512
+    chain.each_cons(2) do |a, b|
+      bytes[fat_offset + (a * 4), 4] = [b].pack('V')
+    end
+    bytes[fat_offset + (chain.last * 4), 4] = [0xFFFFFFFE].pack('V')
+
+    expect { described_class.new(bytes).streams }.
+      to raise_error(OfficePackage::Refused, /nested too deep/)
+  end
+
   it 'says what is not a compound file' do
     expect { described_class.new('PK') }.
       to raise_error(OfficePackage::NotPackage)

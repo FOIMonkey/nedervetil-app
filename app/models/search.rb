@@ -1,5 +1,5 @@
 # Public facade for PostgreSQL full-text and authority typeahead search
-# (see doc/SEARCH.md).
+# (see doc/FORK.md).
 module Search
   def self.backend
     @backend ||= Adapters::Postgresql::Adapter.new

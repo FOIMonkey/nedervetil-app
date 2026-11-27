@@ -3,52 +3,6 @@
     {
       "warning_type": "Remote Code Execution",
       "warning_code": 24,
-      "fingerprint": "5cd420639efadb2f9f2ca7bf79a05a490153dadd82b877abb42f49dc0d5183b6",
-      "check_name": "UnsafeReflection",
-      "message": "Unsafe reflection method `safe_constantize` called on parameter value",
-      "file": "app/controllers/admin/categories_controller.rb",
-      "line": 100,
-      "link": "https://brakemanscanner.org/docs/warning_types/remote_code_execution/",
-      "code": "params.fetch(:model_type, \"PublicBody\").safe_constantize",
-      "render_path": null,
-      "location": {
-        "type": "method",
-        "class": "Admin::CategoriesController",
-        "method": "current_klass"
-      },
-      "user_input": "params.fetch(:model_type, \"PublicBody\")",
-      "confidence": "High",
-      "cwe_id": [
-        470
-      ],
-      "note": "False positive: check_klass (a before_action) refuses any class not in Categorisable.models before current_klass is used, safe_constantize only looks up an existing constant, and the controller is admin-only."
-    },
-    {
-      "warning_type": "SQL Injection",
-      "warning_code": 0,
-      "fingerprint": "72a4027290437247b651d0149418d9a933642306954d9a28946adc97f308b787",
-      "check_name": "SQL",
-      "message": "Possible SQL injection",
-      "file": "app/controllers/admin/notes_controller.rb",
-      "line": 62,
-      "link": "https://brakemanscanner.org/docs/warning_types/sql_injection/",
-      "code": "Note.where(params.slice(:notable_tag, :notable_id, :notable_type).permit!)",
-      "render_path": null,
-      "location": {
-        "type": "method",
-        "class": "Admin::NotesController",
-        "method": "scope"
-      },
-      "user_input": "params.slice(:notable_tag, :notable_id, :notable_type).permit!",
-      "confidence": "High",
-      "cwe_id": [
-        89
-      ],
-      "note": "False positive: hash conditions are bound, not interpolated, and slice limits them to notable_tag, notable_id and notable_type, on an admin-only controller."
-    },
-    {
-      "warning_type": "Remote Code Execution",
-      "warning_code": 24,
       "fingerprint": "d4dea5dc929e651074ff6ca3c9c1e1f4635fb02650c470f2ebbed1b3bf9c6c42",
       "check_name": "UnsafeReflection",
       "message": "Unsafe reflection method `safe_constantize` called on parameter value",
@@ -91,28 +45,6 @@
         22
       ],
       "note": "False positive: params[:token] is verified with MessageVerifier, checked against the authenticated user and can?(:read, @info_request), and ready_path validates pack_id against PACK_ID and coerces info_request_id with Integer under tmp/regulator_packs; url_title is only the download filename."
-    },
-    {
-      "warning_type": "Format Validation",
-      "warning_code": 30,
-      "fingerprint": "d116e090ba7427efc39bba2df4ea04490ce8287f84ce1e9c6c2ba7597cd316a7",
-      "check_name": "ValidationRegex",
-      "message": "Insufficient validation for `url_template` using `/\\A(https?:\\/\\/|\\/|\\{value\\}\\z)/`. Use `\\A` and `\\z` as anchors",
-      "file": "app/models/authority_feeds/link.rb",
-      "line": 28,
-      "link": "https://brakemanscanner.org/docs/warning_types/format_validation/",
-      "code": ":url_template, { :presence => true, :format => ({ :with => /\\A(https?:\\/\\/|\\/|\\{value\\}\\z)/, :message => \"must start with https:// or /, or be {value}\" }) }",
-      "render_path": null,
-      "location": {
-        "type": "model",
-        "model": "AuthorityFeeds::Link"
-      },
-      "user_input": null,
-      "confidence": "High",
-      "cwe_id": [
-        777
-      ],
-      "note": "Accepted: the pattern is a prefix check by design (https://, http:// or / for templates an admin writes), and a {value} address goes through ExternalRelease.normalise_url, which keeps only http and https."
     },
     {
       "warning_type": "SQL Injection",
@@ -569,52 +501,6 @@
         89
       ],
       "note": "False positive: only the model's class and table name are interpolated; the tag is bound through where(has_tag_string_tags: { name: })."
-    },
-    {
-      "warning_type": "SQL Injection",
-      "warning_code": 0,
-      "fingerprint": "7900832f3d0b11b4d8b6bf8df1b975b236c60bcc4f716ac2d47963c5b8e0da2d",
-      "check_name": "SQL",
-      "message": "Possible SQL injection",
-      "file": "lib/user_stats.rb",
-      "line": 27,
-      "link": "https://brakemanscanner.org/docs/warning_types/sql_injection/",
-      "code": "User.connection.select_all(((\"SELECT lower(substring(email, position('@' in email)+1)) AS domain,\\nCOUNT(id) AS count\\nFROM users\\nWHERE created_at >= '#{start_date}'\\nGROUP BY domain\\nORDER BY count DESC\\n\" or \"SELECT lower(substring(email, position('@' in email)+1)) AS domain,\\nCOUNT(id) AS count\\nFROM users\\nGROUP BY domain\\nORDER BY count DESC\\n\") or \"#{(\"SELECT lower(substring(email, position('@' in email)+1)) AS domain,\\nCOUNT(id) AS count\\nFROM users\\nWHERE created_at >= '#{start_date}'\\nGROUP BY domain\\nORDER BY count DESC\\n\" or \"SELECT lower(substring(email, position('@' in email)+1)) AS domain,\\nCOUNT(id) AS count\\nFROM users\\nGROUP BY domain\\nORDER BY count DESC\\n\")} LIMIT #{limit}\"))",
-      "render_path": null,
-      "location": {
-        "type": "method",
-        "class": "UserStats",
-        "method": "self.list_user_domains"
-      },
-      "user_input": "start_date",
-      "confidence": "Medium",
-      "cwe_id": [
-        89
-      ],
-      "note": "Accepted: start_date comes from the users rake task's arguments, typed by an operator on the server, not from a request."
-    },
-    {
-      "warning_type": "SQL Injection",
-      "warning_code": 0,
-      "fingerprint": "19308e0a7ad1120c1752ae0a1e5d60b99c0a51d9cacd29ad05a49398a5cb9294",
-      "check_name": "SQL",
-      "message": "Possible SQL injection",
-      "file": "lib/user_stats.rb",
-      "line": 50,
-      "link": "https://brakemanscanner.org/docs/warning_types/sql_injection/",
-      "code": "User.connection.select_all((\"      SELECT count(*) FROM users\\n      WHERE id NOT IN (\\n        SELECT DISTINCT user_id FROM info_requests\\n        WHERE user_id IS NOT NULL\\n      ) AND email LIKE '%@#{domain}'\\n\" + \" AND created_at >= '#{start_date}'\"))",
-      "render_path": null,
-      "location": {
-        "type": "method",
-        "class": "UserStats",
-        "method": "self.count_dormant_users"
-      },
-      "user_input": "start_date",
-      "confidence": "Medium",
-      "cwe_id": [
-        89
-      ],
-      "note": "Accepted: the domain and date come from the users rake task's arguments, typed by an operator on the server, not from a request."
     }
   ],
   "brakeman_version": "8.1.1"

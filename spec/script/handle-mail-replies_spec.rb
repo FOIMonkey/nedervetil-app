@@ -1,10 +1,10 @@
 require "spec_helper"
 require "external_command"
 
-def mail_reply_test(email_filename)
+def mail_reply_test(email_filename, raw: load_file_fixture(email_filename))
   Dir.chdir Rails.root do
     xc = ExternalCommand.new("script/handle-mail-replies", "--test",
-                             stdin_string: load_file_fixture(email_filename))
+                             stdin_string: raw)
     xc.run
     expect(xc.err).to eq("")
     return xc
@@ -66,10 +66,19 @@ RSpec.describe "When filtering" do
     expect(r.out).to eq("user@example.com\n")
   end
 
-  it "should detect a WebShield delivery error message" do
-    r = mail_reply_test("track-response-webshield-bounce.eml")
+  it "should detect a WebShield delivery error message with null return-path" do
+    raw = load_file_fixture("track-response-webshield-bounce.eml").sub(
+      /^Return-Path: <[^>]+>/, "Return-Path: <>"
+    )
+    r = mail_reply_test("track-response-webshield-bounce.eml", raw: raw)
     expect(r.status).to eq(1)
     expect(r.out).to eq("failed.user@example.co.uk\n")
+  end
+
+  it "should ignore a WebShield subject without null return-path or Auto-Submitted" do
+    r = mail_reply_test("track-response-webshield-bounce.eml")
+    expect(r.status).to eq(0)
+    expect(r.out).to eq("")
   end
 
   it "should detect a MS Exchange non-permanent delivery error message" do

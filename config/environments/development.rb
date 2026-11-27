@@ -89,9 +89,9 @@ Rails.application.configure do
   # to make Rails upgrades easier.
   # ----------------------------------------------------------------
 
-  config.action_mailer.preview_paths = [
-    Rails.root.join('spec', 'mailers', 'previews')
-  ]
+  mailer_previews_path = Rails.root.join('spec', 'mailers', 'previews').to_s
+  config.action_mailer.preview_paths = [mailer_previews_path]
+  config.eager_load_paths << mailer_previews_path
 
   # Set RAILS_LOG_LEVEL in the environment to a valid log level to temporarily
   # run the application with a non-default setting.

@@ -101,6 +101,10 @@ module AlaveteliSandbox
             "SANDBOX_CONVERTERS must be one of #{MODES.join(', ')} " \
             "(got #{AlaveteliConfiguration.sandbox_converters.inspect})"
     end
+    if required? && RUBY_PLATFORM.include?('linux') && !Seccomp.supported?
+      raise ConfigurationError,
+            'SANDBOX_CONVERTERS=required needs seccomp support on this CPU'
+    end
 
     problem = Cell.configuration_problem
     raise ConfigurationError, problem if problem

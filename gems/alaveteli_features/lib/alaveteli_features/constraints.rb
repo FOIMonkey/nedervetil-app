@@ -1,5 +1,6 @@
 module AlaveteliFeatures
   module Constraints
+    # Route constraint that matches only when a named feature flag is enabled.
     class FeatureConstraint
       include AlaveteliFeatures::Helpers
 

@@ -901,6 +901,22 @@ RSpec.describe AlaveteliTextMasker do
         result = class_instance.apply_masks(data, 'text/html', masks: [mask])
         expect(result).to eq(expected)
       end
+
+      it 'decodes entity-encoded @, spaces and soft hyphens in HTML while ' \
+         'keeping markup entities escaped' do
+        rule = FactoryBot.build(:censor_rule, text: 'Jane Example',
+                                              replacement: '[name]')
+        html = '<p>Email jane&#64;example&#46;com or ' \
+               'Jane&nbsp;Ex&shy;ample ' \
+               '&lt;script&gt;alert(1)&lt;/script&gt;</p>'
+        result = class_instance.apply_masks(html, 'text/html',
+                                            censor_rules: [rule])
+
+        expect(result).to eq(
+          '<p>Email [email address] or [name] ' \
+          '&lt;script&gt;alert(1)&lt;/script&gt;</p>'
+        )
+      end
     end
   end
 

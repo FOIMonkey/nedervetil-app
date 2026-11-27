@@ -24,7 +24,9 @@ class InfoRequestBatchMetrics
 
       { request_url: url,
         authority_name: info_request.public_body.name,
-        number_of_replies: info_request.incoming_messages.size,
+        number_of_replies: info_request.incoming_messages.count { |message|
+          ability.can?(:read, message)
+        },
         request_status: status }
     end
   end

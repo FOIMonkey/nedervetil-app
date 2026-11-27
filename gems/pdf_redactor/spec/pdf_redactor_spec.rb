@@ -157,7 +157,9 @@ RSpec.describe PDFRedactor do
     end
   end
 
-  # A 300 by 100 point grey image object of the text.
+  # A 300 by 100 point grey image object of the text (JPEG-encoded so the spec
+  # works under ImageMagick's sandbox policy, which disables the raw gray
+  # coder).
   def image_object(text)
     Dir.mktmpdir do |dir|
       File.binwrite("#{dir}/page.pdf",
@@ -165,10 +167,11 @@ RSpec.describe PDFRedactor do
                                   texts: [{ x: 10, y: 40, text: text,
                                             size: 28 }] }]))
       png = render_pages("#{dir}/page.pdf", dir, dpi: 300).first
-      raw = magick(png, '-depth', '8', '-resize', '1250x417!', 'gray:-')
+      jpeg = magick(png, '-colorspace', 'Gray', '-resize', '1250x417!',
+                    '-quality', '95', 'jpeg:-')
       "<< /Type /XObject /Subtype /Image /Width 1250 /Height 417 " \
-        "/ColorSpace /DeviceGray /BitsPerComponent 8 /Length #{raw.bytesize} " \
-        ">>\nstream\n#{raw}\nendstream"
+        "/ColorSpace /DeviceGray /BitsPerComponent 8 /Filter /DCTDecode " \
+        "/Length #{jpeg.bytesize} >>\nstream\n#{jpeg}\nendstream"
     end
   end
 
@@ -725,6 +728,103 @@ RSpec.describe PDFRedactor do
 
         expect_name_boxed_in_picture(pdf, pages: 2)
       end
+
+      it 'flattens a sandwich scan whose text layer uses normal rendering ' \
+         'mode behind the picture' do
+        visible_under_scan =
+          'BT /F1 28 Tf 50 640 Td (Dear Jane Doelittle) Tj ET'
+        pdf = pages_pdf(
+          ['/Resources << /XObject << /Im0 5 0 R >> /Font << /F1 6 0 R >> >> ' \
+           '/Contents 4 0 R'],
+          [stream("#{visible_under_scan} #{picture}"),
+           image_object('Dear Jane Doelittle'), helvetica]
+        )
+
+        masked, report = described_class.redact(pdf, [rule('Jane Doelittle')])
+
+        expect(report['boxes_over_images']).to eq(1)
+        expect(report['pages_rasterized']).to eq(1)
+        expect(qdf_of(masked)).not_to include('/Width 1250')
+        seen = ocr_pages(masked)
+        expect(seen.join).to include('Dear')
+        expect(seen.join).not_to include('Doelittle')
+      end
+
+      it 'restores graphics state when an unmatched Q and clip precede ' \
+         'a match over a picture' do
+        clipped = "Q 0 0 1 1 re W n #{hidden_text}"
+        pdf = pages_pdf(
+          ['/Resources << /XObject << /Im0 5 0 R >> /Font << /F1 6 0 R >> >> ' \
+           '/Contents 4 0 R'],
+          [stream("#{picture} #{clipped}"),
+           image_object('Dear Jane Doelittle'), helvetica]
+        )
+
+        expect_name_boxed_in_picture(pdf)
+      end
+
+      it 'boxes over a later picture when the match is inside an earlier ' \
+         'form XObject' do
+        visible_text = 'BT /F1 28 Tf 50 640 Td (Dear Jane Doelittle) Tj ET'
+        pdf = pages_pdf(
+          ['/Resources << /XObject << /Fm0 5 0 R /Im0 6 0 R >> >> ' \
+           '/Contents 4 0 R'],
+          [stream("/Fm0 Do #{picture}"),
+           form('/Font << /F1 7 0 R >>', visible_text),
+           image_object('Dear Jane Doelittle'), helvetica]
+        )
+
+        masked, report = described_class.redact(pdf, [rule('Jane Doelittle')])
+
+        expect(report['boxes_over_images']).to eq(1)
+        expect(report['pages_rasterized']).to eq(1)
+        expect(ocr_pages(masked).join).not_to include('Doelittle')
+      end
+
+      it 'boxes the right place on a cropped scanned page' do
+        cropped_scan = pages_pdf(
+          ['/CropBox [0 400 595 842] /Resources << /XObject << /Im0 5 0 R >> ' \
+           '>> /Contents 4 0 R'],
+          [stream(picture), image_object('Dear Jane Doelittle')]
+        )
+
+        masked, report = described_class.redact(
+          cropped_scan, [rule('Jane Doelittle')], ocr: true
+        )
+
+        expect(report['ocr_matches']).to eq(1)
+        expect(report['pages_rasterized']).to eq(1)
+        seen = ocr_pages(masked).join
+        expect(seen).to include('Dear')
+        expect(seen).not_to include('Doelittle')
+      end
+    end
+
+    it 'censors UTF-16LE and soft-hyphenated text strings and inline ~>' \
+       'EI streams' do
+      u16le = ("\xFF\xFE".b + "Notes on Jane Doelittle".encode('UTF-16LE').b).
+              unpack1('H*')
+      soft = ("\xFE\xFF".b + "Jane Doe\u00ADlittle".encode('UTF-16BE').b).
+             unpack1('H*')
+      inline_img = 'BI /W 1 /H 1 /BPC 8 /CS /G /F /A85 ID z~>EI ' \
+                   'BT /F1 12 Tf 72 700 Td (Jane Doelittle attended.) Tj ET'
+      pdf = write(
+        ['<< /Type /Catalog /Pages 2 0 R >>',
+         '<< /Type /Pages /Kids [3 0 R] /Count 1 >>',
+         '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] ' \
+         '/Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>',
+         helvetica, stream(inline_img),
+         "<< /Title <#{u16le}> /Subject <#{soft}> >>"],
+        root: 1, info: 6
+      )
+
+      masked, report = described_class.redact(pdf, [rule('Jane Doelittle')],
+                                              final_scan: true)
+
+      expect(report['matches']).to eq(1)
+      expect(report['text_strings_censored']).to eq(2)
+      expect(text_of(masked)).not_to include('Doelittle')
+      expect(info_title(masked)).to eq('Notes on [redacted]')
     end
 
     context 'with the name outside the page content' do
@@ -1845,6 +1945,68 @@ RSpec.describe PDFRedactor do
 
         expect { described_class.redact(pdf, [rule('Jane Doelittle')]) }.
           to raise_error(described_class::Error, /form/)
+      end
+
+      it 'redacts a form drawn after more than 64 placements of another form' do
+        bullet = '0 0 2 2 re f'
+        bullet_form =
+          "<< /Type /XObject /Subtype /Form /BBox [0 0 10 10] " \
+          "/Length #{bullet.bytesize} >>\nstream\n#{bullet}\nendstream"
+        secret = 'BT /F1 12 Tf 72 700 Td (Jane Doelittle) Tj ET'
+        secret_form =
+          "<< /Type /XObject /Subtype /Form /BBox [0 0 595 842] " \
+          "/Resources << /Font << /F1 7 0 R >> >> " \
+          "/Length #{secret.bytesize} >>\nstream\n#{secret}\nendstream"
+        draws = (0...70).map { |i| "q 1 0 0 1 #{i * 5} 100 cm /Fm0 Do Q" }
+        draws << '/Fm1 Do'
+        page = '/Resources << /XObject << /Fm0 5 0 R /Fm1 6 0 R >> >> ' \
+               '/Contents 4 0 R'
+        pdf = pages_pdf([page], [stream(draws.join("\n")), bullet_form,
+                                 secret_form, helvetica])
+
+        masked, report = described_class.redact(pdf, [rule('Jane Doelittle')],
+                                                final_scan: true)
+
+        expect(report['matches']).to eq(1)
+        expect(text_of(masked)).not_to include('Doelittle')
+      end
+
+      it 'fails closed when redaction boxes in a form exceed MAX_FORM_BOXES' do
+        stub_const('PDFRedactor::Redactor::MAX_FORM_BOXES', 2)
+        lines = [700, 680, 660].map do |y|
+          "BT /F1 12 Tf 72 #{y} Td (Jane Doelittle) Tj ET"
+        end.join("\n")
+        form_obj = "<< /Type /XObject /Subtype /Form /BBox [0 0 595 842] " \
+                   "/Resources << /Font << /F1 6 0 R >> >> " \
+                   "/Length #{lines.bytesize} >>\nstream\n#{lines}\nendstream"
+        page = '/Resources << /XObject << /Fm0 5 0 R >> >> /Contents 4 0 R'
+        pdf = pages_pdf([page], [stream('/Fm0 Do'), form_obj, helvetica])
+
+        expect { described_class.redact(pdf, [rule('Jane Doelittle')]) }.
+          to raise_error(described_class::Error, /too many redaction boxes/)
+      end
+
+      it 'treats text as over a picture when pictures are nested too deep ' \
+         'to place' do
+        picture = '<< /Type /XObject /Subtype /Image /Width 1 /Height 1 ' \
+                  "/ColorSpace /DeviceGray /BitsPerComponent 8 /Length 1 >>\n" \
+                  "stream\n\x80\nendstream"
+        forms = (0...10).map do |i|
+          inner = i == 9 ? '/Im0 6 0 R' : "/Fm#{i + 1} #{i + 8} 0 R"
+          body = i == 9 ? '/Im0 Do' : "/Fm#{i + 1} Do"
+          '<< /Type /XObject /Subtype /Form /BBox [0 0 1 1] ' \
+            "/Resources << /XObject << #{inner} >> >> " \
+            "/Length #{body.bytesize} >>\nstream\n#{body}\nendstream"
+        end
+        content = 'q 595 0 0 842 0 0 cm /Fm0 Do Q ' \
+                  'BT /F1 12 Tf 72 700 Td (Jane Doelittle) Tj ET'
+        page = '/Resources << /Font << /F1 5 0 R >> ' \
+               '/XObject << /Fm0 7 0 R >> >> /Contents 4 0 R'
+        pdf = pages_pdf([page], [stream(content), helvetica, picture, *forms])
+
+        _masked, report = described_class.redact(pdf, [rule('Jane Doelittle')])
+
+        expect(report['boxes_over_images']).to eq(1)
       end
     end
 

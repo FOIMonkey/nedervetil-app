@@ -25,10 +25,10 @@
   # https://github.com/github/secureheaders/blob/master/docs/cookies.md
   # Note the secure flag is only sent where HTTPS is available
   config.cookies = {
-    httponly: { only: ['_wdtk_cookie_session'] },
-    secure: { only: ['_wdtk_cookie_session'] },
+    httponly: { only: ['_nedervetil_session'] },
+    secure: true,
     samesite: {
-      lax: { only: ['_wdtk_cookie_session'] }
+      lax: true
     }
   }
 end

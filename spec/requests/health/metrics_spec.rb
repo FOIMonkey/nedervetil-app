@@ -9,7 +9,7 @@ RSpec.describe 'Health metrics page', type: :request do
     end
 
     it 'shows the sidekiq stats' do
-      %w[sidekiq_processed_job sidekiq_busy_workers sidekiq_enqueued_jobs
+      %w[sidekiq_processed_jobs sidekiq_busy_workers sidekiq_enqueued_jobs
          sidekiq_retry_jobs sidekiq_scheduled_jobs sidekiq_failed_jobs
          sidekiq_dead_jobs].each do |metric|
         expect(response.body).to match(/^#{metric} \d+$/)

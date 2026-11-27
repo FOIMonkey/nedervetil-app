@@ -62,7 +62,7 @@ module Alaveteli
     require "#{Rails.root}/lib/strip_empty_sessions"
     config.middleware.insert_before ::ActionDispatch::Cookies,
                                     StripEmptySessions,
-                                    key: '_wdtk_cookie_session',
+                                    key: '_nedervetil_session',
                                     path: "/",
                                     httponly: true
     Rails.backtrace_cleaner.add_silencer do |line|

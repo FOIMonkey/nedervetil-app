@@ -8,6 +8,7 @@ require "alaveteli_features/railtie" if defined?(Rails)
 require "flipper"
 require "flipper-active_record" if defined?(Rails)
 
+# Feature-flag registry and Flipper backend wrapper.
 module AlaveteliFeatures
   def self.features
     @features ||= Collection.new(Feature)

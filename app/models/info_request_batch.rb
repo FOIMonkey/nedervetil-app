@@ -259,14 +259,17 @@ class InfoRequestBatch < ApplicationRecord
   #
   # Returns an array of PublicBody objects
   def requestable_public_bodies
-    public_bodies.is_requestable - sent_public_bodies
+    public_bodies.visible.is_requestable.
+      without_tag(PublicBody.batch_excluded_tags) - sent_public_bodies
   end
 
   # Return a list of public bodies which we can't sent the request to
   #
   # Returns an array of PublicBody objects
   def unrequestable_public_bodies
-    public_bodies - public_bodies.is_requestable - sent_public_bodies
+    allowed = public_bodies.visible.is_requestable.
+              without_tag(PublicBody.batch_excluded_tags)
+    public_bodies - allowed - sent_public_bodies
   end
 
   # Have we persisted an InfoRequest for each PublicBody in this batch?

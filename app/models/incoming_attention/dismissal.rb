@@ -9,8 +9,18 @@ module IncomingAttention
     # any marker, preventing partial dismissal or TOCTOU via reassignment.
     # Reloads request under lock for the caller.
     def self.record!(request, message_ids, ability:)
-      request_ids = IncomingMessage.where(id: message_ids).
-        pluck(:info_request_id)
+      allowed_requests = if request.info_request_batch_id
+                           InfoRequest.where(
+                             info_request_batch_id:
+                               request.info_request_batch_id
+                           )
+                         else
+                           InfoRequest.where(id: request.id)
+                         end
+      request_ids = IncomingMessage.
+                    where(id: message_ids,
+                          info_request_id: allowed_requests.select(:id)).
+                    pluck(:info_request_id)
       raise Invalid unless request_ids.size == message_ids.size
 
       InfoRequest.transaction do

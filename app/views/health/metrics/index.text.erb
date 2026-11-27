@@ -1,6 +1,6 @@
 # HELP sidekiq_processed_jobs The total number of processed jobs.
 # TYPE sidekiq_processed_jobs gauge
-sidekiq_processed_job <%= @sidekiq_stats.processed %>
+sidekiq_processed_jobs <%= @sidekiq_stats.processed %>
 
 # HELP sidekiq_busy_workers The number of workers performing a job.
 # TYPE sidekiq_busy_workers gauge
@@ -22,6 +22,6 @@ sidekiq_scheduled_jobs <%= @sidekiq_stats.scheduled_size %>
 # TYPE sidekiq_failed_jobs gauge
 sidekiq_failed_jobs <%= @sidekiq_stats.failed %>
 
-# HELP sidekiq_processed_jobs Number of jobs that need manual intervention to retry
+# HELP sidekiq_dead_jobs Number of jobs that need manual intervention to retry
 # TYPE sidekiq_dead_jobs gauge
 sidekiq_dead_jobs <%= @sidekiq_stats.dead_size %>

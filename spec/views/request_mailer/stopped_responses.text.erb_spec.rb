@@ -25,23 +25,17 @@ RSpec.describe "request_mailer/stopped_responses" do
     expect(response).to match("an Test's Law request")
   end
 
-  it "does not add HTMLEntities to the request title" do
+  it "omits the request title and requester name" do
     assign(:info_request, request)
     render
-    expect(response).to match("'Request apostrophe's data' is an old request")
-  end
-
-  it "does not add HTMLEntities to the user name" do
-    assign(:info_request, request)
-    render
-    expect(response).to match("sent to Test Us'r")
-    expect(response).to match("on another subject to Test Us'r")
+    expect(response).not_to include(request.title)
+    expect(response).not_to include(user.name)
   end
 
   it "does not add HTMLEntities to the public body name" do
     assign(:info_request, request)
     render
-    expect(response).to match("on behalf of Apostrophe's,")
+    expect(response).to match("on behalf of Apostrophe's to reply")
   end
 
   it "does not add HTMLEntities to the contact email" do

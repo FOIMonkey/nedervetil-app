@@ -1,4 +1,4 @@
-# Preveiewing Mailers
+# Previewing Mailers
 
 [Action Mailer previews](https://guides.rubyonrails.org/action_mailer_basics.html#previewing-emails)
 provide a way to see how emails look by visiting a special URL that renders

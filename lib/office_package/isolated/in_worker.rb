@@ -13,7 +13,16 @@ module OfficePackage
       include ReportChecks
 
       MAX_BYTES = AlaveteliSandbox::OfficeStep::LIMITS.fetch(:file_size)
+      REPORT_MAX_BYTES = 16 * 1024 * 1024
       GUARDS = %w[guard guard_unpack].freeze
+      ALLOWED_KEYS = %w[
+        changed count counts data_model entries error errors external_links
+        hidden_cells hidden_columns hidden_rows hidden_sheets hidden_values
+        index kept legacy_xls message name named_ranges not_checked offset
+        part pivot_cache ratio readable removed rows seen size skipped
+        spreadsheets texts total_columns total_rows type unformatted_cells
+        value
+      ].to_set.freeze
 
       attr_reader :last_zip_index
 
@@ -95,7 +104,8 @@ module OfficePackage
       end
 
       def report
-        json = @job.read(AlaveteliSandbox::OfficeStep::REPORT, max: MAX_BYTES)
+        json = @job.read(AlaveteliSandbox::OfficeStep::REPORT,
+                         max: REPORT_MAX_BYTES)
         discard(AlaveteliSandbox::OfficeStep::REPORT)
         report = JSON.parse(json)
         raise TypeError, 'the report is not an object' unless report.is_a?(Hash)
@@ -282,7 +292,13 @@ module OfficePackage
       def symbols(value)
         raise TypeError, 'not an object' unless value.is_a?(Hash)
 
-        value.transform_keys(&:to_sym)
+        value.each_with_object({}) do |(key, item), out|
+          unless key.is_a?(String) && ALLOWED_KEYS.include?(key)
+            raise TypeError, "unexpected key: #{key}"
+          end
+
+          out[key.to_sym] = item
+        end
       end
 
       def discard(name)

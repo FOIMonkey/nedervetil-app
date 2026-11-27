@@ -1640,11 +1640,19 @@ button.publish-tool {
       margin: 0;
     }
 
-    .site-title__logo {
+    // Only switch to flex when a theme renders a mark + name inside the link;
+    // the core placeholder logo uses block text-indent image replacement.
+    .site-title__logo:has(.site-title__name) {
       display: flex;
       gap: var(--space-2);
       align-items: center;
       min-width: 0;
+    }
+
+    .site-title__logo:not(:has(.site-title__name)) {
+      max-width: calc(100% - 5.5rem);
+      background-position: left center;
+      background-size: contain;
     }
 
     .site-title__mark {

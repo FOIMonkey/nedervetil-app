@@ -34,7 +34,22 @@ module RequestJourney
       return if @info_request.nil? || @info_request.persisted?
 
       step = @step || :write
-      { id: STEP_FORMS[step], step: step.to_s } if STEP_FORMS.key?(step)
+      return unless STEP_FORMS.key?(step)
+
+      { id: STEP_FORMS[step], step: step.to_s, default: step_default(step) }
+    end
+
+    def step_default(step)
+      case step
+      when :who then [_('Find'), nil, nil]
+      when :subject
+        if @suggestions
+          [_('Write request'), 'step', 'write']
+        else
+          [_('Check publications'), 'check', '1']
+        end
+      when :write then [_('Check and send'), 'review', '1']
+      end
     end
 
     def start_journey
@@ -44,7 +59,8 @@ module RequestJourney
 
       set_journey_context
       if params[:from].present?
-        @copied = current_user.info_requests.find_by(id: params[:from])
+        candidate = current_user.info_requests.find_by(id: params[:from])
+        @copied = candidate if candidate && can?(:read, candidate)
       end
       @subject = subject_from_params
       if %w[home about topics documents authorities].

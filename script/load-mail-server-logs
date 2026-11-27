@@ -6,13 +6,13 @@ LOC="`dirname "${BASH_SOURCE[0]}"`"/..
 cd "$LOC"
 
 # Specific file if specified
-if [ x$1 != x ]
+if [ -n "${1:-}" ]
 then
     case "$1" in
-      /*) f=$1 ;;
-       *) f=$(pwd)/$1 ;;
+      /*) f="$1" ;;
+       *) f="$(pwd)/$1" ;;
     esac
-    bundle exec rails runner 'MailServerLog.load_file("'$f'")'
+    bundle exec rails runner 'MailServerLog.load_file(ARGV.fetch(0))' -- "$f"
     exit
 fi
 
@@ -25,8 +25,14 @@ then
     echo "MTA_LOG_PATH is blank" >&2
     exit 1
 fi
-LATEST=$( ls $LOG_PATH 2>/dev/null | sort | tail -3 )
-for X in $LATEST
+shopt -s nullglob
+# Intentional unquoted expansion of the configured glob pattern into an array.
+MATCHES=( $LOG_PATH )
+if [ "${#MATCHES[@]}" -eq 0 ]
+then
+    exit 0
+fi
+while IFS= read -r -d '' X
 do
-    bundle exec rails runner 'MailServerLog.load_file("'$X'")'
-done
+    bundle exec rails runner 'MailServerLog.load_file(ARGV.fetch(0))' -- "$X"
+done < <(printf '%s\0' "${MATCHES[@]}" | sort -z | tail -z -n 3)

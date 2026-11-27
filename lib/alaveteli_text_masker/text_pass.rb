@@ -2,7 +2,8 @@ module AlaveteliTextMasker
   # Masks plain text and HTML content using simultaneous span-merging.
   class TextPass < Pass
     REFERENCE = /&(?:[A-Za-z][A-Za-z0-9]{1,31}|#[0-9]{1,7}|#[xX]\h{1,6});/
-    LETTER = /\A[\p{L}\p{M}]\z/
+    SAFE_DECODE = /\A[\p{L}\p{M}\p{N}@.\-_+:\/ ]\z/
+    UNSEEN = /\A[\u00AD\u200B\u200C\u200D\u2060\uFEFF]\z/
     BACKREF = /\\(?:([0-9])|k<([^>]+)>|([&+`'\\]))/
     # Byte offsets avoid O(n) char indexing; length is in chars for tie-breaks.
     Span = Data.define(:start_pos, :end_pos, :length, :priority, :replacement,
@@ -187,7 +188,7 @@ module AlaveteliTextMasker
       end
     end
 
-    # Decode letter character references while leaving markup entities intact.
+    # Decode text/email character references while keeping markup entities.
     def decode_html_letters(text)
       return text unless content_type == 'text/html' && text.match?(REFERENCE)
 
@@ -196,8 +197,16 @@ module AlaveteliTextMasker
 
       entities = HTMLEntities.new(:expanded)
       utf8.gsub(REFERENCE) do |reference|
-        letter = entities.decode(reference)
-        letter.match?(LETTER) ? letter : reference
+        char = entities.decode(reference)
+        if char == "\u00A0"
+          ' '
+        elsif char.match?(UNSEEN)
+          ''
+        elsif char.match?(SAFE_DECODE)
+          char
+        else
+          reference
+        end
       end
     end
   end

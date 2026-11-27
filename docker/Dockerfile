@@ -13,11 +13,10 @@ RUN apt-get update -y && \
     bubblewrap \
     chromium \
     elinks \
-    ghostscript \
+    fonts-urw-base35 \
     imagemagick \
     libemail-address-perl \
     libemail-outlook-message-perl \
-    libmagic-dev \
     libreoffice-calc-nogui \
     libreoffice-impress-nogui \
     libreoffice-writer-nogui \
@@ -30,17 +29,14 @@ RUN apt-get update -y && \
     tesseract-ocr-eng \
     tesseract-ocr-osd \
     tnef \
-    mutt
+    wait-for-it \
+    mutt && \
+    rm -rf /var/lib/apt/lists/*
 
-# Wait-for-it
-RUN git clone https://github.com/vishnubob/wait-for-it.git /tmp/wait-for-it && \
-    chmod +x /tmp/wait-for-it/wait-for-it.sh && \
-    ln -s /tmp/wait-for-it/wait-for-it.sh /bin/wait-for-it
+COPY lib/alaveteli_sandbox/imagemagick-policy.xml /etc/ImageMagick-7/policy.xml
 
 WORKDIR /alaveteli
 RUN git config --global --add safe.directory /alaveteli
-
-RUN gem update --system
 
 EXPOSE 3000
 CMD wait-for-it db:5432 --strict -- ./docker/entrypoint.sh

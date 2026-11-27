@@ -271,8 +271,9 @@ class ApplicationController < ActionController::Base
   def remember_last_request(info_request)
     return unless authenticated?
 
-    cookies[:last_request_id] = info_request.id
-    cookies[:last_body_id] = nil
+    session[:last_request_id] = info_request.id
+    cookies.delete(:last_request_id)
+    cookies.delete(:last_body_id)
   end
 
   def memoise_page(&block)

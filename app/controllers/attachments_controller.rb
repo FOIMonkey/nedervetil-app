@@ -10,7 +10,6 @@ class AttachmentsController < ApplicationController
   before_action :find_info_request, :find_incoming_message, :find_attachment
 
   before_action :authenticate_attachment
-  before_action :set_cors
 
   around_action :ensure_masked
 
@@ -101,14 +100,6 @@ class AttachmentsController < ApplicationController
       @attachment.to_signed_global_id,
       referer: verifier.generate(request.fullpath)
     )
-  end
-
-  def set_cors
-    # Allow CSVs to be explored in a Datasette instance
-    return unless @attachment.content_type == 'text/csv'
-
-    headers['access-control-allow-origin'] = '*'
-    headers['access-control-request-method'] = 'GET'
   end
 
   def part_number

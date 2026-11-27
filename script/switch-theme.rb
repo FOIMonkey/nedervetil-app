@@ -105,8 +105,11 @@ end
 
 public_directory = File.join(alaveteli_directory, 'public')
 public_theme_link = File.join(public_directory, 'alavetelitheme')
+theme_public_dir = File.join(full_theme_path, 'public')
+remove_public_link =
+  requested_theme == NO_THEME_NAME || !File.directory?(theme_public_dir)
 
-if requested_theme == NO_THEME_NAME &&
+if remove_public_link &&
    File.exist?(public_theme_link) && !File.symlink?(public_theme_link)
   STDERR.puts "Couldn't remove #{public_theme_link} since it's not a symlink"
   exit 1
@@ -133,13 +136,13 @@ symlink(File.join(alaveteli_directory, 'config', File.basename(theme_filename)),
         config_directory,
         "general.yml")
 
-if requested_theme == NO_THEME_NAME
+if remove_public_link
   File.unlink(public_theme_link) if File.symlink?(public_theme_link)
 else
-  symlink(File.join(full_theme_path, 'public'),
-          public_directory,
-          'alavetelitheme')
+  symlink(theme_public_dir, public_directory, 'alavetelitheme')
+end
 
+unless requested_theme == NO_THEME_NAME
   symlink(full_theme_path,
           File.join(alaveteli_directory, 'lib', 'themes'),
           requested_theme)

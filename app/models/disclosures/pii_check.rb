@@ -104,21 +104,36 @@ module Disclosures
       http.open_timeout = 3
       http.read_timeout = 20
       http.write_timeout = 5
+      request = build_request(uri, body)
+      Timeout.timeout(30) { JSON.parse(read_response(http, request)) }
+    end
+
+    def build_request(uri, body)
       request = Net::HTTP::Post.new(uri.request_uri)
       request['Content-Type'] = 'application/json'
       request['Accept'] = 'application/json'
       token = ENV['DISCLOSURES_PII_CHECK_AUTH_TOKEN'].to_s
       request['Authorization'] = "Bearer #{token}" unless token.empty?
       request.body = JSON.generate(body)
-      Timeout.timeout(30) do
-        response = http.request(request)
-        raise Unavailable, response.code unless response.code.to_i == 200
-        if response.body.to_s.bytesize > MAX_RESPONSE
-          raise Unavailable, 'too large'
-        end
+      request
+    end
 
-        JSON.parse(response.body.to_s)
+    def read_response(http, request)
+      buf = +''.b
+      http.start do |conn|
+        conn.request(request) do |response|
+          raise Unavailable, response.code unless response.code.to_i == 200
+
+          length = response['Content-Length']&.to_i
+          raise Unavailable, 'too large' if length && length > MAX_RESPONSE
+
+          response.read_body do |chunk|
+            buf << chunk.b
+            raise Unavailable, 'too large' if buf.bytesize > MAX_RESPONSE
+          end
+        end
       end
+      buf.force_encoding(Encoding::UTF_8)
     end
 
     def endpoint

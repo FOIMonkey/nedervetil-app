@@ -25,11 +25,23 @@ RSpec.describe User::EmailAlerts do
       before { user.destroy! }
       it { is_expected.to be_falsey }
     end
+
+    context 'when the user rotates authentication_version' do
+      let!(:token) { described_class.token(user) }
+      before { user.revoke_authentication! }
+      it { is_expected.to be_falsey }
+    end
   end
 
   describe '.token' do
     subject { described_class.token(user) }
-    it { is_expected.to eq(described_class.verifier.generate(user.id)) }
+    it do
+      expected = described_class.verifier.generate(
+        [user.id, user.authentication_version.to_s],
+        purpose: described_class::PURPOSE
+      )
+      is_expected.to eq(expected)
+    end
   end
 
   describe '.verifier' do

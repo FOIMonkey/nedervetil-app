@@ -4,7 +4,9 @@ module User::Anonymisable
   extend ActiveSupport::Concern
 
   def anonymise!
-    return if info_requests.none?
+    if info_requests.none? && Disclosures::Document.where(owner_id: id).none?
+      return
+    end
 
     current_name = read_attribute(:name)
     [current_name, *previous_names].each do |name|

@@ -48,7 +48,8 @@ RSpec.describe 'Authentication journeys', type: :request do
     reset_token = user.send_reset_password_instructions
     unconfirmed = FactoryBot.create(:unconfirmed_user, password: password)
     [signin_path, signup_path, new_password_change_path,
-     edit_password_change_path(id: reset_token), new_user_confirmation_path,
+     edit_password_change_path(reset_password_token: reset_token),
+     new_user_confirmation_path,
      confirm_path(email_token: confirmation_token(unconfirmed))].each do |path|
       get path
       expect(response).to have_http_status(:ok), path
@@ -247,7 +248,7 @@ RSpec.describe 'Authentication journeys', type: :request do
     confirm = confirmation_token(account)
     travel 2.days do # the confirmation link has expired
       reset = account.send_reset_password_instructions
-      patch password_change_path(id: reset),
+      patch password_change_path(reset_password_token: reset),
         params: { password_change_user: { password: password,
                                           password_confirmation: password } },
         headers: origin
@@ -265,7 +266,7 @@ RSpec.describe 'Authentication journeys', type: :request do
   it 'confirms nothing when a reset is refused' do
     account = FactoryBot.create(:unconfirmed_user)
     reset = account.send_reset_password_instructions
-    patch password_change_path(id: reset),
+    patch password_change_path(reset_password_token: reset),
       params: { password_change_user: { password: password,
                                         password_confirmation: 'different' } },
       headers: origin
@@ -395,7 +396,7 @@ RSpec.describe 'Authentication journeys', type: :request do
       headers: origin
     account = User.find_by!(email: 'letter@example.test')
     reset = account.send_reset_password_instructions
-    patch password_change_path(id: reset),
+    patch password_change_path(reset_password_token: reset),
       params: { password_change_user: { password: password,
                                         password_confirmation: password } },
       headers: origin
@@ -416,7 +417,7 @@ RSpec.describe 'Authentication journeys', type: :request do
                                email: 'letter-author@example.test' } },
       headers: origin
     reset = other.send_reset_password_instructions
-    patch password_change_path(id: reset),
+    patch password_change_path(reset_password_token: reset),
       params: { password_change_user: { password: password,
                                         password_confirmation: password } },
       headers: origin
@@ -434,7 +435,7 @@ RSpec.describe 'Authentication journeys', type: :request do
       expect(response).to have_http_status(:not_found)
     end
     [confirm, change].each do |token|
-      patch password_change_path(id: token),
+      patch password_change_path(reset_password_token: token),
         params: {
           password_change_user: {
             password: 'changed-invented-password',

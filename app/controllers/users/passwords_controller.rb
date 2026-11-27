@@ -10,7 +10,9 @@ class Users::PasswordsController < Devise::PasswordsController
              }
   # Keyed on the token digest so the cache never stores a usable reset link.
   rate_limit to: 5, within: 15.minutes, only: :update, name: 'reset-token',
-             by: -> { reset_digest(params[:id].to_s) }
+             by: -> { reset_digest(params[:reset_password_token].to_s) }
+  rate_limit to: 10, within: 1.hour, only: :update, name: 'reset-account',
+             by: -> { reset_account_key }
 
   def new
     render 'users/passwords/new'
@@ -24,16 +26,16 @@ class Users::PasswordsController < Devise::PasswordsController
   end
 
   def edit
-    token = params[:id].to_s
+    token = params[:reset_password_token].to_s
     digest = reset_digest(token)
     account = User.find_by(reset_password_token: digest) if token.present?
-    @reset_token = params[:id]
+    @reset_token = params[:reset_password_token]
     @totp_required = resettable?(account, digest) && account.totp?
     render 'users/passwords/edit'
   end
 
   def update
-    token = params[:id].to_s
+    token = params[:reset_password_token].to_s
     digest = reset_digest(token)
     account = User.find_by(reset_password_token: digest) if token.present?
     data = reset_fields
@@ -112,6 +114,15 @@ class Users::PasswordsController < Devise::PasswordsController
     Devise.token_generator.digest(User, :reset_password_token, token)
   end
 
+  def reset_account_key
+    token = params[:reset_password_token].to_s
+    if token.present?
+      id = User.where(reset_password_token: reset_digest(token)).pick(:id)
+      return "user:#{id}" if id
+    end
+    "ip:#{request.remote_ip}"
+  end
+
   def resettable?(account, digest)
     account.present? && !account.closed? &&
       account.reset_password_token == digest &&
@@ -134,9 +145,9 @@ class Users::PasswordsController < Devise::PasswordsController
     letter.each { |key, value| session[key] = value }
   end
 
-  # Public reset URLs pass the token in :id; override Devise's default
-  # query-param check so valid links aren't redirected to sign-in.
+  # Public reset URLs pass the token in :reset_password_token; override Devise's
+  # default query-param check so valid links aren't redirected to sign-in.
   def assert_reset_token_passed
-    head :not_found if params[:id].blank?
+    head :not_found if params[:reset_password_token].blank?
   end
 end

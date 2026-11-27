@@ -54,7 +54,7 @@ module PDFRedactor
   # Bump when a change alters what PDFRedactor writes, so that stored PDFs are
   # masked again the next time their request is expired (FoiAttachment::
   # Maskable keeps a stored PDF while what goes into masking it is the same).
-  VERSION = 17
+  VERSION = 18
 
   # re matches decoded text. legacy matches raw content-stream bytes, as the
   # old masker did, for rules written in content-stream syntax. text is a

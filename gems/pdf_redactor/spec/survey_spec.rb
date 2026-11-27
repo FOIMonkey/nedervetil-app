@@ -52,4 +52,27 @@ RSpec.describe PDFRedactor::Survey do
     expect(page).to include('visible' => 0, 'unmapped' => 6,
                             'picture_share' => 0.0)
   end
+
+  it 'counts unmapped glyphs drawn inside a Form XObject' do
+    font = '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica ' \
+           '/Encoding << /Type /Encoding /Differences [144 /zz1 /zz2] >> >>'
+    body = "BT /F1 12 Tf 72 760 Td (\220\221\220\221) Tj ET"
+    form = "<< /Type /XObject /Subtype /Form /BBox [0 0 595 842] " \
+           "/Resources << /Font << /F1 4 0 R >> >> " \
+           "/Length #{body.bytesize} >>\nstream\n#{body}\nendstream"
+    doc = AttachmentFixtures.write(
+      ['<< /Type /Catalog /Pages 2 0 R >>',
+       '<< /Type /Pages /Kids [3 0 R] /Count 1 >>',
+       '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] ' \
+       '/Resources << /XObject << /Fm0 6 0 R >> >> /Contents 5 0 R >>',
+       font,
+       "<< /Length 7 >>\nstream\n/Fm0 Do\nendstream",
+       form],
+      root: 1, info: nil
+    )
+
+    page, = described_class.pages(doc)
+
+    expect(page).to include('visible' => 0, 'unmapped' => 4)
+  end
 end

@@ -16,17 +16,21 @@ class Users::EmailChangesController < ApplicationController
     data = params.require(:signchangeemail).permit(:new_email, :password,
       :otp_attempt)
     @new_email = data[:new_email] # the form keeps it when it is shown again
+    address = data[:new_email].to_s.strip.downcase
+    unless MySociety::Validate.is_valid_email(address)
+      unless current_user.valid_password?(data[:password].to_s)
+        return refuse(:new)
+      end
+
+      flash.now[:error] = _('Please enter a valid email address.')
+      return render :new, status: :unprocessable_content
+    end
+
     passed = current_user.valid_password?(data[:password].to_s)
     if current_user.otp_required_for_login
       passed &&= current_user.verify_second_factor!(data[:otp_attempt])
     end
     return refuse(:new) unless passed
-
-    address = data[:new_email].to_s.strip.downcase
-    unless MySociety::Validate.is_valid_email(address)
-      flash.now[:error] = _('Please enter a valid email address.')
-      return render :new, status: :unprocessable_content
-    end
 
     UserMailer.changeemail_requested(current_user, address).deliver_now
     unless User.find_user_by_email(address)

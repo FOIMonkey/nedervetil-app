@@ -174,7 +174,7 @@ module AttachmentManagement
 
       def redact_image(input, coder, boxes, output)
         info = image_info(input, coder)
-        if info[:frames] > 1 && coder != 'gif'
+        if info[:frames] > 1
           raise Unsupported.new(:multi_page_image,
                                 _('{{count}} pages', count: info[:frames]))
         end

@@ -6,6 +6,8 @@ class Users::SessionsController < Devise::SessionsController
   rate_limit to: 10, within: 1.minute, only: :create, name: 'ip'
   rate_limit to: 5, within: 1.minute, only: :create, name: 'email',
              by: -> { credentials['email'].to_s.strip.downcase }
+  rate_limit to: 15, within: 1.hour, only: :create, name: 'email-hour',
+             by: -> { credentials['email'].to_s.strip.downcase }
   layout :sign_page_layout
   self.framed_by_sign_in_dialog = true
 
@@ -16,14 +18,9 @@ class Users::SessionsController < Devise::SessionsController
   def create
     data = credentials
     user = User.find_user_by_email(data['email'])
-    request.env['warden'].logout(:user)
-    # Discard any unfinished 2FA enrolment from the previous signed-in user.
-    session.delete(:authentication_enrolment)
-    @user = @current_user = @current_ability = nil
-    password_valid = user&.valid_password?(data['password'].to_s)
-    unless password_valid && user.active_for_authentication? &&
-           !blocked_spam?(user)
-      User.new.password = data['password'].to_s unless user
+    clear_previous_sign_in_state
+    unless valid_credentials?(user, data['password'].to_s) &&
+           user.active_for_authentication? && !blocked_spam?(user)
       return failed_sign_in
     end
 
@@ -60,6 +57,20 @@ class Users::SessionsController < Devise::SessionsController
   end
 
   private
+
+  def clear_previous_sign_in_state
+    request.env['warden'].logout(:user)
+    # Discard any unfinished 2FA enrolment from the previous signed-in user.
+    session.delete(:authentication_enrolment)
+    @user = @current_user = @current_ability = nil
+  end
+
+  def valid_credentials?(user, password)
+    return user.valid_password?(password) if user&.encrypted_password.present?
+
+    Devise::Encryptor.digest(User, password)
+    false
+  end
 
   def credentials
     value = params[:user] || params[:user_signin]

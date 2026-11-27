@@ -170,11 +170,13 @@ Rails.application.routes.draw do
                                     as: :new_password_change
     post '/profile/change_password', to: 'users/passwords#create',
                                      as: :password_changes
-    get '/profile/change_password/:id', to: 'users/passwords#edit',
-                                        as: :edit_password_change
-    match '/profile/change_password/:id', to: 'users/passwords#update',
-                                          via: [:patch, :put],
-                                          as: :password_change
+    get '/profile/change_password/:reset_password_token',
+        to: 'users/passwords#edit',
+        as: :edit_password_change
+    match '/profile/change_password/:reset_password_token',
+          to: 'users/passwords#update',
+          via: [:patch, :put],
+          as: :password_change
     get '/c/:email_token', to: 'users/confirmations#show', as: :confirm
     post '/c/:email_token', to: 'users/confirmations#update'
     get '/profile/confirmation', to: 'users/confirmations#new',
@@ -220,8 +222,10 @@ Rails.application.routes.draw do
 
   namespace :users do
     get 'email_alerts/disable/:token',
-        to: 'email_alerts#destroy',
+        to: 'email_alerts#show',
         as: :disable_email_alerts
+    post 'email_alerts/disable/:token',
+         to: 'email_alerts#destroy'
   end
 
   namespace :users, path: 'profile' do

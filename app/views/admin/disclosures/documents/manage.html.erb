@@ -16,7 +16,37 @@
     <div class="admin-doc-manage__main">
       <%= render partial: 'disclosures/documents/details', locals: { document: @document } %>
       <% if @pages.any? %>
-        <%= render partial: 'disclosures/documents/pages', locals: { document: @document, page_url: ->(page) { disclosure_document_page_path(@document, page: page.number) } } %>
+        <%= render partial: 'disclosures/documents/pages', locals: { document: @document, page_url: ->(page) { admin_disclosure_document_page_path(@document, page: page.number) } } %>
+      <% elsif @draft_text %>
+        <section class="document-pages" aria-label="<%= _('The document') %>">
+          <section class="document-text" id="page-1" aria-label="<%= _('Text') %>">
+            <%= tag.pre(@draft_text, tabindex: 0) %>
+          </section>
+        </section>
+      <% elsif @draft_page_count.to_i.positive? %>
+        <% tags = Disclosures::Attribution.new(@document).boxes %>
+        <section class="document-pages" aria-label="<%= _('The document') %>">
+          <% (1..@draft_page_count).each do |number| %>
+            <figure class="document-page" id="page-<%= number %>">
+              <figcaption class="document-page__label">
+                <%= _('Page {{page}}', page: number) %><% if @draft_page_count > 1 %> <%= _('of {{count}}', count: @draft_page_count) %><% end %>
+              </figcaption>
+              <div class="document-page__sheet">
+                <img src="<%= admin_disclosure_document_page_path(@document, page: number) %>"
+                     alt="<%= _('Page {{page}}', page: number) %>"
+                     loading="<%= number > 2 ? 'lazy' : 'eager' %>"
+                     class="document-page__image">
+                <% document_box_tags(tags[number]).each do |_x0, y0, x1, _y1, who| %>
+                  <span class="document-paper__tag" style="top: <%= (y0 * 100).round(2) %>%; right: <%= ((1 - x1) * 100).round(2) %>%" aria-hidden="true"><%= who %></span>
+                <% end %>
+              </div>
+            </figure>
+          <% end %>
+        </section>
+      <% elsif @document.servable? %>
+        <section class="document-pages" aria-label="<%= _('The document') %>">
+          <p class="document-pages__none"><%= _('This kind of file can’t be shown here. Download it to read it.') %></p>
+        </section>
       <% end %>
     </div>
 

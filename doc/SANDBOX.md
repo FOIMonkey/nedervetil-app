@@ -37,6 +37,8 @@ Required environment variables for each cell service:
 
 Set all three `SANDBOX_*_CELL` sockets or none. At boot, both the app and each cell hash `AlaveteliSandbox::Cell::SHARED_CODE` and the worker source/gem list; a cell refuses requests from an app running a different release digest until both are restarted.
 
+Run each cell service under its own unprivileged OS account with no write access to the application checkout, mounting only the required worker and sandbox paths (`gems`, `lib`, `script`, and `vendor` where needed) read-only so `config/master.key` and other application secrets are never visible inside cell services.
+
 ## Native Tool & ImageMagick Policy Requirements
 
 Install the native binaries under `/usr/bin` (the sandbox only mounts `/usr` read-only):

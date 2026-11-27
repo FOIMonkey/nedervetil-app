@@ -113,7 +113,7 @@ RSpec.describe MaskSet do
         censor_rules: [rule], masks: [], default_masks: false
       ).apply(html, 'text/html')
       expect(masked).
-        to eq('<p>[name], [name], [name] &lt;tag&gt; &amp; &nbsp;</p>')
+        to eq('<p>[name], [name], [name] &lt;tag&gt; &amp;  </p>')
     end
 
     it 'leaves HTML entity references unchanged when no rule matches' do

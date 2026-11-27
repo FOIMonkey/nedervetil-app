@@ -13,7 +13,9 @@ module Search
         private
 
         def where_sql
-          sql = +'t.locale = :default_locale AND :tsq <% t.name'
+          sql = +'t.locale = :default_locale ' \
+                "AND t.url_name <> 'internal_admin_authority' " \
+                'AND :tsq <% t.name'
           sql << " AND #{not_excluded('t.public_body_id')}" if excluding?
           sql
         end

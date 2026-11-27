@@ -46,6 +46,11 @@ module User::Erasable
     sign_ins.destroy_all
     email_histories.destroy_all
     permission_changes.destroy_all
+    notifications.delete_all
+    AttachmentManagement::Revision.where(user_id: id).find_each(&:discard!)
+    info_requests.pluck(:id).each do |request_id|
+      RegulatorPack.purge_for_request!(request_id)
+    end
   end
 
   def erase_account

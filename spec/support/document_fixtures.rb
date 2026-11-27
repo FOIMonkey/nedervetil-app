@@ -309,14 +309,14 @@ module DocumentFixtures
       y += step
       draw
     end
-    AttachmentFixtures.magick('-size', '1240x1754', 'xc:white',
-                              '-fill', 'black',
-                              '-pointsize', point_size.to_s,
-                              *draws,
-                              '-blur', '0x0.6',
-                              '-colorspace', 'Gray',
-                              '-quality', '82',
-                              '-strip', 'jpeg:-')
+    AttachmentFixtures.white_canvas(1240, 1754,
+                                    '-fill', 'black',
+                                    '-pointsize', point_size.to_s,
+                                    *draws,
+                                    '-blur', '0x0.6',
+                                    '-colorspace', 'Gray',
+                                    '-quality', '82',
+                                    '-strip', 'jpeg:-')
   end
 
   # Lines that fit between the top margin (170 px) and a 100 px bottom margin.
@@ -522,15 +522,15 @@ module DocumentFixtures
   end
 
   def signature_png
-    AttachmentFixtures.magick('-size', '360x110', 'xc:white',
-                              '-fill', 'none',
-                              '-stroke', '#1b2a6b',
-                              '-strokewidth', '3',
-                              '-draw', "path 'M 20,80 C 50,10 80,100 110,50 " \
-                                       'S 170,20 190,70 S 250,90 280,40 ' \
-                                       "S 330,60 345,55'",
-                              '-depth', '8',
-                              '-strip', 'png:-')
+    AttachmentFixtures.white_canvas(360, 110,
+                                    '-fill', 'none',
+                                    '-stroke', '#1b2a6b',
+                                    '-strokewidth', '3',
+                                    '-draw', "path 'M 20,80 C 50,10 80,100 " \
+                                             '110,50 S 170,20 190,70 ' \
+                                             "S 250,90 280,40 S 330,60 345,55'",
+                                    '-depth', '8',
+                                    '-strip', 'png:-')
   end
 
   # Text folded to what Helvetica's standard encoding can show.

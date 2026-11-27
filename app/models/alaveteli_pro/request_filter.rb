@@ -50,14 +50,17 @@ module AlaveteliPro
     end
 
     def results(user)
-      request_summaries = user.request_summaries
+      request_summaries =
+        IncomingAttention::Effective.visible_summaries(user.request_summaries,
+                                                       user)
+      escaped = ActiveRecord::Base.sanitize_sql_like(search.to_s)
       request_summaries =
         request_summaries.
           includes(:request_summary_categories).
             where("title ILIKE :q
                    OR body ILIKE :q
                    OR public_body_names ILIKE :q",
-                   q: "%#{ search }%").
+                   q: "%#{escaped}%").
               references(:request_summary_categories)
       request_summaries = filter_results(request_summaries, user)
       request_summaries = request_summaries.

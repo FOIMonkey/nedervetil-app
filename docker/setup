@@ -23,7 +23,9 @@ if [ -L config/general.yml ]; then
   THEME=$(basename -s .yml "$(readlink config/general.yml)" | sed 's/^general-//')
   notice_msg "Switching to $THEME..."
   if output=$(bundle exec script/switch-theme.rb "$THEME" 2>&1); then
-    bin/rails assets:clean >/dev/null
+    if [ -d public/assets ]; then
+      bin/rails assets:clean >/dev/null
+    fi
     success_msg 'done'
   else
     error_msg 'failed'

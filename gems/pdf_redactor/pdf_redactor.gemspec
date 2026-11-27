@@ -5,8 +5,9 @@ Gem::Specification.new do |spec|
   spec.version = '0.1.0'
   spec.authors = ['Nedervetil contributors']
   spec.summary = 'Read and redact PDF text, images and metadata'
+  spec.license = 'AGPL-3.0-or-later'
   spec.required_ruby_version = '>= 3.4'
   spec.files = Dir.chdir(__dir__) do
-    Dir['lib/**/*'].select { |path| File.file?(path) }
+    Dir['lib/**/*', 'LICENSE*'].select { |path| File.file?(path) }
   end
 end

@@ -8,8 +8,8 @@ class FollowupsController < ApplicationController
   # Full load preserves typed text on Back (see doc/FORK.md).
   turbo_drive false, only: %i[new create preview]
 
-  before_action :set_incoming_message,
-                :set_info_request,
+  before_action :set_info_request,
+                :set_incoming_message,
                 :set_last_request_data,
                 :check_incoming_message_can_be_followed_up,
                 :check_request_matches_incoming_message,
@@ -256,11 +256,12 @@ class FollowupsController < ApplicationController
   # up on an admin-hidden reply. Request :read and ownership checks still run;
   # hidden content, sender and subject are withheld (followups_no_quotes_spec).
   def set_incoming_message
-    @incoming_message = if params[:incoming_message_id].nil?
-                          nil
-                        else
-                          IncomingMessage.find(params[:incoming_message_id])
-                        end
+    return if params[:incoming_message_id].nil?
+
+    @incoming_message = IncomingMessage.find_by!(
+      id: params[:incoming_message_id],
+      info_request_id: @info_request.id
+    )
   end
 
   def set_info_request

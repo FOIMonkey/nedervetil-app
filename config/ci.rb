@@ -1,8 +1,7 @@
 # Run using bin/ci
 
 CI.run do
-  step "Style: Ruby correctness and size cops",
-       "bin/rubocop --only Lint,Metrics,Rails,Security,Performance"
+  step "Style: RuboCop", "bin/rubocop"
   step "Autoloading: Zeitwerk", "bin/rails zeitwerk:check"
   step "Dead code: partials, Stimulus, methods, routes", "bin/rails dead_code"
 

@@ -1,0 +1,12 @@
+<% @title = _('Disable Email Alerts') %>
+<%= page_band %>
+
+<p>
+  <%= _('Turn off email alerts for things you follow?') %>
+</p>
+
+<%= form_tag users_disable_email_alerts_path(token: @token), method: :post, data: { turbo: false } do %>
+  <div class="form_button">
+    <%= submit_tag _('Disable email alerts') %>
+  </div>
+<% end %>

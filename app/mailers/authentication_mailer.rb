@@ -17,7 +17,8 @@ class AuthenticationMailer < ApplicationMailer
   end
 
   def reset_password_instructions(record, token, _opts = {})
-    @reset_url = edit_password_change_url(id: token, **self.class.origin)
+    @reset_url = edit_password_change_url(reset_password_token: token,
+                                          **self.class.origin)
     mail_user(record, subject: -> { _('Reset your password') })
   end
 end

@@ -313,30 +313,36 @@ RSpec.describe AttachmentManagement::Engines::Raster do
       expect(report[:metadata_removed].join).not_to include('51/1')
     end
 
-    it 'paints the boxes on every frame of an animated GIF' do
+    it 'refuses an animated GIF so hidden frames cannot escape preview' do
       frame = ->(text) do
         AttachmentFixtures.image(lines: [[20, 100, text]], width: 300,
                                  height: 200, format: 'gif')
       end
-      first = write('a.gif', frame.call('frame one SECRET'))
+      first = write('a.gif', frame.call('frame one'))
       second = write('b.gif', frame.call('frame two SECRET'))
       input = File.join(dir, 'anim.gif')
       AttachmentFixtures.magick('-delay', '50', first, second, input)
       expect(engine.image_info(input, 'gif')[:frames]).to eq(2)
 
+      expect do
+        engine.redact_image(input, 'gif', [[0.03, 0.30, 0.97, 0.62]],
+                            File.join(dir, 'out.gif'))
+      end.to raise_error(AttachmentManagement::Unsupported) { |e|
+        expect(e.reason).to eq(:multi_page_image)
+      }
+    end
+
+    it 'paints the boxes on a single-frame GIF' do
+      input = write('single.gif',
+                    AttachmentFixtures.image(lines: [[20, 100, 'one SECRET']],
+                                             width: 300, height: 200,
+                                             format: 'gif'))
       box = [0.03, 0.30, 0.97, 0.62]
       output = File.join(dir, 'out.gif')
       report = engine.redact_image(input, 'gif', [box], output)
 
-      expect(report).to include(frames: 2, boxes: 1, boxes_verified: 2)
-      AttachmentFixtures.magick(output, '-coalesce',
-                                File.join(dir, 'frame-%d.png'))
-      expect(
-        black?(AttachmentFixtures.region(File.join(dir, 'frame-0.png'), box))
-      ).to be true
-      expect(
-        black?(AttachmentFixtures.region(File.join(dir, 'frame-1.png'), box))
-      ).to be true
+      expect(report).to include(frames: 1, boxes: 1, boxes_verified: 1)
+      expect(black?(AttachmentFixtures.region(output, box))).to be true
     end
 
     it 'refuses a multi-page TIFF' do

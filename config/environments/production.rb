@@ -87,6 +87,17 @@ Rails.application.configure do
   # to make Rails upgrades easier.
   # ----------------------------------------------------------------
 
+  configured_host = AlaveteliConfiguration.domain.to_s.sub(/:\d+\z/, '')
+  config.hosts << configured_host if configured_host.present?
+  Array(AlaveteliConfiguration.allowed_hosts).each do |host|
+    extra = host.to_s.strip.sub(/:\d+\z/, '')
+    config.hosts << extra if extra.present?
+  end
+  config.hosts.concat(%w[127.0.0.1 localhost [::1]])
+  config.host_authorization = {
+    exclude: ->(request) { request.path == '/up' }
+  }
+
   config.action_mailer.delivery_method = AlaveteliConfiguration.production_mailer_delivery_method.to_sym
 
   if AlaveteliConfiguration.production_mailer_delivery_method.to_sym == :smtp

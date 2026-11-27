@@ -1,7 +1,7 @@
 module Search
   module Adapters
     module Postgresql
-      # PostgreSQL search backend behind Search (see doc/SEARCH.md).
+      # PostgreSQL search backend behind Search (see doc/FORK.md).
       class Adapter
         def typeahead(query, model:, exclude_tags: [])
           unless model == PublicBody

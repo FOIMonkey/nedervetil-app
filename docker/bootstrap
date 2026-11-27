@@ -47,6 +47,7 @@ fi
   -e "s/^INCOMING_OUTCOME_MODE: 'off'\$/INCOMING_OUTCOME_MODE: 'apply'/" \
   -e "s/^SITE_NAME: 'Alaveteli'\$/SITE_NAME: 'Nedervetil'/" \
   -e "s/^CONTACT_NAME: 'Alaveteli'\$/CONTACT_NAME: 'Nedervetil'/" \
+  -e "s/^DOMAIN: 'www.example.org'\$/DOMAIN: 'localhost:3000'/" \
   config/general.yml-example > "config/general-$demo_theme.yml"
 if [ ! -L config/general.yml ] && [ ! -f config/general.yml ]; then
   ln -s "general-$demo_theme.yml" config/general.yml

@@ -19,12 +19,12 @@ RSpec.describe 'Cookies' do
       submitted_contact_form: 1
     }
     expect(response).to redirect_to(frontpage_path)
-    expect(response.headers['Set-Cookie']).to include('_wdtk_cookie_session=')
+    expect(response.headers['Set-Cookie']).to include('_nedervetil_session=')
 
     follow_redirect!
     expect(response.body).to include('Your message has been sent')
     expect(response.headers['Set-Cookie']).
-      to match(/_wdtk_cookie_session=;.*max-age=0/m)
+      to match(/_nedervetil_session=;.*max-age=0/m)
 
     get '/help/about'
     expect(response.body).not_to include('Your message has been sent')

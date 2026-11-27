@@ -140,7 +140,8 @@ module Disclosures
       name_rules = rules(user)
       all_rules = public_rules + name_rules
       masked, report = PDFRedactor.redact(bytes, all_rules,
-                                          ocr: false, final_scan: true)
+                                          ocr: Disclosures.ocr?,
+                                          final_scan: true)
       refuse_if_parts_unmasked!(report)
       record_rule_matches(mask_set.censor_rules, attachment, report)
       name_range = (public_rules.size...all_rules.size)
@@ -216,7 +217,8 @@ module Disclosures
 
     def redact(bytes, user)
       masked, report = PDFRedactor.redact(bytes, rules(user),
-                                          ocr: false, final_scan: true)
+                                          ocr: Disclosures.ocr?,
+                                          final_scan: true)
       if report['rules_matched'].empty?
         raise Error::Refused, _('The name wasn’t found in the file’s text.')
       end

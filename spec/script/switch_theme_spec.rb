@@ -96,4 +96,29 @@ RSpec.describe 'script/switch-theme.rb' do
       expect(general_yml_target).to eq('general-example.yml')
     end
   end
+
+  context 'when switching to a theme without a public/ directory' do
+    before do
+      FileUtils.mkdir_p(File.join(@tmpdir, 'lib', 'themes'))
+      FileUtils.mkdir_p(File.join(@tmpdir, 'themes', 'propshaft-theme', '.git'))
+      FileUtils.touch(
+        File.join(@tmpdir, 'config', 'general-propshaft-theme.yml')
+      )
+    end
+
+    it 'links lib/themes/<theme> without creating a dangling public/alavetelitheme' do
+      File.symlink(
+        File.join(@tmpdir, 'themes', 'example', 'public'),
+        public_theme_link
+      )
+
+      _out, _err, status = run_switch('propshaft-theme')
+
+      expect(status.exitstatus).to eq(0)
+      expect(File.symlink?(public_theme_link)).to be(false)
+      theme_link = File.join(@tmpdir, 'lib', 'themes', 'propshaft-theme')
+      expect(File.symlink?(theme_link)).to be(true)
+      expect(general_yml_target).to eq('general-propshaft-theme.yml')
+    end
+  end
 end

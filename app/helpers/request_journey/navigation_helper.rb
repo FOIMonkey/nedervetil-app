@@ -85,6 +85,15 @@ module RequestJourney
       end
     end
 
+    def request_journey_default_button
+      form = request_journey_form
+      return unless form&.dig(:default)
+
+      label, name, value = form[:default]
+      button_tag label, type: 'submit', form: form[:id], name: name,
+                        value: value, hidden: true
+    end
+
     def request_journey_hidden_fields
       return unless request_journey_pro? && params[:request_choice].present?
 

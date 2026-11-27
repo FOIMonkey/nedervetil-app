@@ -35,4 +35,23 @@ RSpec.describe MailHandler::ReplyHandler do
         to eq(normal_recipient)
     end
   end
+
+  describe '.permanently_failed_addresses and .is_oof?' do
+    it 'ignores spoofed bounce subjects without empty return-path or Auto-Submitted' do
+      mail = Mail.new do
+        from 'attacker@example.org'
+        to 'contact@localhost'
+        subject 'Returned Mail: Error During Delivery'
+        body "---- Failed Recipients ----\n<victim@example.org>\n"
+      end
+      mail.return_path = 'attacker@example.org'
+
+      expect(described_class.permanently_failed_addresses(mail)).to eq([])
+    end
+
+    it 'handles messages with no Subject header in .is_oof?' do
+      mail = Mail.new { from 'sender@example.org' }
+      expect(described_class.is_oof?(mail)).to be(false)
+    end
+  end
 end

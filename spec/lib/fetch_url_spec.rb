@@ -153,6 +153,33 @@ RSpec.describe "fetch_url!" do
     expect { fetch_url!('http:/feed') }.
       to raise_error(FetchURLError, /Unsupported URL/)
   end
+
+  it "refuses loopback, metadata and private addresses and non-HTTP ports" do
+    %w[
+      http://127.0.0.1/secret
+      http://169.254.169.254/latest/meta-data/
+      http://10.0.0.1/internal
+      http://[::1]/secret
+      http://localhost/secret
+      http://example.com:6379/
+    ].each do |blocked|
+      expect { fetch_url!(blocked) }.to raise_error(FetchURLError), blocked
+    end
+  end
+
+  it "refuses a redirect to a private or metadata address" do
+    stub_request(:get, uri).to_return(
+      status: 302, headers: { 'Location' => 'http://169.254.169.254/meta' }
+    )
+    expect { fetch_url!(uri) }.
+      to raise_error(FetchURLError, /Refused non-public address/)
+  end
+
+  it "refuses responses larger than MAX_FETCH_BYTES" do
+    stub_request(:get, uri).to_return(body: 'a' * (MAX_FETCH_BYTES + 1))
+    expect { fetch_url!(uri) }.
+      to raise_error(FetchURLError, /exceeded #{MAX_FETCH_BYTES} bytes/o)
+  end
 end
 
 RSpec.describe "quietly_try_to_open" do

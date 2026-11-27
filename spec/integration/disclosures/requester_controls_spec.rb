@@ -232,4 +232,30 @@ RSpec.describe 'Requester Document controls' do
            params: { attachment_id: attachment.id, kind: 'released_records' }
     }.to change(Disclosures::Document, :count).by(1)
   end
+
+  it 'lets admins preview and download pending reviews without exposing public downloads' do
+    document = queued
+    sign_in(admin)
+    document_request :get, admin_disclosure_manage_document_path(document)
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include('Records by ward.')
+    expect(response.body).
+      to include(admin_disclosure_download_document_path(document))
+
+    document_request :get, admin_disclosure_download_document_path(document)
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include('Records by ward.')
+
+    document_request :get, disclosure_document_download_path(document)
+    expect(response).to have_http_status(:not_found)
+
+    [owner, other].each do |user|
+      sign_in(user)
+      document_request :get, admin_disclosure_download_document_path(document)
+      expect(response).to have_http_status(:not_found)
+      document_request :get,
+                       admin_disclosure_document_page_path(document, page: 1)
+      expect(response).to have_http_status(:not_found)
+    end
+  end
 end

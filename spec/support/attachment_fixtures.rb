@@ -126,8 +126,28 @@ module AttachmentFixtures
   # lines: [[x, y, text], ...] in pixels from the top left.
   def image(lines:, width: 800, height: 500, format: 'png', point_size: 36)
     draws = lines.flat_map { |x, y, text| ['-annotate', "+#{x}+#{y}", text] }
-    magick('-size', "#{width}x#{height}", 'xc:white', '-fill', 'black',
-           '-pointsize', point_size.to_s, *draws, "#{format}:-")
+    white_canvas(width, height, '-fill', 'black',
+                 '-pointsize', point_size.to_s, *draws, "#{format}:-")
+  end
+
+  # Builds a white canvas without ImageMagick's xc: pseudo-coder, which
+  # lib/alaveteli_sandbox/imagemagick-policy.xml disables.
+  def white_canvas(width, height, *args)
+    magick('png:-', '-scale', "#{width}x#{height}!", *args,
+           stdin: white_pixel_png)
+  end
+
+  def white_pixel_png
+    @white_pixel_png ||= begin
+      require 'zlib'
+      chunk = ->(type, data) do
+        [data.bytesize, type, data, Zlib.crc32(type + data)].pack('Na4a*N')
+      end
+      ihdr = [1, 1, 8, 2, 0, 0, 0].pack('NNCCCCC')
+      idat = Zlib::Deflate.deflate("\x00\xFF\xFF\xFF".b)
+      "\x89PNG\r\n\x1a\n".b + chunk['IHDR', ihdr] + chunk['IDAT', idat] +
+        chunk['IEND', ''.b]
+    end
   end
 
   # Rotated JPEG with EXIF orientation 6 and GPS tag.

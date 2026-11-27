@@ -139,16 +139,16 @@ RSpec.describe 'Sign-in pages', type: :request do
 
   it 'asks for an authenticator code on password reset only when enabled' do
     plain_token = user.send_reset_password_instructions
-    get edit_password_change_path(id: plain_token)
+    get edit_password_change_path(reset_password_token: plain_token)
     expect(page.at_css('#password_change_user_otp_attempt')).to be_nil
 
     turn_on_app
     totp_token = user.send_reset_password_instructions
-    get edit_password_change_path(id: totp_token)
+    get edit_password_change_path(reset_password_token: totp_token)
     expect(page.at_css('#password_change_user_otp_attempt')).to be_present
 
     next_password = 'another-long-password'
-    patch password_change_path(id: totp_token),
+    patch password_change_path(reset_password_token: totp_token),
       params: { password_change_user: { password: next_password,
                                         password_confirmation: next_password,
                                         otp_attempt: 'not-a-code' } },
@@ -159,7 +159,7 @@ RSpec.describe 'Sign-in pages', type: :request do
     expect(page.at_css('#password_change_user_otp_attempt')).to be_present
 
     travel 61.minutes do
-      get edit_password_change_path(id: totp_token)
+      get edit_password_change_path(reset_password_token: totp_token)
       expect(page.at_css('#password_change_user_otp_attempt')).to be_nil
     end
   end

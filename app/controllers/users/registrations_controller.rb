@@ -65,6 +65,7 @@ class Users::RegistrationsController < Devise::RegistrationsController
 
       existing.update(name: @user_signup.name)
     end
+    AuthenticationReturn.remember(session, params[:r]) if params.key?(:r)
     render 'users/confirmations/check_email'
   end
 

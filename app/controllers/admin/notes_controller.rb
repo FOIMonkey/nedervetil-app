@@ -59,7 +59,9 @@ class Admin::NotesController < AdminController
   end
 
   def scope
-    Note.where(params.slice(:notable_tag, :notable_id, :notable_type).permit!)
+    filters = params.slice(:notable_tag, :notable_id, :notable_type).
+              permit(:notable_tag, :notable_id, :notable_type)
+    Note.where(filters)
   end
 
   def note_params

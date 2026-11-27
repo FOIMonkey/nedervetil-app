@@ -34,7 +34,7 @@ RSpec.describe 'Signed-out authentication forms in a browser', js: true do
 
   it 'changes the password from the mailed reset address' do
     token = user.send_reset_password_instructions
-    visit edit_password_change_path(id: token)
+    visit edit_password_change_path(reset_password_token: token)
     fill_in 'New password', with: 'changed-invented-password'
     fill_in 'Confirm password', with: 'changed-invented-password'
     click_button 'Change password'

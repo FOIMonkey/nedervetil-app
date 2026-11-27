@@ -13,7 +13,8 @@ DB_VOLUME="$(basename "$(pwd)")_postgres"
 if docker volume ls | grep -q "$DB_VOLUME"; then
   while true
   do
-    read -r -p 'Do you also want to reset your development database? ' choice
+    printf 'Do you also want to reset your development database? '
+    read -r choice
     case "$choice" in
       n|N) break;;
       y|Y)

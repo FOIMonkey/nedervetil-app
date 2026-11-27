@@ -2,7 +2,7 @@ module Search
   module Adapters
     module Postgresql
       # Authority typeahead using AuthorityQuery with a SimilarNameQuery
-      # fallback (see doc/SEARCH.md).
+      # fallback (see doc/FORK.md).
       class Typeahead < Search::Adapter
         def initialize(query_string, exclude_tags: [])
           @exclude_tags = exclude_tags

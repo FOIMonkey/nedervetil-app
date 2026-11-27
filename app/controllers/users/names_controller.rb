@@ -3,6 +3,8 @@
 #
 class Users::NamesController < ApplicationController
   before_action :check_user_logged_in, :check_user_suspension, :load_user
+  rate_limit to: 5, within: 1.hour, only: :update, name: 'profile-name',
+             by: -> { current_user&.id || request.remote_ip }
 
   def update
     if @edit_user.update(user_params)

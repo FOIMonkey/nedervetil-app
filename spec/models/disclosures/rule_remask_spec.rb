@@ -381,4 +381,27 @@ RSpec.describe Disclosures::RuleRemask do
       )
     end
   end
+
+  describe '.raster_match?' do
+    it 'checks the original attributes and fails closed when unreadable' do
+      attachment = public_file_without_a_document(
+        'scan.pdf', 'application/pdf', "%PDF-1.7\n"
+      )
+      allow(attachment).to receive(:original_attributes).and_return(
+        content_type: 'application/vnd.openxmlformats-officedocument.' \
+                      'wordprocessingml.document',
+        filename: 'source.docx',
+        body: 'raw-docx-bytes'
+      )
+      censor_rule = rule('black')
+      expect(Disclosures::RuleCheck).to receive(:match?).with(
+        attachment, 'raw-docx-bytes'.b,
+        rules: [censor_rule], format: 'other'
+      ).and_raise(Disclosures::RuleCheck::Unreadable, 'cannot read')
+
+      expect(
+        described_class.raster_match?(attachment, nil, [censor_rule])
+      ).to be(true)
+    end
+  end
 end

@@ -136,6 +136,7 @@ class RegulatorPack
     summary = render_correspondence(pack_bodies)
 
     Zip::File.open(file_path, create: true) do |zipfile|
+      used_names = Set.new(['correspondence.txt'])
       zipfile.get_output_stream('correspondence.txt') { |f| f.write(summary) }
       messages.each_with_index do |message, index|
         message.get_attachments_for_display.each do |attachment|
@@ -144,11 +145,25 @@ class RegulatorPack
           bytes, display_name = pack_entry_for(attachment)
           next if bytes.nil?
 
-          filename = "#{index + 1}_#{attachment.url_part_number}_" \
-                     "#{display_name}"
+          base = "#{index + 1}_#{attachment.url_part_number}_#{display_name}"
+          filename = unique_zip_name(base, used_names)
           zipfile.get_output_stream(filename) { |f| f.write(bytes) }
         end
       end
+    end
+  end
+
+  def unique_zip_name(base, used_names)
+    return base if used_names.add?(base)
+
+    ext = File.extname(base)
+    stem = ext.empty? ? base : base.delete_suffix(ext)
+    n = 2
+    loop do
+      candidate = "#{stem}_#{n}#{ext}"
+      return candidate if used_names.add?(candidate)
+
+      n += 1
     end
   end
 

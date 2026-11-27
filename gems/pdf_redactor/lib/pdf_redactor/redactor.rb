@@ -17,6 +17,9 @@ module PDFRedactor
     LABEL_FONT = 'RIRedacted'
     # Its width in Helvetica, in ems (ISO 32000-1 Annex D's standard widths).
     LABEL_EMS = 4.447
+    MAX_FORM_PLACEMENTS = 10_000
+    MAX_FORM_BOXES = 5_000
+    UNSEEN_CHARS = "\u00AD\u200B\u200C\u200D\u2060\uFEFF"
 
     # PDFDocEncoding (Annex D) where it differs from Latin-1.
     PDFDOC = {
@@ -47,6 +50,8 @@ module PDFRedactor
       @page_streams = Set.new
       @forms = {} # [form, resources] -> what it adds to a page that draws it
       @form_edits = {}
+      @form_box_collector = nil
+      @stream_balance = {}
       @running = Set.new # forms being read, as a form can draw itself
       @object_edits = [] # [start, stop, bytes]
       @labelled = [] # pages whose boxes say [redacted]
@@ -66,12 +71,17 @@ module PDFRedactor
     def run
       @doc.pages.each_with_index do |(page, res, attrs, ref), idx|
         @page = { images: 0, visible: 0, unmapped: 0, image_area: 0.0,
-                  area: page_area(attrs), number: idx + 1 }
+                  area: page_area(attrs), number: idx + 1,
+                  image_boxes: [], extra_boxes: [] }
         contents = @doc.resolve(page['Contents'])
         sids = (contents.is_a?(Array) ? contents : [page['Contents']]).
                grep(Ref).select { |sid| @doc.object(sid.num)&.dig(:stream) }
         claim_page_streams(sids)
+        collect_page_images(sids, res || {})
         run_streams(sids, res || {})
+        if @page[:extra_boxes].any? && sids.any?
+          add_boxes(sids.map(&:num), @page[:extra_boxes].uniq)
+        end
         Array(@doc.resolve(page['Annots'])).each do |a|
           annot_streams(@doc.resolve(a), res || {})
         end
@@ -132,11 +142,14 @@ module PDFRedactor
       @rules.each_index.select { |i| @matched.include?(@rules[i]) }
     end
 
-    # A PDF text string as text: UTF-16BE or UTF-8 by its byte order mark,
-    # otherwise PDFDocEncoding. FinalScan reads strings this way too.
+    # A PDF text string as text: UTF-16BE, UTF-16LE or UTF-8 by its byte
+    # order mark, otherwise PDFDocEncoding. FinalScan reads strings this way.
     def self.decode_text_string(b)
       if b.start_with?("\xFE\xFF".b)
         b.byteslice(2..).force_encoding('UTF-16BE').
+          encode('UTF-8', invalid: :replace, undef: :replace)
+      elsif b.start_with?("\xFF\xFE".b)
+        b.byteslice(2..).force_encoding('UTF-16LE').
           encode('UTF-8', invalid: :replace, undef: :replace)
       elsif b.start_with?("\xEF\xBB\xBF".b)
         b.byteslice(3..).force_encoding('UTF-8').scrub
@@ -245,6 +258,95 @@ module PDFRedactor
        (m[4] * n[1]) + (m[5] * n[3]) + n[5]]
     end
 
+    def unit_square_bbox(m)
+      pts = [[0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0]].map do |x, y|
+        [(x * m[0]) + (y * m[2]) + m[4], (x * m[1]) + (y * m[3]) + m[5]]
+      end
+      xs = pts.map(&:first)
+      ys = pts.map(&:last)
+      [xs.min, ys.min, xs.max, ys.max]
+    end
+
+    def transform_points(points, m)
+      return points if m == M1
+
+      points.map do |x, y|
+        [(x * m[0]) + (y * m[2]) + m[4], (x * m[1]) + (y * m[3]) + m[5]]
+      end
+    end
+
+    def page_has_images?
+      return false unless @page
+
+      @page[:images].to_i.positive? || !@page[:image_boxes]&.empty?
+    end
+
+    def overlaps_page_image?(points)
+      return false unless @page
+      return true if @page[:image_boxes_overflow]
+      return false unless @page[:image_boxes]&.any?
+
+      xs = points.map(&:first)
+      ys = points.map(&:last)
+      bx0, bx1 = xs.minmax
+      by0, by1 = ys.minmax
+      @page[:image_boxes].any? do |ix0, iy0, ix1, iy1|
+        ox = [bx1, ix1].min - [bx0, ix0].max
+        oy = [by1, iy1].min - [by0, iy0].max
+        ox.positive? && oy.positive? && (ox * oy) > 0.5
+      end
+    end
+
+    def collect_page_images(sids, res, outer = M1, depth = 0, seen = Set.new)
+      if depth > 8 || @page[:image_boxes].size >= 2000
+        @page[:image_boxes_overflow] = true
+        return
+      end
+      return if sids.empty?
+
+      data = sids.filter_map { |sid| @doc.stream_data(sid) }.join("\n")
+      return unless data.include?('Do') || data.include?('BI')
+
+      xobjects = @doc.resolve(res['XObject'])
+      xobjects = {} unless xobjects.is_a?(Hash)
+      ctm = M1
+      stack = []
+      Lexer.each_op(data) do |op, a|
+        if @page[:image_boxes].size >= 2000
+          @page[:image_boxes_overflow] = true
+          break
+        end
+
+        case op
+        when 'q' then stack << ctm
+        when 'Q' then ctm = stack.pop || ctm
+        when 'cm'
+          ctm = mul(a.map { |x| num(x) }, ctm) if a.size == 6
+        when 'BI'
+          @page[:image_boxes] << unit_square_bbox(mul(ctm, outer))
+        when 'Do'
+          ref = xobjects[a[0].to_s]
+          xobject = @doc.resolve(ref)
+          sub = xobject.is_a?(Hash) ? @doc.name(xobject['Subtype']) : nil
+          if sub == 'Image'
+            @page[:image_boxes] << unit_square_bbox(mul(ctm, outer))
+          elsif sub == 'Form' && ref.is_a?(Ref)
+            o = @doc.object(ref.num)
+            next unless o && o[:stream] && o[:value].is_a?(Hash)
+
+            own = @doc.resolve(o[:value]['Resources'])
+            fres = own.is_a?(Hash) ? own : res
+            fm = nums(o[:value]['Matrix'])
+            fouter = mul(ctm, outer)
+            fouter = mul(fm, fouter) if fm.size == 6
+            next unless seen.add?([ref.num, fouter])
+
+            collect_page_images([ref], fres, fouter, depth + 1, seen)
+          end
+        end
+      end
+    end
+
     # Areas that an author marked to redact but did not apply: everything
     # under them goes, as ISO 32000-1 12.5.6.23 asks, so the page is boxed and
     # becomes a picture of itself.
@@ -301,7 +403,7 @@ module PDFRedactor
                   else
                     []
                   end
-        targets.each { |t| form(t, res) }
+        targets.each { |t| form(t, res, M1, on_contents: false) }
       end
     end
 
@@ -320,7 +422,7 @@ module PDFRedactor
     # outer: the form's matrix and the CTM where the page drew it, so the
     # pictures inside count towards the page's area. A form is read once for
     # each set of resources, and each page that draws it counts what's in it.
-    def form(ref, res, outer = M1)
+    def form(ref, res, outer = M1, on_contents: true)
       return unless ref.is_a?(Ref) && !@running.include?(ref.num)
 
       o = @doc.object(ref.num)
@@ -332,33 +434,66 @@ module PDFRedactor
       outer = mul(m, outer) if m.size == 6
       scale = determinant(outer)
       key = [ref.num, res.object_id]
-      unless @forms.key?(key)
-        @forms[key] = read_form(ref, res, outer, scale)
-        return
+      adds = (@forms[key] ||= read_form(ref, res))
+      if @page
+        @page[:images] += adds[:images]
+        @page[:visible] += adds[:visible]
+        @page[:unmapped] += adds[:unmapped]
+        @page[:image_area] += adds[:image_area] * scale
       end
+      if @form_box_collector
+        if @form_box_collector.size + adds[:boxes].size > MAX_FORM_BOXES
+          raise Error, 'too many redaction boxes in form'
+        end
 
-      adds = @forms[key]
-      @page[:images] += adds[:images]
-      @page[:visible] += adds[:visible]
-      @page[:image_area] += adds[:image_area] * scale
-      @page[:rasterize] ||= adds[:rasterize]
+        adds[:boxes].each do |b|
+          @form_box_collector << {
+            corners: transform_points(b[:corners], outer),
+            invisible: b[:invisible]
+          }
+        end
+      else
+        apply_form_boxes(adds[:boxes], outer, on_contents: on_contents)
+      end
     end
 
-    # Reads the form and returns what it added to the page. Its one stream
+    def apply_form_boxes(form_boxes, outer, on_contents:)
+      return if !@page || form_boxes.empty?
+
+      images = page_has_images?
+      form_boxes.each do |b|
+        page_corners = transform_points(b[:corners], outer)
+        over_img = (b[:invisible] && images) ||
+                   overlaps_page_image?(page_corners)
+        if on_contents && (!b[:invisible] || over_img)
+          @page[:extra_boxes] << path(page_corners)
+          @report['boxes'] += 1 if b[:invisible]
+        end
+        next unless over_img
+
+        @report['boxes_over_images'] += 1
+        @page[:rasterize] = true
+      end
+    end
+
+    # Reads the form and returns what it added in its own space. Its one stream
     # can't hold different edits for pages whose resources make it read
     # differently, so that fails.
-    def read_form(ref, res, outer, scale)
+    def read_form(ref, res)
       num = ref.num
       if @page_streams.include?(num)
         raise Error, "object #{num} is both page content and a form"
       end
 
-      before = @page.slice(:images, :visible, :image_area)
-      rasterize = @page.delete(:rasterize)
+      saved_page = @page
+      saved_collector = @form_box_collector
+      @page = { images: 0, visible: 0, unmapped: 0, image_area: 0.0,
+                image_boxes: [], extra_boxes: [] }
+      @form_box_collector = []
       earlier = @form_edits[num]
       @edits.delete(num)
       @running << num
-      run_streams([ref], res, outer: outer)
+      run_streams([ref], res, outer: M1, on_contents: false)
       @running.delete(num)
       edits = @edits[num] || { ops: {}, prefix: nil, suffix: nil }
       if earlier && earlier != edits
@@ -366,25 +501,24 @@ module PDFRedactor
       end
 
       @form_edits[num] = edits
-      adds = { images: @page[:images] - before[:images],
-               visible: @page[:visible] - before[:visible],
-               image_area: if scale.zero?
-                             0.0
-                           else
-                             (@page[:image_area] - before[:image_area]) / scale
-                           end,
-               rasterize: @page[:rasterize] }
-      @page[:rasterize] ||= rasterize
-      adds
+      { images: @page[:images],
+        visible: @page[:visible],
+        unmapped: @page[:unmapped],
+        image_area: @page[:image_area],
+        boxes: @form_box_collector }
+    ensure
+      @page = saved_page
+      @form_box_collector = saved_collector
     end
 
     # Decodes the text of content streams that share one graphics state.
-    def run_streams(sids, res, outer: M1)
+    def run_streams(sids, res, outer: M1, on_contents: true)
       glyphs = []
       ctxs = {}
       gs = { ctm: M1, tc: 0.0, tw: 0.0, th: 1.0, tl: 0.0, rise: 0.0,
              font: nil, tfs: 0.0, tr: 0 }
       stack = []
+      underflow_qs = []
       tm = M1.dup
       tlm = M1
       forms = []
@@ -409,7 +543,12 @@ module PDFRedactor
           oi += 1
           case op
           when 'q' then stack << gs.dup
-          when 'Q' then gs = stack.pop || gs
+          when 'Q'
+            if stack.empty?
+              underflow_qs << [num, start, stop]
+            else
+              gs = stack.pop
+            end
           when 'cm' then if a.size == 6
                            gs[:ctm] = mul(a.map { |x| num(x) }, gs[:ctm])
                          end
@@ -474,9 +613,19 @@ module PDFRedactor
           end
         end
       end
+      if done.any?
+        @stream_balance[done.first] = { underflow_qs: underflow_qs,
+                                        open_qs: stack.size }
+      end
       # Forms are read first, as #boxes covers a match in hidden text only on
       # a page with pictures, and a form may draw them.
-      forms.uniq(&:first).each { |r, m| form(r, res, m) }
+      if forms.size > MAX_FORM_PLACEMENTS
+        raise Error, 'too many form placements'
+      end
+
+      forms.uniq.each do |r, m|
+        form(r, res, m, on_contents: on_contents)
+      end
       censor(glyphs, ctxs, done) unless glyphs.empty?
     end
 
@@ -697,46 +846,59 @@ module PDFRedactor
     # One box for each run of marked glyphs on a line, painted after the
     # stream's own content in the stream's own space.
     def boxes(glyphs, visual, marked, sids)
+      on_page = @page && sids.all? { |sid| @page_streams.include?(sid) }
+      images = page_has_images?
       runs = []
       visual.each do |gi|
         g = glyphs[gi]
-        images = @page.to_h[:images].to_i.positive?
-        unless marked.include?(gi) && (!g.invisible || images)
+        keep = marked.include?(gi) && (!on_page || !g.invisible || images)
+        unless keep
           runs << nil unless runs.last.nil?
           next
         end
-        if runs.last && same_line?(glyphs[runs.last.last], g)
+        if runs.last && same_line?(glyphs[runs.last.last], g) &&
+           (on_page || glyphs[runs.last.last].invisible == g.invisible)
           runs.last << gi
         else
           runs << [gi]
         end
       end
       labels = []
-      paths = runs.compact.map do |run|
+      paths = []
+      runs.compact.each do |run|
         rg = run.map { |gi| glyphs[gi] }
         asc = rg.map { |g| g.font.ascent }.max
         desc = rg.map { |g| g.font.descent }.min
-        if rg.any?(&:invisible)
-          # The scan under an OCR layer still shows the words.
-          @report['boxes_over_images'] += 1
-          @page[:rasterize] = true if @page
-        end
         first = rg.first
         last = rg.last
         corners = [[first.x0, first.y0, desc], [last.x1, last.y1, desc],
                    [last.x1, last.y1, asc], [first.x0, first.y0, asc]]
-        corners = corners.map { |x, y, k|
+        corners = corners.map do |x, y, k|
           [x + (first.vx * k), y + (first.vy * k)]
-        }
-        labels << label(*corners.first(2), corners.last)
-        path(corners)
+        end
+        inv = rg.any?(&:invisible)
+        if !on_page && @form_box_collector
+          if @form_box_collector.size >= MAX_FORM_BOXES
+            raise Error, 'too many redaction boxes in form'
+          end
+
+          @form_box_collector << { corners: corners, invisible: inv }
+        end
+        next if !on_page && inv
+
+        if on_page && (inv || overlaps_page_image?(corners))
+          # A scan under or over the text still holds the words in its pixels.
+          @report['boxes_over_images'] += 1
+          @page[:rasterize] = true
+        end
+        labels << label(*corners.first(2), corners.last) if on_page
+        paths << path(corners)
       end
       return if paths.empty?
 
       @report['boxes'] += paths.size
       # A form can be drawn by several pages, each with its own resources, so
       # only a box on the page itself can name the page's font.
-      on_page = @page && sids.all? { |sid| @page_streams.include?(sid) }
       labels = on_page ? labels.compact : []
       @page[:labelled] = true if labels.any?
       add_boxes(sids, paths, labels)
@@ -812,14 +974,22 @@ module PDFRedactor
       @object_edits.any? { |s, e, _| s < span[1] && e > span[0] }
     end
 
-    # The stream's own content is wrapped in q ... Q, so the boxes draw in
-    # the stream's starting space whatever state the content leaves.
+    # The stream's own content is wrapped in q ... Q, with any extra Q's
+    # blanked and unclosed q's closed, so boxes draw in the starting space.
     def add_boxes(sids, paths, labels = [])
       # A page's joined streams are written to the first.
       sids = [sids.first] if @groups.key?(sids.first)
       edit(sids.first)[:prefix] ||= "q\n"
+      if (bal = @stream_balance[sids.first])
+        bal[:underflow_qs].each do |num, start, stop|
+          edit(num)[:ops][start] = [stop, (' ' * (stop - start)).b]
+        end
+        close_qs = "Q\n" * (bal[:open_qs] + 1)
+      else
+        close_qs = "Q\n"
+      end
       e = edit(sids.last)
-      e[:suffix] ||= "\nQ\n"
+      e[:suffix] ||= "\n#{close_qs}"
       e[:suffix] += "q 0 g #{paths.join("\n")} f Q\n"
       e[:suffix] += "q 1 g #{labels.join("\n")} Q\n" if labels.any?
     end
@@ -969,8 +1139,14 @@ module PDFRedactor
 
     def decode_text_string(b) = self.class.decode_text_string(b)
 
+    def normalize_string(s)
+      s.unicode_normalize(:nfkc).delete(UNSEEN_CHARS)
+    rescue ArgumentError, Encoding::CompatibilityError
+      s
+    end
+
     # A match becomes [redacted], so that a name's word lengths don't show.
-    def censor_string(s)
+    def censor_string(s, normalized: false)
       out = s
       hit = false
       @rules.each do |rule|
@@ -978,6 +1154,13 @@ module PDFRedactor
           hit = true
           @matched << rule
           LABEL
+        end
+      end
+      if !normalized && !out.ascii_only?
+        norm = normalize_string(out)
+        if norm != out && @rules.any? { |rule| norm.match?(rule.re) }
+          rep = censor_string(norm, normalized: true)
+          return rep if rep
         end
       end
       hit ? out : nil

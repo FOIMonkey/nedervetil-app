@@ -11,7 +11,8 @@
       <div class="dashboard-left-column">
         <%= render partial: 'alaveteli_pro/dashboard/sidebar' %>
       </div>
-      <% if @user.info_requests.empty? && @user.draft_info_requests.empty? && @user.info_request_batches.empty? && @user.draft_info_request_batches.empty? %>
+      <% visible_reqs = IncomingAttention::Effective.visible_requests(@user, @user.info_requests) %>
+      <% if visible_reqs.empty? && @user.draft_info_requests.empty? && @user.info_request_batches.empty? && @user.draft_info_request_batches.empty? %>
         <%= render partial: 'no_requests' %>
       <% else %>
         <%= render partial: 'request_list' %>

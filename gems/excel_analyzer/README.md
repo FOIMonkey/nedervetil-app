@@ -21,4 +21,4 @@ prompt that will allow you to experiment.
 ## Contributing
 
 Bug reports and pull requests are welcome on GitHub at
-https://github.com/mysociety/alaveteli
+https://github.com/FOIMonkey/nedervetil-app

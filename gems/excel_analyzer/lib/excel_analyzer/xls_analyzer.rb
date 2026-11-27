@@ -162,12 +162,7 @@ module ExcelAnalyzer
       name = "spreadsheet#{extension}"
       ::AlaveteliSandbox.job(input: Pathname(io.path),
                              input_name: name) do |job|
-        job.run('soffice', '--headless', '--convert-to', 'xlsx',
-                '--outdir', job.scratch, job.input,
-                timeout: 300, memory: 4 * 1024 * 1024 * 1024)
-        unless job.exist?('spreadsheet.xlsx')
-          raise 'LibreOffice conversion failed'
-        end
+        run_soffice_in_job(job)
 
         Tempfile.new(['spreadsheet', '.xlsx']).tap do |tempfile|
           tempfile.binmode
@@ -175,6 +170,19 @@ module ExcelAnalyzer
           tempfile.rewind
         end
       end
+    end
+
+    def run_soffice_in_job(job)
+      job.run('soffice', '--headless', '--convert-to', 'xlsx',
+              '--outdir', job.scratch, job.input,
+              timeout: 300, memory: 4 * 1024 * 1024 * 1024)
+      return if job.exist?('spreadsheet.xlsx')
+
+      raise 'LibreOffice conversion failed'
+    rescue ::AlaveteliSandbox::Failed => e
+      raise if e.result.nil?
+
+      raise 'LibreOffice conversion failed'
     end
 
     def soffice_installed?

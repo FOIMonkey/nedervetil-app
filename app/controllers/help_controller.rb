@@ -12,6 +12,8 @@ class HelpController < ApplicationController
   before_action :long_cache
   before_action :catch_spam, only: [:contact]
   before_action :set_turnstile_required, only: [:contact]
+  rate_limit to: 10, within: 1.hour, only: :contact,
+             if: -> { request.post? }, name: 'help-contact'
 
   ContactSpamError = Class.new(StandardError)
 
@@ -30,15 +32,11 @@ class HelpController < ApplicationController
   end
 
   def contact
-    # if they clicked remove for link to request/body, remove it
-    if params[:remove]
-      @last_request = nil
-      cookies[:last_request_id] = nil
-      cookies[:last_body_id] = nil
-    end
+    clear_last_request_link if params[:remove]
 
     # look up link to request/body
-    request = InfoRequest.find_by(id: cookies[:last_request_id].to_i)
+    last_request_id = session[:last_request_id] || cookies[:last_request_id]
+    request = InfoRequest.find_by(id: last_request_id.to_i)
     @last_request = request if can?(:read, request)
 
     @last_body = PublicBody.find_by(id: cookies[:last_body_id].to_i)
@@ -53,7 +51,6 @@ class HelpController < ApplicationController
 
     if params[:remove]
       contact_validator.errors.clear
-
     elsif @turnstile_required &&
           (refusal = turnstile_refusal('contact'))
       flash.now[:error] = refusal
@@ -69,6 +66,13 @@ class HelpController < ApplicationController
   end
 
   private
+
+  def clear_last_request_link
+    @last_request = nil
+    session.delete(:last_request_id)
+    cookies.delete(:last_request_id)
+    cookies.delete(:last_body_id)
+  end
 
   def contact_validator
     @contact_validator ||= ContactValidator.new(contact_params)

@@ -66,7 +66,7 @@ RSpec.describe 'Security headers', type: :request do
       sign_in(user)
 
       expect(cookies_set.size).to eq(1)
-      expect(cookies_set.first).to start_with('_wdtk_cookie_session=')
+      expect(cookies_set.first).to start_with('_nedervetil_session=')
       expect(cookie_attributes(cookies_set.first)).
         to eq(%w[path=/ httponly samesite=lax])
     end
@@ -95,7 +95,7 @@ RSpec.describe 'Security headers', type: :request do
       follow_redirect!
 
       expect(cookies_set.size).to eq(1)
-      expect(cookies_set.first).to start_with('_wdtk_cookie_session=;')
+      expect(cookies_set.first).to start_with('_nedervetil_session=;')
       expect(cookie_attributes(cookies_set.first)).to eq(
         ['path=/', 'max-age=0', 'expires=thu, 01 jan 1970 00:00:00 gmt',
          'httponly', 'samesite=lax']

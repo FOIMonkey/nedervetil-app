@@ -140,10 +140,14 @@ RSpec.describe 'Retired replay and bounded authentication returns',
   end
 
   it 'does not exchange an old reset token for new credentials or a session' do
-    patch password_change_path(id: legacy.email_token), params: {
-      password_change_user: { password: 'invented-new-password',
-                              password_confirmation: 'invented-new-password' }
-    }, headers: origin
+    patch password_change_path(reset_password_token: legacy.email_token),
+          params: {
+            password_change_user: {
+              password: 'invented-new-password',
+              password_confirmation: 'invented-new-password'
+            }
+          },
+          headers: origin
     expect(response).to have_http_status(422)
     expect(user.reload.valid_password?('jonespassword')).to be true
     expect(request.env['warden'].user(scope: :user)).to be_nil

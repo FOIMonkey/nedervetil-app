@@ -1,1 +1,1669 @@
-.ruby-style.yml
+---
+inherit_from: .rubocop_todo.yml
+
+plugins:
+  - rubocop-capybara
+  - rubocop-factory_bot
+  - rubocop-performance
+  - rubocop-rails
+
+require:
+  - "./lib/custom_cops/empty_lines_around_rescued_exceptions.rb"
+
+#################### AllCops ####################
+
+AllCops:
+  TargetRubyVersion: 3.4
+  RubyInterpreters:
+    - ruby
+    - rake
+  Include:
+    - "**/*.rb"
+    - "**/*.gemfile"
+    - "**/*.gemspec"
+    - "**/*.rake"
+    - "**/*.ru"
+    - "**/*.spec"
+    - "**/Gemfile"
+    - "**/Rakefile"
+    - "**/Vagrantfile"
+  Exclude:
+    - db/schema.rb
+    - lib/themes/**/*
+    - node_modules/**/*
+    - vendor/**/*
+    - ".git/**/*"
+    - bin/rubocop
+  DisplayCopNames: false
+  StyleGuideCopsOnly: false
+  DisabledByDefault: true
+
+#################### Bundler ####################
+
+Bundler/DuplicatedGem:
+  Enabled: true
+
+Bundler/DuplicatedGroup:
+  Enabled: true
+
+Bundler/GemFilename:
+  Enabled: true
+
+Bundler/InsecureProtocolSource:
+  Enabled: true
+
+#################### Capybara ####################
+
+Capybara/AbsoluteXPathInElementScope:
+  Enabled: true
+
+Capybara/AlwaysTrueCountQuery:
+  Enabled: true
+
+Capybara/AssertStyle:
+  Enabled: true
+
+Capybara/ChainedFind:
+  Enabled: true
+
+Capybara/FindAllFirst:
+  Enabled: true
+
+Capybara/IgnoredQueryOption:
+  Enabled: true
+
+Capybara/ModalMethodWithoutBlock:
+  Enabled: true
+
+Capybara/NativeAttribute:
+  Enabled: true
+
+Capybara/RSpec/CurrentPathExpectation:
+  Enabled: true
+
+Capybara/RSpec/CurrentUrlExpectation:
+  Enabled: true
+
+Capybara/RSpec/FindElementValueEq:
+  Enabled: true
+
+Capybara/RSpec/HaveSelector:
+  Enabled: true
+
+Capybara/RSpec/MatchStyle:
+  Enabled: true
+
+Capybara/RSpec/NegationMatcher:
+  Enabled: true
+
+Capybara/RSpec/NegationMatcherAfterVisit:
+  Enabled: true
+
+Capybara/RSpec/PredicateMatcher:
+  Enabled: true
+
+Capybara/RSpec/SpecificMatcher:
+  Enabled: true
+
+Capybara/RSpec/VisibilityMatcher:
+  Enabled: true
+
+Capybara/RedundantWithinFind:
+  Enabled: true
+
+Capybara/SpecificActions:
+  Enabled: true
+
+Capybara/SpecificFinders:
+  Enabled: true
+
+Capybara/UnorderedWindowAccess:
+  Enabled: true
+
+Capybara/VisibilityOption:
+  Enabled: true
+
+#################### FactoryBot ####################
+
+FactoryBot/AttributeDefinedStatically:
+  Enabled: true
+
+FactoryBot/ConsistentParenthesesStyle:
+  Enabled: true
+
+FactoryBot/CreateList:
+  Enabled: true
+
+FactoryBot/FactoryAssociationWithStrategy:
+  Enabled: true
+
+FactoryBot/FactoryClassName:
+  Enabled: true
+
+FactoryBot/FactoryNameStyle:
+  Enabled: true
+
+FactoryBot/IdSequence:
+  Enabled: true
+
+FactoryBot/RedundantFactoryOption:
+  Enabled: true
+
+#################### Gemspec ####################
+
+Gemspec/DeprecatedAttributeAssignment:
+  Enabled: true
+
+#################### Layout ####################
+
+Layout/AccessModifierIndentation:
+  Enabled: true
+
+Layout/ArrayAlignment:
+  Enabled: true
+
+Layout/AssignmentIndentation:
+  Enabled: true
+
+Layout/BlockEndNewline:
+  Enabled: true
+
+Layout/CaseIndentation:
+  Enabled: true
+
+Layout/ClosingParenthesisIndentation:
+  Enabled: true
+
+Layout/CommentIndentation:
+  Enabled: true
+
+Layout/ConditionPosition:
+  Enabled: true
+
+Layout/DefEndAlignment:
+  Enabled: true
+
+Layout/DotPosition:
+  Enabled: true
+  EnforcedStyle: trailing
+
+Layout/ElseAlignment:
+  Enabled: true
+
+Layout/EmptyLineAfterGuardClause:
+  Enabled: true
+
+Layout/EmptyLineAfterMagicComment:
+  Enabled: true
+
+# Prefer EmptyLinesAroundRescuedExceptions instead
+
+Layout/EmptyLineBetweenDefs:
+  Enabled: true
+
+Layout/EmptyLines:
+  Enabled: true
+
+Layout/EmptyLinesAroundAccessModifier:
+  Enabled: true
+
+Layout/EmptyLinesAroundArguments:
+  Enabled: true
+
+Layout/EmptyLinesAroundAttributeAccessor:
+  Enabled: true
+
+Layout/EmptyLinesAroundBeginBody:
+  Enabled: true
+
+Layout/EmptyLinesAroundBlockBody:
+  Enabled: true
+
+Layout/EmptyLinesAroundClassBody:
+  Enabled: true
+
+# Prefer EmptyLinesAroundRescuedExceptions instead
+
+Layout/EmptyLinesAroundMethodBody:
+  Enabled: true
+
+Layout/EmptyLinesAroundModuleBody:
+  Enabled: true
+
+Layout/EndAlignment:
+  Enabled: true
+
+Layout/EndOfLine:
+  Enabled: true
+
+Layout/ExtraSpacing:
+  Enabled: true
+
+Layout/FirstArgumentIndentation:
+  Enabled: true
+
+Layout/FirstArrayElementIndentation:
+  Enabled: true
+
+Layout/FirstHashElementIndentation:
+  Enabled: true
+
+Layout/HashAlignment:
+  Enabled: true
+
+Layout/IndentationConsistency:
+  Enabled: true
+  Exclude:
+    - Gemfile
+
+Layout/IndentationStyle:
+  Enabled: true
+
+Layout/IndentationWidth:
+  Enabled: true
+
+Layout/InitialIndentation:
+  Enabled: true
+
+Layout/LeadingCommentSpace:
+  Enabled: true
+
+Layout/LeadingEmptyLines:
+  Enabled: true
+
+Layout/LineLength:
+  Enabled: true
+  Max: 80
+  AllowCopDirectives: true
+  AllowedPatterns:
+    - "^\\s*it\\s+.*do$"
+    - "^\\s*context\\s+.*do$"
+    - "^\\s*describe\\s+.*do$"
+    - "^RSpec\\.describe(\\s+|\\().*do$"
+    - "^RSpec\\.shared_examples\\s.*do( \\|.*\\|)?$"
+    - "^\\s*class\\s+[A-Z].*<.*"
+    - "^\\s*def\\s"
+    # Schema comments written by annotaterb, which rewrites them on migrate
+    - "^#  \\w+\\s+:\\w+"
+  Exclude:
+    - bin/setup
+    - config/environments/development.rb
+    - config/environments/production.rb
+    - config/environments/test.rb
+    - config/initializers/backtrace_silencers.rb
+    - config/initializers/content_security_policy.rb
+    - config/initializers/new_framework_defaults*
+    - db/migrate/*
+
+Layout/MultilineArrayBraceLayout:
+  Enabled: true
+
+Layout/MultilineBlockLayout:
+  Enabled: true
+
+Layout/MultilineHashBraceLayout:
+  Enabled: true
+
+Layout/MultilineMethodCallBraceLayout:
+  Enabled: true
+
+Layout/MultilineMethodDefinitionBraceLayout:
+  Enabled: true
+
+Layout/MultilineOperationIndentation:
+  Enabled: true
+
+Layout/ParameterAlignment:
+  Enabled: true
+
+Layout/RescueEnsureAlignment:
+  Enabled: true
+
+Layout/SpaceAfterColon:
+  Enabled: true
+
+Layout/SpaceAfterComma:
+  Enabled: true
+
+Layout/SpaceAfterMethodName:
+  Enabled: true
+
+Layout/SpaceAfterNot:
+  Enabled: true
+
+Layout/SpaceAfterSemicolon:
+  Enabled: true
+
+Layout/SpaceAroundBlockParameters:
+  Enabled: true
+
+Layout/SpaceAroundEqualsInParameterDefault:
+  Enabled: true
+
+Layout/SpaceAroundKeyword:
+  Enabled: true
+
+Layout/SpaceAroundOperators:
+  Enabled: true
+
+Layout/SpaceBeforeBlockBraces:
+  Enabled: true
+
+Layout/SpaceBeforeComma:
+  Enabled: true
+
+Layout/SpaceBeforeComment:
+  Enabled: true
+
+Layout/SpaceBeforeFirstArg:
+  Enabled: true
+
+Layout/SpaceBeforeSemicolon:
+  Enabled: true
+
+Layout/SpaceInsideArrayLiteralBrackets:
+  Enabled: true
+  Exclude:
+    - db/migrate/*
+
+Layout/SpaceInsideArrayPercentLiteral:
+  Enabled: true
+
+Layout/SpaceInsideBlockBraces:
+  Enabled: true
+
+Layout/SpaceInsideHashLiteralBraces:
+  Enabled: true
+
+Layout/SpaceInsideParens:
+  Enabled: true
+
+Layout/SpaceInsidePercentLiteralDelimiters:
+  Enabled: true
+
+Layout/SpaceInsideRangeLiteral:
+  Enabled: true
+
+Layout/SpaceInsideReferenceBrackets:
+  Enabled: true
+
+Layout/TrailingEmptyLines:
+  Enabled: true
+
+Layout/TrailingWhitespace:
+  Enabled: true
+
+#################### Lint ####################
+
+Lint/AmbiguousAssignment:
+  Enabled: true
+
+Lint/AmbiguousBlockAssociation:
+  Enabled: true
+
+Lint/AmbiguousOperator:
+  Enabled: true
+
+Lint/AmbiguousOperatorPrecedence:
+  Enabled: true
+
+Lint/AmbiguousRange:
+  Enabled: true
+
+Lint/AmbiguousRegexpLiteral:
+  Enabled: true
+
+Lint/ArgumentMismatch:
+  Enabled: true
+
+Lint/ArrayLiteralInRegexp:
+  Enabled: true
+
+Lint/AssignmentInCondition:
+  Enabled: true
+
+Lint/BigDecimalNew:
+  Enabled: true
+
+Lint/BinaryOperatorWithIdenticalOperands:
+  Enabled: true
+
+Lint/BooleanSymbol:
+  Enabled: true
+  Exclude:
+    # Existing migration left as written; new migrations are checked.
+    - db/migrate/20170412150729_create_alaveteli_pro_request_summary_categories.rb
+
+Lint/CircularArgumentReference:
+  Enabled: true
+
+Lint/ConstantDefinitionInBlock:
+  Enabled: true
+
+Lint/ConstantOverwrittenInRescue:
+  Enabled: true
+
+Lint/ConstantReassignment:
+  Enabled: true
+
+Lint/CopDirectiveSyntax:
+  Enabled: true
+
+Lint/DataDefineOverride:
+  Enabled: true
+
+Lint/Debugger:
+  Enabled: true
+
+Lint/DeprecatedClassMethods:
+  Enabled: true
+
+Lint/DeprecatedConstants:
+  Enabled: true
+
+Lint/DeprecatedOpenSSLConstant:
+  Enabled: true
+
+Lint/DeprecatedReference:
+  Enabled: true
+
+Lint/DisjunctiveAssignmentInConstructor:
+  Enabled: true
+
+Lint/DuplicateBranch:
+  Enabled: true
+
+Lint/DuplicateCaseCondition:
+  Enabled: true
+
+Lint/DuplicateElsifCondition:
+  Enabled: true
+
+Lint/DuplicateHashKey:
+  Enabled: true
+
+Lint/DuplicateMagicComment:
+  Enabled: true
+
+Lint/DuplicateMatchPattern:
+  Enabled: true
+
+Lint/DuplicateMethods:
+  Enabled: true
+
+Lint/DuplicateRegexpCharacterClassElement:
+  Enabled: true
+
+Lint/DuplicateRequire:
+  Enabled: true
+
+Lint/DuplicateRescueException:
+  Enabled: true
+
+Lint/DuplicateSetElement:
+  Enabled: true
+
+Lint/EachWithObjectArgument:
+  Enabled: true
+
+Lint/ElseLayout:
+  Enabled: true
+
+Lint/EmptyBlock:
+  Enabled: true
+
+Lint/EmptyClass:
+  Enabled: true
+
+Lint/EmptyConditionalBody:
+  Enabled: true
+
+Lint/EmptyEnsure:
+  Enabled: true
+
+Lint/EmptyExpression:
+  Enabled: true
+
+Lint/EmptyFile:
+  Enabled: true
+
+Lint/EmptyInPattern:
+  Enabled: true
+
+Lint/EmptyInterpolation:
+  Enabled: true
+
+Lint/EmptyWhen:
+  Enabled: true
+
+Lint/EnsureReturn:
+  Enabled: true
+
+Lint/ErbNewArguments:
+  Enabled: true
+
+Lint/FlipFlop:
+  Enabled: true
+
+Lint/FloatComparison:
+  Enabled: true
+
+Lint/FloatOutOfRange:
+  Enabled: true
+
+Lint/FormatParameterMismatch:
+  Enabled: true
+
+Lint/HashCompareByIdentity:
+  Enabled: true
+
+Lint/HashNewWithKeywordArgumentsAsDefault:
+  Enabled: true
+
+Lint/IdentityComparison:
+  Enabled: true
+
+Lint/ImplicitStringConcatenation:
+  Enabled: true
+
+Lint/IncompatibleIoSelectWithFiberScheduler:
+  Enabled: true
+
+Lint/IneffectiveAccessModifier:
+  Enabled: true
+
+Lint/InheritException:
+  Enabled: true
+
+Lint/InterpolationCheck:
+  Enabled: true
+
+Lint/ItWithoutArgumentsInBlock:
+  Enabled: true
+
+Lint/LambdaWithoutLiteralBlock:
+  Enabled: true
+
+Lint/LiteralAsCondition:
+  Enabled: true
+
+Lint/LiteralAssignmentInCondition:
+  Enabled: true
+
+Lint/LiteralInInterpolation:
+  Enabled: true
+
+Lint/Loop:
+  Enabled: true
+
+Lint/MisplacedMagicComment:
+  Enabled: true
+
+Lint/MissingCopEnableDirective:
+  Enabled: true
+
+Lint/MissingSuper:
+  Enabled: true
+
+Lint/MixedCaseRange:
+  Enabled: true
+
+Lint/MixedRegexpCaptureTypes:
+  Enabled: true
+
+Lint/MultipleComparison:
+  Enabled: true
+
+Lint/NameTypo:
+  Enabled: true
+
+Lint/NestedMethodDefinition:
+  Enabled: true
+
+Lint/NestedPercentLiteral:
+  Enabled: true
+
+Lint/NextWithoutAccumulator:
+  Enabled: true
+
+Lint/NoReturnInBeginEndBlocks:
+  Enabled: true
+
+Lint/NonAtomicFileOperation:
+  Enabled: true
+
+Lint/NonDeterministicRequireOrder:
+  Enabled: true
+
+Lint/NonLocalExitFromIterator:
+  Enabled: true
+
+Lint/NumberedParameterAssignment:
+  Enabled: true
+
+Lint/NumericOperationWithConstantResult:
+  Enabled: true
+
+Lint/OrAssignmentToConstant:
+  Enabled: true
+
+Lint/OrderedMagicComments:
+  Enabled: true
+
+Lint/OutOfRangeRegexpRef:
+  Enabled: true
+
+Lint/ParenthesesAsGroupedExpression:
+  Enabled: true
+
+Lint/PercentStringArray:
+  Enabled: true
+
+Lint/PercentSymbolArray:
+  Enabled: true
+
+Lint/RaiseException:
+  Enabled: true
+
+Lint/RandOne:
+  Enabled: true
+
+Lint/RedundantCopDisableDirective:
+  Enabled: true
+
+Lint/RedundantCopEnableDirective:
+  Enabled: true
+
+Lint/RedundantDirGlobSort:
+  Enabled: true
+
+Lint/RedundantRegexpQuantifiers:
+  Enabled: true
+
+Lint/RedundantRequireStatement:
+  Enabled: true
+
+Lint/RedundantSafeNavigation:
+  Enabled: true
+
+Lint/RedundantSplatExpansion:
+  Enabled: true
+
+Lint/RedundantStringCoercion:
+  Enabled: true
+
+Lint/RedundantTypeConversion:
+  Enabled: true
+
+Lint/RedundantWithIndex:
+  Enabled: true
+
+Lint/RedundantWithObject:
+  Enabled: true
+
+Lint/RefinementImportMethods:
+  Enabled: true
+
+Lint/RegexpAsCondition:
+  Enabled: true
+
+Lint/RequireParentheses:
+  Enabled: true
+
+Lint/RequireRangeParentheses:
+  Enabled: true
+
+Lint/RequireRelativeSelfPath:
+  Enabled: true
+
+Lint/RescueException:
+  Enabled: true
+
+Lint/RescueType:
+  Enabled: true
+
+Lint/ReturnInVoidContext:
+  Enabled: true
+
+Lint/SafeNavigationChain:
+  Enabled: true
+
+Lint/SafeNavigationConsistency:
+  Enabled: true
+
+Lint/SafeNavigationWithEmpty:
+  Enabled: true
+
+Lint/ScriptPermission:
+  Enabled: true
+
+Lint/SelfAssignment:
+  Enabled: true
+
+Lint/SendWithMixinArgument:
+  Enabled: true
+
+Lint/ShadowedArgument:
+  Enabled: true
+
+Lint/ShadowedException:
+  Enabled: true
+
+Lint/ShadowingOuterLocalVariable:
+  Enabled: true
+
+Lint/SharedMutableDefault:
+  Enabled: true
+
+Lint/StructNewOverride:
+  Enabled: true
+
+Lint/SuperArgumentMismatch:
+  Enabled: true
+
+Lint/SuppressedException:
+  Enabled: true
+
+Lint/SuppressedExceptionInNumberConversion:
+  Enabled: true
+
+Lint/SymbolConversion:
+  Enabled: true
+
+Lint/Syntax:
+  Enabled: true
+
+Lint/ToEnumArguments:
+  Enabled: true
+
+Lint/ToJSON:
+  Enabled: true
+
+Lint/TopLevelReturnWithArgument:
+  Enabled: true
+
+Lint/TrailingCommaInAttributeDeclaration:
+  Enabled: true
+
+Lint/TripleQuotes:
+  Enabled: true
+
+Lint/UnderscorePrefixedVariableName:
+  Enabled: true
+
+Lint/UnescapedBracketInRegexp:
+  Enabled: true
+
+Lint/UnexpectedBlockArity:
+  Enabled: true
+
+Lint/UnifiedInteger:
+  Enabled: true
+
+Lint/UnmodifiedReduceAccumulator:
+  Enabled: true
+
+Lint/UnreachableCode:
+  Enabled: true
+
+Lint/UnreachableLoop:
+  Enabled: true
+
+Lint/UnreachablePatternBranch:
+  Enabled: true
+
+Lint/UnusedBlockArgument:
+  Enabled: true
+
+Lint/UnusedMethodArgument:
+  Enabled: true
+
+Lint/UriEscapeUnescape:
+  Enabled: true
+
+Lint/UriRegexp:
+  Enabled: true
+
+Lint/UselessAccessModifier:
+  Enabled: true
+
+Lint/UselessAssignment:
+  Enabled: true
+
+Lint/UselessConstantScoping:
+  Enabled: true
+
+Lint/UselessDefaultValueArgument:
+  Enabled: true
+
+Lint/UselessDefined:
+  Enabled: true
+
+Lint/UselessElseWithoutRescue:
+  Enabled: true
+
+Lint/UselessMethodDefinition:
+  Enabled: true
+
+Lint/UselessNumericOperation:
+  Enabled: true
+
+Lint/UselessOr:
+  Enabled: true
+
+Lint/UselessRescue:
+  Enabled: true
+
+Lint/UselessRuby2Keywords:
+  Enabled: true
+
+Lint/UselessSetterCall:
+  Enabled: true
+
+Lint/UselessTimes:
+  Enabled: true
+
+Lint/Void:
+  Enabled: true
+
+#################### Metrics ####################
+
+Metrics/BlockNesting:
+  Enabled: true
+
+Metrics/ClassLength:
+  Enabled: true
+  Max: 250
+  CountAsOne: ['array', 'hash', 'heredoc', 'method_call']
+
+Metrics/CyclomaticComplexity:
+  Enabled: true
+  Max: 10
+  # Without this, the Exclude below would replace the one in .rubocop_todo.yml.
+  inherit_mode:
+    merge:
+      - Exclude
+  Exclude:
+    # A list of independent permission rules, not one tangled method.
+    - app/models/ability/document_rules.rb
+
+Metrics/MethodLength:
+  Enabled: true
+  Max: 25
+  CountAsOne: ['array', 'hash', 'heredoc', 'method_call']
+  # Without this, the Exclude below would replace the one in .rubocop_todo.yml.
+  inherit_mode:
+    merge:
+      - Exclude
+  Exclude:
+    # A list of independent permission rules, not one tangled method.
+    - app/models/ability/document_rules.rb
+    # Historical schema definitions are naturally longer than 25 lines.
+    - db/migrate/*
+
+Metrics/ModuleLength:
+  Enabled: true
+  Max: 250
+  CountAsOne: ['array', 'hash', 'heredoc', 'method_call']
+
+Metrics/ParameterLists:
+  Enabled: true
+  Max: 5
+  CountKeywordArgs: false
+
+#################### Naming ####################
+
+Naming/AccessorMethodName:
+  Enabled: true
+
+Naming/AsciiIdentifiers:
+  Enabled: true
+
+Naming/ClassAndModuleCamelCase:
+  Enabled: true
+
+Naming/ConstantName:
+  Enabled: true
+
+Naming/FileName:
+  Enabled: true
+  Exclude:
+    # Themes override this file by its name.
+    - 'config/custom-routes.rb'
+    # Named after script/handle-mail-replies.rb, which the mail server runs.
+    - 'spec/script/handle-mail-replies_spec.rb'
+
+Naming/MethodName:
+  Enabled: true
+
+Naming/PredicateMethod:
+  Enabled: true
+  # A bang method may say whether it worked, as ActiveRecord's save! does.
+  AllowBangMethods: true
+  # call is RuboCop's default. save is for form objects that copy
+  # ActiveRecord's save.
+  AllowedMethods:
+    - call
+    - save
+
+Naming/VariableName:
+  Enabled: true
+
+#################### Performance ####################
+
+Performance/AncestorsInclude:
+  Enabled: true
+
+Performance/BindCall:
+  Enabled: true
+
+Performance/Caller:
+  Enabled: true
+
+Performance/CollectionLiteralInLoop:
+  Enabled: true
+
+Performance/CompareWithBlock:
+  Enabled: true
+
+Performance/ConcurrentMonotonicTime:
+  Enabled: true
+
+Performance/ConstantRegexp:
+  Enabled: true
+
+Performance/Count:
+  Enabled: true
+
+Performance/DeletePrefix:
+  Enabled: true
+
+Performance/DeleteSuffix:
+  Enabled: true
+
+Performance/Detect:
+  Enabled: true
+
+Performance/DoubleStartEndWith:
+  Enabled: true
+
+Performance/EndWith:
+  Enabled: true
+
+Performance/FixedSize:
+  Enabled: true
+
+Performance/FlatMap:
+  Enabled: true
+
+Performance/InefficientHashSearch:
+  Enabled: true
+
+Performance/MapCompact:
+  Enabled: true
+
+Performance/MapMethodChain:
+  Enabled: true
+
+Performance/MethodObjectAsBlock:
+  Enabled: true
+
+Performance/RangeInclude:
+  Enabled: true
+
+Performance/RedundantBlockCall:
+  Enabled: true
+
+Performance/RedundantEqualityComparisonBlock:
+  Enabled: true
+
+Performance/RedundantMatch:
+  Enabled: true
+
+Performance/RedundantMerge:
+  Enabled: true
+
+Performance/RedundantSortBlock:
+  Enabled: true
+
+Performance/RedundantSplitRegexpArgument:
+  Enabled: true
+
+Performance/RedundantStringChars:
+  Enabled: true
+
+Performance/RegexpMatch:
+  Enabled: true
+
+Performance/ReverseEach:
+  Enabled: true
+
+Performance/ReverseFirst:
+  Enabled: true
+
+Performance/Size:
+  Enabled: true
+
+Performance/SortReverse:
+  Enabled: true
+
+Performance/Squeeze:
+  Enabled: true
+
+Performance/StartWith:
+  Enabled: true
+
+Performance/StringBytesize:
+  Enabled: true
+
+Performance/StringIdentifierArgument:
+  Enabled: true
+
+Performance/StringInclude:
+  Enabled: true
+
+Performance/StringReplacement:
+  Enabled: true
+
+Performance/Sum:
+  Enabled: true
+
+Performance/TimesMap:
+  Enabled: true
+
+Performance/UnfreezeString:
+  Enabled: true
+
+Performance/UriDefaultParser:
+  Enabled: true
+
+Performance/ZipWithoutBlock:
+  Enabled: true
+
+#################### Rails ####################
+
+Rails/ActionControllerFlashBeforeRender:
+  Enabled: true
+
+Rails/ActionControllerTestCase:
+  Enabled: true
+
+Rails/ActiveRecordAliases:
+  Enabled: true
+
+Rails/ActiveRecordOverride:
+  Enabled: true
+
+Rails/ActiveSupportAliases:
+  Enabled: true
+
+Rails/ActiveSupportOnLoad:
+  Enabled: true
+
+Rails/AddColumnIndex:
+  Enabled: true
+
+Rails/AfterCommitOverride:
+  Enabled: true
+
+Rails/ArelStar:
+  Enabled: true
+
+Rails/AssertNot:
+  Enabled: true
+
+Rails/AttributeDefaultBlockValue:
+  Enabled: true
+
+Rails/BelongsTo:
+  Enabled: true
+
+# Historical deployed migrations cannot be rewritten; disable so bin/ci matches
+# CI with or without config/database.yml.
+Rails/BulkChangeTable:
+  Enabled: false
+
+Rails/ContentTag:
+  Enabled: true
+
+Rails/CreateTableWithTimestamps:
+  Enabled: true
+  Exclude:
+    # Existing migrations left as written; new migrations are checked.
+    - db/migrate/001_create_users.rb
+    - db/migrate/002_add_sessions.rb
+    - db/migrate/004_create_info_requests.rb
+    - db/migrate/005_create_public_bodies.rb
+    - db/migrate/009_create_outgoing_messages.rb
+    - db/migrate/013_create_incoming_messages.rb
+    - db/migrate/014_create_post_redirects.rb
+    - db/migrate/018_add_response_type_to_incoming_message.rb
+    - db/migrate/021_remove_contains_information_default.rb
+    - db/migrate/022_create_info_request_events.rb
+    - db/migrate/035_track_overdue_alerts.rb
+    - db/migrate/036_add_public_body_tags.rb
+    - db/migrate/049_track_things.rb
+    - db/migrate/053_acts_as_xapian_migration.rb
+    - db/migrate/058_remove_sessions.rb
+    - db/migrate/062_add_comments.rb
+    - db/migrate/067_factor_out_raw_email.rb
+    - db/migrate/068_add_censor_table.rb
+    - db/migrate/071_add_exim_log.rb
+    - db/migrate/074_create_holidays.rb
+    - db/migrate/079_add_profile_photo.rb
+    - db/migrate/104_create_foi_attachments.rb
+    - db/migrate/111_create_purge_requests.rb
+    - db/migrate/20140710094405_create_public_body_headings_and_categories.rb
+    - db/migrate/20170914164031_remove_purge_request.rb
+    - db/migrate/20211206123811_create_active_storage_tables.active_storage.rb
+    - db/migrate/20261031000100_create_disclosure_topic_matches.rb
+    - db/migrate/20261122000300_reparent_pages_and_topics_to_documents.rb
+
+Rails/DangerousColumnNames:
+  Enabled: true
+  Exclude:
+    # Existing migration left as written; new migrations are checked.
+    - db/migrate/20140804120601_add_display_order_to_categories_and_headings.rb
+
+Rails/DelegateAllowBlank:
+  Enabled: true
+
+Rails/DeprecatedActiveModelErrorsMethods:
+  Enabled: true
+
+Rails/DotSeparatedKeys:
+  Enabled: true
+
+Rails/DuplicateAssociation:
+  Enabled: true
+
+Rails/DuplicateScope:
+  Enabled: true
+
+Rails/EnumHash:
+  Enabled: true
+
+Rails/EnumSyntax:
+  Enabled: true
+
+Rails/EnumUniqueness:
+  Enabled: true
+
+Rails/EnvLocal:
+  Enabled: true
+
+Rails/ExpandedDateRange:
+  Enabled: true
+
+Rails/FindById:
+  Enabled: true
+
+Rails/FindByOrAssignmentMemoization:
+  Enabled: true
+
+Rails/HttpPositionalArguments:
+  Enabled: true
+
+Rails/HttpStatusNameConsistency:
+  Enabled: true
+
+Rails/I18nLazyLookup:
+  Enabled: true
+
+Rails/I18nLocaleAssignment:
+  Enabled: true
+
+Rails/IgnoredColumnsAssignment:
+  Enabled: true
+
+Rails/IgnoredSkipActionFilterOption:
+  Enabled: true
+
+Rails/Inquiry:
+  Enabled: true
+
+Rails/LinkToBlank:
+  Enabled: true
+
+Rails/MailerName:
+  Enabled: true
+
+Rails/MigrationClassName:
+  Enabled: true
+
+Rails/MultipleRoutePaths:
+  Enabled: true
+
+Rails/NotNullColumn:
+  Enabled: true
+  Exclude:
+    # Existing migration left as written; new migrations are checked.
+    - db/migrate/20170412145313_add_user_to_request_summary.rb
+
+Rails/OutputSafety:
+  Enabled: true
+
+Rails/Pick:
+  Enabled: true
+
+Rails/PluckInWhere:
+  Enabled: true
+
+Rails/RedundantAllowNil:
+  Enabled: true
+
+Rails/RedundantPresenceValidationOnBelongsTo:
+  Enabled: true
+
+Rails/ReflectionClassName:
+  Enabled: true
+
+Rails/RefuteMethods:
+  Enabled: true
+
+Rails/RelativeDateConstant:
+  Enabled: true
+
+Rails/RenderPlainText:
+  Enabled: true
+
+Rails/RequestReferer:
+  Enabled: true
+
+Rails/ReversibleMigration:
+  Enabled: true
+
+Rails/RootJoinChain:
+  Enabled: true
+
+Rails/SafeNavigation:
+  Enabled: true
+
+Rails/SafeNavigationWithBlank:
+  Enabled: true
+
+Rails/ScopeArgs:
+  Enabled: true
+
+Rails/SelectMap:
+  Enabled: true
+
+Rails/ThreeStateBooleanColumn:
+  Enabled: true
+  Exclude:
+    # Existing migrations left as written; new migrations are checked.
+    - db/migrate/017_add_email_confirmed_to_users.rb
+    - db/migrate/018_add_response_type_to_incoming_message.rb
+    - db/migrate/024_add_is_bounce_to_incoming_messages.rb
+    - db/migrate/027_change_classification_system.rb
+    - db/migrate/044_remove_is_bounce.rb
+    - db/migrate/105_extend_incoming_message.rb
+    - db/migrate/114_add_attention_requested_flag_to_info_requests.rb
+    - db/migrate/116_add_censor_rule_regexp.rb
+    - db/migrate/20170509210708_add_use_notifications_to_info_request.rb
+    - db/migrate/20170726114401_add_expired_to_notification.rb
+    - db/migrate/20240724010118_add_dataset_public_to_project.rb
+    - db/migrate/20250304205550_add_locked_to_foi_attachments.rb
+    - db/migrate/20261006000100_create_incoming_attention_predictions.rb
+    - db/migrate/20261105171600_create_user_permission_changes.rb
+    - db/migrate/20261114180000_create_topic_pages.rb
+    - db/migrate/20261122000600_drop_foi_attachment_lock_and_replace_columns.rb
+
+Rails/TopLevelHashWithIndifferentAccess:
+  Enabled: true
+
+Rails/TransactionExitStatement:
+  Enabled: true
+
+Rails/UniqBeforePluck:
+  Enabled: true
+
+Rails/UnknownEnv:
+  Enabled: true
+
+Rails/UnusedRenderContent:
+  Enabled: true
+
+Rails/WhereEquals:
+  Enabled: true
+
+Rails/WhereExists:
+  Enabled: true
+
+Rails/WhereMissing:
+  Enabled: true
+
+Rails/WhereNot:
+  Enabled: true
+  Exclude:
+    # Old migration already run on live databases; left as written.
+    - db/migrate/20140716131107_create_category_translation_tables.rb
+
+Rails/WhereNotWithMultipleConditions:
+  Enabled: true
+
+#################### Security ####################
+
+Security/CompoundHash:
+  Enabled: true
+
+Security/Eval:
+  Enabled: true
+
+Security/IoMethods:
+  Enabled: true
+
+Security/JSONLoad:
+  Enabled: true
+
+Security/MarshalLoad:
+  Enabled: true
+
+Security/Open:
+  Enabled: true
+
+Security/YAMLLoad:
+  Enabled: true
+
+#################### Style ####################
+
+Style/Alias:
+  Enabled: true
+
+Style/AndOr:
+  Enabled: true
+
+Style/ArrayJoin:
+  Enabled: true
+
+Style/Attr:
+  Enabled: true
+
+Style/BeginBlock:
+  Enabled: true
+
+Style/BlockComments:
+  Enabled: true
+
+Style/CaseEquality:
+  Enabled: true
+
+Style/CharacterLiteral:
+  Enabled: true
+
+Style/ClassCheck:
+  Enabled: true
+
+Style/ClassEqualityComparison:
+  Enabled: true
+
+Style/ClassMethods:
+  Enabled: true
+
+Style/ClassVars:
+  Enabled: true
+
+Style/ColonMethodCall:
+  Enabled: true
+
+Style/CommandLiteral:
+  Enabled: true
+
+Style/CommentAnnotation:
+  Enabled: true
+
+Style/DefWithParentheses:
+  Enabled: true
+
+Style/Documentation:
+  Enabled: true
+  Exclude:
+    - db/migrate/*
+    - spec/**/*
+    - gems/*/spec/**/*
+    - test/**/*
+
+Style/DoubleNegation:
+  Enabled: true
+
+Style/EachForSimpleLoop:
+  Enabled: true
+
+Style/EmptyCaseCondition:
+  Enabled: true
+
+Style/EmptyElse:
+  Enabled: true
+
+Style/EmptyLiteral:
+  Enabled: true
+
+Style/EndBlock:
+  Enabled: true
+
+Style/EvenOdd:
+  Enabled: true
+
+Style/FetchEnvVar:
+  Enabled: true
+
+Style/For:
+  Enabled: true
+
+Style/FormatString:
+  Enabled: true
+
+Style/GlobalVars:
+  Enabled: true
+  # Themes add their route files to it; config/routes.rb loads them.
+  AllowedVariables:
+    - $alaveteli_route_extensions
+
+Style/GuardClause:
+  Enabled: true
+  Exclude:
+    # Old migrations run on every fresh database and never again on a live
+    # one, so they are left as written.
+    - db/migrate/*
+
+Style/HashSyntax:
+  Enabled: true
+  EnforcedStyle: ruby19_no_mixed_keys
+  Exclude:
+    - config/routes.rb
+  EnforcedShorthandSyntax: either_consistent
+
+Style/IdenticalConditionalBranches:
+  Enabled: true
+
+Style/IfInsideElse:
+  Enabled: true
+
+Style/IfUnlessModifier:
+  Enabled: true
+
+Style/IfUnlessModifierOfIfUnless:
+  Enabled: true
+
+Style/IfWithSemicolon:
+  Enabled: true
+
+Style/InfiniteLoop:
+  Enabled: true
+
+Style/Lambda:
+  Enabled: true
+  EnforcedStyle: literal
+
+Style/LambdaCall:
+  Enabled: true
+
+Style/LineEndConcatenation:
+  Enabled: true
+
+Style/MethodCallWithoutArgsParentheses:
+  Enabled: true
+
+Style/MethodDefParentheses:
+  Enabled: true
+
+Style/MissingRespondToMissing:
+  Enabled: true
+
+Style/MultilineBlockChain:
+  Enabled: true
+
+Style/MultilineIfThen:
+  Enabled: true
+
+Style/MultilineTernaryOperator:
+  Enabled: true
+
+Style/MutableConstant:
+  Enabled: true
+  Exclude:
+    # Existing migrations left as written; new migrations are checked.
+    - db/migrate/20240209162933_change_citation_type_values.rb
+    - db/migrate/20241001114832_change_citation_type_values_again.rb
+
+Style/NegatedIf:
+  Enabled: true
+
+Style/NegatedWhile:
+  Enabled: true
+
+Style/NestedModifier:
+  Enabled: true
+
+Style/NestedParenthesizedCalls:
+  Enabled: true
+
+Style/NestedTernaryOperator:
+  Enabled: true
+
+Style/NilComparison:
+  Enabled: true
+
+Style/NonNilCheck:
+  Enabled: true
+
+Style/Not:
+  Enabled: true
+
+Style/NumericLiteralPrefix:
+  Enabled: true
+
+Style/OptionalArguments:
+  Enabled: true
+
+Style/ParallelAssignment:
+  Enabled: true
+
+Style/ParenthesesAroundCondition:
+  Enabled: true
+
+Style/PerlBackrefs:
+  Enabled: true
+
+Style/PreferredHashMethods:
+  Enabled: true
+
+Style/Proc:
+  Enabled: true
+
+Style/RaiseArgs:
+  Enabled: true
+
+Style/RedundantBegin:
+  Enabled: true
+
+Style/RedundantCapitalW:
+  Enabled: true
+
+Style/RedundantException:
+  Enabled: true
+
+Style/RedundantFreeze:
+  Enabled: true
+
+Style/RedundantInterpolation:
+  Enabled: true
+
+Style/RedundantParentheses:
+  Enabled: true
+
+Style/RedundantReturn:
+  Enabled: true
+
+Style/RedundantSelf:
+  Enabled: true
+
+Style/RescueModifier:
+  Enabled: true
+
+Style/ReturnNilInPredicateMethodDefinition:
+  Enabled: true
+
+Style/SelfAssignment:
+  Enabled: true
+
+Style/Semicolon:
+  Enabled: true
+
+Style/SignalException:
+  Enabled: true
+  EnforcedStyle: only_raise
+
+Style/SingleLineMethods:
+  Enabled: true
+
+Style/SpecialGlobalVars:
+  Enabled: true
+
+Style/StabbyLambdaParentheses:
+  Enabled: true
+
+Style/StructInheritance:
+  Enabled: true
+
+Style/SymbolLiteral:
+  Enabled: true
+
+Style/SymbolProc:
+  Enabled: true
+
+Style/TrailingCommaInArguments:
+  Enabled: true
+
+Style/TrailingCommaInArrayLiteral:
+  Enabled: true
+
+Style/TrailingCommaInHashLiteral:
+  Enabled: true
+
+Style/TrailingUnderscoreVariable:
+  Enabled: true
+
+Style/TrivialAccessors:
+  Enabled: true
+
+Style/UnlessElse:
+  Enabled: true
+
+Style/VariableInterpolation:
+  Enabled: true
+
+Style/WhenThen:
+  Enabled: true
+
+Style/WhileUntilDo:
+  Enabled: true
+
+Style/WhileUntilModifier:
+  Enabled: true
+
+Style/WordArray:
+  Enabled: true
+
+Style/ZeroLengthPredicate:
+  Enabled: true

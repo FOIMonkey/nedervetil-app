@@ -13,89 +13,247 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  checks:
+  prepare:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
-
-    services:
-      postgres:
-        image: postgres:17-trixie
-        env:
-          POSTGRES_HOST_AUTH_METHOD: trust
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-      redis:
-        image: redis:7-alpine
-        ports:
-          - 6379:6379
-        options: >-
-          --health-cmd "redis-cli ping"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-
-    env:
-      RAILS_ENV: test
-      PGHOST: 127.0.0.1
-      PGUSER: postgres
-      REDIS_URL: redis://127.0.0.1:6379/0
+    timeout-minutes: 15
 
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
-      - name: Install system packages
-        run: |
-          sudo apt-get update -y
-          sudo apt-get install -y --no-install-recommends \
-            libpq-dev libmagic-dev libyaml-dev libffi-dev \
-            poppler-utils qpdf ghostscript imagemagick \
-            elinks tnef libemail-address-perl libemail-outlook-message-perl
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
 
-      - uses: ruby/setup-ruby@be3c7df29b3349ec6bcfc6b4792f1cf9f5237d18 # v1.343.0
+      - name: Build app image
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
-          bundler-cache: true
+          context: .
+          file: docker/Dockerfile
+          load: true
+          tags: nedervetil-ci-app:latest
+          cache-from: type=gha,scope=app
+          cache-to: type=gha,mode=max,scope=app
 
-      - name: Configure test environment
+      - name: Build postgres image
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          file: docker/Dockerfile-postgres
+          load: false
+          tags: nedervetil-ci-db:latest
+          cache-from: type=gha,scope=postgres
+          cache-to: type=gha,mode=max,scope=postgres
+
+      - name: Restore Bundler cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: /tmp/bundle
+          key: bundle-trixie-${{ hashFiles('.ruby-version', 'Gemfile.lock', 'gems/*/*.gemspec') }}
+          restore-keys: |
+            bundle-trixie-
+
+      - name: Warm Bundler cache
         run: |
-          cat > config/database.yml <<'YAML'
-          test:
-            adapter: postgresql
-            encoding: unicode
-            database: alaveteli_test
-            host: 127.0.0.1
-            username: postgres
-            pool: 5
-          YAML
-          cp config/storage.yml-example config/storage.yml
-          cp config/general.yml-example config/general.yml
-          bundle exec rails db:create db:migrate
+          mkdir -p /tmp/bundle
+          docker run --rm \
+            -v "$GITHUB_WORKSPACE:/alaveteli:ro" \
+            -v /tmp/bundle:/bundle \
+            -e BUNDLE_PATH=/bundle \
+            -e BUNDLE_FROZEN=true \
+            -w /alaveteli \
+            nedervetil-ci-app:latest \
+            sh -ec 'bundle check >/dev/null || bundle install --jobs 4'
+          sudo chown -R "$(id -u):$(id -g)" /tmp/bundle
 
-      - name: Zeitwerk autoload check
-        run: bundle exec rails zeitwerk:check
+  checks:
+    needs: prepare
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
 
-      - name: Dead code check
-        run: bundle exec rails dead_code
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
-      - name: Brakeman security scan
-        run: bundle exec brakeman --quiet --no-pager --exit-on-warn --exit-on-error
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
 
-      - name: Bundler audit
-        run: bundle exec bundle-audit check --update
+      - name: Load app image
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          file: docker/Dockerfile
+          load: true
+          tags: nedervetil-ci-app:latest
+          cache-from: type=gha,scope=app
 
-      - name: Build stylesheets
-        run: bundle exec rails dartsass:build
+      - name: Load postgres image
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          file: docker/Dockerfile-postgres
+          load: true
+          tags: nedervetil-ci-db:latest
+          cache-from: type=gha,scope=postgres
 
-      - name: Core smoke specs
+      - name: Restore Bundler cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: /tmp/bundle
+          key: bundle-trixie-${{ hashFiles('.ruby-version', 'Gemfile.lock', 'gems/*/*.gemspec') }}
+
+      - name: Run static checks, security audits, and gem specs
         run: |
-          bundle exec rspec \
-            spec/integration/private_archive_spec.rb \
-            spec/integration/sample_data_spec.rb \
-            spec/integration/health_checks_spec.rb \
-            spec/lib/configuration_spec.rb
+          for p in /etc/apparmor.d/*qpdf*; do
+            [ -f "$p" ] && sudo apparmor_parser -R "$p" || true
+          done
+          docker network create ci-net
+          docker run -d --name ci-db --network ci-net --network-alias db \
+            -e POSTGRES_PASSWORD=password \
+            nedervetil-ci-db:latest \
+            postgres -c fsync=off -c synchronous_commit=off -c full_page_writes=off
+          docker run -d --name ci-redis --network ci-net --network-alias redis \
+            redis:7.4-alpine
+
+          docker run --rm --init --privileged --network ci-net \
+            --tmpfs /run/alaveteli-convert:mode=0700,nosuid,nodev,noexec \
+            -v "$GITHUB_WORKSPACE:/src:ro" \
+            -v /tmp/bundle:/bundle:ro \
+            -e BUNDLE_PATH=/bundle \
+            -e DATABASE_URL=postgres://postgres:password@db/ \
+            -e REDIS_URL=redis://redis:6379 \
+            nedervetil-ci-app:latest \
+            bash -euo pipefail -c '
+              mkdir -p /alaveteli-specs
+              tar -C /src --exclude=./.git --exclude=./tmp --exclude=./log --exclude=./storage -cf - . | tar -C /alaveteli-specs --no-same-owner -xf -
+              ln -sfn /src/.git /alaveteli-specs/.git
+              git config --global --add safe.directory /alaveteli-specs
+              cd /alaveteli-specs
+              cp config/database.yml-example config/database.yml
+              cp config/storage.yml-example config/storage.yml
+              cp config/general.yml-example config/general.yml
+              wait-for-it db:5432 --strict --timeout=30
+              RAILS_ENV=test ANNOTATERB_SKIP_ON_DB_TASKS=1 bundle exec rails db:migrate
+
+              echo "::group::Zeitwerk autoload check"
+              RAILS_ENV=development bundle exec rails zeitwerk:check
+              echo "::endgroup::"
+
+              echo "::group::Dead code check"
+              RAILS_ENV=test bundle exec rails dead_code
+              echo "::endgroup::"
+
+              echo "::group::Brakeman security scan"
+              bundle exec brakeman --quiet --no-pager --exit-on-warn --exit-on-error
+              echo "::endgroup::"
+
+              echo "::group::Bundler audit"
+              bundle exec bundle-audit check --update
+              echo "::endgroup::"
+
+              echo "::group::Importmap audit"
+              bin/importmap audit
+              echo "::endgroup::"
+
+              echo "::group::Standalone gem specs"
+              RAILS_ENV=test bundle exec rspec gems/pdf_redactor/spec
+              RAILS_ENV=test bundle exec rspec gems/office_package/spec
+              RAILS_ENV=test bundle exec rspec gems/excel_analyzer/spec
+              RAILS_ENV=test bundle exec rspec gems/alaveteli_features/spec
+              echo "::endgroup::"
+
+              echo "::group::Build stylesheets"
+              bundle exec rails dartsass:build
+              echo "::endgroup::"
+            '
+
+  specs:
+    needs: prepare
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+
+      - name: Load app image
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          file: docker/Dockerfile
+          load: true
+          tags: nedervetil-ci-app:latest
+          cache-from: type=gha,scope=app
+
+      - name: Load postgres image
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          file: docker/Dockerfile-postgres
+          load: true
+          tags: nedervetil-ci-db:latest
+          cache-from: type=gha,scope=postgres
+
+      - name: Restore Bundler cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: /tmp/bundle
+          key: bundle-trixie-${{ hashFiles('.ruby-version', 'Gemfile.lock', 'gems/*/*.gemspec') }}
+
+      - name: Run full spec suite (shard ${{ matrix.shard }}/4)
+        run: |
+          for p in /etc/apparmor.d/*qpdf*; do
+            [ -f "$p" ] && sudo apparmor_parser -R "$p" || true
+          done
+          docker network create ci-net
+          docker run -d --name ci-db --network ci-net --network-alias db \
+            -e POSTGRES_PASSWORD=password \
+            nedervetil-ci-db:latest \
+            postgres -c fsync=off -c synchronous_commit=off -c full_page_writes=off
+          docker run -d --name ci-redis --network ci-net --network-alias redis \
+            redis:7.4-alpine
+
+          docker run --rm --init --privileged --network ci-net \
+            --tmpfs /alaveteli-specs/tmp:exec \
+            --tmpfs /run/alaveteli-convert1:mode=0700,nosuid,nodev,noexec \
+            --tmpfs /run/alaveteli-convert2:mode=0700,nosuid,nodev,noexec \
+            --tmpfs /run/alaveteli-convert3:mode=0700,nosuid,nodev,noexec \
+            --tmpfs /run/alaveteli-convert4:mode=0700,nosuid,nodev,noexec \
+            -v "$GITHUB_WORKSPACE:/src:ro" \
+            -v /tmp/bundle:/bundle:ro \
+            -e BUNDLE_PATH=/bundle \
+            -e DATABASE_URL=postgres://postgres:password@db/ \
+            -e REDIS_URL=redis://redis:6379 \
+            nedervetil-ci-app:latest \
+            bash -euo pipefail -c '
+              mkdir -p /alaveteli-specs
+              tar -C /src --exclude=./.git --exclude=./tmp --exclude=./log --exclude=./storage -cf - . | tar -C /alaveteli-specs --no-same-owner -xf -
+              ln -sfn /src/.git /alaveteli-specs/.git
+              git config --global --add safe.directory /alaveteli-specs
+              cd /alaveteli-specs
+              mkdir -p log
+              ln -sf /dev/null log/test.log
+              cp config/database.yml-example config/database.yml
+              cp config/storage.yml-example config/storage.yml
+              cp config/general.yml-example config/general.yml
+              wait-for-it db:5432 --strict --timeout=30
+              RAILS_ENV=test ANNOTATERB_SKIP_ON_DB_TASKS=1 bundle exec rails db:migrate >/dev/null
+              RAILS_ENV=test bundle exec rails dartsass:build >/dev/null
+
+              status=0
+              bin/parallel_specs --shard ${{ matrix.shard }}/4 || status=$?
+              if [ "$status" -ne 0 ]; then
+                for f in tmp/parallel_specs/*.log; do
+                  [ -f "$f" ] || continue
+                  echo "=== $f (tail 80) ==="
+                  tail -n 80 "$f"
+                done
+              fi
+              exit "$status"
+            '

@@ -4,20 +4,13 @@ module IncomingAttention
   module Effective
     Decision = Struct.new(:bucket, :label, :route, :reason,
                           keyword_init: true) do
-      def routine?
-        bucket == 'routine_updates'
-      end
-
-      def needs_attention?
-        !routine?
-      end
+      def routine? = bucket == 'routine_updates'
+      def needs_attention? = !routine?
     end
 
     module_function
 
-    def active?
-      Config.enabled?
-    end
+    def active? = Config.enabled?
 
     def attention(reason = :uncertain, route = 'REVIEW')
       Decision.new(bucket: 'needs_attention',
@@ -37,12 +30,12 @@ module IncomingAttention
       return attention(:missing) unless prediction
       return attention(:human) if prediction.attention_override == 'attention'
       if prediction.attention_override == 'routine'
-        return Decision.new(bucket: 'routine_updates',
-                            label: 'Routine update',
-                            route: 'SKIP',
-                            reason: :human)
+        return Decision.new(bucket: 'routine_updates', label: 'Routine update',
+                            route: 'SKIP', reason: :human)
       end
+
       return attention(:incomplete) unless prediction.status == 'complete'
+
       unless prediction.eligible?
         return attention(
           :ineligible,
@@ -60,19 +53,15 @@ module IncomingAttention
         return attention(:bounded, prediction.route)
       end
 
-      Decision.new(bucket: 'routine_updates',
-                   label: 'Routine update',
-                   route: 'SKIP',
-                   reason: :bounded)
+      Decision.new(bucket: 'routine_updates', label: 'Routine update',
+                   route: 'SKIP', reason: :bounded)
     rescue StandardError => e
       Rails.logger.warn('incoming_attention_decision_failed ' \
                         "message_id=#{message&.id} #{e.class}")
       attention(:unavailable)
     end
 
-    def routine?(message)
-      decision(message).routine?
-    end
+    def routine?(message) = decision(message).routine?
 
     # New mail gets a prediction before commit; older mail without one is only
     # held if covered by the backfill cutoff.
@@ -116,9 +105,7 @@ module IncomingAttention
 
       request.info_request_events.where.not(described_state: nil).
         exists?(['created_at > ? OR (created_at = ? AND id >= ?)',
-                 event.created_at,
-                 event.created_at,
-                 event.id])
+                 event.created_at, event.created_at, event.id])
     rescue StandardError => e
       Rails.logger.warn('incoming_attention_review_check_failed ' \
                         "message_id=#{message&.id} #{e.class}")
@@ -169,31 +156,29 @@ module IncomingAttention
     # Core's status classification decides. An earlier unclassified reply
     # stays unresolved when a later routine one arrives.
     def unresolved(scope = IncomingMessage.all)
-      relation(scope).where(
-        "NOT EXISTS (SELECT 1 FROM incoming_attention_predictions iahuman " \
-        "WHERE iahuman.incoming_message_id = incoming_messages.id " \
-        "AND iahuman.human_reviewed_at IS NOT NULL) " \
-        "AND (EXISTS (SELECT 1 FROM incoming_attention_predictions iaauto " \
-        "WHERE iaauto.incoming_message_id = incoming_messages.id " \
-        "AND iaauto.auto_classified = TRUE) OR " \
-        "NOT EXISTS (SELECT 1 FROM info_request_events iaclassified " \
-        "WHERE iaclassified.incoming_message_id = incoming_messages.id " \
-        "AND iaclassified.info_request_id = " \
-        "incoming_messages.info_request_id " \
-        "AND iaclassified.event_type = 'response' " \
-        "AND (iaowner_request.awaiting_description = FALSE " \
-        "OR iaclassified.last_described_at IS NOT NULL OR " \
-        "EXISTS (SELECT 1 FROM info_request_events iacoredescription " \
-        "WHERE iacoredescription.info_request_id = " \
-        "iaclassified.info_request_id " \
-        "AND iacoredescription.described_state IS NOT NULL " \
-        "AND (iacoredescription.created_at > iaclassified.created_at " \
-        "OR (iacoredescription.created_at = iaclassified.created_at " \
-        "AND iacoredescription.id >= iaclassified.id)) " \
-        "AND NOT EXISTS (SELECT 1 FROM incoming_attention_predictions iap " \
-        "WHERE iap.response_event_id = iacoredescription.id " \
-        "AND iap.auto_classified = TRUE)))))"
-      )
+      relation(scope).where(<<~SQL.squish)
+        NOT EXISTS (SELECT 1 FROM incoming_attention_predictions iahuman
+        WHERE iahuman.incoming_message_id = incoming_messages.id
+        AND iahuman.human_reviewed_at IS NOT NULL)
+        AND (EXISTS (SELECT 1 FROM incoming_attention_predictions iaauto
+        WHERE iaauto.incoming_message_id = incoming_messages.id
+        AND iaauto.auto_classified = TRUE) OR
+        NOT EXISTS (SELECT 1 FROM info_request_events iaclassified
+        WHERE iaclassified.incoming_message_id = incoming_messages.id
+        AND iaclassified.info_request_id = incoming_messages.info_request_id
+        AND iaclassified.event_type = 'response'
+        AND (iaowner_request.awaiting_description = FALSE
+        OR iaclassified.last_described_at IS NOT NULL OR
+        EXISTS (SELECT 1 FROM info_request_events iacoredescription
+        WHERE iacoredescription.info_request_id = iaclassified.info_request_id
+        AND iacoredescription.described_state IS NOT NULL
+        AND (iacoredescription.created_at > iaclassified.created_at
+        OR (iacoredescription.created_at = iaclassified.created_at
+        AND iacoredescription.id >= iaclassified.id))
+        AND NOT EXISTS (SELECT 1 FROM incoming_attention_predictions iap
+        WHERE iap.response_event_id = iacoredescription.id
+        AND iap.auto_classified = TRUE)))))
+      SQL
     end
 
     def needs_attention(scope = IncomingMessage.all)
@@ -237,15 +222,14 @@ module IncomingAttention
     end
 
     def routine_status(request)
-      unless request.described_state == 'waiting_response'
-        return request.described_state
-      end
-      if Time.zone.today > request.date_very_overdue_after
-        return 'waiting_response_very_overdue'
-      end
-      if Time.zone.today > request.date_response_required_by
-        return 'waiting_response_overdue'
-      end
+      state = request.described_state
+      return state unless state == 'waiting_response'
+
+      today = Time.zone.today
+      very = request.date_very_overdue_after
+      due = request.date_response_required_by
+      return 'waiting_response_very_overdue' if today > very
+      return 'waiting_response_overdue' if today > due
 
       'waiting_response'
     end
@@ -268,11 +252,23 @@ module IncomingAttention
       return InfoRequest.none unless user
 
       requests ||= InfoRequest.where(user_id: user.id)
-      if Ability.new(user).can?(:admin, InfoRequest)
-        requests
-      else
-        requests.where(user_id: user.id)
-      end
+      return requests if Ability.new(user).can?(:admin, InfoRequest)
+
+      requests.where(user_id: user.id).
+        where(Ability::RequesterVisible.sql(request: 'info_requests'))
+    end
+
+    def visible_summaries(summaries, user)
+      return summaries.none unless user
+      return summaries if Ability.new(user).can?(:admin, InfoRequest)
+
+      summaries.where(
+        "request_summaries.summarisable_type <> 'InfoRequest' OR " \
+        'EXISTS (SELECT 1 FROM info_requests vis_req ' \
+        'WHERE vis_req.id = request_summaries.summarisable_id ' \
+        'AND vis_req.prominence IN (?))',
+        Ability::RequesterVisible::REQUEST
+      )
     end
 
     def ready_request_ids(requests)
@@ -304,49 +300,43 @@ module IncomingAttention
 
     def phase_summaries(summaries, phase, user: nil)
       requests = visible_requests(user)
+      phase_s = phase.to_s
       if active? &&
          %w[response_received awaiting_response overdue very_overdue].
-           include?(phase.to_s)
+           include?(phase_s)
         ready_ids = ready_request_ids(requests)
-        if phase.to_s == 'response_received'
-          requests = requests.where(id: ready_ids)
-        else
-          requests = requests.where(described_state: 'waiting_response').
-            where.not(id: ready_ids)
-          today = Time.zone.today
-          requests =
-            case phase.to_s
-            when 'awaiting_response'
-              requests.where('date_response_required_by >= ?', today)
-            when 'overdue'
-              requests.where('date_response_required_by < ? AND ' \
-                             'date_very_overdue_after >= ?',
-                             today,
-                             today)
-            when 'very_overdue'
-              requests.where('date_very_overdue_after < ?', today)
-            end
-        end
+        requests = phase_requests(requests, phase_s, ready_ids)
       else
         requests = requests.public_send(phase)
       end
       relevant = summaries_for_requests(summaries, requests)
-      return relevant unless phase.to_s == 'awaiting_response'
+      return relevant unless phase_s == 'awaiting_response'
 
-      relevant.or(
-        summaries.where(
-          summarisable_type: 'InfoRequestBatch',
-          summarisable_id: InfoRequestBatch.where(sent_at: nil).select(:id)
-        )
-      )
+      unsent = InfoRequestBatch.where(sent_at: nil).select(:id)
+      relevant.or(summaries.where(summarisable_type: 'InfoRequestBatch',
+                                  summarisable_id: unsent))
+    end
+
+    def phase_requests(requests, phase_s, ready_ids)
+      return requests.where(id: ready_ids) if phase_s == 'response_received'
+
+      waiting = requests.where(described_state: 'waiting_response').
+        where.not(id: ready_ids)
+      today = Time.zone.today
+      case phase_s
+      when 'awaiting_response'
+        waiting.where('date_response_required_by >= ?', today)
+      when 'overdue'
+        waiting.where('date_response_required_by < ? AND ' \
+                      'date_very_overdue_after >= ?', today, today)
+      when 'very_overdue'
+        waiting.where('date_very_overdue_after < ?', today)
+      end
     end
 
     def counts(user)
-      pending = unresolved(
-        IncomingMessage.where(
-          info_request_id: visible_requests(user).select(:id)
-        )
-      )
+      req_ids = visible_requests(user).select(:id)
+      pending = unresolved(IncomingMessage.where(info_request_id: req_ids))
       routine_ids = eligible_ids(pending, 'SKIP')
       { 'needs_attention' =>
           dashboard_ready(pending.where.not(id: routine_ids)).count,
@@ -365,9 +355,7 @@ module IncomingAttention
     end
 
     InboxReply = Struct.new(:message, :request, :label, :routine) do
-      def received_at
-        message[:sent_at] || message.created_at
-      end
+      def received_at = message[:sent_at] || message.created_at
     end
 
     def inbox(user)
@@ -379,17 +367,12 @@ module IncomingAttention
                 'incoming_messages.id DESC').to_a
       ready, predictions = checked(messages)
       replies = ready.map do |message|
-        verdict = decision(message,
-                           prediction: predictions[message.id],
-                           current: true)
-        label = Labels.for_message(message,
-                                   decision: verdict,
-                                   prediction: predictions[message.id],
-                                   current: true)
-        InboxReply.new(message,
-                       requests.fetch(message.info_request_id),
-                       label,
-                       verdict.routine?)
+        pred = predictions[message.id]
+        verdict = decision(message, prediction: pred, current: true)
+        label = Labels.for_message(message, decision: verdict,
+                                            prediction: pred, current: true)
+        InboxReply.new(message, requests.fetch(message.info_request_id),
+                       label, verdict.routine?)
       end
       { attention: replies.reject(&:routine),
         routine: replies.select(&:routine),
@@ -397,8 +380,7 @@ module IncomingAttention
     end
 
     def page_data(summaries, user: nil)
-      singles = summaries.
-        select { |s| s.summarisable_type == 'InfoRequest' }.
+      singles = summaries.select { |s| s.summarisable_type == 'InfoRequest' }.
         map(&:summarisable_id)
       batches = summaries.
         select { |s| s.summarisable_type == 'InfoRequestBatch' }.
@@ -408,36 +390,32 @@ module IncomingAttention
         InfoRequest.where(id: singles).
           or(InfoRequest.where(info_request_batch_id: batches))
       ).includes(public_body: :translations).order(:id).to_a
-      messages =
-        unresolved(IncomingMessage.where(info_request_id: requests.map(&:id))).
-          order('incoming_messages.sent_at ASC NULLS LAST',
-                'incoming_messages.id ASC').to_a
+      messages = unresolved(
+        IncomingMessage.where(info_request_id: requests.map(&:id))
+      ).order('incoming_messages.sent_at ASC NULLS LAST',
+              'incoming_messages.id ASC').to_a
       messages, predictions = checked(messages)
-      decisions = messages.to_h do |message|
-        [message.id, decision(message,
-                              prediction: predictions[message.id],
-                              current: true)]
+      decisions = messages.to_h do |m|
+        [m.id, decision(m, prediction: predictions[m.id], current: true)]
       end
       grouped = messages.group_by(&:info_request_id)
-      counts = grouped.transform_values(&:size)
-      labels = messages.to_h do |message|
-        [message.id, Labels.for_message(message,
-                                        decision: decisions.fetch(message.id),
-                                        prediction: predictions[message.id],
-                                        current: true)]
+      labels = messages.to_h do |m|
+        [m.id, Labels.for_message(m, decision: decisions.fetch(m.id),
+                                     prediction: predictions[m.id],
+                                     current: true)]
       end
-      {
-        requests: requests.
-          group_by { |r| r.info_request_batch_id || "request:#{r.id}" },
+      by_group = requests.group_by do |r|
+        r.info_request_batch_id || "request:#{r.id}"
+      end
+      { requests: by_group,
         messages: grouped,
-        message_counts: counts,
+        message_counts: grouped.transform_values(&:size),
         decisions: decisions,
         labels: labels,
         bucket_counts: grouped.transform_values do |items|
           items.partition { |m| decisions.fetch(m.id).needs_attention? }.
             map(&:size)
-        end
-      }
+        end }
     end
   end
 end

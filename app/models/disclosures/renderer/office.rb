@@ -3,7 +3,7 @@ module Disclosures
     # A Word file or a slide deck, shown as LibreOffice prints it.
     class Office < PDF
       def office_sections
-        findings_sections(Formats.ooxml?(attachment.filename))
+        findings_sections(Formats.ooxml?("file#{safe_extension}"))
       end
 
       private

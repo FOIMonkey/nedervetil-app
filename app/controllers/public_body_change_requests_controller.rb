@@ -5,6 +5,7 @@ class PublicBodyChangeRequestsController < ApplicationController
 
   before_action :catch_spam, only: [:create]
   before_action :set_turnstile_required
+  rate_limit to: 10, within: 1.hour, only: :create, name: 'change-request'
 
   def new
     @change_request =

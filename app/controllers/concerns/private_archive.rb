@@ -106,7 +106,7 @@ module PrivateArchive
     end
 
     body = PublicBody.find_by_url_name_with_historic(params[:url_name])
-    raise ActiveRecord::RecordNotFound unless body
+    raise ActiveRecord::RecordNotFound if !body || body.internal_admin_body?
 
     if body.url_name && body.url_name != params[:url_name]
       return redirect_to(url_name: body.url_name)

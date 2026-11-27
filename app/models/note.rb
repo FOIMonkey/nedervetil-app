@@ -43,7 +43,11 @@ class Note < ApplicationRecord
                default: Note.default_style,
                suffix: true
 
+  NOTABLE_TYPES = %w[PublicBody InfoRequest Category].freeze
+
   belongs_to :notable, polymorphic: true, optional: true
+
+  validates :notable_type, inclusion: { in: NOTABLE_TYPES }, allow_nil: true
 
   validates :body, presence: true, if: ->(n) { n.original_style? }
   validates :rich_body, presence: true, unless: ->(n) { n.original_style? }

@@ -383,11 +383,23 @@ module AlaveteliSandbox
     # Called by .open
     def remove
       return unless @dir && File.exist?(@dir)
+      return remove_shared if in_cells?
 
-      in_cells? ? remove_shared : FileUtils.remove_entry_secure(@dir)
+      restore_own_directory_modes(@dir)
+      FileUtils.remove_entry_secure(@dir)
     end
 
     private
+
+    def restore_own_directory_modes(root)
+      Find.find(root) do |path|
+        stat = File.lstat(path)
+        Find.prune if stat.symlink?
+        File.chmod(0o700, path) if stat.directory? && stat.uid == Process.euid
+      rescue SystemCallError
+        nil
+      end
+    end
 
     # With cells the directory's name is one their users can't guess: they
     # can enter any job they can name, and read its input.

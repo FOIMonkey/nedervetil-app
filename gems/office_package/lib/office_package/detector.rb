@@ -35,9 +35,9 @@ module OfficePackage
     READER_OPTIONS = Nokogiri::XML::ParseOptions::NONET |
                      Nokogiri::XML::ParseOptions::BIG_LINES
     # Printable runs: ASCII and UTF-8 sequences, and UTF-16LE in the Latin
-    # range.
+    # and general-punctuation ranges (dashes and curly quotes).
     NARROW = /(?:[\t\x20-\x7E]|[\xC2-\xF4][\x80-\xBF]{1,3}){4,}/n
-    WIDE = /(?:[\t\x20-\x7E\xA0-\xFF]\x00){4,}/n
+    WIDE = /(?:[\t\x20-\x7E\xA0-\xFF]\x00|[\x10-\x27]\x20){4,}/n
 
     def self.call(bytes, matcher)
       new(matcher, 0).scan(bytes, 'file')
@@ -156,7 +156,7 @@ module OfficePackage
         raise Refused, 'a part over the size limit'
       end
       raise Refused, 'a part that declares a DOCTYPE' if
-        data.b.include?('<!DOCTYPE'.b)
+        OfficePackage.doctype?(data)
 
       @nodes = +''
       @blocks = []

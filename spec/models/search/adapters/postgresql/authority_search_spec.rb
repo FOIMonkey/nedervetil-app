@@ -96,4 +96,15 @@ RSpec.describe Search::Adapters::Postgresql::Adapter, :search_index do
               results(page: 1, per_page: 10)
     expect(results.total_estimate).to eq(1)
   end
+
+  it 'excludes internal_admin_authority without calling internal_admin_body' do
+    internal = body('Internal Admin Body',
+                    url_name: 'internal_admin_authority')
+    internal.reindex
+    body('Internal Audit Agency')
+    expect(PublicBody).not_to receive(:internal_admin_body)
+
+    expect(typeahead('Internal')).to eq(['Internal Audit Agency'])
+    expect(typeahead('Internl')).to eq(['Internal Audit Agency'])
+  end
 end

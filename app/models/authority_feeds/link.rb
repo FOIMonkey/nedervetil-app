@@ -25,7 +25,7 @@ module AuthorityFeeds
     validates :url_template,
               presence: true,
               format: {
-                with: %r{\A(https?://|/|\{value\}\z)},
+                with: %r{\A(https?://.*|/(?![/\\]).*|\{value\})\z},
                 message: 'must start with https:// or /, or be {value}'
               }
     validates :tag, format: { with: /\A[a-z0-9_]+\z/ }, allow_nil: true

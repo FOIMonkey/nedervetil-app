@@ -67,10 +67,13 @@ RSpec.describe 'Devise authentication boundaries', type: :request do
 
   it 'never creates a session from a reset link' do
     token = user.send_reset_password_instructions
-    patch password_change_path(id: token), params: { password_change_user: {
-      password: 'another-invented-password',
-      password_confirmation: 'another-invented-password'
-    } }
+    patch password_change_path(reset_password_token: token),
+          params: {
+            password_change_user: {
+              password: 'another-invented-password',
+              password_confirmation: 'another-invented-password'
+            }
+          }
     expect(response).to redirect_to(signin_path)
     expect(user.reload.valid_password?('another-invented-password')).to be true
     get show_user_profile_path(user.url_name)

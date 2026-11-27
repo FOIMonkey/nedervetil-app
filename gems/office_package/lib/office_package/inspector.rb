@@ -159,7 +159,10 @@ module OfficePackage
         raise Guard::Refused, 'part_too_large_to_parse'
       end
 
-      Nokogiri::XML(zip.read(name), &:nonet)
+      raw = zip.read(name)
+      raise Guard::Refused, 'doctype' if OfficePackage.doctype?(raw)
+
+      Nokogiri::XML(raw, &:nonet)
     end
   end
 end

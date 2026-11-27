@@ -10,6 +10,7 @@ module HealthChecks
       def initialize(args = {})
         super
         @checked_at = nil
+        @mutex = Mutex.new
       end
 
       def ok?
@@ -27,11 +28,13 @@ module HealthChecks
       private
 
       def result
-        if @checked_at.nil? || @checked_at < KEEP.ago
-          @result = run
-          @checked_at = Time.zone.now
+        @mutex.synchronize do
+          if @checked_at.nil? || @checked_at < KEEP.ago
+            @result = run
+            @checked_at = Time.zone.now
+          end
+          @result
         end
-        @result
       end
 
       def run

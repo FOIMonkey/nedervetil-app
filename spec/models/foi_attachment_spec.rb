@@ -1369,4 +1369,23 @@ RSpec.describe FoiAttachment do
       expect(foi_attachment.unmasked_body).to eq(foi_attachment.body)
     end
   end
+
+  describe '#sanitise_html' do
+    let(:attachment) { FoiAttachment.new }
+
+    it 'strips remote media beacons and srcset while keeping local images' do
+      html = '<img src="local.png" srcset="https://evil.test/x.png 2x">' \
+             '<img src="https://evil.test/beacon.png">' \
+             '<video src="https://evil.test/v.mp4" ' \
+             'poster="https://evil.test/p.jpg"></video>' \
+             '<audio src="https://evil.test/a.mp3"></audio>' \
+             '<a href="https://example.org" ping="https://evil.test/p">ok</a>'
+      sanitised = attachment.sanitise_html(html)
+
+      expect(sanitised).to include('src="local.png"')
+      expect(sanitised).not_to include('evil.test')
+      expect(sanitised).not_to include('srcset')
+      expect(sanitised).not_to include('ping=')
+    end
+  end
 end

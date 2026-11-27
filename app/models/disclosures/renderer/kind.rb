@@ -37,14 +37,13 @@ module Disclosures
       end
 
       def office_findings(path, read = office_read,
-                          ooxml: Formats.ooxml?(attachment.filename))
-        unless ooxml
+                          ooxml: Formats.ooxml?("file#{safe_extension}"))
+        if ooxml
+          HiddenRisk.findings(path, document, read: read).
+            each { |finding| scored(finding) }
+        else
           outcome.findings << Inspector::UNLISTED
-          return
         end
-
-        HiddenRisk.findings(path, document, read: read).
-          each { |finding| scored(finding) }
         rule_check(path, read)
       end
 

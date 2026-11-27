@@ -2,7 +2,7 @@ module Search
   module Adapters
     module Postgresql
       # Full-text PostgreSQL query for authority search over search_documents
-      # (see doc/SEARCH.md).
+      # (see doc/FORK.md).
       class AuthorityQuery < Search::Adapter
         # {D, C, B, A}: weight name/short_name (A) and notes (C) only.
         RANK_WEIGHTS = '{0, 0.2, 0, 1}'.freeze
@@ -81,7 +81,9 @@ module Search
         end
 
         def where_sql
-          sql = +"sd.searchable_type = 'PublicBody' AND (#{matches_sql})"
+          sql = +"sd.searchable_type = 'PublicBody' " \
+                "AND t.url_name <> 'internal_admin_authority' " \
+                "AND (#{matches_sql})"
           sql << " AND #{not_excluded('sd.searchable_id')}" if excluding?
           sql
         end
@@ -115,8 +117,14 @@ module Search
         end
 
         def count
-          select_value('SELECT count(DISTINCT sd.searchable_id) ' \
-                       "FROM search_documents sd WHERE #{where_sql}").to_i
+          select_value(<<~SQL.squish).to_i
+            SELECT count(DISTINCT sd.searchable_id)
+            FROM search_documents sd
+            JOIN public_body_translations t
+              ON t.public_body_id = sd.searchable_id
+              AND t.locale = :default_locale
+            WHERE #{where_sql}
+          SQL
         end
 
         def select_value(sql)

@@ -18,7 +18,7 @@ RSpec.describe 'File downloads', type: :request do
       'x-permitted-cross-domain-policies' => 'none' }
   end
 
-  let(:session_cookie) { a_string_starting_with('_wdtk_cookie_session=') }
+  let(:session_cookie) { a_string_starting_with('_nedervetil_session=') }
   let(:weak_etag) { a_string_matching(/\AW\/"\h{32}"\z/) }
   let(:page_policy_with_nonce) do
     a_string_matching(/\Adefault-src 'self' https:; .*'nonce-[^']+'/)

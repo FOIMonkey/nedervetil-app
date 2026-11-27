@@ -33,9 +33,9 @@ module IncomingAttention
 
       def pdf_text(bytes)
         AlaveteliSandbox.job(input: bytes, input_name: 'input.pdf') do |job|
-          rendered = limited('pdftoppm', '-f', '1', '-l', PAGES.to_s,
-                             '-scale-to', LONG_SIDE.to_s, '-gray', '-png',
-                             job.input, job.scratch('page'),
+          rendered = limited('pdftoppm', '-cropbox', '-f', '1',
+                             '-l', PAGES.to_s, '-scale-to', LONG_SIDE.to_s,
+                             '-gray', '-png', job.input, job.scratch('page'),
                              job: job, binary_output: true)
           return nil unless rendered
 

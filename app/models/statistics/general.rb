@@ -1,6 +1,18 @@
+require 'open3'
+
 module Statistics
   # High-level site statistics and version information
   class General
+    def self.git_commit
+      @git_commit ||=
+        begin
+          out, status = Open3.capture2('git', 'log', '-1', '--format=%H')
+          status.success? ? out.strip : ''
+        rescue SystemCallError
+          ''
+        end
+    end
+
     def to_h
       {
         alaveteli_git_commit: alaveteli_git_commit,
@@ -22,7 +34,7 @@ module Statistics
     end
 
     def alaveteli_git_commit
-      `git log -1 --format="%H"`.strip
+      self.class.git_commit
     end
   end
 end

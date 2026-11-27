@@ -29,9 +29,15 @@ RSpec.describe 'Authentication policy regressions', type: :request do
 
   def reset_password(token, value = 'changed-invented-password',
                      confirmation: value, code: nil, headers: origin)
-    patch password_change_path(id: token), params: { password_change_user: {
-      password: value, password_confirmation: confirmation, otp_attempt: code
-    } }, headers: headers
+    patch password_change_path(reset_password_token: token),
+          params: {
+            password_change_user: {
+              password: value,
+              password_confirmation: confirmation,
+              otp_attempt: code
+            }
+          },
+          headers: headers
   end
 
   it 'requires migrated ordinary owners to re-enrol after resetting credentials' do
@@ -97,7 +103,9 @@ RSpec.describe 'Authentication policy regressions', type: :request do
     get url.path
     expect(response).to have_http_status(:ok)
     form = Nokogiri::HTML(response.body).
-      at_css("form[action='#{password_change_path(id: token)}']")
+      at_css(
+        "form[action='#{password_change_path(reset_password_token: token)}']"
+      )
     expect(form.at_css('input[name="password_change_user[password]"]')).
       to be_present
     expect(form.at_css('input[name="password_change_user[otp_attempt]"]')).
@@ -197,7 +205,8 @@ RSpec.describe 'Authentication policy regressions', type: :request do
     token = user.send_reset_password_instructions
     [{ password_change_user: 'a string' },
      { password_change_user: %w[a list] }, {}].each do |sent|
-      patch password_change_path(id: token), params: sent, headers: origin
+      patch password_change_path(reset_password_token: token),
+            params: sent, headers: origin
       expect(response).to have_http_status(422)
     end
     expect(user.reload.valid_password?(password)).to be true

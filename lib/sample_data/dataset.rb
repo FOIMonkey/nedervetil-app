@@ -205,6 +205,7 @@ module SampleData
       damp_and_mould
       batch
       badger
+      saved_draft
     end
 
     def waiting
@@ -492,6 +493,22 @@ module SampleData
                          'Are you really a badger?',
                          'Is it true that you are really a badger, in fact?',
                          raw: true)
+      end
+    end
+
+    def saved_draft
+      @at.on(2) do
+        draft = DraftInfoRequest.create!(
+          user: @requester,
+          public_body: @bodies[:larkhollow],
+          title: 'Public library opening hours and closures',
+          body: "Dear Larkhollow District Council,\n\n" \
+                'Please send me the weekly opening hours for each public ' \
+                'library run by the council in 2020 and 2026, and a list of ' \
+                "any branches that closed between those dates.\n\n" \
+                "Yours faithfully,\n\n#{@requester.name}"
+        )
+        AlaveteliPro::RequestSummary.create_or_update_from(draft)
       end
     end
 

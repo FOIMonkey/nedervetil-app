@@ -12,14 +12,13 @@ Gem::Specification.new do |spec|
   spec.summary = "File analysers for ActiveStorage"
   spec.description = "Extra ActiveStorage Analysers for Alaveteli"
   spec.homepage = "https://alaveteli.org"
+  spec.license = "AGPL-3.0-or-later"
   spec.required_ruby_version = ">= 3.2.0"
 
   spec.metadata["homepage_uri"] = spec.homepage
 
   spec.files = Dir.chdir(__dir__) do
-    `git ls-files -z`.split("\x0").reject do |f|
-      (File.expand_path(f) == __FILE__) || f.start_with?(*%w[bin/ spec/ .git])
-    end
+    Dir["lib/**/*", "LICENSE*", "README*"].select { |f| File.file?(f) }
   end
   spec.require_paths = ["lib"]
 

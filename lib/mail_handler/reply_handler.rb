@@ -31,9 +31,11 @@ module MailHandler
       end
 
       subject = MailHandler.get_header_string("Subject", message)
-      # Then look for the style we’ve seen in WebShield bounces
-      # (These do not have a return path of <> in the cases I have seen.)
-      if subject == "Returned Mail: Error During Delivery"
+      auto_submitted = MailHandler.get_header_string("Auto-Submitted", message)
+      # Only trust WebShield-style bounces when automated or null return-path.
+      if subject == "Returned Mail: Error During Delivery" &&
+         (MailHandler.empty_return_path?(message) ||
+          auto_submitted.to_s.downcase.start_with?('auto-'))
         failed = /^\s*---- Failed Recipients ----\s*((?:<[^>]+>\r?\n)+)/.
           match(MailHandler.get_part_body(message))
         return failed[1].scan(/<([^>]+)>/).flatten if failed
@@ -71,7 +73,7 @@ module MailHandler
         return true
       end
 
-      subject = MailHandler.get_header_string("Subject", message).downcase
+      subject = MailHandler.get_header_string("Subject", message).to_s.downcase
       if MailHandler.empty_return_path?(message)
         return true if subject.start_with?("out of office: ",
                                            "automatic reply: ")

@@ -109,7 +109,7 @@ services:
 
   specs-redis:
     profiles: [specs]
-    image: library/redis
+    image: library/redis:7.4-alpine
     command: redis-server
 
   db:
@@ -124,13 +124,13 @@ services:
       - postgres:/var/lib/postgresql
 
   redis:
-    image: library/redis
+    image: library/redis:7.4-alpine
     command: redis-server
     volumes:
       - redis:/data
 
   smtp:
-    image: mailhog/mailhog
+    image: mailhog/mailhog:v1.0.1
     ports:
       - 127.0.0.1:1080:8025
 

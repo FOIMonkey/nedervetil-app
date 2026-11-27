@@ -35,6 +35,7 @@ module AlaveteliConfiguration
       # no longer authenticate anyone; emergency login has been removed.
       ADMIN_PASSWORD: '',
       ADMIN_USERNAME: '',
+      ALLOWED_HOSTS: [],
       ATTACHMENT_MANAGEMENT_DRAFT_HOURS: 4,
       ATTACHMENT_MANAGEMENT_PREVIEW_HOURS: 4,
       ATTACHMENT_MANAGEMENT_REQUESTER_ACCESS: 'redact',
@@ -60,7 +61,7 @@ module AlaveteliConfiguration
       DISCLOSURES_REVIEW_REQUESTER_REDACTIONS: true,
       DOMAIN: 'localhost:3000',
       DONATION_URL: '',
-      ENABLE_TWO_FACTOR_AUTH: false,
+      ENABLE_TWO_FACTOR_AUTH: true,
       ENFORCE_REQUEST_LIMITS: true,
       EXCEPTION_NOTIFICATIONS_FROM: 'errors@localhost',
       EXCEPTION_NOTIFICATIONS_TO: 'user-support@localhost',
@@ -135,9 +136,19 @@ module AlaveteliConfiguration
     # rubocop:enable Layout/LineLength
   end
 
+  EXAMPLE_INCOMING_EMAIL_SECRET =
+    'xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx'.freeze
+
   # True for the shipped default or secrets under 64 chars (ProductionSafety).
   def self.default_secret?(value)
     value.to_s.length < 64 || value == DEFAULTS[:SECRET_KEY_BASE]
+  end
+
+  def self.default_incoming_email_secret?(value)
+    text = value.to_s.strip
+    text.length < 32 ||
+      text == DEFAULTS[:INCOMING_EMAIL_SECRET] ||
+      text == EXAMPLE_INCOMING_EMAIL_SECRET
   end
 
   def self.get(key, default)

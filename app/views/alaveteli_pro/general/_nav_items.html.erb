@@ -3,6 +3,7 @@
 <% @request_journey_pro = true %>
 <% own_request = controller?('request') && action?('show') && @info_request&.is_actual_owning_user?(@user) %>
 <li class="<%= 'selected' if controller?('alaveteli_pro/dashboard') && action?('index') || controller?('alaveteli_pro/info_requests') && action?('index') || controller?('info_request_batch') && action?('show') || own_request %>">
+  <%= request_journey_default_button %>
   <%= request_journey_nav _('Home'), 'home',
       :id => 'dashboard-link',
       :onclick => track_analytics_event(

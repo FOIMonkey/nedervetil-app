@@ -220,14 +220,16 @@ module Disclosures
       return true if page_text_match?(document, rules)
       return false unless attachment.raw_email&.kept?
 
-      raw_bytes = attachment.unmasked_body
+      raw = attachment.original_attributes
+      raw_bytes = raw[:body]
       return false if raw_bytes.blank?
 
-      format = Formats.for(attachment.content_type, attachment.filename,
-                           raw_bytes)
+      format = Formats.for(raw[:content_type], raw[:filename], raw_bytes)
       RuleCheck.match?(document || attachment, raw_bytes.b,
                        rules: rules, format: format)
-    rescue RuleCheck::Unreadable, RawEmail::Erasable::ErasedError,
+    rescue RuleCheck::Unreadable
+      true
+    rescue RawEmail::Erasable::ErasedError,
            FoiAttachment::MissingError, ActiveStorage::FileNotFoundError
       false
     end

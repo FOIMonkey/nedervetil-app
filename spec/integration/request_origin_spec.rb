@@ -79,7 +79,7 @@ RSpec.describe 'Where a form may be sent from', type: :request do
     get '/help/contact'
     expect(response).to be_successful
     expect(response.headers['Set-Cookie'].to_s).
-      not_to include('_wdtk_cookie_session')
+      not_to include('_nedervetil_session')
   end
 
   it 'accepts a signed-in admin’s form with its token, without an Origin' do

@@ -116,4 +116,43 @@ RSpec.describe Disclosures::PiiCheck do
       to_return(json([{ entity_type: 'EMAIL_ADDRESS', score: 1.0 }]))
     expect(described_class.call(['a@b.org'])).to eq(:personal)
   end
+
+  it 'aborts streaming responses that exceed MAX_RESPONSE before buffering' do
+    configure('ai')
+    stub_const("#{described_class}::MAX_RESPONSE", 64)
+
+    response = instance_double(Net::HTTPOK, code: '200')
+    allow(response).to receive(:[]).with('Content-Length').and_return(nil)
+    read_trailing_chunk = false
+    allow(response).to receive(:read_body) do |&block|
+      block.call('x' * 40)
+      block.call('y' * 40)
+      read_trailing_chunk = true
+      block.call('z' * 10_000)
+    end
+
+    conn = instance_double(Net::HTTP)
+    allow(conn).to receive(:request).and_yield(response)
+    http = instance_double(Net::HTTP,
+                           'use_ssl=': nil, 'verify_mode=': nil,
+                           'open_timeout=': nil, 'read_timeout=': nil,
+                           'write_timeout=': nil)
+    allow(http).to receive(:start).and_yield(conn)
+    allow(Net::HTTP).to receive(:new).and_return(http)
+
+    expect(described_class.call(['Jane'])).to eq(:unavailable)
+    expect(read_trailing_chunk).to be(false)
+  end
+
+  it 'rejects responses declaring an oversized Content-Length before reading' do
+    configure('ai')
+    stub_request(:post, 'http://127.0.0.1:5002/v1/check').
+      to_return(status: 200,
+                body: '{"findings":[]}',
+                headers: {
+                  'Content-Type' => 'application/json',
+                  'Content-Length' => (described_class::MAX_RESPONSE + 1).to_s
+                })
+    expect(described_class.call(['Jane'])).to eq(:unavailable)
+  end
 end

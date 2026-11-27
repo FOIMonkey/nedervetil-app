@@ -31,8 +31,10 @@ module ActionText::WithoutAttachments
 
     def remove_attachments
       tag = ActionText::Attachment.tag_name
+      nodes = body&.fragment&.find_all(tag) || []
+      blobs = locate_blobs(nodes)
 
-      if body&.fragment&.find_all(tag)&.any?
+      if nodes.any?
         self.body = ActionText::Content.new(
           body.fragment.update { |html| html.css(tag).remove }
         )
@@ -40,6 +42,23 @@ module ActionText::WithoutAttachments
 
       # Detaching purges each blob later, unless it is attached elsewhere.
       self.embeds = [] if embeds.attached?
+      purge_unattached_blobs(blobs)
+    end
+
+    def locate_blobs(nodes)
+      nodes.filter_map do |node|
+        sgid = node['sgid']
+        next if sgid.blank?
+
+        attachable = GlobalID::Locator.locate_signed(sgid, for: 'attachable')
+        attachable if attachable.is_a?(ActiveStorage::Blob)
+      rescue ActiveRecord::RecordNotFound
+        nil
+      end.uniq
+    end
+
+    def purge_unattached_blobs(blobs)
+      blobs.each { |blob| blob.purge_later if blob.attachments.none? }
     end
   end
 end

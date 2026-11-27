@@ -21,7 +21,7 @@ class ThemeReconciler
     @theme_repo_path = File.expand_path(theme_repo_path)
     @start_ref = validate_ref(start_ref)
     @end_ref = validate_ref(end_ref)
-    @temp_dir = File.join(Dir.tmpdir, "git_reconcile_#{Time.now.to_i}")
+    @temp_dir = Dir.mktmpdir('git_reconcile_')
     @diff_command = detect_diff_command
   end
 
@@ -51,12 +51,16 @@ class ThemeReconciler
   class UserAbortError < StandardError; end
 
   def detect_diff_command
-    nvim_exists, = Open3.capture2e("which nvim")
-    nvim_exists.empty? ? "vimdiff" : "nvim -d"
+    _out, status = Open3.capture2e('which', 'nvim')
+    status.success? ? %w[nvim -d] : %w[vimdiff]
   end
 
   def validate_ref(ref)
-    _stdout, status = Open3.capture2e("git rev-parse #{ref}")
+    if ref.to_s.start_with?('-') || ref.to_s.empty?
+      raise "Invalid reference #{ref}"
+    end
+
+    _stdout, status = Open3.capture2e('git', 'rev-parse', '--verify', ref)
     return ref if status.success?
 
     raise "Reference #{ref} not found in core repository"
@@ -64,8 +68,8 @@ class ThemeReconciler
 
   def find_changed_core_files
     # Get list of changed files between refs
-    stdout, = Open3.capture2("git diff --name-only #{@start_ref} #{@end_ref} " \
-                             "-- #{CORE_VIEW_PATH}")
+    stdout, = Open3.capture2('git', 'diff', '--name-only',
+                             @start_ref, @end_ref, '--', CORE_VIEW_PATH)
     stdout.split("\n").select { |f| File.file?(f) }
   end
 
@@ -157,8 +161,8 @@ class ThemeReconciler
   end
 
   def get_core_changes(file_path)
-    stdout, = Open3.capture2("git diff #{@start_ref} #{@end_ref} -- " \
-                             "#{file_path}")
+    stdout, = Open3.capture2('git', 'diff', @start_ref, @end_ref,
+                             '--', file_path)
     stdout
   end
 
@@ -166,18 +170,18 @@ class ThemeReconciler
     patch_file = File.join(@temp_dir, "changes.patch")
     File.write(patch_file, patch_content)
 
-    _, status = Open3.capture2e("patch -f --no-backup-if-mismatch " \
-                                "#{theme_file} #{patch_file}")
+    _, status = Open3.capture2e('patch', '-f', '--no-backup-if-mismatch',
+                                '--', theme_file, patch_file)
     status
   end
 
   def handle_conflict(theme_file, core_file)
     puts "Conflict detected in #{theme_file}"
-    puts "Opening #{@diff_command} to resolve conflicts..."
+    puts "Opening #{@diff_command.join(' ')} to resolve conflicts..."
 
-    system("#{@diff_command} #{theme_file} #{core_file}")
+    system(*@diff_command, '--', theme_file, core_file)
 
-    if $CHILD_STATUS.exitstatus == 1
+    if $CHILD_STATUS&.exitstatus == 1
       raise UserAbortError, "User aborted at #{theme_file}"
     end
 

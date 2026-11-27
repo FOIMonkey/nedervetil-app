@@ -473,7 +473,15 @@ module PDFRedactor
 
     # The message names the object, never the text.
     def check(text, where, rules = @rules)
-      return unless rules.any? { |rule| text.match?(rule.re) }
+      candidates = [text]
+      unless text.ascii_only?
+        norm = text.unicode_normalize(:nfkc).delete(UNSEEN)
+        candidates << norm unless norm == text
+      end
+      matched = candidates.any? do |candidate|
+        rules.any? { |rule| candidate.match?(rule.re) }
+      end
+      return unless matched
 
       raise Matched, "a rule still matches in #{where} after masking " \
                      '(final scan)'

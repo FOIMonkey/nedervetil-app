@@ -29,6 +29,7 @@ module OfficePackage
     HEADER_DIFAT = 109
     ENTRY = 128
     MAX_ENTRIES = 100_000
+    MAX_DEPTH = 32
 
     Entry = Struct.new(:index, :name, :type, :left, :right, :child, :start,
                        :byte_size, keyword_init: true)
@@ -71,6 +72,9 @@ module OfficePackage
             refuse!('streams far larger than the file') if budget.negative?
             found << [(path + [entry.name]).join('/'), stream(entry)]
           when STORAGE
+            if path.size >= MAX_DEPTH
+              refuse!('a directory tree nested too deep')
+            end
             stack << [entry.child, path + [entry.name]]
           end
         end

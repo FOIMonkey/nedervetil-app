@@ -123,10 +123,10 @@ RSpec.describe 'Attachment downloads', type: :request do
                                              prominence: 'requester_only')
         end
 
-        it 'adds CORS headers' do
+        it 'does not add wildcard CORS headers' do
           show
-          expect(response.headers['Access-Control-Allow-Origin']).to eq('*')
-          expect(response.headers['Access-Control-Request-Method']).to eq('GET')
+          expect(response.headers['Access-Control-Allow-Origin']).to be_nil
+          expect(response.headers['Access-Control-Request-Method']).to be_nil
         end
       end
     end

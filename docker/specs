@@ -38,8 +38,8 @@ cd "$copy"
 mkdir -p log
 ln -sf /dev/null log/test.log
 cp config/storage.yml-example config/storage.yml
-[ -f config/database.yml ] || cp config/database.yml-example config/database.yml
-[ -f config/general.yml ] || cp config/general.yml-example config/general.yml
+cp config/database.yml-example config/database.yml
+cp config/general.yml-example config/general.yml
 
 bundle check >/dev/null || bundle install
 wait-for-it specs-db:5432 --strict --quiet

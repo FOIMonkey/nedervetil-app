@@ -15,15 +15,17 @@ module AlaveteliPro
 
       # Create a Hash that has a default value of 0 for new/unset keys
       hash_with_default = Hash.new(0)
+      visible = IncomingAttention::Effective.
+                visible_summaries(request_summaries, self)
 
       # Calculate the phase totals from the request_summary_categories
       raw_counts =
-        request_summaries.
+        visible.
           joins(:request_summary_categories).
           references(:request_summary_categories).
           group("request_summary_categories.slug").
           count("request_summary_categories.id")
-      raw_counts['not_drafts'] = request_summaries.not_category(:draft).count
+      raw_counts['not_drafts'] = visible.not_category(:draft).count
 
       @phase_counts =
         hash_with_default.merge(raw_counts).with_indifferent_access
@@ -35,14 +37,15 @@ module AlaveteliPro
     # need attention, which the stored categories don't know.
     def attention_phase_counts
       effective = IncomingAttention::Effective
+      visible = effective.visible_summaries(request_summaries, self)
       counts = Hash.new(0).with_indifferent_access
       InfoRequest::State.phases.each do |phase|
         counts[phase[:scope]] = effective.phase_summaries(
-          request_summaries, phase[:scope], user: self
+          visible, phase[:scope], user: self
         ).count
       end
-      counts['not_drafts'] = request_summaries.not_category(:draft).count
-      counts['draft'] = request_summaries.category(:draft).count
+      counts['not_drafts'] = visible.not_category(:draft).count
+      counts['draft'] = visible.category(:draft).count
       counts.merge!(effective.counts(self))
     end
   end

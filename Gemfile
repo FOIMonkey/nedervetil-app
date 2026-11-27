@@ -47,19 +47,12 @@
 # Gems from GitHub
 # ================
 #
-# Sometimes we need to apply fixes to gems. Generally you'll want to fork the
-# code to the mysociety organisation, fix the problem and use that git ref. This
-# is a sure-fire way to out of date dependencies, so getting back on the
-# upstream release as soon as possible is favourable. Its also better to use
-# the ref option rather than branch. For example, if you rebase your bugfix
-# branch on upstream/master and force push it, the locked SHA will no longer
-# exist on the specified branch. This makes previous versions of Alaveteli
-# uninstallable.
+# If we temporarily need a patched gem from git, prefer pinning a commit SHA
+# with the `ref:` option rather than a moving branch so older revisions remain
+# installable, and return to the upstream release as soon as possible.
 #
 # Upgrading Gems
 # ==============
-#
-# We use Gemnasium, which alerts us to gem updates.
 #
 # Most gems will be pessimistically locked at the PATCH level, so you can just
 # run `bundle update foo`.
@@ -83,8 +76,6 @@ source 'https://rubygems.org'
 # provisioning pin the same number; change them together.
 ruby file: ".ruby-version"
 
-git_source(:mysociety) { |repo| "https://github.com/mysociety/#{repo}.git" }
-
 gem 'rails', '~> 8.1.4', '>= 8.1.4.1'
 
 gem 'pg', '~> 1.7.0'
@@ -102,7 +93,7 @@ gem 'dalli', '~> 5.3.4'
 gem 'exception_notification', '~> 5.0.1'
 gem 'friendly_id', '~> 5.7.0'
 gem 'htmlentities', '~> 4.4.2'
-gem 'icalendar', '~> 2.13.0'
+gem 'icalendar', '~> 2.14.0'
 gem 'json', '~> 3.1.0'
 gem 'holidays', '~> 11.8.0'
 gem 'countries', '~> 8.1.0'
@@ -113,8 +104,8 @@ gem 'puma', '~> 8.1.2'
 gem 'rack', '~> 3.2.9'
 gem 'rack-utf8_sanitizer', '~> 1.11.1'
 gem 'matrix', '~> 0.4.3'
-# Pinned so net/http stays on 0.9.x rather than Ruby 3.4's default 0.6.0.
-gem 'net-http', '~> 0.9.1'
+# Pinned so net/http stays on 0.10.x rather than Ruby 3.4's default 0.6.0.
+gem 'net-http', '~> 0.10.0'
 gem 'net-protocol', '~> 0.4.0'
 gem 'ostruct', '~> 0.6.3'
 gem 'redcarpet', '~> 3.6.1'
@@ -122,7 +113,7 @@ gem 'rqrcode', '~> 3.2.0'
 gem 'rubyzip', '~> 3.7.0'
 gem 'ruby-progressbar', '~> 1.13'
 gem 'secure_headers', '~> 7.3.0'
-gem 'sidekiq', '8.1.7'
+gem 'sidekiq', '~> 8.1.7'
 gem 'sidekiq-limit_fetch', '~> 4.4.1'
 gem 'will_paginate', '~> 4.0.1'
 gem 'zip_kit', '~> 6.4.3'
@@ -136,7 +127,6 @@ gem 'rails-html-sanitizer', '~> 1.7.2'
 gem 'benchmark', '~> 0.5.0'
 gem 'csv', '~> 3.3.6'
 gem 'drb', '~> 2.2.3'
-gem 'pstore', '~> 0.3.0'
 gem 'rdoc', '~> 8.1.0'
 gem 'uri', '~> 1.1.2'
 
@@ -162,7 +152,7 @@ gem 'office_package', path: 'gems/office_package'
 gem 'pdf_redactor', path: 'gems/pdf_redactor'
 
 # Storage backend (S3 API; also used for S3-compatible stores)
-gem 'aws-sdk-s3', require: false
+gem 'aws-sdk-s3', '~> 1.245', require: false
 
 # Storage content analyzers
 gem 'excel_analyzer', path: 'gems/excel_analyzer', require: false

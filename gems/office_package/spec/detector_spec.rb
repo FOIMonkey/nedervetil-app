@@ -152,6 +152,16 @@ RSpec.describe OfficePackage::Detector do
     expect(hit_parts(OfficeFixtures.word('<w:p/>', core: nil,
                                                    comment: 'Jane Example'))).
       to eq(['outside the parts'])
+    wide = "Jane O\u2019Example".encode('UTF-16LE').b
+    expect(
+      OfficePackage::Detector.call(
+        OfficeFixtures.word(
+          '<w:p/>', core: nil,
+                    parts: { 'word/data.bin' => [nil, "\x05#{wide}".b] }
+        ),
+        ->(t) { t.include?("Jane O\u2019Example") }
+      ).hits.map(&:part)
+    ).to eq(['word/data.bin'])
   end
 
   it 'lists what it can’t read' do
@@ -165,14 +175,14 @@ RSpec.describe OfficePackage::Detector do
     expect(result.not_checked).to eq(['word/media/image1.png'])
   end
 
-  it 'refuses a part that declares a DOCTYPE' do
-    bytes = OfficeFixtures.word(
-      '<w:p/>',
-      core: nil,
-      parts: {
-        'word/x.xml' => [nil, '<!DOCTYPE x [<!ENTITY e "y">]><x>&e;</x>']
-      }
-    )
-    expect { detect(bytes) }.to raise_error(OfficePackage::Refused, /DOCTYPE/)
+  it 'refuses a part that declares a DOCTYPE, including in UTF-16' do
+    ['<!DOCTYPE x [<!ENTITY e "y">]><x>&e;</x>',
+     "\xFF\xFE".b + '<!DOCTYPE x><x/>'.encode('UTF-16LE').b].each do |xml|
+      bytes = OfficeFixtures.word(
+        '<w:p/>', core: nil, parts: { 'word/x.xml' => [nil, xml] }
+      )
+      expect { detect(bytes) }.
+        to raise_error(OfficePackage::Refused, /DOCTYPE/)
+    end
   end
 end

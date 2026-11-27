@@ -16,7 +16,7 @@ module PDFRedactor
     HEX_RE = /<([0-9A-Fa-f\x00\t\n\f\r ]*)>/n
     PLAIN_LITERAL_RE = /\(([^()\\\r]*)\)/n
     REF_RE = /(\d+)[\x00\t\n\f\r ]+(\d+)[\x00\t\n\f\r ]+R(?!#{REG})/n
-    EI_RE = /(?<=[\x00\t\n\f\r ])EI(?=[\x00\t\n\f\r ]|\z)/n
+    EI_RE = /(?<=[\x00\t\n\f\r >])EI(?=[\x00\t\n\f\r ]|\z)/n
     ESC = {
       110 => "\n", 114 => "\r", 116 => "\t", 98 => "\b", 102 => "\f"
     }.freeze

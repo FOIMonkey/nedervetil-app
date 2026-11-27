@@ -51,6 +51,7 @@ RSpec.describe 'The sample data', feature: :alaveteli_pro do
     expect(requester.info_requests.pluck(:prominence).uniq).
       to eq(['requester_only'])
     expect(requester.info_request_batches.count).to eq(1)
+    expect(requester.draft_info_requests.count).to eq(1)
 
     badger = InfoRequest.find_by!(url_title: 'are_you_really_a_badger')
     expect(badger.user).to eq(requester)
@@ -152,5 +153,24 @@ RSpec.describe 'The sample data', feature: :alaveteli_pro do
     end
     get '/documents/review'
     expect(response.body).to include('Student counselling waiting times')
+    counselling = in_review.find_by!(title: 'Student counselling waiting times')
+    get admin_disclosure_manage_document_path(counselling)
+    expect(response).to have_http_status(:ok)
+    expect(response.body).
+      to include(admin_disclosure_document_page_path(counselling, page: 1))
+    expect(response.body).
+      to include(admin_disclosure_download_document_path(counselling))
+    get admin_disclosure_document_page_path(counselling, page: 1)
+    expect(response).to have_http_status(:ok)
+    expect(response.media_type).to eq('image/png')
+    get admin_disclosure_download_document_path(counselling)
+    expect(response).to have_http_status(:ok)
+    expect(response.media_type).to eq('application/pdf')
+    expect do
+      get disclosure_document_download_path(counselling)
+      expect(response).to have_http_status(:not_found)
+    rescue ActiveRecord::RecordNotFound
+      true
+    end.not_to raise_error
   end
 end

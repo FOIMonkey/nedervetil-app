@@ -27,16 +27,17 @@
   }
 }
 
-// Every row is the same height, so the beam can line up with any of them. The
-// beam shapes come from Topics::TopicsHelper#torch_style, so these lengths must
-// match its TORCH. Without :has() the beam stays on the search box.
+// Without a theme lamp picture (topics/topics/_torch_image), the front page
+// shows a highlighted search panel and lights each topic row on hover/focus.
+// When a theme provides .torch__badger, the beam sweeps between rows using the
+// clip-path polygons from Topics::TopicsHelper#torch_style (matching TORCH).
 .torch {
   --rh: 4.75rem;
   --m: 15rem;
   --gx: 25rem;
   position: relative;
-  display: grid;
-  grid-template-columns: var(--gx) minmax(0, 1fr);
+  display: block;
+  max-width: 48rem;
 }
 
 // A theme's lamp picture (topics/topics/_torch_image) sits above the beam.
@@ -50,19 +51,39 @@
 }
 
 .torch__beam {
-  position: absolute;
-  z-index: 0;
-  top: 0;
-  right: 0;
-  bottom: 0;
-  left: 0;
-  background: #ffe500; // the disc's own yellow, so lamp and beam are one shape
-  clip-path: var(--beam-0);
-  transition: clip-path 0.22s cubic-bezier(0.2, 0.8, 0.2, 1);
+  display: none;
+}
+
+.torch:has(.torch__badger) {
+  display: grid;
+  max-width: none;
+  grid-template-columns: var(--gx) minmax(0, 1fr);
+
+  .torch__beam {
+    display: block;
+    position: absolute;
+    z-index: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    background: #ffe500; // the disc's own yellow, so lamp and beam are one shape
+    clip-path: var(--beam-0);
+    transition: clip-path 0.22s cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+
+  .torch__find {
+    background: transparent;
+  }
+
+  .torch__row:hover,
+  .torch__row:focus-within {
+    background: transparent;
+  }
 }
 
 @for $i from 1 through 12 {
-  .torch:has(.torch__row--#{$i}:hover, .torch__row--#{$i}:focus-within) .torch__beam {
+  .torch:has(.torch__badger):has(.torch__row--#{$i}:hover, .torch__row--#{$i}:focus-within) .torch__beam {
     clip-path: var(--beam-#{$i});
   }
 }
@@ -74,8 +95,9 @@
   grid-column: 2;
 }
 
-// Anything in the beam is on the highlight, so its edges are ink in both colour schemes.
+// Anything in the panel/beam is on the highlight, so its edges are ink in both colour schemes.
 .torch__find {
+  @include highlighted;
   display: flex;
   align-items: center;
   height: var(--rh);
@@ -174,6 +196,7 @@
 .torch__row:hover,
 .torch__row:focus-within {
   border-top-color: transparent;
+  background: var(--color-highlight);
 
   a,
   a:link,
@@ -207,33 +230,34 @@
 // On phones there's no room for the lamp picture: the search box keeps its
 // highlighted panel and a topic lights when tapped or reached with the keyboard.
 @media screen and (max-width: 58em) {
-  .torch {
+  .torch,
+  .torch:has(.torch__badger) {
     display: block;
-  }
 
-  .torch__badger,
-  .torch__beam {
-    display: none;
-  }
+    .torch__badger,
+    .torch__beam {
+      display: none;
+    }
 
-  .torch__find {
-    height: auto;
-    padding: var(--space-3);
-    background: #ffe500;
-  }
+    .torch__find {
+      height: auto;
+      padding: var(--space-3);
+      background: var(--color-highlight);
+    }
 
-  .torch__row {
-    height: auto;
-    padding: var(--space-3);
-  }
+    .torch__row {
+      height: auto;
+      padding: var(--space-3);
+    }
 
-  .torch__summary {
-    white-space: normal;
-  }
+    .torch__summary {
+      white-space: normal;
+    }
 
-  .torch__row:hover,
-  .torch__row:focus-within {
-    background: var(--color-highlight);
+    .torch__row:hover,
+    .torch__row:focus-within {
+      background: var(--color-highlight);
+    }
   }
 }
 

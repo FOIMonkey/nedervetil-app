@@ -44,7 +44,7 @@ module Disclosures
     # job: AlaveteliSandbox job holding pdf_path and dir, or nil.
     def pdf_page(pdf_path, page, dir, job:)
       prefix = File.join(dir, "ocr-#{page}")
-      runner.limited('pdftoppm', '-f', page.to_s, '-l', page.to_s,
+      runner.limited('pdftoppm', '-cropbox', '-f', page.to_s, '-l', page.to_s,
                      '-scale-to', LONG_SIDE.to_s, '-gray', '-png',
                      '-singlefile', pdf_path, prefix,
                      job: job, binary_output: true) or return nil
