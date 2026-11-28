@@ -1,7 +1,7 @@
 namespace :documents do
   desc 'Queue the analysis of spreadsheets that have never been read'
   task check_unread_spreadsheets: :environment do
-    Disclosures::SpreadsheetHold.unread.find_each do |attachment|
+    FoiAttachment::SpreadsheetHold.unread.find_each do |attachment|
       attachment.file_blob.analyze_later
     end
   end

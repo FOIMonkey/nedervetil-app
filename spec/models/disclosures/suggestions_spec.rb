@@ -210,14 +210,14 @@ RSpec.describe 'Disclosures suggestions' do
     end
     message = AttachmentFixtures.deliver(info_request, files)
     reads = 0
-    allow(IncomingAttention::Outcome::Input).
+    allow(FoiAttachment::Content).
       to receive(:document_text).and_wrap_original do |original, *args|
         reads += 1
         original.call(*args)
       end
     rows = suggestions_for(message).
       reject { |row| row.rule.to_s.start_with?('email') }
-    expect(reads).to eq(IncomingAttention::Outcome::Input::MAX_DOCUMENTS)
+    expect(reads).to eq(FoiAttachment::Content::MAX_DOCUMENTS)
     expect(rows.size).to eq(10)
     expect(rows.select { |row| row.rule == 'over_limit' }.map(&:suggestion)).
       to eq(%w[look look])
@@ -225,7 +225,7 @@ RSpec.describe 'Disclosures suggestions' do
       satisfy { |row| row.fresh?(FoiAttachment.find(row.foi_attachment_id)) }
     )
 
-    stub_const('IncomingAttention::Outcome::Input::MAX_DOCUMENT_BYTES', 200)
+    stub_const('FoiAttachment::Content::MAX_DOCUMENT_BYTES', 200)
     message = AttachmentFixtures.deliver(
       info_request,
       [['big.txt', 'text/plain', "Synthetic fleet records.\n" * 20]]

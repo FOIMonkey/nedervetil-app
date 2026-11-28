@@ -4,7 +4,6 @@ module IncomingAttention
   # Builds the masked triage payload for the AI service from core's parsed
   # reply text and redacted attachment filenames.
   class Input
-    IMAGE_EXTENSIONS = %w[jpg jpeg png gif svg webp bmp tiff tif ico].freeze
     # Model state limit and Worker framing bytes; reply text is trimmed to fit
     # so no unread text is sent.
     STATE_BYTES = 8_192
@@ -44,7 +43,7 @@ module IncomingAttention
                         ability.can?(:read, message)
 
       parts = message.foi_attachments.includes(file_attachment: :blob).to_a
-      waiting = parts.select { |part| Disclosures::SpreadsheetHold.waiting?(part) }
+      waiting = parts.select { |part| FoiAttachment::SpreadsheetHold.waiting?(part) }
       return nil if waiting.empty?
       unless (parts - waiting).all? { |part| ability.can?(:read, part) }
         return nil
@@ -150,8 +149,7 @@ module IncomingAttention
               end
       # Image names stay here: only how many there are is sent.
       images, documents = names.partition do |name|
-        IMAGE_EXTENSIONS.
-          include?(File.extname(name).delete_prefix('.').downcase)
+        FoiAttachment::Content.image_filename?(name)
       end
       metadata = { 'attachment_filenames_available' => available,
                    'non_image_attachment_filenames' => documents,

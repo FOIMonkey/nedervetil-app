@@ -4,14 +4,14 @@ module Disclosures
   # stall the reply or re-queue the job.
   class Suggester
     RULE_VERSION = 6
-    IMAGES = (IncomingAttention::Input::IMAGE_EXTENSIONS +
+    IMAGES = (FoiAttachment::Content::IMAGE_EXTENSIONS +
               %w[emz wmz emf wmf heic]).map { |ext| ".#{ext}" }.freeze
     # Images over this size may be photographed letters.
     LARGE_IMAGE = 300.kilobytes
-    LETTER = IncomingAttention::Outcome::LetterPick::LETTER
-    RESPONSE_NAME = IncomingAttention::Outcome::LetterPick::RESPONSE_NAME
-    ABOUT_REQUEST = IncomingAttention::Outcome::LetterPick::ABOUT_REQUEST
-    REGIME = IncomingAttention::Outcome::LetterPick::REGIME
+    LETTER = FoiAttachment::LetterPick::LETTER
+    RESPONSE_NAME = FoiAttachment::LetterPick::RESPONSE_NAME
+    ABOUT_REQUEST = FoiAttachment::LetterPick::ABOUT_REQUEST
+    REGIME = FoiAttachment::LetterPick::REGIME
     WEAK_RESPONSE_NAME = /correspond|newsletter|responsib/i
     # rubocop:disable Layout/LineLength
     ROUTINE = /\backnowledge?ment\b|\backnowledge receipt|now being considered|has been (?:received|logged)|fees? notice|(?:requires?|need) (?:further|some) (?:information|clarification)|please (?:can you )?(?:clarify|advise)|extend(?:ed)? the (?:time|deadline)|public interest test.{0,40}(?:extend|additional time)/i
@@ -51,7 +51,7 @@ module Disclosures
     def self.fingerprint(part)
       Digest::SHA1.hexdigest(
         [RULE_VERSION,
-         IncomingAttention::Outcome::Input.fingerprint(part)].to_json
+         FoiAttachment::Content.fingerprint(part)].to_json
       )
     end
 
@@ -134,7 +134,7 @@ module Disclosures
         )]
       end
 
-      text = readable_text(part)
+      text = FoiAttachment::Content.document_text(part).to_s
       if text.strip.length < 80
         return [result(
           'look', 'no_text',
@@ -150,7 +150,7 @@ module Disclosures
 
     def set_aside_result(name, text)
       head = text[0, 3000].split.join(' ')
-      if IncomingAttention::Outcome::LetterPick.leaflet?(name, head)
+      if FoiAttachment::LetterPick.leaflet?(name, head)
         return result(
           'set_aside', 'leaflet',
           N_('Looks like a leaflet or a notice of your rights.')
@@ -176,7 +176,7 @@ module Disclosures
     # Keyed by attachment; highest score >= LetterPick::FLOOR wins.
     def pick_letter(letters, results)
       scored = letters.filter_map do |part, text|
-        score = IncomingAttention::Outcome::LetterPick.score(
+        score = FoiAttachment::LetterPick.score(
           part.display_filename, text
         )
         [score, part, text] if score
@@ -186,7 +186,7 @@ module Disclosures
         head = text[0, 3000].split.join(' ')
         results[part] =
           if best && best[1] == part &&
-             best[0] >= IncomingAttention::Outcome::LetterPick::FLOOR
+             best[0] >= FoiAttachment::LetterPick::FLOOR
             letter_result(part, head)
           elsif head.scan(LETTER).size >= 2
             result('released_records',
@@ -245,22 +245,18 @@ module Disclosures
       end
     end
 
-    # Enforces Outcome::Input extraction caps across all opened files.
+    # Count every file opened for classification against the extraction limits.
     def within_limits?(part)
-      input = IncomingAttention::Outcome::Input
+      content = FoiAttachment::Content
       size = part.file_blob&.byte_size
-      return false if @opened >= input::MAX_DOCUMENTS ||
-                      (size && size > input::MAX_DOCUMENT_BYTES) ||
+      return false if @opened >= content::MAX_DOCUMENTS ||
+                      (size && size > content::MAX_DOCUMENT_BYTES) ||
                       Process.clock_gettime(
                         Process::CLOCK_MONOTONIC
-                      ) - @started > input::EXTRACTION_SECONDS
+                      ) - @started > content::EXTRACTION_SECONDS
 
       @opened += 1
       true
-    end
-
-    def readable_text(part)
-      IncomingAttention::Outcome::Input.document_text(part).to_s
     end
 
     # Overlap of 3-word shingles with the requester's masked outgoing messages.
@@ -269,9 +265,7 @@ module Disclosures
       return 0.0 if mine.empty?
 
       asked = request.outgoing_messages.flat_map do |outgoing|
-        shingles(
-          IncomingAttention::Outcome::Input.asked(request, outgoing)
-        ).to_a
+        shingles(FoiAttachment::Content.asked(request, outgoing)).to_a
       end.to_set
       (mine & asked).size.to_f / mine.size
     end

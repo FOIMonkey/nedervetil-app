@@ -657,7 +657,7 @@ DISCLOSURES_OCR: true
 DISCLOSURES_REMOVE_OFFICE_METADATA: false
 
 # A check for personal data (above all people's names) in hidden Office content
-# (`Disclosures::PiiCheck`). Calls an optional self-hosted PII checking service
+# (`PiiCheck`). Calls an optional self-hosted PII checking service
 # over HTTPS (or HTTP on loopback: `127.0.0.1`, `localhost`, `::1`), supporting
 # either the `badger/v1` JSON contract (`DISCLOSURES_PII_CHECK: ai`, e.g.
 # serving https://huggingface.co/HMC83/name-detector-32m-cells) or

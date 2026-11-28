@@ -47,11 +47,6 @@ module Disclosures
       high?(item.texts, document) ? :high : :low
     end
 
-    # Preserves first-seen order so repeated cells aren't resent to PiiCheck.
-    def deduplicated(texts)
-      Array(texts).map { |text| text.to_s.strip }.reject(&:empty?).uniq
-    end
-
     def high?(texts, document)
       texts = Array(texts).map { |text| text.to_s.strip }.reject(&:empty?)
       return false if texts.empty?
@@ -84,7 +79,7 @@ module Disclosures
 
       texts = read.value('content_texts')
       joined = texts.join("\n").byteslice(0, MAX_TEXT)
-      pii_text = deduplicated(texts).join("\n").byteslice(0, MAX_TEXT)
+      pii_text = PiiCheck.deduplicated(texts).join("\n").byteslice(0, MAX_TEXT)
       personal?(joined, document, pii_text: pii_text)
     end
 

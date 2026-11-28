@@ -194,7 +194,7 @@ RSpec.describe 'Holding back a suspect spreadsheet' do
         core: nil
       )
       attachment = deliver(bytes)
-      Disclosures::SpreadsheetHold.new(attachment.file_blob, metadata).run
+      FoiAttachment::SpreadsheetHold.new(attachment.file_blob, metadata).run
       attachment.reload.prominence
     end
 
@@ -252,7 +252,7 @@ RSpec.describe 'Holding back a suspect spreadsheet' do
       end
 
       it 'holds one when the check breaks, and logs which error by its class' do
-        allow(Disclosures::PiiCheck).to receive(:call).
+        allow(PiiCheck).to receive(:call).
           and_raise(NoMethodError, 'Officer Anjali Raval')
         allow(Rails.logger).to receive(:warn).and_call_original
         expect(hold([['Officer', 'Anjali Raval']])).to eq('hidden')
@@ -266,7 +266,7 @@ RSpec.describe 'Holding back a suspect spreadsheet' do
     it 'still holds a file with anything else hidden' do
       bytes = OfficeFixtures.workbook(core: nil)
       attachment = deliver(bytes)
-      Disclosures::SpreadsheetHold.new(attachment.file_blob,
+      FoiAttachment::SpreadsheetHold.new(attachment.file_blob,
                                        metadata.merge(hidden_rows: 3)).run
       expect(attachment.reload.prominence).to eq('hidden')
     end
@@ -296,7 +296,7 @@ RSpec.describe 'Holding back a suspect spreadsheet' do
     attachment = deliver(hidden_data)
     travel_to(3.days.from_now) do
       sign_in(owner)
-      expect(Disclosures::SpreadsheetHold.waiting?(FoiAttachment.find(attachment.id))).
+      expect(FoiAttachment::SpreadsheetHold.waiting?(FoiAttachment.find(attachment.id))).
         to be(true)
       download(attachment)
       expect(response).not_to have_http_status(:ok)
@@ -311,7 +311,22 @@ RSpec.describe 'Holding back a suspect spreadsheet' do
   end
 
   describe 'following up a parse' do
-    let(:job) { Disclosures::SpreadsheetCheckJob }
+    let(:job) { FoiAttachment::SpreadsheetCheckJob }
+
+    it 'runs a check serialized before the job moved and schedules its next attempt' do
+      attachment = deliver(hidden_data)
+      message_id = attachment.incoming_message_id
+      payload = job.new(message_id, 1).serialize.merge(
+        'job_class' => 'Disclosures::SpreadsheetCheckJob'
+      )
+      clear_enqueued_jobs
+
+      ActiveJob::Base.execute(payload)
+
+      expect(ActiveStorage::AnalyzeJob).
+        to have_been_enqueued.with(attachment.file_blob)
+      expect(job).to have_been_enqueued.with(message_id, 2).on_queue('default')
+    end
 
     it 'follows up each parse that found a spreadsheet' do
       clear_enqueued_jobs
@@ -354,7 +369,7 @@ RSpec.describe 'Holding back a suspect spreadsheet' do
       report = ActionMailer::Base.deliveries.last
       expect(report.to).to eq([AlaveteliConfiguration.contact_email])
       expect(report.subject).to include(attachment.id.to_s)
-      expect(Disclosures::SpreadsheetHold.waiting?(attachment.reload)).
+      expect(FoiAttachment::SpreadsheetHold.waiting?(attachment.reload)).
         to be(true)
     end
 
@@ -362,8 +377,8 @@ RSpec.describe 'Holding back a suspect spreadsheet' do
       unread = deliver(File.binread(fixtures.join('data.xlsx')))
       read = deliver(hidden_data, name: 'other.xlsx')
       analyse(read)
-      expect(Disclosures::SpreadsheetHold.unread).to include(unread)
-      expect(Disclosures::SpreadsheetHold.unread).not_to include(read)
+      expect(FoiAttachment::SpreadsheetHold.unread).to include(unread)
+      expect(FoiAttachment::SpreadsheetHold.unread).not_to include(read)
     end
   end
 
@@ -406,7 +421,7 @@ RSpec.describe 'Holding back a suspect spreadsheet' do
       )
       attachment = deliver(archive, name: 'response.zip',
                                     type: 'application/zip')
-      expect(Disclosures::SpreadsheetHold.waiting?(attachment)).to be(true)
+      expect(FoiAttachment::SpreadsheetHold.waiting?(attachment)).to be(true)
 
       sign_in(owner)
       download(attachment)
@@ -414,7 +429,7 @@ RSpec.describe 'Holding back a suspect spreadsheet' do
 
       analyse(attachment)
       expect(attachment.prominence).not_to eq('hidden')
-      expect(Disclosures::SpreadsheetHold.waiting?(attachment)).to be(false)
+      expect(FoiAttachment::SpreadsheetHold.waiting?(attachment)).to be(false)
       download(attachment)
       expect(response).to have_http_status(:ok)
     end
@@ -444,9 +459,9 @@ RSpec.describe 'Holding back a suspect spreadsheet' do
         '<w:p><w:r><w:t>Plain letter</w:t></w:r></w:p>'
       )
       clean = deliver(clean_docx, name: 'letter.docx', type: docx_type)
-      expect(Disclosures::SpreadsheetHold.waiting?(clean)).to be(true)
+      expect(FoiAttachment::SpreadsheetHold.waiting?(clean)).to be(true)
       analyse(clean)
-      expect(Disclosures::SpreadsheetHold.waiting?(clean.reload)).to be(false)
+      expect(FoiAttachment::SpreadsheetHold.waiting?(clean.reload)).to be(false)
       expect(clean.prominence).not_to eq('hidden')
 
       [
@@ -462,7 +477,7 @@ RSpec.describe 'Holding back a suspect spreadsheet' do
          )]
       ].each do |filename, bytes|
         attachment = deliver(bytes, name: filename, type: docx_type)
-        expect(Disclosures::SpreadsheetHold.waiting?(attachment)).to be(true)
+        expect(FoiAttachment::SpreadsheetHold.waiting?(attachment)).to be(true)
         analyse(attachment)
         expect(attachment.prominence).to eq('hidden'), filename
       end
@@ -716,7 +731,7 @@ RSpec.describe 'Holding back a suspect spreadsheet' do
       [clean, suspect].each do |att|
         expect { analyse(att) }.not_to raise_error
         expect(att.file_blob.reload).not_to be_analyzed
-        expect(Disclosures::SpreadsheetHold.waiting?(att)).to be(true)
+        expect(FoiAttachment::SpreadsheetHold.waiting?(att)).to be(true)
         expect(att.prominence).not_to eq('hidden')
       end
       expect(ActionMailer::Base.deliveries).to be_empty
@@ -727,11 +742,11 @@ RSpec.describe 'Holding back a suspect spreadsheet' do
 
       allow(OfficePackage::Isolated).to receive(:read).and_call_original
       perform_enqueued_jobs(only: ActiveStorage::AnalyzeJob) do
-        Disclosures::SpreadsheetCheckJob.perform_now(clean.incoming_message_id)
-        Disclosures::SpreadsheetCheckJob.perform_now(suspect.incoming_message_id)
+        FoiAttachment::SpreadsheetCheckJob.perform_now(clean.incoming_message_id)
+        FoiAttachment::SpreadsheetCheckJob.perform_now(suspect.incoming_message_id)
       end
 
-      expect(Disclosures::SpreadsheetHold.waiting?(clean.reload)).to be(false)
+      expect(FoiAttachment::SpreadsheetHold.waiting?(clean.reload)).to be(false)
       expect(clean.prominence).not_to eq('hidden')
       expect(suspect.reload.prominence).to eq('hidden')
     end
@@ -746,7 +761,7 @@ RSpec.describe 'Holding back a suspect spreadsheet' do
 
       expect { analyse(xls) }.not_to raise_error
       expect(xls.file_blob.reload).not_to be_analyzed
-      expect(Disclosures::SpreadsheetHold.waiting?(xls)).to be(true)
+      expect(FoiAttachment::SpreadsheetHold.waiting?(xls)).to be(true)
       expect(xls.prominence).not_to eq('hidden')
       expect(ActionMailer::Base.deliveries).to be_empty
     end
@@ -782,7 +797,7 @@ RSpec.describe 'Holding back a suspect spreadsheet' do
 
       expect { analyse(clean) }.not_to raise_error
       expect(clean.file_blob.reload).not_to be_analyzed
-      expect(Disclosures::SpreadsheetHold.waiting?(clean)).to be(true)
+      expect(FoiAttachment::SpreadsheetHold.waiting?(clean)).to be(true)
       expect(clean.prominence).not_to eq('hidden')
 
       allow(OfficePackage::Isolated).to receive(:read).and_call_original
@@ -791,19 +806,19 @@ RSpec.describe 'Holding back a suspect spreadsheet' do
 
       expect { analyse(with_xls) }.not_to raise_error
       expect(with_xls.file_blob.reload).not_to be_analyzed
-      expect(Disclosures::SpreadsheetHold.waiting?(with_xls)).to be(true)
+      expect(FoiAttachment::SpreadsheetHold.waiting?(with_xls)).to be(true)
       expect(with_xls.prominence).not_to eq('hidden')
       expect(ActionMailer::Base.deliveries).to be_empty
 
       allow(AlaveteliSandbox).to receive(:job).and_call_original
       perform_enqueued_jobs(only: ActiveStorage::AnalyzeJob) do
-        Disclosures::SpreadsheetCheckJob.perform_now(clean.incoming_message_id)
-        Disclosures::SpreadsheetCheckJob.perform_now(
+        FoiAttachment::SpreadsheetCheckJob.perform_now(clean.incoming_message_id)
+        FoiAttachment::SpreadsheetCheckJob.perform_now(
           with_xls.incoming_message_id
         )
       end
 
-      expect(Disclosures::SpreadsheetHold.waiting?(clean.reload)).to be(false)
+      expect(FoiAttachment::SpreadsheetHold.waiting?(clean.reload)).to be(false)
       expect(clean.prominence).not_to eq('hidden')
       expect(with_xls.reload.prominence).to eq('hidden')
     end
@@ -829,9 +844,9 @@ RSpec.describe 'Holding back a suspect spreadsheet' do
 
       allow(OfficePackage::Isolated).to receive(:read).and_call_original
       perform_enqueued_jobs(only: ActiveStorage::AnalyzeJob) do
-        Disclosures::SpreadsheetCheckJob.perform_now(att.incoming_message_id)
+        FoiAttachment::SpreadsheetCheckJob.perform_now(att.incoming_message_id)
       end
-      expect(Disclosures::SpreadsheetHold.waiting?(att.reload)).to be(false)
+      expect(FoiAttachment::SpreadsheetHold.waiting?(att.reload)).to be(false)
       expect(att.prominence).not_to eq('hidden')
     end
 
@@ -843,23 +858,23 @@ RSpec.describe 'Holding back a suspect spreadsheet' do
       )
       clear_enqueued_jobs
       ole_docx = deliver(encrypted, name: 'locked.docx', type: ole_type)
-      expect(Disclosures::SpreadsheetCheckJob).
+      expect(FoiAttachment::SpreadsheetCheckJob).
         to have_been_enqueued.with(ole_docx.incoming_message_id)
-      expect(Disclosures::SpreadsheetHold.waiting?(ole_docx)).to be(true)
+      expect(FoiAttachment::SpreadsheetHold.waiting?(ole_docx)).to be(true)
 
       ole_msg = deliver(
         OfficeFixtures.compound({ 'WordDocument' => 'plain' }),
         name: 'note.msg', type: ole_type
       )
-      expect(Disclosures::SpreadsheetHold.waiting?(ole_msg)).to be(false)
-      expect(Disclosures::SpreadsheetHold.unread).to include(ole_docx)
-      expect(Disclosures::SpreadsheetHold.unread).not_to include(ole_msg)
+      expect(FoiAttachment::SpreadsheetHold.waiting?(ole_msg)).to be(false)
+      expect(FoiAttachment::SpreadsheetHold.unread).to include(ole_docx)
+      expect(FoiAttachment::SpreadsheetHold.unread).not_to include(ole_msg)
 
       allow(OfficePackage::Isolated).to receive(:read).
         and_raise(AlaveteliSandbox::Refused, 'office cell unavailable')
       expect { analyse(ole_docx) }.not_to raise_error
       expect(ole_docx.file_blob.reload).not_to be_analyzed
-      expect(Disclosures::SpreadsheetHold.waiting?(ole_docx)).to be(true)
+      expect(FoiAttachment::SpreadsheetHold.waiting?(ole_docx)).to be(true)
 
       sign_in(owner)
       download(ole_docx)
@@ -867,7 +882,7 @@ RSpec.describe 'Holding back a suspect spreadsheet' do
 
       allow(OfficePackage::Isolated).to receive(:read).and_call_original
       perform_enqueued_jobs(only: ActiveStorage::AnalyzeJob) do
-        Disclosures::SpreadsheetCheckJob.
+        FoiAttachment::SpreadsheetCheckJob.
           perform_now(ole_docx.incoming_message_id)
       end
       expect(ole_docx.reload.prominence).to eq('hidden')

@@ -4,6 +4,11 @@ class Ability
   # Uses prominence allow-lists so unknown or missing values fail closed to
   # :admins.
   module RequesterVisible
+    # A document whose visibility follows its source attachment and request.
+    # `source` uses #foi_attachment, #request_deleted? and #info_request_id.
+    module AttachmentBacked
+    end
+
     ORDER = %i[nobody admins requester].freeze
 
     REQUEST = %w[requester_only].freeze
@@ -18,7 +23,7 @@ class Ability
       when InfoRequest then own(record)
       when IncomingMessage, OutgoingMessage then message(record)
       when FoiAttachment then file(record)
-      when Disclosures::Document then source(record)
+      when AttachmentBacked then source(record)
       else raise ArgumentError, "no visibility for #{record.class}"
       end
     end
@@ -46,7 +51,7 @@ class Ability
     def hidden_by_admin?(record)
       level = case record
               when FoiAttachment then file(record, checking: false)
-              when Disclosures::Document then source(record, checking: false)
+              when AttachmentBacked then source(record, checking: false)
               else of(record)
               end
       level != :requester
@@ -56,9 +61,8 @@ class Ability
       levels.min_by { |level| ORDER.index(level) }
     end
 
-    # SQL equivalent of requester? for named table aliases (outer-joined NULLs
-    # fail closed). Omits SpreadsheetHold because spreadsheets never become
-    # documents, which are the only file callers.
+    # Prominence filter for named table aliases (outer-joined NULLs fail
+    # closed). Reading an individual file also checks for pending analysis.
     def sql(request: nil, message: nil, file: nil)
       conditions = []
       conditions << "#{request}.prominence IN (#{list(REQUEST)})" if request
@@ -85,7 +89,7 @@ class Ability
       reply = record.incoming_message
       return :nobody unless reply&.info_request
 
-      held = checking && Disclosures::SpreadsheetHold.waiting?(record)
+      held = checking && FoiAttachment::SpreadsheetHold.waiting?(record)
       least(message(reply), own(record), held ? :admins : :requester)
     end
 

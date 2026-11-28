@@ -1,5 +1,5 @@
 module Disclosures
-  # Reads page images via local Tesseract (IncomingAttention::Outcome::Ocr),
+  # Reads page images via local Tesseract (FoiAttachment::Ocr),
   # correcting orientation/tilt and keeping the single strongest reading.
   # See doc/FORK.md.
   module Ocr
@@ -147,7 +147,7 @@ module Disclosures
     end
 
     def runner
-      IncomingAttention::Outcome::Ocr
+      FoiAttachment::Ocr
     end
   end
 end

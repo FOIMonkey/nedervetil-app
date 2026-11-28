@@ -115,7 +115,7 @@ module IncomingMessage::FromRawEmail
     yield
   ensure
     begin
-      Disclosures::SpreadsheetHold.check_later(self)
+      FoiAttachment::SpreadsheetHold.check_later(self)
     rescue StandardError => e
       Rails.logger.warn("IncomingMessage #{id}: spreadsheet check failed " \
                         "(#{e.class})")

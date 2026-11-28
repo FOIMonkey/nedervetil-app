@@ -107,7 +107,7 @@ RSpec.describe Ability::RequesterVisible do
     end
 
     it 'is for admins until it is read, though nobody hid it' do
-      expect(Disclosures::SpreadsheetHold.waiting?(file)).to be(true)
+      expect(FoiAttachment::SpreadsheetHold.waiting?(file)).to be(true)
       expect(described_class.of(file)).to eq(:admins)
       expect(described_class.hidden_by_admin?(file)).to be(false)
       set(file, 'hidden')
@@ -152,5 +152,7 @@ RSpec.describe Ability::RequesterVisible do
 
   it 'has no answer for anything else' do
     expect { described_class.of(User.new) }.to raise_error(ArgumentError)
+    expect { described_class.of(AttachmentManagement::Revision.new) }.
+      to raise_error(ArgumentError)
   end
 end

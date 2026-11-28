@@ -216,19 +216,19 @@ RSpec.describe 'Who sees what: the table' do
       let(:file) { file_in(reply, 'costs.xlsx') }
 
       it 'is for admins until it is read' do
-        expect(Disclosures::SpreadsheetHold.waiting?(file)).to be(true)
+        expect(FoiAttachment::SpreadsheetHold.waiting?(file)).to be(true)
         expect(cells(request, reply, file)[:file]).to eq(seen('A'))
       end
 
       it 'every reader agrees with Ability on what the requester sees' do
-        expect(Disclosures::SpreadsheetHold.waiting?(file)).to be(true)
+        expect(FoiAttachment::SpreadsheetHold.waiting?(file)).to be(true)
         expect(agree?(readers(request, reply, file)[:file])).to be(true)
         expect(AttachmentManagement::Visibility.describe(file)).
           to eq('Admins only, until it’s been checked.')
       end
 
       it 'leaves the requester free to delete their request' do
-        expect(Disclosures::SpreadsheetHold.waiting?(file)).to be(true)
+        expect(FoiAttachment::SpreadsheetHold.waiting?(file)).to be(true)
         deletion = Disclosures::RequestDeletion.new(request.reload, requester)
         expect([deletion.offered?, deletion.blockers]).to eq([true, []])
       end

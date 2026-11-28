@@ -28,7 +28,20 @@ RSpec.describe 'Feature settings in general.yml' do
     expect(Disclosures::Tidy.on?).to be false
     expect(IncomingAttention::Outcome.mode).to eq('off')
     expect(IncomingAttention::Outcome.strict_documents?).to be false
-    expect(IncomingAttention::Outcome::Ocr.enabled?).to be false
+    expect(IncomingAttention::Outcome.ocr?).to be false
+  end
+
+  it 'gates outcome OCR independently of publication OCR' do
+    allow(FoiAttachment::Ocr).to receive(:available?).and_return(true)
+    expect(IncomingAttention::Outcome.ocr?).to be false
+    expect(Disclosures.ocr?).to be true
+
+    allow(AlaveteliConfiguration).to receive(:incoming_outcome_ocr).
+      and_return(true)
+    expect(IncomingAttention::Outcome.ocr?).to be true
+
+    allow(FoiAttachment::Ocr).to receive(:available?).and_return(false)
+    expect(IncomingAttention::Outcome.ocr?).to be false
   end
 
   it 'documents each of them in general.yml-example with the same value' do

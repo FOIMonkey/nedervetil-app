@@ -119,7 +119,7 @@ RSpec.describe 'Converters routed through AlaveteliSandbox' do
     end
 
     it 'reads a scanned PDF with OCR in a job' do
-      unless IncomingAttention::Outcome::Ocr.path('tesseract')
+      unless FoiAttachment::Ocr.path('tesseract')
         skip 'Tesseract is not installed'
       end
 
@@ -128,7 +128,7 @@ RSpec.describe 'Converters routed through AlaveteliSandbox' do
         pages: [AttachmentFixtures.letter_page(secret: 'SCANNEDWORDS',
                                                heading: 'HEADING')]
       )
-      expect(IncomingAttention::Outcome::Ocr.pdf_text(pdf)).
+      expect(FoiAttachment::Ocr.pdf_text(pdf)).
         to include('SCANNEDWORDS')
       expect(programs).to eq(%w[pdftoppm tesseract])
     end

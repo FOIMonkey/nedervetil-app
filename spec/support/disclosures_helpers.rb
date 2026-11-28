@@ -53,14 +53,14 @@ module DisclosuresHelpers
   end
 
   # As if ExcelAnalyzer's job had run and found nothing: until it has, a new
-  # spreadsheet is kept from its requester (Disclosures::SpreadsheetHold).
+  # spreadsheet is kept from its requester (FoiAttachment::SpreadsheetHold).
   def read_by_analyzer(attachment)
     blob = attachment.file.blob
     blob.update!(metadata: blob.metadata.merge(analyzed: true))
   end
 
   def ocr_tools?
-    IncomingAttention::Outcome::Ocr.available?
+    FoiAttachment::Ocr.available?
   end
 end
 

@@ -82,6 +82,13 @@ RSpec.describe 'Disclosures formats' do
       to eq(kept.size)
   end
 
+  it 'recognises raster image extensions when the MIME type is unknown' do
+    type = 'application/octet-stream'
+    expect(Disclosures::Formats.declared(type, 'scan.TIFF')).to eq('image')
+    expect(Disclosures::Formats.declared(type, 'logo.SVG')).to eq('other')
+    expect(Disclosures::Formats.declared(type, 'badge.ico')).to eq('other')
+  end
+
   # An OLE2 compound file, as older Office (.doc, .xls) writes.
   let(:ole) do
     "\xD0\xCF\x11\xE0\xA1\xB1\x1A\xE1".b + ("\0".b * 504) +
@@ -150,7 +157,7 @@ RSpec.describe 'Disclosures formats' do
       info_request, [['minutes.docx', kept['briefing.docx'], ole]]
     )
     # Word files are scanned for embedded spreadsheets before the requester
-    # can use them (Disclosures::SpreadsheetHold.waiting?).
+    # can use them (FoiAttachment::SpreadsheetHold.waiting?).
     read_by_analyzer(part(message, 'minutes.docx'))
     Disclosures::Suggester.new(message).run
     expect(Disclosures::Suggestion.

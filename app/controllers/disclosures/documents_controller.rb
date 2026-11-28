@@ -69,7 +69,7 @@ module Disclosures
       @title = _('Your documents')
       set_no_crawl_headers
       # Share one hash so Rails does not preload info_request twice; abilities
-      # read user and Disclosures::SpreadsheetHold reads file_attachment.
+      # read user and FoiAttachment::SpreadsheetHold reads file_attachment.
       @documents = Document.left_joins(:info_request).
         where('info_requests.user_id = :id OR ' \
               '(disclosure_documents.request_deleted_at IS NOT NULL ' \
