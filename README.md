@@ -28,7 +28,7 @@ reviewed, and published independently.
   Sass, Stimulus, Turbo Drive — no jQuery or Bootstrap) plus a Markdown/YAML
   help-pack engine served at `/help`.
 - **Optional external integrations:** Reply reading (`IncomingAttention`) and
-  hidden-content name checking (`Disclosures::PiiCheck`, e.g. with the open
+  hidden-content name checking (`PiiCheck`, e.g. with the open
   [HMC83/name-detector-32m-cells](https://huggingface.co/HMC83/name-detector-32m-cells)
   model or Presidio) are optional contracts disabled by default.
 

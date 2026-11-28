@@ -123,7 +123,7 @@ RSpec.describe 'Office files read by their callers, in the worker and here' do
         allow(attachment).to receive_message_chain(:file, :download).
           and_return(bytes)
         blob = instance_double(ActiveStorage::Blob, content_type: type)
-        hold = Disclosures::SpreadsheetHold.new(blob, {})
+        hold = FoiAttachment::SpreadsheetHold.new(blob, {})
         here, there = both { hold.send(:looks_personal?, attachment) }
         expect(there).to eq(here)
       end

@@ -6,9 +6,9 @@
       <% if cannot?(:read, a) %>
         <%= image_tag('content_type/icon_unknown.png', class: 'attachment__image', alt: '') %>
       <% end %>
-      <% if Disclosures::SpreadsheetHold.held?(a) %>
+      <% if FoiAttachment::SpreadsheetHold.held?(a) %>
         <p class="attachment__held"><%= a.prominence_reason %></p>
-      <% elsif @request_history && a.prominence != 'hidden' && !a.erased? && Disclosures::SpreadsheetHold.waiting?(a) %>
+      <% elsif @request_history && a.prominence != 'hidden' && !a.erased? && FoiAttachment::SpreadsheetHold.waiting?(a) %>
         <p class="attachment__held"><%= a.display_filename %>: <%= _('Getting it ready') %></p>
       <% elsif @request_history && cannot?(:read, a) && !a.erased? %>
         <p class="attachment__held"><%= hidden_file_notice %></p>

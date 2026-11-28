@@ -20,12 +20,8 @@ module IncomingAttention
                 letter: 23,
                 other: 18 }.freeze
       FOLDED = 'FOLDED_QUOTED_SECTION'.freeze
-      # Extraction bounds; any document not read in full leaves the reading
-      # incomplete ("not sure", never a status).
-      MAX_DOCUMENTS = 8
-      MAX_DOCUMENT_BYTES = 10 * 1024 * 1024
-      EXTRACTION_SECONDS = 60
-      READABLE = (LetterPick::DOCS + %w[.xlsx .xls .ods .csv]).freeze
+      READABLE = (FoiAttachment::LetterPick::DOCS +
+                  %w[.xlsx .xls .ods .csv]).freeze
 
       module_function
 
@@ -61,7 +57,7 @@ module IncomingAttention
                     'censor' => censor_print(request) }
         main = prepared_part(main)
         prints = sources['parts']
-        prints[main.id.to_s] = fingerprint(main)
+        prints[main.id.to_s] = FoiAttachment::Content.fingerprint(main)
         # Drops body caches that masking or a replacement made stale.
         message.reload
         folded = unread_is_pending do
@@ -86,19 +82,19 @@ module IncomingAttention
         ocr = []
         documents, omitted =
           read_documents(message, request, ability, prints, ocr)
-        letter = LetterPick.pick(documents.map { |name, body| [name, body] })
+        letter = FoiAttachment::LetterPick.pick(documents)
         excerpts = documents.filter_map do |name, body|
           if name == letter
             { 'name' => name,
               'text' => body.split.join(' ')[0, LETTER_CHARS],
               'letter' => true }
-          elsif !LetterPick.leaflet?(name, body)
+          elsif !FoiAttachment::LetterPick.leaflet?(name, body)
             { 'name' => name,
               'text' => body.strip[0, OTHER_CHARS],
               'letter' => false }
           end
         end
-        asked = asked(request, outgoing)
+        asked = FoiAttachment::Content.asked(request, outgoing)
         shared = share(asked[0, REQUEST_CHARS],
                        asked.length > REQUEST_CHARS,
                        shown,
@@ -185,20 +181,17 @@ module IncomingAttention
       # [[name, text], ...] for the documents read in full, and the omitted ones
       # as {"name" => reason}. Images and erased parts are neither.
       def read_documents(message, request, ability, prints, ocr = [])
+        content = FoiAttachment::Content
         documents = []
         omitted = {}
         attempts = 0
         started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
         message.get_attachments_for_display.each do |part|
           name = name_of(request, part)
-          if part.erased_at || name.blank? ||
-             IncomingAttention::Input::IMAGE_EXTENSIONS.
-               include?(File.extname(name).delete_prefix('.').downcase)
-            next
-          end
+          next if part.erased_at || name.blank? || content.image_filename?(name)
 
           unless ability.can?(:read, part)
-            if Disclosures::SpreadsheetHold.waiting?(part)
+            if FoiAttachment::SpreadsheetHold.waiting?(part)
               raise Unavailable, 'analysis_pending'
             end
 
@@ -210,32 +203,32 @@ module IncomingAttention
           reason =
             if !READABLE.include?(File.extname(name).downcase)
               'unreadable_type'
-            elsif documents.size >= MAX_DOCUMENTS
+            elsif documents.size >= content::MAX_DOCUMENTS
               'too_many'
             elsif size.nil?
               'size_unknown'
-            elsif size > MAX_DOCUMENT_BYTES
+            elsif size > content::MAX_DOCUMENT_BYTES
               'too_large'
             elsif Process.clock_gettime(Process::CLOCK_MONOTONIC) - started >
-                  EXTRACTION_SECONDS
+                  content::EXTRACTION_SECONDS
               'out_of_time'
             end
           next omitted[name] = reason if reason
 
           part = prepared_part(part)
-          prints[part.id.to_s] ||= fingerprint(part)
+          prints[part.id.to_s] ||= content.fingerprint(part)
           name = name_of(request, part)
-          if part.file.blob.byte_size > MAX_DOCUMENT_BYTES
+          if part.file.blob.byte_size > content::MAX_DOCUMENT_BYTES
             next omitted[name] = 'too_large'
           end
 
-          body = document_text(part)
+          body = content.document_text(part)
           # Count OCR attempts (not successes) so failing scans cannot exhaust
           # the extraction budget.
           if (body.nil? || body.strip.length < 80) && pdf?(name, part) &&
-             attempts < Ocr::MAX_DOCUMENTS &&
+             attempts < FoiAttachment::Ocr::MAX_DOCUMENTS &&
              Process.clock_gettime(Process::CLOCK_MONOTONIC) - started <=
-             EXTRACTION_SECONDS && Ocr.enabled?
+             content::EXTRACTION_SECONDS && Outcome.ocr?
             attempts += 1
             scanned = scanned_text(part)
             if scanned && scanned.strip.length >= 80
@@ -276,7 +269,7 @@ module IncomingAttention
       def part_unchanged?(part, message, ability, print)
         part && part.incoming_message_id == message.id &&
           ability.can?(:read, part) && !pending_mask?(part) &&
-          fingerprint(part) == print
+          FoiAttachment::Content.fingerprint(part) == print
       end
 
       def unread_is_pending
@@ -301,13 +294,6 @@ module IncomingAttention
         part
       end
 
-      def fingerprint(part)
-        blob = part.file.attached? ? part.file.blob : nil
-        [part.updated_at&.to_f, part.masked_at&.to_f,
-         part.erased_at&.to_f, part.masking_failed_at&.to_f, part.hexdigest,
-         part.prominence, blob&.id, blob&.checksum]
-      end
-
       def censor_print(request)
         request.applicable_censor_rules.
           map { |rule| [rule.id, rule.updated_at&.to_f] }.sort_by(&:first)
@@ -315,12 +301,6 @@ module IncomingAttention
 
       def pending_mask?(_part)
         false
-      end
-
-      # Uses get_text_for_indexing to strip emails/censor rules before masking.
-      def asked(request, outgoing)
-        request.apply_all_masks(outgoing.get_text_for_indexing(false).to_s,
-                                'text/plain')
       end
 
       def name_of(request, part)
@@ -337,24 +317,12 @@ module IncomingAttention
       # OCRs only the served #body (never #unmasked_body) and re-applies masks
       # since scanned image text cannot carry prior text redactions.
       def scanned_text(part)
-        text = Ocr.pdf_text(part.body)
+        text = FoiAttachment::Ocr.pdf_text(part.body)
         text && part.apply_all_masks(text,
                                      'text/html',
                                      redacted_attribute: :body_to_text)
       rescue StandardError => e
         Rails.logger.warn('request_outcome_scanned_text_failed ' \
-                          "attachment_id=#{part&.id} #{e.class}")
-        nil
-      end
-
-      # Re-applies default masks to extracted text (including locked parts),
-      # since stored files only carry inbound censor rules.
-      def document_text(part)
-        part.apply_all_masks(part.body_to_text.to_s,
-                             'text/html',
-                             redacted_attribute: :body_to_text)
-      rescue StandardError => e
-        Rails.logger.warn('request_outcome_document_text_failed ' \
                           "attachment_id=#{part&.id} #{e.class}")
         nil
       end

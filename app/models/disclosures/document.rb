@@ -1,6 +1,8 @@
 module Disclosures
   # Slim public catalogue entry backed directly by one FoiAttachment#file.
   class Document < ApplicationRecord
+    include Ability::RequesterVisible::AttachmentBacked
+
     self.table_name = 'disclosure_documents'
 
     KINDS = Disclosures::KINDS

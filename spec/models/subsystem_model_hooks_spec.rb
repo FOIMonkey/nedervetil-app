@@ -57,7 +57,7 @@ RSpec.describe 'Fork model hooks' do
     it 'checks spreadsheets after core has parsed the reply' do
       message.update_column(:last_parsed, nil)
       checked = false
-      allow(Disclosures::SpreadsheetHold).to receive(:check_later).
+      allow(FoiAttachment::SpreadsheetHold).to receive(:check_later).
         with(message) { checked = message.last_parsed.present? }
 
       expect(message.parse_raw_email!).to be true
@@ -68,7 +68,7 @@ RSpec.describe 'Fork model hooks' do
     it 'forwards once to core while still checking spreadsheets' do
       message.parse_raw_email!
       expect(message).not_to receive(:extract_attachments)
-      expect(Disclosures::SpreadsheetHold).to receive(:check_later).
+      expect(FoiAttachment::SpreadsheetHold).to receive(:check_later).
         with(message)
 
       message.parse_raw_email!(once: true)
@@ -76,7 +76,7 @@ RSpec.describe 'Fork model hooks' do
 
     it 'checks spreadsheets when parsing raises and preserves the original error' do
       allow(message).to receive(:extract_attachments).and_raise('Parse stopped')
-      expect(Disclosures::SpreadsheetHold).to receive(:check_later).
+      expect(FoiAttachment::SpreadsheetHold).to receive(:check_later).
         with(message)
 
       expect { message.parse_raw_email! }.to raise_error('Parse stopped')

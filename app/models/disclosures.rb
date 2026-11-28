@@ -39,7 +39,7 @@ module Disclosures
 
   def self.ocr?
     on = (ocr.nil? ? AlaveteliConfiguration.disclosures_ocr : ocr) == true
-    on && IncomingAttention::Outcome::Ocr.available?
+    on && FoiAttachment::Ocr.available?
   end
 
   def self.engine(job:)

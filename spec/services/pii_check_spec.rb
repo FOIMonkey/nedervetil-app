@@ -1,6 +1,6 @@
 require 'spec_helper'
 
-RSpec.describe Disclosures::PiiCheck do
+RSpec.describe PiiCheck do
   def configure(mode, endpoint = 'http://127.0.0.1:5002/v1/check')
     allow(AlaveteliConfiguration).to receive(:disclosures_pii_check).
       and_return(mode)
@@ -16,6 +16,11 @@ RSpec.describe Disclosures::PiiCheck do
   it 'is off unless configured, and then never answers clear' do
     expect(described_class).not_to be_enabled
     expect(described_class.call(['Jane'])).to eq(:unavailable)
+  end
+
+  it 'strips and deduplicates workbook cells in first-seen order' do
+    expect(described_class.deduplicated([' B ', nil, 'A', '  ', 'B', ' A'])).
+      to eq(%w[B A])
   end
 
   it 'asks an ai service by the badger/v1 contract, with the token' do

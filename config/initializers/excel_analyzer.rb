@@ -7,7 +7,7 @@ ExcelAnalyzer.on_spreadsheet_received = ->(raw_email_blob) do
 end
 
 ExcelAnalyzer.on_hidden_metadata = ->(blob, metadata) do
-  Disclosures::SpreadsheetHold.new(blob, metadata).run
+  FoiAttachment::SpreadsheetHold.new(blob, metadata).run
 end
 
 # Read where the app reads Office files (OfficePackage::Isolated).
@@ -69,7 +69,7 @@ Rails.application.config.to_prepare do
   # kill switch, full volume), analyzers let AlaveteliSandbox::Refused
   # propagate so the blob stays unanalyzed (SpreadsheetHold.waiting? stays
   # true). Discarding here avoids Sidekiq's retry/dead-set buildup while
-  # Disclosures::SpreadsheetCheckJob owns the retry schedule (1m..18h).
+  # FoiAttachment::SpreadsheetCheckJob owns the retry schedule (1m..18h).
   ExcelAnalyzer.retryable_errors = [AlaveteliSandbox::Refused]
 
   handled = ActiveStorage::AnalyzeJob.rescue_handlers.any? do |name, _|

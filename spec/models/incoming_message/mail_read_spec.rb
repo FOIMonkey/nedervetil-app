@@ -95,7 +95,7 @@ RSpec.describe IncomingMessage, 'reading its mail' do
        'refused: nothing has changed' do
       message
       refuse_mail_reads
-      expect(Disclosures::SpreadsheetHold).not_to receive(:check_later)
+      expect(FoiAttachment::SpreadsheetHold).not_to receive(:check_later)
 
       expect { message.parse_raw_email! }.
         to raise_error(MailHandler::ReadRefused)
@@ -104,7 +104,7 @@ RSpec.describe IncomingMessage, 'reading its mail' do
     it 'queues spreadsheet checks when the parse fails after the read' do
       message
       allow(message).to receive(:extract_attachments).and_raise('Stopped')
-      expect(Disclosures::SpreadsheetHold).
+      expect(FoiAttachment::SpreadsheetHold).
         to receive(:check_later).with(message)
 
       expect { message.parse_raw_email! }.to raise_error('Stopped')

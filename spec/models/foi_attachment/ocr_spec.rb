@@ -1,7 +1,7 @@
 require 'spec_helper'
 require 'tmpdir'
 
-RSpec.describe IncomingAttention::Outcome::Ocr do
+RSpec.describe FoiAttachment::Ocr do
   def with_ocr(value)
     allow(AlaveteliConfiguration).
       to receive(:incoming_outcome_ocr).and_return(value)
@@ -39,14 +39,12 @@ RSpec.describe IncomingAttention::Outcome::Ocr do
     end
   end
 
-  it 'is off unless switched on, and off when a program is missing' do
-    with_ocr(nil) { expect(described_class.enabled?).to be false }
-    with_ocr(true) do
-      allow(described_class).to receive(:path).and_return('/usr/bin/x')
-      expect(described_class.enabled?).to be true
-      allow(described_class).to receive(:path).with('tesseract').and_return(nil)
-      expect(described_class.enabled?).to be false
-    end
+  it 'is available when all required programs can be found' do
+    allow(described_class).to receive(:path).and_return('/usr/bin/x')
+    expect(described_class.available?).to be true
+
+    allow(described_class).to receive(:path).with('tesseract').and_return(nil)
+    expect(described_class.available?).to be false
   end
 
   def result(stdout)
@@ -181,22 +179,21 @@ RSpec.describe IncomingAttention::Outcome::Ocr do
     end
 
     it 'reads at most two scanned documents for one reply' do
-      allow(IncomingAttention::Outcome::Ocr).
-        to receive(:enabled?).and_return(true)
-      allow(IncomingAttention::Outcome::Ocr).
+      allow(IncomingAttention::Outcome).to receive(:ocr?).and_return(true)
+      allow(FoiAttachment::Ocr).
         to receive(:pdf_text).and_return('Recognised letter text ' * 10)
       blank = AttachmentFixtures.pdf(pages: [{ texts: [] }])
       message = receive_reply([['one.pdf', blank],
                                ['two.pdf', blank + ' '],
                                ['three.pdf', blank + '  ']])
       built = IncomingAttention::Outcome::Input.build(message)
-      expect(IncomingAttention::Outcome::Ocr).to have_received(:pdf_text).twice
+      expect(FoiAttachment::Ocr).to have_received(:pdf_text).twice
       expect(built.signals['ocr']).to eq(2)
       expect(built.signals['omitted']).to eq('three.pdf' => 'no_text')
     end
 
     it 'rejects OCR text when its source changes before OCR returns' do
-      allow(described_class).to receive(:enabled?).and_return(true)
+      allow(IncomingAttention::Outcome).to receive(:ocr?).and_return(true)
       blank = AttachmentFixtures.pdf(pages: [{ texts: [] }])
       message = receive_reply([['Response.pdf', blank]])
       allow(described_class).to receive(:pdf_text) do
@@ -213,16 +210,15 @@ RSpec.describe IncomingAttention::Outcome::Ocr do
     end
 
     it 'counts failed readings towards the two' do
-      allow(IncomingAttention::Outcome::Ocr).
-        to receive(:enabled?).and_return(true)
-      allow(IncomingAttention::Outcome::Ocr).
+      allow(IncomingAttention::Outcome).to receive(:ocr?).and_return(true)
+      allow(FoiAttachment::Ocr).
         to receive(:pdf_text).and_return(nil)
       blank = AttachmentFixtures.pdf(pages: [{ texts: [] }])
       message = receive_reply([['one.pdf', blank],
                                ['two.pdf', blank + ' '],
                                ['three.pdf', blank + '  ']])
       built = IncomingAttention::Outcome::Input.build(message)
-      expect(IncomingAttention::Outcome::Ocr).to have_received(:pdf_text).twice
+      expect(FoiAttachment::Ocr).to have_received(:pdf_text).twice
       expect(built.signals['ocr']).to eq(0)
       expect(built.signals['omitted']).
         to eq('one.pdf' => 'no_text',

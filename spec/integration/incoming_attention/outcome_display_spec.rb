@@ -83,7 +83,7 @@ RSpec.describe 'Request outcome on the correspondence page' do
   end
 
   # A zip waits for the analyzer's spreadsheet scan before the reading can use
-  # it (Disclosures::SpreadsheetHold.waiting?): read, as if the scan had run.
+  # it (FoiAttachment::SpreadsheetHold.waiting?): read, as if the scan had run.
   def read_by_analyzer(message, filename)
     message.parse_raw_email!
     parts = message.foi_attachments.reload
@@ -300,7 +300,7 @@ RSpec.describe 'Request outcome on the correspondence page' do
   it 'sends nothing when the extracted document is replaced before extraction returns' do
     message = receive_response
     FactoryBot.create(:admin_user).tap { |user| @user_ids << user.id }
-    allow(IncomingAttention::Outcome::Input).
+    allow(FoiAttachment::Content).
       to receive(:document_text).and_wrap_original do |original, part|
       text = original.call(part)
       if part.filename == 'FOI 4242 Response.txt'
@@ -340,7 +340,7 @@ RSpec.describe 'Request outcome on the correspondence page' do
                              censorable: info_request,
                              text: 'Ward Z')
     message = receive_response
-    allow(IncomingAttention::Outcome::Input).
+    allow(FoiAttachment::Content).
       to receive(:document_text).and_wrap_original do |original, part|
       text = original.call(part)
       rule.update_columns(text: 'Ward A', updated_at: Time.current + 5)

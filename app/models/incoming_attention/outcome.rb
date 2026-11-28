@@ -42,6 +42,11 @@ module IncomingAttention
       AlaveteliConfiguration.incoming_outcome_strict_documents == true
     end
 
+    def ocr?
+      AlaveteliConfiguration.incoming_outcome_ocr == true &&
+        FoiAttachment::Ocr.available?
+    end
+
     def applying?
       Config.enabled? && mode == 'apply'
     end

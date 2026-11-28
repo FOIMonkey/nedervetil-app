@@ -101,8 +101,7 @@ module DocumentFixtures
     AttachmentFixtures.pdf(pages: layout.pages, info: info)
   end
 
-  # Its text and LEAFLET_FILENAME each match a LetterPick leaflet rule, so
-  # either rule sets it aside.
+  # Its text and LEAFLET_FILENAME each match a FoiAttachment::LetterPick rule.
   def leaflet_pdf(authority: 'the authority')
     layout = Layout.new
     layout.line('Freedom of Information: complaints procedure',

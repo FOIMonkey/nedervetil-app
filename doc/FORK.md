@@ -104,8 +104,9 @@ See [`SANDBOX.md`](SANDBOX.md) for `AlaveteliSandbox::Job`, bubblewrap + seccomp
 * **Async reply parsing & 120-day `RawEmail` retention:**
   * `IncomingMessage` stores header values on receipt, serialises parses through Active Storage uploads via `IncomingMessage::ParsingLock`, populates main-body text asynchronously via `IncomingMessage::StoreTextJob`, normalises Outlook HTML tables (`EmailTables`), and re-queues refused mail reads in `RequestMailbox`.
   * `RawEmail` tracks `read_at`, removes Action Mailbox's duplicate `InboundEmail` via `RawEmail::ForgetInboundJob`, and expires raw emails after `RawEmail::KEPT_FOR` (120 days of request inactivity).
-* **One-file `FoiAttachment` storage & fail-closed masking:**
+* **One-file `FoiAttachment` storage, shared attachment primitives & fail-closed masking:**
   * Each `FoiAttachment` owns a single Active Storage file (`FoiAttachment::StoredFile`, `Prominence`, `Erasable`, `Maskable`) and purges its blob once on destroy.
+  * Shared attachment checks and content readers live under `FoiAttachment` (`FoiAttachment::Content`, `FoiAttachment::LetterPick`, `FoiAttachment::Ocr`, `FoiAttachment::SpreadsheetHold`, `FoiAttachment::SpreadsheetCheckJob`) so visibility, reply reading, Excel analysis, and disclosure suggestions use the same lower-layer primitives directly.
   * `CensorRule` supports `black` (requester-reaching) and `blue` (public-only) rules plus `masking_finished_at`. `InfoRequest::Masking` and `MaskSet` compute per-view mask sets.
   * Masking runs in place on `FoiAttachment#file` and never reads `RawEmail` during normal masking (only on explicit `remask_from_email!`). `AlaveteliTextMasker` routes PDF masking through `PDFRedactor`, leaves zip/archive containers uncorrupted by skipping byte masking, and fails closed on masking faults by setting `masking_failed_at` (refused on every public path).
 * **Working-copy redaction editor (`AttachmentManagement`):**
@@ -113,9 +114,9 @@ See [`SANDBOX.md`](SANDBOX.md) for `AlaveteliSandbox::Job`, bubblewrap + seccomp
   * Configured via `ATTACHMENT_MANAGEMENT_REQUESTER_ACCESS`, `ATTACHMENT_MANAGEMENT_DRAFT_HOURS`, and `ATTACHMENT_MANAGEMENT_PREVIEW_HOURS` in [`config/general.yml-example`](../config/general.yml-example).
 * **Controlled publication (`Disclosures`) & Office hidden-content holds:**
   * Attachments remain `requester_only` until explicitly prepared, checked, and published as `Disclosures::Document` records with 12-character public IDs, rendered page PNGs, and OCR-extracted searchable text.
-  * Pre-publish checks run `Disclosures::RuleCheck`, `Disclosures::HiddenRisk`, and optional `Disclosures::PiiCheck` (disabled by default via `DISCLOSURES_PII_CHECK: 'off'`, failing closed to `:unavailable` when enabled and unreachable).
+  * Pre-publish checks run `Disclosures::RuleCheck`, `Disclosures::HiddenRisk`, and optional `PiiCheck` (disabled by default via `DISCLOSURES_PII_CHECK: 'off'`, failing closed to `:unavailable` when enabled and unreachable).
   * Supports an optional admin review queue (`Disclosures::ReviewSubmission`, `/documents/review`), withdrawal and erasure, and request deletion that keeps published documents detached from private correspondence.
-  * `config/initializers/excel_analyzer.rb` routes `ExcelAnalyzer` through `OfficePackage::Isolated` and `AttachmentManagement::ZipGuard`, holds spreadsheets and embedded Office files with hidden rows, columns, sheets, or comments via `Disclosures::SpreadsheetHold`, and discards `AlaveteliSandbox::Refused` on `ActiveStorage::AnalyzeJob` so `Disclosures::SpreadsheetCheckJob` owns deferred retries while unanalysed blobs remain held.
+  * `config/initializers/excel_analyzer.rb` routes `ExcelAnalyzer` through `OfficePackage::Isolated` and `AttachmentManagement::ZipGuard`, holds spreadsheets and embedded Office files with hidden rows, columns, sheets, or comments via `FoiAttachment::SpreadsheetHold`, and discards `AlaveteliSandbox::Refused` on `ActiveStorage::AnalyzeJob` so `FoiAttachment::SpreadsheetCheckJob` owns deferred retries while unanalysed blobs remain held.
   * Configured via `DISCLOSURES_*` settings in [`config/general.yml-example`](../config/general.yml-example).
 
 ---

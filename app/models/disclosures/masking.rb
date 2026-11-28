@@ -139,7 +139,7 @@ module Disclosures
 
     # Preserves prior SpreadsheetHold analysis: Tidy only strips metadata.
     def kept_analysis(attachment)
-      return unless SpreadsheetHold.spreadsheet?(attachment) &&
+      return unless FoiAttachment::SpreadsheetHold.spreadsheet?(attachment) &&
                     attachment.file.analyzed?
 
       attachment.file_blob.metadata.except('identified')
