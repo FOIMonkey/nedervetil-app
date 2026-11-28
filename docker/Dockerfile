@@ -39,4 +39,4 @@ WORKDIR /alaveteli
 RUN git config --global --add safe.directory /alaveteli
 
 EXPOSE 3000
-CMD wait-for-it db:5432 --strict -- ./docker/entrypoint.sh
+CMD ["wait-for-it", "db:5432", "--strict", "--", "./docker/entrypoint.sh"]
